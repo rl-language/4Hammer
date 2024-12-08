@@ -35,8 +35,7 @@ function(build_rules_for_target ARCH OS LIBGODOT_TARGET_TYPE)
   set(lib_godot_target lib_godot_${ARCH}_${OS}_${LIBGODOT_TARGET_TYPE})
 
   add_custom_command(OUTPUT ${LIB_GODOT}
-				   COMMAND cd ${GODOT_CPP}
-				   COMMAND scons platform=linux verbose=true custom_api_file=${GODOT_API_JSON} target=template_${LIBGODOT_TARGET_TYPE}
+				   COMMAND cd ${GODOT_CPP} && scons platform=linux verbose=true custom_api_file=${GODOT_API_JSON} target=template_${LIBGODOT_TARGET_TYPE}
 				   COMMAND ${CMAKE_COMMAND} -E  copy_if_different ${LIB_GODOT_REMOTE}  ${LIB_GODOT}
 				   DEPENDS ${GODOT_API_JSON} godot-cpp)
 
@@ -66,8 +65,7 @@ build_rules_for_target("x86_64" "linux" "debug")
 
 set(WASM_LIB_GODOT_FILENAME libgodot-cpp.web.template_release.wasm32.nothreads.a)
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${WASM_LIB_GODOT_FILENAME}
-				COMMAND cd ${GODOT_CPP}
-				COMMAND scons platform=web verbose=true custom_api_file=${GODOT_API_JSON} target=template_release threads=0
+				COMMAND cd ${GODOT_CPP} && scons platform=web verbose=true custom_api_file=${GODOT_API_JSON} target=template_release threads=0
 				COMMAND ${CMAKE_COMMAND} -E  copy_if_different ${GODOT_CPP}/bin/${WASM_LIB_GODOT_FILENAME} ${CMAKE_CURRENT_BINARY_DIR}/${WASM_LIB_GODOT_FILENAME}
 				DEPENDS ${GODOT_API_JSON} godot-cpp)
 add_custom_target(libgodot_web_release ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${WASM_LIB_GODOT_FILENAME})
