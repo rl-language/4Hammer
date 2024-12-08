@@ -8,7 +8,6 @@ func _ready() -> void:
 	position.x = -(size.x - 30)
 	#$VContainer/ActionListScrollable.custom_minimum_size.y = get_viewport().size.y - 100
 	GlobalRules.on_state_changed.connect(on_state_change)
-	visible = false
 
 	on_state_change()
 	

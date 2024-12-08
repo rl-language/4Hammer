@@ -1,7 +1,7 @@
 import bounded_arg
 import math.numeric
 
-using Coordinate = LinearlyDistributedInt<0, 20>
+using Coordinate = LinearlyDistributedInt<0, 40>
 
 cls Vector2D:
     Int x

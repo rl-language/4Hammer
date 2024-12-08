@@ -213,11 +213,22 @@ The name of the action can be arbitrary. However, reusing the same name and para
 
 In the previous sections, we saw how game rules can be written independently of the graphical engine mechanisms. Here, we will explore how these mechanisms are implemented.
 
----
+#### RLC Godot Interop
 
-### RLC Godot Interop
+ToDo: expand and make a video for this part too.
 
-RL programs are designed to seamlessly integrate with the Godot engine, allowing for easy interoperability between rule-based logic and graphical representations.
+RL programs are designed to seamlessly integrate with the Godot engine, allowing for easy interoperability between rule-based logic and graphical representations. RLC is a compiled language, so the CMakeLists.txt file specifies how the rules of rlc must be compiled into a godot extension.
+
+With emscripten, such extension can be compiled to webassembly and exported to the web too.
+
+From a godot script perspective, this then materializes as a library of functions that can be invoked. In scripts/Rules.gd you can see a script that contains both the library of rules, with the type RLCLib, and the state of the game. The rest of gui will interact with this class. In this particular example it is a singleton, but it is not mandatory to be the case.
+
+A series of methods are exposed to perform common activities such us resolving all actions considered random, triggering particular actions, enumerate all valid actions and so on.
+
+Finally, signals are exposed to notify listener when the state of the simulation changes, when a action is triggered and so on.
+
+Other scripts then can subscribe to such events and update themselves based on the list of valid actions, on the state of the game and so on.
+ToDo: expand
 
 ---
 

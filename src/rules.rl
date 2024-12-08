@@ -77,6 +77,7 @@ act single_attack(ctx Unit target, frm Weapon source) -> SingleAttack:
         target.models.erase(id.get())
 
 act attack(ctx Board board, frm Int source, frm Int target) -> Attack:
+    board.current_target_unit = target
     frm current_model = 0
     while current_model != board[source].models.size():
         frm weapon = board[source][current_model].weapons[0]
@@ -98,14 +99,14 @@ enum ProfileToUse:
     use_super_humans:
         Unit unit = make_profile2()
 
-act play() -> Game:
-    frm board : Board
+act play() -> Game: # required
+    frm board : Board # required
     board.units.append(make_profile1())
     board.units.back().owned_by_player1 = true
     board.units[0].translate(0, 5)
 
     act pick_profile(frm ProfileToUse profile)
-    act select_position(BoardPosition position)  { 50.0 > board.units.back().distance(position) }
+    act select_position(BoardPosition position)  { 10.0 > position.as_vector().length() }
 
     board.units.append(profile.unit())
     board.units.back().move_to(position) 
@@ -117,7 +118,6 @@ act play() -> Game:
         board.units[target.get()].owned_by_player1
     }
 
-    board.current_target_unit = 0
 
     subaction*(board) attack = attack(board, source.get(), target.get())
 

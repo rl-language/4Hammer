@@ -6,28 +6,28 @@ using Wounds = LinearlyDistributedInt<0, 10>
 using WeaponsVector = BoundedVector<Weapon, 2>
 
 cls Model:
-    BoardPosition position
+    BoardPosition position # required
     Profile profile
     Wounds suffered_wounds
     WeaponsVector weapons
 
 using ModelVector = BoundedVector<Model, 20>
 
-cls ModelID:
+cls ModelID: # required
     BInt<0, 21> id
 
     fun get() -> Int:
         return self.id.value
 
-cls UnitID:
-    BInt<0, 2> id
+cls UnitID: # required
+    BInt<0, 11> id
 
     fun get() -> Int:
         return self.id.value
 
 cls Unit:
-    ModelVector models
-    Bool owned_by_player1
+    ModelVector models # required
+    Bool owned_by_player1 # required
 
     fun get_unit_toughtness() -> Int:
         if self.models.size() == 0:
@@ -80,11 +80,11 @@ cls Unit:
         
 
 
-using UnitVector = BoundedVector<Unit, 2>
+using UnitVector = BoundedVector<Unit, 10>
 
 cls Board:
-    UnitVector units
-    Int current_target_unit
+    UnitVector units # required
+    Int current_target_unit # required
 
     fun get(Int unit_id) -> ref Unit:
         return self.units[unit_id]
