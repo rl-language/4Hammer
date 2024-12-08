@@ -247,9 +247,9 @@ source .venv/bin/activate.sh
 mkdir build
 cd build
 cmake .. -DGODOT_EDITOR=/PATH/TO/GODOT/EDITOR/EXECUTABLE
-make run
-# Optionally, you can build the editor with:
-# make editor
+make editor
+# after the opening the editor for the first time you can run
+# make run
 ```
 
 ---

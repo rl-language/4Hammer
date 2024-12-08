@@ -1,8 +1,7 @@
 cmake_minimum_required (VERSION 3.10)
 project(GodotExtensions)
-find_package(rlc REQUIRED)
+find_package(rlc REQUIRED PATHS "../.venv/share/rlc/cmake/rlcConfig.cmake")
 include(ExternalProject)
-set(rlc_DIR "../.venv/share/rlc/cmake/rlcConfig.cmake")
 
 if (NOT DEFINED GODOT_EDITOR)
 	message(FATAL_ERROR "godot editor location not found, specify it with -DGODOT_EDITOR=PATH")
