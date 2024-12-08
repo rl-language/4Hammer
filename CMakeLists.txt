@@ -94,7 +94,7 @@ add_custom_target(run
 	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} -m DEPENDS rules_x86_64_linux_debug)
 
 add_custom_target(export-web
-    COMMAND mkdir ${CMAKE_CURRENT_BINARY_DIR}/exports/
+    COMMAND mkdir ${CMAKE_CURRENT_BINARY_DIR}/exports/ -p
 	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} --export-release Web ${CMAKE_CURRENT_BINARY_DIR}/exports/skirmish.html DEPENDS rules_web_release)
 
 add_custom_target(test-web
