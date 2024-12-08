@@ -241,6 +241,9 @@ RL programs are designed to seamlessly integrate with the Godot engine, allowing
 ```bash
 git clone https://github.com/drblallo/skirmish.git
 cd skirmish
+python3 -m pip install virtualenv
+python3 -m virtualenv .venv
+source .venv/bin/activate.sh
 mkdir build
 cd build
 cmake .. -DGODOT_EDITOR=/PATH/TO/GODOT/EDITOR/EXECUTABLE
