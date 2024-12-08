@@ -88,19 +88,14 @@ add_custom_command(
 add_custom_target(rules_web_release ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/librules_web_release.wasm)
 
 add_custom_target(editor
-	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}
-	COMMAND ${GODOT_EDITOR} -e DEPENDS rules_x86_64_linux_debug)
+	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} -e DEPENDS rules_x86_64_linux_debug)
 
 add_custom_target(run
-	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}
-	COMMAND ${GODOT_EDITOR} DEPENDS rules_x86_64_linux_debug)
+	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} DEPENDS rules_x86_64_linux_debug)
 
 add_custom_target(export-web
-	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}
-	COMMAND ${GODOT_EDITOR} --export-release Web ${CMAKE_CURRENT_BINARY_DIR}/exports/skirmish.html DEPENDS rules_web_release)
+	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} --export-release Web ${CMAKE_CURRENT_BINARY_DIR}/exports/skirmish.html DEPENDS rules_web_release)
 
 add_custom_target(test-web
-	COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/exports
-	COMMAND vivaldi 127.0.0.1:8000
-	COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/tools/open_server.py
+	COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/exports && vivaldi 127.0.0.1:8000 && python ${CMAKE_CURRENT_SOURCE_DIR}/tools/open_server.py
 	DEPENDS export-web)
