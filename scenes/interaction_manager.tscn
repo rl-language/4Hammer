@@ -1,0 +1,15 @@
+[gd_scene load_steps=4 format=3 uid="uid://caqrrl5r6dkea"]
+
+[ext_resource type="Script" path="res://scripts/InteractionManager.gd" id="1_l8afb"]
+
+[sub_resource type="Gradient" id="Gradient_31ftj"]
+offsets = PackedFloat32Array(0.0180723, 0.10241, 0.915584, 1)
+colors = PackedColorArray(0, 0, 0, 0, 1, 1, 1, 0.843137, 1, 1, 1, 0.827451, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_woyyi"]
+gradient = SubResource("Gradient_31ftj")
+fill_from = Vector2(1, 1)
+
+[node name="InteractionManager" type="Sprite2D"]
+texture = SubResource("GradientTexture2D_woyyi")
+script = ExtResource("1_l8afb")

@@ -1,0 +1,21 @@
+[gd_scene load_steps=5 format=3 uid="uid://dcwfqeyhcjyud"]
+
+[ext_resource type="Script" path="res://scripts/Spawner.gd" id="1_lwvmf"]
+[ext_resource type="PackedScene" uid="uid://bomo4fmpfvsfk" path="res://scenes/UI.tscn" id="2_d0w1n"]
+[ext_resource type="Script" path="res://scripts/SelectPointManager.gd" id="3_ghfpk"]
+[ext_resource type="Script" path="res://scripts/CameraControls.gd" id="3_h3ntp"]
+
+[node name="MainNode" type="Node2D"]
+
+[node name="Models" type="Node" parent="."]
+script = ExtResource("1_lwvmf")
+
+[node name="UI" parent="." instance=ExtResource("2_d0w1n")]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(1000, 1000)
+zoom = Vector2(0.4, 0.4)
+script = ExtResource("3_h3ntp")
+
+[node name="SelectPointManager" type="Node2D" parent="."]
+script = ExtResource("3_ghfpk")

@@ -1,0 +1,49 @@
+[gd_scene load_steps=7 format=3 uid="uid://ftituuecgo5n"]
+
+[ext_resource type="Script" path="res://scenes/Model.gd" id="1_7y218"]
+
+[sub_resource type="Gradient" id="Gradient_2ed0p"]
+offsets = PackedFloat32Array(0, 0.668831, 0.707792, 0.728916)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_kdlmd"]
+gradient = SubResource("Gradient_2ed0p")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 1)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_mnmnr"]
+radius = 31.0
+
+[sub_resource type="Gradient" id="Gradient_cssls"]
+offsets = PackedFloat32Array(0.566265, 0.680723)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_ebjdi"]
+gradient = SubResource("Gradient_cssls")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+
+[node name="Model" type="Sprite2D"]
+position = Vector2(100, 100)
+texture = SubResource("GradientTexture2D_kdlmd")
+script = ExtResource("1_7y218")
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+process_mode = 3
+shape = SubResource("CircleShape2D_mnmnr")
+
+[node name="Aura" type="Sprite2D" parent="."]
+visible = false
+modulate = Color(1, 1, 0.117647, 1)
+z_index = -1
+scale = Vector2(1.2, 1.2)
+texture = SubResource("GradientTexture2D_ebjdi")
+
+[connection signal="input_event" from="Area2D" to="." method="_on_area_2d_input_event"]
+[connection signal="mouse_entered" from="Area2D" to="." method="_on_area_2d_mouse_entered"]
+[connection signal="mouse_exited" from="Area2D" to="." method="_on_area_2d_mouse_exited"]
+[connection signal="mouse_shape_entered" from="Area2D" to="." method="_on_area_2d_mouse_shape_entered"]
+[connection signal="mouse_shape_exited" from="Area2D" to="." method="_on_area_2d_mouse_shape_exited"]

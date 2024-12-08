@@ -1,0 +1,10 @@
+[configuration]
+
+entry_symbol = "rules_library_init"
+compatibility_minimum = "4.2"
+
+[libraries]
+
+linux.release.x86_64 = "res://build/librules_x86_64_linux_release.so"
+linux.debug.x86_64 = "res://build/librules_x86_64_linux_debug.so"
+web.wasm32 = "res://build/librules_web_release.wasm"
