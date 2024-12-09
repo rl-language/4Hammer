@@ -28,3 +28,6 @@ enum Profile:
         Int save = 3
         Int wounds = 2
         Int leadership = 6
+
+    fun equal(Profile other) -> Bool:
+        return self.value == other.value

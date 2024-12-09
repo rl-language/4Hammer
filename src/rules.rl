@@ -77,6 +77,8 @@ act single_attack(ctx Unit target, frm Weapon source) -> SingleAttack:
         target.models.erase(id.get())
 
 act attack(ctx Board board, frm Int source, frm Int target) -> Attack:
+    if board[target].models.size() == 0:
+        return
     board.current_target_unit = target
     frm current_model = 0
     while current_model != board[source].models.size():
@@ -99,6 +101,9 @@ enum ProfileToUse:
     use_super_humans:
         Unit unit = make_profile2()
 
+    fun equal(ProfileToUse other) -> Bool:
+        return self.value == other.value
+
 act play() -> Game: # required
     frm board : Board # required
     board.units.append(make_profile1())
@@ -120,7 +125,6 @@ act play() -> Game: # required
 
 
     subaction*(board) attack = attack(board, source.get(), target.get())
-
 
 fun get_current_player(Game g) -> Int:
     if g.is_done():
@@ -149,8 +153,8 @@ fun max_game_lenght() -> Int:
 fun log_models_left(Game g) -> Int:
     return g.board.units[0].models.size()
 
-fun log_distance(Game g) -> Float:
-    return g.board.units[0].distance(g.board.units[1])
+fun log_use_humans(Game g) -> Int:
+    return int(g.profile == ProfileToUse::use_humans)
 
 fun gen_methods():
     let x : Vector<Bool>
