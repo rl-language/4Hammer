@@ -19,3 +19,9 @@ script = ExtResource("3_h3ntp")
 
 [node name="SelectPointManager" type="Node2D" parent="."]
 script = ExtResource("3_ghfpk")
+
+[node name="Panel" type="Panel" parent="."]
+modulate = Color(0.27451, 0.639216, 0, 0.847059)
+z_index = -2
+offset_right = 2816.0
+offset_bottom = 1920.0

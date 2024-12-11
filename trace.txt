@@ -1,124 +1,146 @@
 # game: 0
-pick_profile {profile: use_humans} 
-select_position {position: {x: 3, y: 5}} 
-select_target {source: 1, target: 0} 
-hit_roll {d: 4} 
-wound_roll {d: 5} 
-allocate_wound {id: 9} 
-save_roll {d: 4} 
-hit_roll {d: 1} 
-hit_roll {d: 3} 
-hit_roll {d: 2} 
-hit_roll {d: 4} 
-wound_roll {d: 6} 
-allocate_wound {id: 14} 
-save_roll {d: 4} 
-hit_roll {d: 2} 
-hit_roll {d: 6} 
-wound_roll {d: 6} 
-allocate_wound {id: 1} 
-save_roll {d: 5} 
-hit_roll {d: 5} 
-wound_roll {d: 5} 
-allocate_wound {id: 1} 
-save_roll {d: 2} 
-hit_roll {d: 1} 
-hit_roll {d: 6} 
-wound_roll {d: 6} 
-allocate_wound {id: 13} 
-save_roll {d: 4} 
-hit_roll {d: 5} 
-wound_roll {d: 2} 
-hit_roll {d: 3} 
-hit_roll {d: 6} 
-wound_roll {d: 3} 
-hit_roll {d: 2} 
-hit_roll {d: 5} 
-wound_roll {d: 4} 
-allocate_wound {id: 7} 
-save_roll {d: 6} 
-hit_roll {d: 2} 
-hit_roll {d: 5} 
-wound_roll {d: 1} 
-hit_roll {d: 2} 
-hit_roll {d: 1} 
-hit_roll {d: 5} 
-wound_roll {d: 3} 
-hit_roll {d: 4} 
-wound_roll {d: 6} 
-allocate_wound {id: 14} 
-save_roll {d: 5} 
-hit_roll {d: 3} 
-hit_roll {d: 6} 
-wound_roll {d: 2} 
-hit_roll {d: 5} 
-wound_roll {d: 4} 
-allocate_wound {id: 0} 
-save_roll {d: 3} 
-hit_roll {d: 2} 
-hit_roll {d: 1} 
-hit_roll {d: 1} 
-hit_roll {d: 5} 
-wound_roll {d: 5} 
-allocate_wound {id: 9} 
-save_roll {d: 5} 
-hit_roll {d: 5} 
-wound_roll {d: 1} 
-hit_roll {d: 1} 
-hit_roll {d: 2} 
-hit_roll {d: 5} 
-wound_roll {d: 3} 
-hit_roll {d: 2} 
-hit_roll {d: 6} 
-wound_roll {d: 1} 
-hit_roll {d: 1} 
-hit_roll {d: 5} 
-wound_roll {d: 2} 
-hit_roll {d: 6} 
-wound_roll {d: 6} 
-allocate_wound {id: 6} 
-save_roll {d: 4} 
-hit_roll {d: 5} 
-wound_roll {d: 5} 
-allocate_wound {id: 12} 
-save_roll {d: 2} 
-hit_roll {d: 4} 
-wound_roll {d: 2} 
-hit_roll {d: 6} 
-wound_roll {d: 4} 
-allocate_wound {id: 7} 
-save_roll {d: 5} 
-hit_roll {d: 2} 
-hit_roll {d: 1} 
-hit_roll {d: 1} 
-hit_roll {d: 2} 
-hit_roll {d: 4} 
-wound_roll {d: 1} 
-hit_roll {d: 2} 
-hit_roll {d: 4} 
-wound_roll {d: 1} 
-hit_roll {d: 6} 
-wound_roll {d: 3} 
-hit_roll {d: 3} 
-hit_roll {d: 4} 
-wound_roll {d: 2} 
-hit_roll {d: 1} 
-hit_roll {d: 5} 
-wound_roll {d: 2} 
-hit_roll {d: 1} 
-hit_roll {d: 3} 
-hit_roll {d: 1} 
-hit_roll {d: 2} 
-hit_roll {d: 2} 
-hit_roll {d: 6} 
-wound_roll {d: 4} 
-allocate_wound {id: 11} 
-save_roll {d: 5} 
-hit_roll {d: 4} 
-wound_roll {d: 5} 
-allocate_wound {id: 7} 
-save_roll {d: 1} 
-hit_roll {d: 6} 
-wound_roll {d: 5} 
-allocate_wound {id: 3} 
-save_roll {d: 2} 
+attack_character {unit_id: 2, char_id: 1} 
+attack_character {unit_id: 5, char_id: 4} 
+done_attaching {}
+attack_character {unit_id: 4, char_id: 3} 
+done_attaching {}
+done_deploying {}
+select_unit {unit_id: 4} 
+deploy_at {position: {x: 34, y: 26}} 
+select_unit {unit_id: 3} 
+deploy_at {position: {x: 43, y: 29}} 
+done_deploying {}
+do_not_use_oath {}
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+do_not_use_oath {}
+end_move {}
+nothing_to_deploy {}
+select_reserve_unit {id: 2} 
+place_at {position: {x: 27, y: 1}} 
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+select_oath_of_moment_target {model: 1} 
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+select_oath_of_moment_target {model: 2} 
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+do_not_use_oath {}
+end_move {}
+select_reserve_unit {id: 1} 
+place_at {position: {x: 34, y: 12}} 
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+select_oath_of_moment_target {model: 3} 
+move_unit {moving_unit: 1} 
+move_to {position: {x: 43, y: 29}} 
+no_overwatch {}
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+select_oath_of_moment_target {model: 1} 
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+select_oath_of_moment_target {model: 3} 
+move_unit {moving_unit: 1} 
+move_to {position: {x: 43, y: 28}} 
+no_overwatch {}
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+select_oath_of_moment_target {model: 1} 
+move_unit {moving_unit: 3} 
+move_to {position: {x: 33, y: 12}} 
+overwatch {source: 0} 
+use_gene_wrought_resiliance {}
+use_veteran_instincts {}
+skip {}
+select_weapon {weapon_id: 0} 
+roll {result: 2} 
+keep_it {do_it: false} 
+reroll {new_value: 3} 
+roll {result: 1} 
+keep_it {do_it: true} 
+roll {result: 3} 
+roll {result: 3} 
+select_weapon {weapon_id: 0} 
+roll {result: 6} 
+roll {result: 3} 
+roll {result: 3} 
+roll {result: 5} 
+allocate_wound {id: 2} 
+roll {result: 2} 
+keep_it {do_it: true} 
+skip {}
+skip {}
+end_move {}
+select_reserve_unit {id: 0} 
+place_at {position: {x: 23, y: 11}} 
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+select_oath_of_moment_target {model: 3} 
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}

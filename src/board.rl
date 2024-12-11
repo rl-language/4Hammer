@@ -1,93 +1,97 @@
-import bounded_arg
-import stats
-import vector2d
+import units
 
-using Wounds = LinearlyDistributedInt<0, 10>
-using WeaponsVector = BoundedVector<Weapon, 2>
+cls AttackSequenceInfo:
+    UnitID source_unit_id # required
+    UnitID target_unit_id # required
+    Bool hit_roll_bonus
+    Bool wound_roll_malus
+    Bool reroll_hits
+    Bool reroll_wounds
+    Bool reroll1_wounds
+    Bool greater_strenght_wound_protection
+    Int target_toughness
+    Weapon source
 
-cls Model:
-    BoardPosition position # required
-    Profile profile
-    Wounds suffered_wounds
-    WeaponsVector weapons
-
-using ModelVector = BoundedVector<Model, 20>
-
-cls ModelID: # required
-    BInt<0, 21> id
-
-    fun get() -> Int:
-        return self.id.value
-
-cls UnitID: # required
-    BInt<0, 11> id
-
-    fun get() -> Int:
-        return self.id.value
-
-cls Unit:
-    ModelVector models # required
-    Bool owned_by_player1 # required
-
-    fun get_unit_toughtness() -> Int:
-        if self.models.size() == 0:
-            return 0
-        return self.models[0].profile.thoughness()
-
-    fun translate(Int x, Int y):
-        let v : Vector2D
-        v.x = x
-        v.y = y
-        self.translate(v)
-
-
-    fun move_to(BoardPosition new_position):
-        if self.models.size() == 0:
-            return
-        let v = new_position.as_vector() - self.models[0].position.as_vector()
-        self.translate(v)
-
-    fun translate(Vector2D v):
-        let i = 0
-        while i != self.models.size():
-            ref model = self.models[i]
-            model.position = model.position + v
-            i = i + 1
-
-    fun distance(BoardPosition position) -> Float:
-        return self.distance(position.as_vector()) 
-
-    fun distance(Unit unit) -> Float:
-        assert(unit.models.size() != 0, "unit cannot be empty")
-        assert(self.models.size() != 0, "unit cannot be empty")
-        return self.distance(unit.models[0]) 
-
-    fun distance(Model model) -> Float:
-        return self.distance(model.position.as_vector()) 
-
-    fun distance(Vector2D position) -> Float:
-        assert(self.models.size() != 0, "calculanting distance to empty unit")
-        let nearest = self.models[0].position.as_vector()
-        let i = 1
-        while i != self.models.size():
-            if (nearest - position).length() > (self.models[i].position.as_vector() - position).length():
-                nearest = self.models[i].position.as_vector()
-            i = i + 1
-        return (nearest - position).length()
-
-    fun get(Int model_id) -> ref Model:
-        return self.models[model_id]
-        
-
-
-using UnitVector = BoundedVector<Unit, 10>
+const MAX_CP = 4
+const MAX_ROUNDS = 5
 
 cls Board:
     UnitVector units # required
-    Int current_target_unit # required
+    UnitVector reserve_units # required
+    UnitID oath_of_moment_target
+    AttackSequenceInfo attack
+    LinearlyDistributedInt<0, MAX_CP>[2] command_points
+    LinearlyDistributedInt<0, MAX_ROUNDS> current_round
+    Bool current_player
+    Bool current_decision_maker
+    Faction[2] players_faction
+    LinearlyDistributedInt<0, 50>[2] score
+
+    fun clear_phase_modifiers():
+        let i = 0
+        while i != self.units.size():
+            self.units[i].clear_phase_modifiers()
+            i = i + 1
 
     fun get(Int unit_id) -> ref Unit:
         return self.units[unit_id]
+
+    fun count_models(Int player_id) -> Int:
+        let i = 0
+        let count = 0
+        while i != self.units.size():
+            if self[i].owned_by_player1 == bool(player_id):
+                count = count + self[i].models.size()
+            i = i + 1 
+        return count
+
+    fun least_distance_from_player_units(BoardPosition position, Bool player) -> Float:
+        let i = 0
+        let least_distance = 100.0
+        while i != self.units.size():
+            if self.units[i].owned_by_player1 == player and !self.units[i].empty() and self.units[i].distance(position) < least_distance:
+                least_distance = self.units[i].distance(position)
+            i = i + 1
+        return least_distance
+
+    fun is_position_valid_for_reserve(BoardPosition position, Unit unit) -> Bool:
+        if unit.has_ability(AbilityKind::deep_strike):
+            return true
+        return position.x < 6 or position.y < 6 or position.x > BOARD_WIDTH - 6 or position.y > BOARD_HEIGHT - 6
+
+    fun remove_empty_units():
+        let i = self.units.size() - 1
+        while i >= 0:
+            if self[i].models.empty():
+               self.units.erase(i)
+            i = i - 1 
+
+    fun score_objective(Int x, Int y):
+        let v : Vector2D
+        v.x = x
+        v.y = y
+        let oc : Int[2] 
+        let i = 0
+        while i != self.units.size():
+            ref unit = self[i]
+            let j = 0
+            while j != unit.models.size():
+                if 3.0 >= unit[j].position.as_vector().distance(v):
+                    oc[unit.owner_id()] = unit.models[j].profile.control()
+                j = j + 1
+            i = i + 1
+        if oc[0] == 0 and oc[1] == 0:
+            return
+        if oc[0] > oc[1]:
+            self.score[0] = self.score[0] + 5
+        else:
+            self.score[1] = self.score[1] + 5
+
+    fun score():
+        self.score_objective(12, 15)
+        self.score_objective(32, 15)
+        self.score_objective(22, 9)
+        self.score_objective(22, 21)
 
 fun append_to_string(ModelID to_add, String output):
     append_to_string(to_add.id, output)

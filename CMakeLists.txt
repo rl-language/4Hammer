@@ -42,14 +42,15 @@ function(build_rules_for_target ARCH OS LIBGODOT_TARGET_TYPE)
   add_custom_target(${lib_godot_target} ALL DEPENDS ${LIB_GODOT})
 
   set(RLC_RULES_LIB_NAME rlcrules_${ARCH}_${OS}_${LIBGODOT_TARGET_TYPE})
-  set(RLC_RULES_LIB lib${RLC_RULES_LIB_NAME}.a)
+  set(RLC_RULES_LIB lib${RLC_RULES_LIB_NAME}.so)
   set(TARGET_NAME skirmish_rules_${ARCH}_${OS}_${LIBGODOT_TARGET_TYPE})
   rlc(${TARGET_NAME}
-	COMPILE
+	DEBUG_INFO
+	SHARED
 	INPUT src/rules.rl
 	OUTPUT ${RLC_RULES_LIB}
 	GODOT rules.inc
-	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks --abort-symbol rlc_abort
+	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks --abort-symbol rlc_abort -g
 	)
 
   set(LIB_NAME rules_${ARCH}_${OS}_${LIBGODOT_TARGET_TYPE})
@@ -57,6 +58,7 @@ function(build_rules_for_target ARCH OS LIBGODOT_TARGET_TYPE)
   target_include_directories(${LIB_NAME} PUBLIC ${GODOT_CPP}/include/ ${GODOT_CPP}/gen/include ${GODOT_CPP}/gdextension/ ${CMAKE_CURRENT_BINARY_DIR} ${RLC_INCLUDE_DIR})
   target_link_directories(${LIB_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
   target_link_libraries(${LIB_NAME} PUBLIC ${RLC_RULES_LIB_NAME} ${LIB_GODOT_FILENAME})
+  target_compile_options(${LIB_NAME} PUBLIC -g)
   add_dependencies(${LIB_NAME} ${TARGET_NAME} ${lib_godot_target})
 endfunction()
 
@@ -80,7 +82,7 @@ rlc(skirmish_rules_wasm32
 
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/librules_web_release.wasm
-    COMMAND emcc ${CMAKE_CURRENT_SOURCE_DIR}/src/rlc_runtime.c -I ${GODOT_CPP}/include/ -I  ${GODOT_CPP}/gen/include -I ${GODOT_CPP}/gdextension/ -I ${CMAKE_CURRENT_BINARY_DIR} -I ${RLC_INCLUDE_DIR} -o ${CMAKE_CURRENT_BINARY_DIR}/runtime.wasm.o -s SIDE_MODULE=1 -s -fno-exceptions -sSUPPORT_LONGJMP='wasm' -O3 -DWEB_ENABLED -DUNIX_ENABLED -DNDEBUG -DGDEXTENSION -Igdextension -s USE_PTHREADS=1 -sWASM_BIGINT -fvisibility=hidden -c
+	COMMAND emcc ${CMAKE_CURRENT_SOURCE_DIR}/src/rlc_runtime.c -I ${GODOT_CPP}/include/ -I  ${GODOT_CPP}/gen/include -I ${GODOT_CPP}/gdextension/ -I ${CMAKE_CURRENT_BINARY_DIR} -I ${RLC_INCLUDE_DIR} -o ${CMAKE_CURRENT_BINARY_DIR}/runtime.wasm.o -s SIDE_MODULE=1 -s -fno-exceptions -sSUPPORT_LONGJMP='wasm' -O3 -DWEB_ENABLED -DUNIX_ENABLED -DNDEBUG -DGDEXTENSION -Igdextension -s USE_PTHREADS=1 -sWASM_BIGINT -fvisibility=hidden -c
 	COMMAND em++ ${CMAKE_CURRENT_SOURCE_DIR}/src/gdexample.cpp -I ${GODOT_CPP}/include/ -I  ${GODOT_CPP}/gen/include -I ${GODOT_CPP}/gdextension/ -I ${CMAKE_CURRENT_BINARY_DIR} -I ${RLC_INCLUDE_DIR} -std=c++17 -o ${CMAKE_CURRENT_BINARY_DIR}/librules_web_release.wasm  ${CMAKE_CURRENT_BINARY_DIR}/${WASM_LIB_GODOT_FILENAME} ${CMAKE_CURRENT_BINARY_DIR}/runtime.wasm.o ${CMAKE_CURRENT_BINARY_DIR}/librlcrules_web_release.o -s SIDE_MODULE=1 -s -fno-exceptions -sSUPPORT_LONGJMP='wasm' -O3 -DWEB_ENABLED -DUNIX_ENABLED -DNDEBUG -DGDEXTENSION -Igdextension -s USE_PTHREADS=0 -sWASM_BIGINT -fvisibility=hidden
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/gdexample.cpp ${CMAKE_CURRENT_BINARY_DIR}/${WASM_LIB_GODOT_FILENAME} ${CMAKE_CURRENT_BINARY_DIR}/librlcrules_web_release.o
 	)
@@ -91,11 +93,18 @@ add_custom_target(editor
 	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} -e DEPENDS rules_x86_64_linux_debug)
 
 add_custom_target(run
-	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} -m DEPENDS rules_x86_64_linux_debug)
+	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} -m --verbose DEPENDS rules_x86_64_linux_debug)
 
 add_custom_target(export-web
-    COMMAND mkdir ${CMAKE_CURRENT_BINARY_DIR}/exports/ -p
+	COMMAND mkdir ${CMAKE_CURRENT_BINARY_DIR}/exports/ -p
 	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} --export-release Web ${CMAKE_CURRENT_BINARY_DIR}/exports/skirmish.html DEPENDS rules_web_release)
+
+rlc(rlc_rules_fuzzer
+	DEBUG_INFO
+	INPUT src/rules.rl
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/rules_fuzzer
+	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks -g --fuzzer --sanitize
+)
 
 add_custom_target(test-web
 	COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/exports && vivaldi 127.0.0.1:8000 && python ${CMAKE_CURRENT_SOURCE_DIR}/tools/open_server.py

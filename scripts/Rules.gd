@@ -130,7 +130,7 @@ func get_current_target_action():
 	
 	
 func get_targetable_unit_id() -> int:
-	return (state as RLCGame).get_board().get_current_target_unit()
+	return (state as RLCGame).get_board().get_attack().get_target_unit_id().get_id().get_value()
 
 func is_terminal() -> bool:
 	return (state as RLCGame).get_resume_index() == -1

@@ -10,8 +10,24 @@
 
 using namespace godot;
 
+#ifdef __unix__
+#include <execinfo.h>
+static void printStackTrace() {
+  void *buffer[64];
+  int nptrs = backtrace(buffer, 64);
+  char **symbols = backtrace_symbols(buffer, nptrs);
+  for (int i = 0; i < nptrs; i++) {
+    std::fprintf(stderr, "%s\n", symbols[i]);
+  }
+  free(symbols);
+}
+#endif
+
 extern "C" {
-void rlc_abort(char *message) { ERR_FAIL_MSG(message); }
+void rlc_abort(char *message) {
+  printStackTrace();
+  ERR_FAIL_MSG(message);
+}
 }
 
 static godot::Variant rlc_string_to_godot_string(godot::Variant s) {
