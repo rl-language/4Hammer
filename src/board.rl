@@ -12,10 +12,10 @@ cls AttackSequenceInfo:
     Bool greater_strenght_wound_protection
     Int target_toughness
     Weapon source
-    BInt<0, 5> current_round
+    BInt<0, MAX_ROUNDS> current_round
 
 const MAX_CP = 4
-const MAX_ROUNDS = 5
+const MAX_ROUNDS = 6
 
 cls Board:
     UnitVector units # required
