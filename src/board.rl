@@ -6,11 +6,13 @@ cls AttackSequenceInfo:
     Bool hit_roll_bonus
     Bool wound_roll_malus
     Bool reroll_hits
+    Bool only_hits_on_6
     Bool reroll_wounds
     Bool reroll1_wounds
     Bool greater_strenght_wound_protection
     Int target_toughness
     Weapon source
+    BInt<0, 5> current_round
 
 const MAX_CP = 4
 const MAX_ROUNDS = 5
@@ -32,6 +34,9 @@ cls Board:
         while i != self.units.size():
             self.units[i].clear_phase_modifiers()
             i = i + 1
+
+    fun get_score(Int player_id) -> Int:
+        return self.score[player_id].value
 
     fun get(Int unit_id) -> ref Unit:
         return self.units[unit_id]
@@ -55,8 +60,16 @@ cls Board:
         return least_distance
 
     fun is_position_valid_for_reserve(BoardPosition position, Unit unit) -> Bool:
-        if unit.has_ability(AbilityKind::deep_strike):
+        if self.current_round == 0:
+            return false
+        if unit.all_have_ability(AbilityKind::deep_strike):
             return true
+        if self.current_round < 3:
+           if !self.current_decision_maker:
+                return (position.x < 6 or  position.x > BOARD_WIDTH - 6 or position.y < 6) and position.y < BOARD_HEIGHT - 6
+           else:
+                return (position.x < 6 or  position.x > BOARD_WIDTH - 6 or position.y > BOARD_WIDTH - 6) and position.y > 6
+        
         return position.x < 6 or position.y < 6 or position.x > BOARD_WIDTH - 6 or position.y > BOARD_HEIGHT - 6
 
     fun remove_empty_units():

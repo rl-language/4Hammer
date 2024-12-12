@@ -114,7 +114,7 @@ func choise_is_random() -> bool:
 func get_current_select_model_action():
 	for action in valid_actions:
 		var unwrapped = action.unwrap()
-		if unwrapped.members_count() == 1 and (unwrapped.get_member(0) as RLCModelID):
+		if unwrapped.members_count() == 1 and (unwrapped.get_member(0) is RLCModelID):
 			return unwrapped.make()
 	return null
 
@@ -160,3 +160,6 @@ func get_location_saction():
 		if is_location_action(action):
 			return action.unwrap().make()
 	return null
+
+func score(player_id: int):
+	return library.get_score((state as RLCGame).get_board(), player_id)

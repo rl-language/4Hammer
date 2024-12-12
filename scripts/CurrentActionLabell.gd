@@ -7,9 +7,10 @@ func _ready() -> void:
 	on_state_change()
 
 func on_state_change():
+	var scores = str(GlobalRules.score(0)) + ":" + str(GlobalRules.score(1))
 	if GlobalRules.is_terminal():
-		text = "Done"
+		text = scores + " - Done"
 	elif GlobalRules.get_question_action():
-		text = ""
+		text = scores
 	else:
-		text = GlobalRules.strip_symbols(GlobalRules.valid_actions[0].unwrap().get_class().substr(7))
+		text = scores + " - " + GlobalRules.strip_symbols(GlobalRules.valid_actions[0].unwrap().get_class().substr(7))

@@ -168,6 +168,14 @@ cls Unit:
     fun max_weapon_parameter(Weapon w, WeaponRuleKind kind) -> Int:
         return max(w.get_rule_parameter(kind), self.get_temporary_weapon_parameter(kind)) 
 
+    fun all_have_ability(AbilityKind kind) -> Bool:
+        let i = 0
+        while i != self.models.size():
+            if !self.models[i].has_ability(kind):
+                return false
+            i = i + 1
+        return true
+
     fun all_have_keyword(Keyword kind) -> Bool:
         let i = 0
         while i != self.models.size():

@@ -6,6 +6,7 @@ var pulsating_time = 0
 var unit_id = 0
 var model_id = 0
 var unit = null
+var being_removed = false
 
 func _ready() -> void:
 	var tween = create_tween()
@@ -48,6 +49,8 @@ func get_unit_color()  -> Color:
 	return Color.REBECCA_PURPLE
 
 func _process(delta):
+	if being_removed:
+		return
 	var model = get_model() 
 	if model == null:
 		_fade_out()
@@ -82,3 +85,4 @@ func _fade_out():
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0, 0.5)
 	tween.tween_callback(self.queue_free)
+	being_removed = true

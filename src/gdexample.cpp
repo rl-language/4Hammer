@@ -10,7 +10,7 @@
 
 using namespace godot;
 
-#ifdef __unix__
+#if 0
 #include <execinfo.h>
 static void printStackTrace() {
   void *buffer[64];
@@ -21,6 +21,9 @@ static void printStackTrace() {
   }
   free(symbols);
 }
+#else
+
+static void printStackTrace() {}
 #endif
 
 extern "C" {

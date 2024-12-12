@@ -154,10 +154,12 @@ act resolve_weapon(ctx Board board, frm Int source, frm Int current_model, frm I
             break
     current_model = current_model + 1
 
-fun _configure_attack(Board board, Int source, Int target):
+fun _configure_attack(Board board, Int source, Int target, Bool overwatch):
     let attack : AttackSequenceInfo
     attack.source_unit_id = source 
     attack.target_unit_id = target
+    if overwatch:
+        attack.only_hits_on_6 = true 
 
     attack.target_toughness = board[target].get_unit_toughtness()
     attack.greater_strenght_wound_protection = board[target].has_greater_strenght_wound_protection()
@@ -169,7 +171,7 @@ fun _configure_attack(Board board, Int source, Int target):
             attack.hit_roll_bonus = true
     board.attack = attack
 
-act attack(ctx Board board, frm Int source, frm Int target, frm Bool melee) -> Attack:
+act attack(ctx Board board, frm Int source, frm Int target, frm Bool melee, frm Bool overwatch) -> Attack:
     if board[source].models.size() == 0:
         return
     if board[target].models.size() == 0:
@@ -186,7 +188,7 @@ act attack(ctx Board board, frm Int source, frm Int target, frm Bool melee) -> A
             board[target].phase_modifiers.greater_strenght_wound_protection = true
             board.command_points[target_player] = board.command_points[target_player] - 1
 
-    _configure_attack(board, source, target)
+    _configure_attack(board, source, target, overwatch)
 
     board.current_decision_maker = board[source].owned_by_player1
     actions:
@@ -307,7 +309,7 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
             board[source.get()].owned_by_player1 == !board.current_player
         }
             board.command_points[int(!board.current_player)] = board.command_points[int(!board.current_player)] - 1
-            subaction*(board) attack = attack(board, source.get(), moved_unit.get(), false)
+            subaction*(board) attack = attack(board, source.get(), moved_unit.get(), false, true)
 
 act move(ctx Board board, ctx UnitID unit, frm Int additional_movement) -> Move:
     if board[unit.get()].models.size() == 0:
@@ -342,7 +344,7 @@ act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
                 board[target.get()].get_shortest_vector_to(board[source.get()]).length() < 2.0
             }
                 board.units[source.get()].consolidate_torward(board.units[target.get()])
-                subaction*(board) attack = attack(board, source.get(), target.get(), true)
+                subaction*(board) attack = attack(board, source.get(), target.get(), true, false)
                 board[source.get()].has_fought = true
                 if have_passed[int(!board.current_decision_maker)]:
 
@@ -388,15 +390,18 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
             id.get() < board.reserve_units.size(),
             board.reserve_units[id.get()].owned_by_player1 == current_player
         }
-            act place_at(BoardPosition position) {
-                board.least_distance_from_player_units(position, !current_player) > 9.0,
-                board.is_position_valid_for_reserve(position, board.reserve_units[id.get()])
-            }
-            board.units.append(board.reserve_units[id.get()])
-            board.units.back().move_to(position)
-            board.units.back().arrange()
-            board.units.back().has_moved = true
-            board.reserve_units.erase(id.get())
+            actions:
+                act place_at(BoardPosition position) {
+                    board.least_distance_from_player_units(position, !current_player) > 9.0,
+                    board.is_position_valid_for_reserve(position, board.reserve_units[id.get()])
+                }
+                board.units.append(board.reserve_units[id.get()])
+                board.units.back().move_to(position)
+                board.units.back().arrange()
+                board.units.back().has_moved = true
+                board.reserve_units.erase(id.get())
+                act nothing_to_deploy()
+                    done_deploying = true
 
 act movement_phase(ctx Board board) -> MovementPhase:
     board.current_decision_maker = board.current_player 
@@ -449,7 +454,7 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
                 board.units[target.get()].owned_by_player1 != board.current_player
             }
                 board[source.get()].has_shoot = true
-                subaction*(board) attack = attack(board, source.get(), target.get(), false)
+                subaction*(board) attack = attack(board, source.get(), target.get(), false, false)
     
 
 act turn(ctx Board board, frm Bool player_id) -> Turn:
@@ -516,10 +521,9 @@ act deploy(ctx Board board) -> Deployment:
 act battle(ctx Board board) -> Battle:
     subaction*(board) attach_leaders = attach_leaders(board)
     subaction*(board) deploy = deploy(board)
-    frm i = 0
-    while i != 5:
+    while board.current_round != 5:
         subaction*(board) battle = round(board)
-        i = i + 1
+        board.current_round = board.current_round + 1
 
 act play() -> Game: # required
     frm board : Board # required

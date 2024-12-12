@@ -4,7 +4,7 @@ var unit_id : int
 var models = []
 
 func remove():
-	get_parent().remvove_unit(self)
+	get_parent().remove_unit(self)
 	queue_free()
 	
 func remove_model(model):

@@ -73,11 +73,19 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${WASM_LIB_GODOT_FILENAME}
 add_custom_target(libgodot_web_release ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${WASM_LIB_GODOT_FILENAME})
 
 rlc(skirmish_rules_wasm32
+    OPTIMIZE
 	SHARED
 	COMPILE
 	INPUT src/rules.rl
-	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/librlcrules_web_release.o
+	OUTPUT librlcrules_web_release.o
 	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks --target=wasm32-unknown-emscripten --abort-symbol rlc_abort
+)
+
+rlc(python_wrapper
+    OPTIMIZE
+    PYTHON skirmish.py
+	INPUT src/rules.rl
+	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks
 )
 
 add_custom_command(
@@ -100,6 +108,7 @@ add_custom_target(export-web
 	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} --export-release Web ${CMAKE_CURRENT_BINARY_DIR}/exports/skirmish.html DEPENDS rules_web_release)
 
 rlc(rlc_rules_fuzzer
+    OPTIMIZE
 	DEBUG_INFO
 	INPUT src/rules.rl
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/rules_fuzzer
