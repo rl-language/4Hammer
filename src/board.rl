@@ -93,12 +93,10 @@ cls Board:
                     oc[unit.owner_id()] = unit.models[j].profile.control()
                 j = j + 1
             i = i + 1
-        if oc[0] == 0 and oc[1] == 0:
+        if oc[int(self.current_player)] == 0: 
             return
-        if oc[0] > oc[1]:
-            self.score[0] = self.score[0] + 5
-        else:
-            self.score[1] = self.score[1] + 5
+        if oc[int(self.current_player)] > oc[int(!self.current_player)]:
+            self.score[int(self.current_player)] = self.score[int(self.current_player)] + 5
 
     fun score():
         self.score_objective(12, 15)
