@@ -307,3 +307,22 @@ fun write_in_observation_tensor(Profile obj, Int observer_id, Vector<Float> outp
 
 fun size_as_observation_tensor(Profile kind) -> Int:
     return 1
+
+enum Stratagem:
+    reroll:
+        Int cost = 1
+    overwatch:
+        Int cost = 1 
+    rapid_ingress:
+        Int cost = 1
+    insane_bravery:
+        Int cost = 1
+    veteran_instincts:
+        Int cost = 1
+    gene_wrought_resiliance:
+        Int cost = 1 
+    duty_and_honour:
+        Int cost = 1 
+
+    fun equal(Stratagem other) -> Bool:
+        return self.value == other.value
