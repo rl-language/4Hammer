@@ -411,7 +411,7 @@ act charge_phase(ctx Board board) -> ChargePhase:
                 board.overwatch = overwatch(board, source)
                 subaction*(board) board.overwatch
                 board[source.get()].has_charged = true
-                if board[source.get()].models.size() == 0 and board[target.get()].models.size() == 0:
+                if board[source.get()].models.size() == 0 or board[target.get()].models.size() == 0:
                     continue
                 board.current_pair_roll = rerollable_pair_dices_roll(board, board[source.get()].can_reroll_charge(), false, true, int(board.current_player))
                 subaction*(board) board.current_pair_roll
