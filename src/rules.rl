@@ -515,13 +515,13 @@ act turn(ctx Board board, frm Bool player_id) -> Turn:
     board.clear_phase_modifiers() 
 
 act round(ctx Board board) -> Round:
-    frm player_turn = turn(board, false)
+    frm player_turn = turn(board, board.starting_player)
     subaction*(board) player_turn
-    player_turn = turn(board, true)
+    player_turn = turn(board, !board.starting_player)
     subaction*(board) player_turn
 
 act attach_leaders(ctx Board board) -> AttachLeaderStep:
-    board.current_decision_maker = false
+    board.current_decision_maker = board.starting_player
     frm passed_players = [false, false]
     while !passed_players[0] or !passed_players[1]:
         actions: 
@@ -543,7 +543,7 @@ act attach_leaders(ctx Board board) -> AttachLeaderStep:
                 board.current_decision_maker = !board.current_decision_maker
 
 act deploy(ctx Board board) -> Deployment:
-    board.current_decision_maker = false
+    board.current_decision_maker = board.starting_player
     frm passed_players = [false, false]
     while !passed_players[0] or !passed_players[1]:
         actions: 
@@ -582,6 +582,9 @@ act play() -> Game: # required
     board.players_faction[1] = Faction::strike_force_octavius
     make_octavious_strike_force(board.reserve_units, true)
 
+    act pick_starting_player(Bool first_player)
+    board.starting_player = first_player 
+
     subaction*(board) battle = battle(board) 
 
 
@@ -591,6 +594,8 @@ fun get_current_player(Game g) -> Int:
         return -4
     let d : Dice
     d.value = 1
+    if can g.pick_starting_player(true):
+        return -1
     if can g.roll(d):
         return -1
     if can g.reroll(d):
@@ -604,10 +609,7 @@ fun get_current_player(Game g) -> Int:
     return int(g.board.current_decision_maker)
 
 fun score(Game g, Int player_id) -> Float:
-    if !g.is_done(): 
-        return 0.0 
-    #return float(g.board.score[0].value)
-    return float(g.board.score[player_id].value - g.board.score[1-player_id].value)
+    return float(g.board.score[player_id].value - g.board.score[1-player_id].value) 
 
 fun get_num_players() -> Int:
     return 2

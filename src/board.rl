@@ -30,6 +30,7 @@ cls Board:
     LinearlyDistributedInt<0, MAX_CP>[2] command_points
     LinearlyDistributedInt<0, MAX_ROUNDS> current_round
     Bool current_player
+    Bool starting_player
     Bool current_decision_maker
     Faction[2] players_faction
     LinearlyDistributedInt<0, 50>[2] score
