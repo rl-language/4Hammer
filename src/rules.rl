@@ -609,7 +609,7 @@ fun get_current_player(Game g) -> Int:
     return int(g.board.current_decision_maker)
 
 fun score(Game g, Int player_id) -> Float:
-    return float(g.board.score[player_id].value - g.board.score[1-player_id].value) 
+    return float(g.board.score[player_id].value)
 
 fun get_num_players() -> Int:
     return 2
@@ -618,7 +618,11 @@ fun max_game_lenght() -> Int:
     return 5000
 
 fun log_p1_score(Game g) -> Int:
-    return g.board.score[0].value
+    return g.board.score[0].value 
+
+fun log_p1_winner(Game g) -> Int:
+    return int(g.board.score[0].value > g.board.score[1].value)
+
 
 fun log_p2_score(Game g) -> Int:
     return g.board.score[1].value
