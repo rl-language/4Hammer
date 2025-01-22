@@ -1,0 +1,12 @@
+digraph asd {
+    node [shape=box];
+    first[label="How many points can be scored at max in the first round of the game?"];
+    first -> second[label="Written as a"];
+    second[label="Situation description file"];
+    second -> third[label="Turned into a"];
+    third[label="Environment"];
+    third -> fourth[label="Used to train a"];
+    fourth[label="Agent"]
+    fourth -> fifth[label="Plays games to generate a"];
+    fifth[label="Report"]
+}

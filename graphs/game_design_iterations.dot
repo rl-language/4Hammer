@@ -1,0 +1,17 @@
+digraph asd {
+    node [shape=box];
+    first[label="Immagine emotion/story/scenario."];
+    second[label="Implement rules that allow a player to experience it."];
+    test[label="Human Testing"];
+    third[label="Are the rules correct?"];
+    fourth[label="Is the emotion/story/scenario worth selling?"];
+    fifth[label="Add it to the product."];
+    test -> third;
+    third -> second[label="no"];
+    fourth -> first[label="no"];
+    third -> fourth[label="yes"];
+    fourth -> fifth[label="yes"];
+    first -> second;  
+    second -> test ;  
+    fifth -> first;  
+}
