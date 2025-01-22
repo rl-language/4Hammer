@@ -1,13 +1,17 @@
 **Tool-Assisted Game Design**
 
-Game design has historically been a difficult discipline to automate. Consider the typical design loop:
-![Design iterations](graphs/game_design_iterations.png)
-It is composed of three sections:
+![Krieg Spiele](imgs/Kriegsspiel_1824.jpg)
+> CC BY-SA 4.0 - Matthew Kirschenbaum
+
+
+Game design has historically been a difficult discipline to automate. Consider the typical design loop composed of the following steps:
 1. A **planning stage**, where the subject of the design is selected.
 2. An **implementation stage**, where concrete rules are chosen.
 3. A **testing step**, where these concrete mechanics are evaluated.
 
 These three steps are repeated until a good design is found and then committed to the final product. After that, the loop begins again.
+
+![Design iterations](graphs/game_design_iterations.png)
 
 The **testing** step is central to the entire process. Due to the iterative nature of game design, testing becomes the core bottleneck stopping the designer to take decisions until data is collected.
 Unfortunately, it is difficult to automate beyond human testing:
@@ -39,9 +43,6 @@ For the rest of this document, we will see how we have combined various pieces o
 ### Example
 
 Let us pick a concrete example.
-
-![Krieg Spiele](imgs/Kriegsspiel_1824.jpg)
-> CC BY-SA 4.0 - Matthew Kirschenbaum
 
 Consider the problem of balancing [war games](https://en.wikipedia.org/wiki/Wargame) . We chose this subject because war games are relatively straightforward to conceptualize: two players take turns moving their armies and units on a map, trying to achieve objectives while preventing their opponents from doing the same.
 
