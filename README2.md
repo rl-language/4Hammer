@@ -1,4 +1,6 @@
-**Tool-Assisted Game Design**
+# Tool-Assisted Game Design
+> Unleash machine learning in your games.
+
 
 ![Krieg Spiele](imgs/Kriegsspiel_1824.jpg)
 > CC BY-SA 4.0 - Matthew Kirschenbaum
@@ -117,10 +119,15 @@ That’s all it takes. From this description, it is possible to:
 * Generate an editor that can run in the browser.
 ![Editor image](imgs/editor.png)
 
-* Generate an agent to test and maximize the scenario’s score. In this case we can see that the agent, while learning to play the game, obtained a final score of 1.5 destroyed models.
+* Generate an agent to test and maximize the scenario’s score. In this case we can see that the agent, while learning to play the game, obtained a final score of 1.5 destroyed models. Notice that the player one is trying to remove as many enemy models as possible, and player two is activelly trying to prevnt player 1 to do so, it is not just playing at random, it is doing the best moves possible.
 ![Obtained reward](imgs/Reward.png)
 
 * Measure the important metrics, in this case we can then measure how many models are left in the target unit when the agent is playing.
 ![Models Left](imgs/ModelsLeft.png)
 
-In short, our technology requires only about 40 lines of code to perform an experiment that no other existing implementation can achieve.
+
+### Conclusion
+
+By empowering designers to automate crucial testing steps, tool-assisted game design dramatically shortens iteration cycles and frees up time for true creativity. Our Warhammer 40,000 demo is just one example: with just a few lines of code, we can ask—and answer—questions about balancing, strategy, and more. Imagine rapidly experimenting with new mechanics, gathering real data in moments rather than weeks, and refining your vision every step of the way.
+
+**This isn’t just a tool; it’s a new way to create games.** If you want to explore our Warhammer 40,000 example or learn how these techniques can transform your own projects, check out [the code here](https://github.com/drblallo/skirmish), or drop us a line at massimo.fioravanti@polimi.it. The future of game design is more accessible, more data-driven, and ultimately more fun—and we’d love to have you be part of it.
