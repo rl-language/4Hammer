@@ -33,7 +33,7 @@ As we said, testing is mandatory, not optional. Therefore, we want to automatize
 
 Of course, even in an ideal world, not all types of tests can be automated. It will always be worthwhile to see how real human players react to the complete game. In the end, they are the customers, and the game must appeal to them. Similarly, certain tests inherently relate to human emotions—questions like: “How many cards can a player discard from their hand before feeling frustrated?” or “Does this mechanic evoke a sense of excitement?”
 
-Yet, those types of questions do not represent the majority of what game designers usually ask. Most questions are along the lines of: “How many cards should this game have to ensure it ends, on average, in five turns?” or “What is the maximum number of points I can score in the first round of the game?” These are technical questions about the practical properties of the game, for which an experiment can be concretely designed and an exact answer provided.
+Those kind of questions are open ended and they don't have a single exact answer, but they can be rewritten as a series of precise questions that while not perfectly equivalent, they offer insight about the original one. For example, instead of asking the previous questions a designer may ask the followings as a proxy: “How often does a player discard more than 5 cards?” or “Is the way the player interacts with this mechanics always the same in a game?”. These are technical questions about the practical properties of the game, for which an experiment can be concretely designed and an exact answer provided. Then the game designer would need to interpret the meaning of these answer and adapt its designs based on them.
 
 For the rest of this document, we will see how we have combined various pieces of new technology to create a tool that accomplishes the tasks described above.
 
@@ -56,9 +56,9 @@ We have chosen [Warhammer 40,000](https://www.warhammer-community.com/en-gb/down
 
 * The game is well known.
 * As far as we know, it lacks any official digital implementation for testing purposes. The best tools available are programs like [Unit Crunch](https://www.unitcrunch.com), which simply automate dice rolling for certain common actions.
-* The game ranks in the top 50% of complexities.
+* The game is fairly complex, scoring a 4.27/5 on [BBG](https://boardgamegeek.com/boardgame/386136/warhammer-40000-tenth-edition)
 
-We have created a digital implementation of a subset of Warhammer 40,000 using our technology, allowing experiments to be written extremely quickly. Naturally, we have not implemented all Warhammer 40,000 rules (which include at least a thousand different units with different stats). Instead, we focused on rules needed to implement a freely available subset of the game called **Combat Patrol**, which includes all basic rules but a smaller set of possible units. We specifically implemented only four units. Expanding support to multiple units would be trivial (though time-consuming). Similarly, we have not implemented the rules found in the online FAQ and updated documentation. We used the Core Rules document as understood at the time, recognizing that FAQ and Rules documents are often updated.
+We have created a digital implementation of a subset of Warhammer 40,000 using our technology, allowing experiments to be written extremely quickly. Naturally, we have not implemented all Warhammer 40,000 rules (which include at least a thousand different units with different rules and statistics). Instead, we focused on rules needed to implement a freely available subset of the game called **Combat Patrol**, which includes all basic rules but a smaller set of possible units. We specifically implemented only four units. Expanding support to multiple units would be trivial (though time-consuming). Similarly, we have not implemented the rules found in the online FAQ and updated documentation. We used the Core Rules document as understood at the time, recognizing that FAQ and Rules documents are often updated.
 
 Combat Patrol games are also played on a smaller board, which makes them easier for machine learning components to manage, but that change doesn’t really affect anything else beyond testing, so it serves as a good proof of concept.
 
@@ -70,7 +70,7 @@ Imagine that a designer for *Warhammer 40,000* wants to answer the following que
 
 Don’t worry about the precise meaning of “Terminator Squad,” “Infernus Squad,” and so on—just know they can shoot each other, and if more members of the target squad are destroyed, that’s better for the shooter.
 
-This natural-language description is equivalent to the short formal scenario below:
+With our technology [RLC](https://github.com/rl-language/rlc/blob/master/docs/where_we_are_going.md), this natural-language description is equivalent to the short formal scenario below:
 
 ```
 act play() -> Game:
