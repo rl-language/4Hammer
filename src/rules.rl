@@ -6,7 +6,6 @@ import vector2d
 import stats
 import board
 
-
 fun required_wound_roll(AttackSequenceInfo info) -> Int:
     let strenght = info.source.strenght()
     let thoughness = info.target_toughness
@@ -178,7 +177,7 @@ fun _configure_attack(Board board, Int source, Int target, Bool overwatch):
             attack.hit_roll_bonus = true
     board.attack_info = attack
 
-act attack(ctx Board board, frm Int source, frm Int target, frm Bool melee, frm Bool overwatch) -> Attack:
+act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee, frm Bool overwatch) -> Attack:
     if board[source].models.size() == 0:
         return
     if board[target].models.size() == 0:
@@ -197,7 +196,7 @@ act attack(ctx Board board, frm Int source, frm Int target, frm Bool melee, frm 
             board.command_points[target_player] = board.command_points[target_player] - 1
             board.mark_strat_used(Stratagem::veteran_instincts, target_player)
 
-    _configure_attack(board, source, target, overwatch)
+    _configure_attack(board, source.get(), target.get(), overwatch)
 
     board.current_decision_maker = board[source].owned_by_player1
     actions:
@@ -233,7 +232,7 @@ act attack(ctx Board board, frm Int source, frm Int target, frm Bool melee, frm 
                 continue
         if board.attack_info.source.has_rule(WeaponRuleKind::hazardous):
             hazardous_uses = hazardous_uses + 1
-        subaction*(board) resolve_weapon = resolve_weapon(board, source, current_model, target)
+        subaction*(board) resolve_weapon = resolve_weapon(board, source.get(), current_model, target.get())
         current_model = current_model + 1
 
     board.attack_info.target_unit_id = source
@@ -343,7 +342,7 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
             board[source.get()].owned_by_player1 == !board.current_player
         }
             board.command_points[int(!board.current_player)] = board.command_points[int(!board.current_player)] - 1
-            board.attack = attack(board, source.get(), moved_unit.get(), false, true)
+            board.attack = attack(board, source, moved_unit, false, true)
             subaction*(board) board.attack
 
 act move(ctx Board board, ctx UnitID unit, frm Int additional_movement) -> Move:
@@ -380,7 +379,7 @@ act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
                 board[target.get()].get_shortest_vector_to(board[source.get()]).length() < 2.0
             }
                 board.units[source.get()].consolidate_torward(board.units[target.get()])
-                board.attack = attack(board, source.get(), target.get(), true, false)
+                board.attack = attack(board, source, target, true, false)
                 subaction*(board) board.attack
                 board[source.get()].has_fought = true
                 if have_passed[int(!board.current_decision_maker)]:
@@ -499,7 +498,7 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
                 board.units[target.get()].owned_by_player1 != board.current_player
             }
                 board[source.get()].has_shoot = true
-                board.attack = attack(board, source.get(), target.get(), false, false)
+                board.attack = attack(board, source, target, false, false)
                 subaction*(board) board.attack
     
 
@@ -570,69 +569,17 @@ act battle(ctx Board board) -> Battle:
     subaction*(board) attach_leaders = attach_leaders(board)
     subaction*(board) deploy = deploy(board)
     while board.current_round != 5:
-        subaction*(board) battle = round(board)
+        subaction*(board) round = round(board)
         board.current_round = board.current_round + 1
 
-@classes
-act play() -> Game: # required
-    frm board : Board # required
-    board.oath_of_moment_target = MAX_UNIT_COUNT 
-    board.players_faction[0] = Faction::strike_force_octavius
-    make_octavious_strike_force(board.reserve_units, false)
-    board.players_faction[1] = Faction::strike_force_octavius
-    make_octavious_strike_force(board.reserve_units, true)
-
-    act pick_starting_player(Bool first_player)
-    board.starting_player = first_player 
-
-    subaction*(board) battle = battle(board) 
 
 
-
-fun get_current_player(Game g) -> Int:
-    if g.is_done():
-        return -4
-    let d : Dice
-    d.value = 1
-    if can g.pick_starting_player(true):
-        return -1
-    if can g.roll(d):
-        return -1
-    if can g.reroll(d):
-        return -1
-    if can g.roll_pair(d, d):
-        return -1
-    if can g.reroll_pair(d, d):
-        return -1
-    if can g.quantity(d):
-        return -1
-    return int(g.board.current_decision_maker)
-
-fun score(Game g, Int player_id) -> Float:
-    return float(g.board.score[player_id].value)
 
 fun get_num_players() -> Int:
     return 2
 
 fun max_game_lenght() -> Int:
     return 5000
-
-fun log_p1_score(Game g) -> Int:
-    return g.board.score[0].value 
-
-fun log_p1_winner(Game g) -> Int:
-    return int(g.board.score[0].value > g.board.score[1].value)
-
-
-fun log_p2_score(Game g) -> Int:
-    return g.board.score[1].value
-
-fun log_models_left1(Game g) -> Int:
-    return g.board.count_models(0)
-
-fun log_models_left2(Game g) -> Int:
-    return g.board.count_models(1)
-
 
 fun gen_methods():
     let x : Vector<Bool>
@@ -677,3 +624,68 @@ fun fuzz(Vector<Byte> input):
         print(executable.get(num_action % executable.size()))
         apply(executable.get(num_action % executable.size()), state)
 
+
+fun pretty_print(Game game):
+    print_indented(game)
+
+
+@classes
+act play() -> Game:
+    frm board : Board
+    board.command_points[0] = 1
+    board.command_points[1] = 0
+
+    board.current_decision_maker = false  # Player 0's turn
+    # Player 0 chooses their unit
+    frm unit : Unit
+    actions:
+        act select_infernus_squad()
+            unit = make_infernus_squad()
+        act select_terminator_squad()
+            unit = make_terminator_squad()
+
+    unit.owned_by_player1 = false
+    board.units.append(unit)
+
+    # Player 1's Terminator Squad
+    let enemy_unit = make_infernus_squad()
+    enemy_unit.owned_by_player1 = true
+    board.units.append(enemy_unit)
+
+    # Deploy units 12 inches apart
+    board.units[0].move_to(make_board_position(0, 0))
+    board.units[0].arrange()
+    board.units[1].move_to(make_board_position(0, 12))
+    board.units[1].arrange()
+
+    # Player 0 performs a ranged attack
+    board.attack = attack(board, unit_id(0), unit_id(1), false, false)
+    subaction*(board) board.attack
+
+fun score(Game g, Int player_id) -> Float:
+    let count = g.board.units[1].models.size()
+    if player_id == 0:
+        # Player 0's score: models destroyed in player 1's unit
+        return float(5- count)
+    else:
+        # Player 1's score: models remaining in their unit
+        return float(count)
+
+fun get_current_player(Game g) -> Int:
+    if g.is_done():
+        return -4
+    let d : Dice
+    d.value = 1
+    if can g.roll(d):
+        return -1
+    if can g.reroll(d):
+        return -1
+    if can g.quantity(d):
+        return -1
+    return int(g.board.current_decision_maker)
+
+fun log_alive_models_player1(Game g) -> Int:
+    return g.board.count_models(0)
+
+fun log_alive_models_player2(Game g) -> Int:
+    return g.board.count_models(1)

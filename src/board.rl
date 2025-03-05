@@ -69,6 +69,9 @@ cls Board:
     fun get(Int unit_id) -> ref Unit:
         return self.units[unit_id]
 
+    fun get(UnitID unit_id) -> ref Unit:
+        return self.units[unit_id.get()]
+
     fun count_models(Int player_id) -> Int:
         let i = 0
         let count = 0

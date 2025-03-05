@@ -111,3 +111,15 @@ cls BoardPosition:
         to_return.y = self.y - other.y
         return to_return
 
+fun make_board_position(Int x, Int y) -> BoardPosition:
+    let b : BoardPosition
+    b.x = x
+    b.y = y
+    return b
+
+fun make_board_position(CoordinateX x, CoordinateY y) -> BoardPosition:
+    let b : BoardPosition
+    b.x = x
+    b.y = y
+    return b
+

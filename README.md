@@ -215,8 +215,6 @@ In the previous sections, we saw how game rules can be written independently of 
 
 #### RLC Godot Interop
 
-ToDo: expand and make a video for this part too.
-
 RL programs are designed to seamlessly integrate with the Godot engine, allowing for easy interoperability between rule-based logic and graphical representations. RLC is a compiled language, so the CMakeLists.txt file specifies how the rules of rlc must be compiled into a godot extension.
 
 With emscripten, such extension can be compiled to webassembly and exported to the web too.

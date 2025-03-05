@@ -81,6 +81,11 @@ cls UnitID: # required
     fun assign(Int value):
         self.id = value
 
+fun unit_id(Int id) -> UnitID:
+    let to_return :  UnitID
+    to_return = id
+    return to_return
+
 cls PhaseModifiers:
     Bool greater_strenght_wound_protection 
 

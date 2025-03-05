@@ -1,27 +1,12 @@
-[gd_scene load_steps=14 format=3 uid="uid://bomo4fmpfvsfk"]
+[gd_scene load_steps=8 format=3 uid="uid://bomo4fmpfvsfk"]
 
 [ext_resource type="Script" path="res://scripts/UI.gd" id="1_0kuxd"]
-[ext_resource type="Script" path="res://scripts/NextActionButton.gd" id="2_c2jt0"]
-[ext_resource type="Script" path="res://scripts/AllActionsPanel.gd" id="3_kgtvj"]
 [ext_resource type="Script" path="res://scripts/AcceptRejectAction.gd" id="3_xtmgh"]
 [ext_resource type="Script" path="res://scripts/RollDiceButton.gd" id="5_oo60i"]
+[ext_resource type="PackedScene" uid="uid://bbeju8wn2shf6" path="res://scenes/all_actions_panel.tscn" id="6_2o12q"]
 [ext_resource type="Script" path="res://scripts/CurrentActionLabell.gd" id="6_s2qdh"]
 [ext_resource type="Script" path="res://scripts/MultipleChoises.gd" id="7_hl21g"]
 [ext_resource type="Script" path="res://scripts/TraceManager.gd" id="8_hfwxe"]
-
-[sub_resource type="InputEventAction" id="InputEventAction_7kpes"]
-action = &"RandomAction"
-
-[sub_resource type="Shortcut" id="Shortcut_lt8o1"]
-events = [SubResource("InputEventAction_7kpes")]
-
-[sub_resource type="InputEventAction" id="InputEventAction_0es8j"]
-action = &"SolveRandomness"
-
-[sub_resource type="Shortcut" id="Shortcut_8x670"]
-events = [SubResource("InputEventAction_0es8j")]
-
-[sub_resource type="Theme" id="Theme_3nmyr"]
 
 [node name="UI" type="CanvasLayer"]
 process_mode = 3
@@ -154,49 +139,8 @@ grow_vertical = 2
 size_flags_vertical = 10
 alignment = 2
 
-[node name="AllActionsPanel" type="PanelContainer" parent="LeftBar"]
+[node name="AllActionsPanel" parent="LeftBar" instance=ExtResource("6_2o12q")]
 layout_mode = 2
-size_flags_vertical = 3
-script = ExtResource("3_kgtvj")
-
-[node name="VContainer" type="VBoxContainer" parent="LeftBar/AllActionsPanel"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="NextActionButton" type="Button" parent="LeftBar/AllActionsPanel/VContainer"]
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_font_sizes/font_size = 30
-shortcut = SubResource("Shortcut_lt8o1")
-text = "Random action"
-script = ExtResource("2_c2jt0")
-
-[node name="SolveRandomnessButton" type="Button" parent="LeftBar/AllActionsPanel/VContainer"]
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_font_sizes/font_size = 30
-shortcut = SubResource("Shortcut_8x670")
-text = "Random actions"
-script = ExtResource("2_c2jt0")
-
-[node name="VSeparator" type="HSeparator" parent="LeftBar/AllActionsPanel/VContainer"]
-layout_mode = 2
-
-[node name="ActionListScrollable" type="ScrollContainer" parent="LeftBar/AllActionsPanel/VContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-theme = SubResource("Theme_3nmyr")
-horizontal_scroll_mode = 0
-
-[node name="ActionList" type="VBoxContainer" parent="LeftBar/AllActionsPanel/VContainer/ActionListScrollable"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-
-[node name="Button" type="Button" parent="LeftBar/AllActionsPanel/VContainer/ActionListScrollable/ActionList"]
-layout_mode = 2
-size_flags_vertical = 0
-text = "sdasd"
 
 [node name="TraceManager" type="HBoxContainer" parent="LeftBar"]
 layout_mode = 2
@@ -213,8 +157,4 @@ text = "Next trace action"
 [connection signal="button_down" from="AcceptRejectAction/HBoxContainer/OkButton" to="AcceptRejectAction" method="_on_ok_button_button_down"]
 [connection signal="button_down" from="AcceptRejectAction/HBoxContainer/CancelButton" to="AcceptRejectAction" method="_on_cancel_button_button_down"]
 [connection signal="button_down" from="RollDiceButton" to="RollDiceButton" method="_on_button_down"]
-[connection signal="button_down" from="LeftBar/AllActionsPanel/VContainer/NextActionButton" to="LeftBar/AllActionsPanel/VContainer/NextActionButton" method="_on_button_down"]
-[connection signal="pressed" from="LeftBar/AllActionsPanel/VContainer/NextActionButton" to="LeftBar/AllActionsPanel/VContainer/NextActionButton" method="_on_button_down"]
-[connection signal="button_down" from="LeftBar/AllActionsPanel/VContainer/SolveRandomnessButton" to="LeftBar/AllActionsPanel/VContainer/SolveRandomnessButton" method="_on_button_down_actions"]
-[connection signal="pressed" from="LeftBar/AllActionsPanel/VContainer/SolveRandomnessButton" to="LeftBar/AllActionsPanel/VContainer/SolveRandomnessButton" method="_on_button_down_actions"]
 [connection signal="button_down" from="LeftBar/TraceManager/NextTraceAction" to="LeftBar/TraceManager" method="_on_next_trace_action_button_down"]
