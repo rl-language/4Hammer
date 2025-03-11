@@ -1,6 +1,5 @@
 extends PanelContainer
 
-var time = 0.0
 var list = null
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -17,23 +16,15 @@ func on_state_change():
 	clear_actions()
 	var counter = 0
 	for action in GlobalRules.valid_actions:
-		add_action(GlobalRules.strip_symbols(GlobalRules.as_str(action)), action, counter)
+		add_action(GlobalRules.action_to_pretty_string(action), action, counter)
 		counter = counter + 1
-
-func _process(delta: float) -> void:
-	if get_rect().has_point(get_global_mouse_position()):
-		time += delta * 2
-	else:
-		time -= delta * 2
-	time = clamp(time, 0.0, 1.0)
-	position.x = lerp(-(size.x - 30), 0.0, time)
 
 func disconnect_all(sig:Signal):
 	for dict in sig.get_connections():
 		sig.disconnect(dict.callable)
 
 func add_action(text: String, action, child_id = 0):
-	var button = null
+	var button : Button = null
 	if list.get_child_count() > child_id:
 		button = list.get_child(child_id)
 	else:
@@ -41,18 +32,26 @@ func add_action(text: String, action, child_id = 0):
 		list.add_child(button)
 	button.text = text
 	button.button_down.connect(func(): self.trigger_action(action))
+	button.connect("gui_input", func(event): self._on_button_input(event, action))
 	button.visible = true
+
+func _on_button_input(event, action):
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_MASK_RIGHT:
+			GlobalRules.add_automatic_action(action)
+			trigger_action(action)
 	
 func clear_actions():
 	for child in list.get_children():
 		child.visible = false
 		disconnect_all(child.button_down)
+		disconnect_all(child.gui_input)
+		
 func trigger_action(action):
 	GlobalRules.apply_action(action)
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey:
-		if event.is_pressed() and event.keycode == KEY_P:
-			visible = not visible
-			on_state_change()
-			get_viewport().set_input_as_handled()
+func toggle():
+	visible = not visible
+	on_state_change()
+	get_viewport().set_input_as_handled()
+			

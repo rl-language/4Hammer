@@ -1,4 +1,20 @@
 import units
+import range
+
+# enum to set the proper state description from within godot user interface. Irrelevant for everything else.
+enum CurrentStateDescription:
+    none
+    hit_roll
+    quantity_roll 
+    hazardous_roll
+    wound_roll
+    allocate_wound 
+    save_roll
+    damage_roll
+    select_weapon
+    select_oath_of_moment_target
+    use_duty_and_honour 
+    overwatch 
 
 cls AttackSequenceInfo:
     UnitID source_unit_id # required
@@ -43,6 +59,8 @@ cls Board:
     RerollableDice current_roll
     RerollableDicePair current_pair_roll
 
+    CurrentStateDescription current_state
+
     fun clear_phase_modifiers():
         self.phase_info.already_used_stratagems[0].clear()
         self.phase_info.already_used_stratagems[1].clear()
@@ -50,6 +68,9 @@ cls Board:
         while i != self.units.size():
             self.units[i].clear_phase_modifiers()
             i = i + 1
+
+    fun get_current_attacking_model() -> ref Model:
+        return self[self.attack.source][self.attack.model]
 
     fun get_score(Int player_id) -> Int:
         return self.score[player_id].value
@@ -154,11 +175,18 @@ cls Board:
         assert(false, "unrechable")
         return -1
 
+    fun get_objectives_locations() -> Vector<BoardPosition>:
+        let to_return : Vector<BoardPosition>
+        to_return.append(make_board_position(12, 15))
+        to_return.append(make_board_position(32, 15))
+        to_return.append(make_board_position(22, 9))
+        to_return.append(make_board_position(22, 21))
+        return to_return
+
     fun score():
-        self.score_objective(12, 15, 0)
-        self.score_objective(32, 15, 1)
-        self.score_objective(22, 9, 2)
-        self.score_objective(22, 21, 3)
+        let pos = self.get_objectives_locations()
+        for val in pos:
+            self.score_objective(val.x.value, val.y.value, 0)
 
 fun append_to_string(ModelID to_add, String output):
     append_to_string(to_add.id, output)

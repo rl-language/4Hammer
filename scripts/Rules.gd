@@ -2,19 +2,44 @@ extends Node
 
 var library = RLCLib.new()
 var state = null
+var automatic_actions = []
 var all_actions = null
 var valid_actions = null
 var rng = RandomNumberGenerator.new()
 signal on_action_applied
 signal on_state_changed
+signal on_state_reset
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	_reset()
+ # Replace with function body.
+
+func set_state(new_state: RLCGame):
+	library.assign(self.state, new_state)
+	var alias = RLCAnyGameAction.make()
+	all_actions = library.enumerate(alias)
+	valid_actions = _valid_actions()
+	on_state_reset.emit()
+	on_state_changed.emit()
+
+func add_automatic_action(action: RLCAnyGameAction):
+	print("here")
+	automatic_actions.append(action)
+
+func _reset():
 	state = library.play()
 	var alias = RLCAnyGameAction.make()
 	all_actions = library.enumerate(alias)
 	valid_actions = _valid_actions()
- # Replace with function body.
+
+func reset():
+	_reset()
+	on_state_reset.emit()
+	on_state_changed.emit()
+
+func action_to_pretty_string(action: RLCAnyGameAction) -> String:
+	return strip_symbols(library.convert_string(library.pretty_string(get_state().get_board(), action)))
 
 func resolve_randomnmess():
 	while library.get_current_player(state) == -1:
@@ -28,6 +53,21 @@ func _valid_actions():
 		if library.can_apply(action, state):
 			l.append(action)
 	return l
+	
+func all_valid_actions_are_of_same_type() -> bool:
+	if valid_actions.size() == 0:
+		return false
+		
+	var action_type = null
+	for action in valid_actions:
+		var unwrapped = action.unwrap()
+		if unwrapped as RLCGameSkip:
+			continue
+		if action_type == null:
+			action_type = unwrapped.get_class()
+		elif action_type != unwrapped.get_class():
+			return false
+	return true
 
 func apply_random_action():
 	_apply_random_action()
@@ -38,9 +78,18 @@ func _apply_random_action():
 	if len(actions) == 0:
 		return
 	var selected = actions[rng.randi_range(0, len(actions)-1)]
-	_apply_action(selected)
-	on_action_applied.emit(selected)
+	var applied = _apply_action(selected)
+	for act in applied:
+		on_action_applied.emit(act)
 
+func load_state(str: String):
+	var new_state = library.play()
+	if library.set_state(new_state, RLCLib.godot_string_to_rlc_string(str)):
+		state = new_state
+		on_state_changed.emit()
+		print("applied")
+	else:
+		print("failed to apply state")
 
 func strip_symbols(s: String) -> String:
 	return s.replace("[", "").replace("]", "").replace(",", "").replace("{", "").replace("}", "").to_snake_case().replace("_", " ")
@@ -56,9 +105,26 @@ func can_apply(action):
 	return self.library.can_apply(action, state)
 	
 func _apply_action(action):
+	var actions = []
 	library.apply(action, state)
+	actions.append(action)
+	while true:
+		var applied_one = false
+		for auto_action in automatic_actions:
+			if can_apply(auto_action):
+				library.apply(auto_action, state)
+				applied_one = true
+				actions.append(auto_action)
+		if not applied_one:
+			break
 	valid_actions = _valid_actions()
-	
+	return actions
+
+func get_current_state_description() -> String:
+	if get_state().get_board().get_current_state().get_value() == 0:
+		return ""
+	return strip_symbols(as_str(get_state().get_board().get_current_state()))
+
 func apply_action(action):
 	if not action is RLCAnyGameAction:
 		var wrapperd = RLCAnyGameAction.make()
@@ -68,8 +134,9 @@ func apply_action(action):
 		print("could not apply action")
 		print_rlc(action)
 		return
-	_apply_action(action)
-	on_action_applied.emit(action)
+	var actions = _apply_action(action)
+	for act in actions:
+		on_action_applied.emit(act)
 	on_state_changed.emit()
 
 
@@ -118,6 +185,14 @@ func get_current_select_model_action():
 			return unwrapped.make()
 	return null
 
+func get_current_select_unit_action():
+	for action in valid_actions:
+		var unwrapped = action.unwrap()
+		if unwrapped.members_count() == 1 and (unwrapped.get_member(0) is RLCUnitID):
+			return unwrapped.make()
+
+	return null
+
 func is_target_action(action: RLCAnyGameAction):
 	var unwrapped = action.unwrap()
 	return unwrapped.members_count() == 2 and (unwrapped.get_member(0) as RLCUnitID) and (unwrapped.get_member(1) as RLCUnitID)
@@ -130,7 +205,7 @@ func get_current_target_action():
 	
 	
 func get_targetable_unit_id() -> int:
-	return (state as RLCGame).get_board().get_attack().get_target_unit_id().get_id().get_value()
+	return (state as RLCGame).get_board().get_attack().get_target().get_id().get_value()
 
 func is_terminal() -> bool:
 	return (state as RLCGame).get_resume_index() == -1
@@ -138,7 +213,7 @@ func is_terminal() -> bool:
 func get_question_action():
 	for action in GlobalRules.valid_actions:
 		var unwrapped = action.unwrap()
-		if unwrapped.get_member(0) is bool:
+		if unwrapped.get_member(0) is bool and unwrapped.members_count() == 0:
 			return unwrapped.make()
 	return null
 	

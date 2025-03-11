@@ -91,9 +91,11 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
     if board.attack_info.source.skill() == 0:
         generated_hits = 1
     else:
+        board.current_state = CurrentStateDescription::hit_roll
         board.current_roll = rerollable_dice_roll(board, board.attack_info.reroll_hits, false, true, source_unit.owner_id())
         subaction*(board) board.current_roll
         if board.current_roll.result < board.attack_info.source.skill() or board.current_roll.result == 1:
+            board.current_state = CurrentStateDescription::none
             return
         if board.current_roll.result == 6:
            generated_hits = generated_hits + source_unit.max_weapon_parameter(board.attack_info.source, WeaponRuleKind::sustained_hit) 
@@ -104,6 +106,7 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
 
     while generated_hits != 0:
         generated_hits = generated_hits - 1
+        board.current_state = CurrentStateDescription::wound_roll
         board.current_roll = rerollable_dice_roll(board, board.attack_info.reroll_wounds, board.attack_info.reroll1_wounds, true, source_unit.owner_id())
         subaction*(board) board.current_roll
 
@@ -112,16 +115,19 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
 
 
         if board.current_roll.result == 6 and board.attack_info.source.has_rule(WeaponRuleKind::devastating_wounds):
+            board.current_state = CurrentStateDescription::damage_roll
             subaction* devastating_damage_roll = evaluate_random_stat(board.attack_info.source.damage(), 0)
             generated_effective_wounds = generated_effective_wounds + devastating_damage_roll.result
         else:
             generated_wounds = generated_wounds + 1 
 
     if generated_wounds == 0 and generated_effective_wounds == 0:
+        board.current_state = CurrentStateDescription::none
         return
 
     frm previous_decision_maker = board.current_decision_maker
     board.current_decision_maker = target.owned_by_player1
+    board.current_state = CurrentStateDescription::allocate_wound
     act allocate_wound(frm ModelID id) {
         id.get() < target.models.size(),
         board.attack_info.source.has_rule(WeaponRuleKind::precision) or !target[id.get()].has_keyword(Keyword::character) or target.all_have_keyword(Keyword::character)
@@ -132,16 +138,19 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         generated_wounds = generated_wounds - 1
 
         board.current_roll = rerollable_dice_roll(board, false, false, true, target.owner_id())
+        board.current_state = CurrentStateDescription::save_roll
         subaction*(board) board.current_roll 
         ref target_model = target.models[id.get()]
         let best_save = min(target_model.profile.save() + board.attack_info.source.penetration(), target_model.profile.invuln_save())
         if board.current_roll.result >= best_save:
             continue
+        board.current_state = CurrentStateDescription::damage_roll
         subaction* damage_roll = evaluate_random_stat(board.attack_info.source.damage(), 0)
         generated_effective_wounds = generated_effective_wounds + damage_roll.result
 
     ref target_model = target.models[id.get()]
     target.damage(id.get(), generated_effective_wounds)
+    board.current_state = CurrentStateDescription::none
 
 
 act resolve_weapon(ctx Board board, frm Int source, frm Int current_model, frm Int target) -> ResolveWeapon:
@@ -149,6 +158,8 @@ act resolve_weapon(ctx Board board, frm Int source, frm Int current_model, frm I
     let rapid_fire_attacks = 0
     if distance <= float(board.attack_info.source.range()) / 2.0:
         rapid_fire_attacks = board.attack_info.source.get_rule_parameter(WeaponRuleKind::rapid_fire)
+
+    board.current_state = CurrentStateDescription::quantity_roll
     subaction* attacks_roll = evaluate_random_stat(board.attack_info.source.attacks(),  rapid_fire_attacks)
 
     frm current_attack = 0
@@ -220,6 +231,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     while current_model != board[source].models.size() and !board[target].models.empty():
         ref model = board[source][current_model]
         frm distance = board[target].distance(model)
+        board.current_state = CurrentStateDescription::select_weapon
         actions:
             act select_weapon(BInt<0, MAX_WEAPONS> weapon_id) {
                 weapon_id < board[source][current_model].weapons.size(),
@@ -239,6 +251,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     board.current_decision_maker = board[source].owned_by_player1
     while hazardous_uses != 0 and !board[source].empty():
         hazardous_uses = hazardous_uses - 1
+        board.current_state = CurrentStateDescription::hazardous_roll
         board.current_roll = rerollable_dice_roll(board, false, false, true, board[source].owner_id())
         subaction*(board) board.current_roll
         if board.current_roll.result != 1:
@@ -249,6 +262,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
         }
         # ToDo: handle non character version
         board[source].damage(model.get(), 3)
+    board.current_state = CurrentStateDescription::none
 
         
 
@@ -265,6 +279,23 @@ enum ProfileToUse:
 
     fun equal(ProfileToUse other) -> Bool:
         return self.value == other.value
+
+enum Player:
+    player_1
+    player_2
+
+act spawn_unit(ctx Board board) -> PickUnit:
+    act spawn(frm ProfileToUse profile)
+    act set_owner(frm Player player)
+    frm unit = profile.unit()
+    unit.owned_by_player1 = player.value == 0
+    actions:
+        act place_in_reserve()
+            board.reserve_units.append(unit)
+        act place_at(frm BoardPosition position)
+            unit[0].position = position
+            unit.arrange()
+            board.units.append(unit)
 
 act battle_shock_step(ctx Board board) -> BattleShockStep:
     frm i = 0
@@ -304,15 +335,16 @@ act command_phase(ctx Board board) -> CommandPhase:
 
     board.current_decision_maker = board.current_player 
     if board.players_faction[int(board.current_player)] == Faction::strike_force_octavius:
+        board.current_state = CurrentStateDescription::select_oath_of_moment_target
         actions:
-            act do_not_use_oath()
-            act select_oath_of_moment_target(frm UnitID model) {
-                model.get() < board.units.size(),
-                board[model.get()].owned_by_player1 != board.current_player
+            act select_oath_of_moment_target(frm UnitID unit) {
+                unit.get() < board.units.size(),
+                board[unit.get()].owned_by_player1 != board.current_player
             }
-            board.oath_of_moment_target = model
+            board.oath_of_moment_target = unit
+            act skip()
+        board.current_state = CurrentStateDescription::use_duty_and_honour
         actions:
-            act do_not_use_duty_and_honour()
             act use_duty_and_honour(frm BInt<0, 4> objective) {
                 board.get_objective_controller(objective.value) == int(board.current_player),
                 board.command_points[int(!board.current_player)] != 0,
@@ -320,6 +352,8 @@ act command_phase(ctx Board board) -> CommandPhase:
             }
             board.mark_strat_used(Stratagem::duty_and_honour, int(board.current_player))
             board.pinned_objectives[int(board.current_player)][objective.value] = true
+            act skip()
+        board.current_state = CurrentStateDescription::none
 
     subaction*(board) shock_step = battle_shock_step(board)
 
@@ -334,8 +368,9 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
         return
     board.mark_strat_used(Stratagem::overwatch, int(!board.current_player))
     board.current_decision_maker = !board[moved_unit.get()].owned_by_player1
+    board.current_state = CurrentStateDescription::overwatch
     actions:
-        act no_overwatch()
+        act skip()
         act overwatch(frm UnitID source) {
             source.get() < board.units.size(),
             24.0 > board[source.get()].distance(board[moved_unit.get()]),
@@ -344,6 +379,7 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
             board.command_points[int(!board.current_player)] = board.command_points[int(!board.current_player)] - 1
             board.attack = attack(board, source, moved_unit, false, true)
             subaction*(board) board.attack
+    board.current_state = CurrentStateDescription::none
 
 act move(ctx Board board, ctx UnitID unit, frm Int additional_movement) -> Move:
     if board[unit.get()].models.size() == 0:
@@ -448,25 +484,23 @@ act movement_phase(ctx Board board) -> MovementPhase:
         actions:
             act end_move()
                 break
-            act move_unit(frm UnitID moving_unit) {
-                moving_unit.get() < board.units.size(),
-                board[moving_unit.get()].owned_by_player1 == board.current_player,
-                !board[moving_unit.get()].has_moved
+            act move_unit(frm UnitID id) {
+                id.get() < board.units.size(),
+                board[id].owned_by_player1 == board.current_player,
+                !board[id].has_moved
             }
-                board[moving_unit.get()].has_moved = true
-                player_move = move(board, moving_unit, 0)
-                subaction*(board, moving_unit) player_move 
-            act advance_unit(frm UnitID running_unit) {
-                running_unit.get() < board.units.size(),
-                board[running_unit.get()].owned_by_player1 == board.current_player,
-                !board[running_unit.get()].has_moved
-            }
-                board[running_unit.get()].has_moved = true
-                board[running_unit.get()].has_run = true
-                board.current_roll = rerollable_dice_roll(board, false, false, true, int(board.current_player))
-                subaction*(board) board.current_roll
-                player_move = move(board, running_unit, board.current_roll.result.value)
-                subaction*(board, running_unit) player_move 
+                act advance(frm Bool do_it)
+                if !do_it:
+                    board[id.get()].has_moved = true
+                    player_move = move(board, id, 0)
+                    subaction*(board, id) player_move 
+                else:
+                    board[id.get()].has_moved = true
+                    board[id.get()].has_run = true
+                    board.current_roll = rerollable_dice_roll(board, false, false, true, int(board.current_player))
+                    subaction*(board) board.current_roll
+                    player_move = move(board, id, board.current_roll.result.value)
+                    subaction*(board, id) player_move 
 
     board.current_decision_maker = board.current_player 
     # reserve managment
@@ -573,7 +607,19 @@ act battle(ctx Board board) -> Battle:
         board.current_round = board.current_round + 1
 
 
+fun<T> set_state(T g, String s) -> Bool:
+    print("Hey") 
+    return from_string(g, s)
 
+fun main() -> Int:
+    let state = play()
+    let dice : Dice
+    let str = to_string(state).to_indented_lines()
+    print(str)
+    set_state(state, str)
+    if from_string(state, str):
+        return 0
+    return 1
 
 fun get_num_players() -> Int:
     return 2
@@ -584,6 +630,10 @@ fun max_game_lenght() -> Int:
 fun gen_methods():
     let x : Vector<Bool>
     let action : AnyGameAction
+    let board : Board
+    for alternative of action:
+        pretty_string(board, alternative)
+    pretty_string(board, action)
     let profile = make_tantus()
     to_string(Weapon::captain_storm_bolter)
     to_string(Profile::captain_octavius)
@@ -594,6 +644,8 @@ fun gen_methods():
     to_string(action)
     print(action)
     to_string(enumerate(action))
+    to_string(true)
+    to_string(CurrentStateDescription::none)
     print(enumerate(action))
 
 fun fuzz(Vector<Byte> input):
@@ -628,39 +680,47 @@ fun fuzz(Vector<Byte> input):
 fun pretty_print(Game game):
     print_indented(game)
 
+fun<T> pretty_string(Board b, T obj) -> String:
+    if obj is GameSelectWeapon:
+        if !(b.get_current_attacking_model().weapons.size() > obj.weapon_id.value):
+            return to_string(obj)
+        return to_string(b.get_current_attacking_model().weapons[obj.weapon_id.value])
+    return to_string(obj)
+
+
+act attack_sequence(ctx Board board, frm Bool overwatch, frm Bool melee) -> AttackSequence:
+    act select_target(UnitID source, UnitID target) { 
+        source.get() < board.units.size(), 
+        target.get() < board.units.size(), 
+        source.get() != target.get()
+    }
+    board.attack = attack(board, source, target, overwatch, melee)
+    subaction*(board) board.attack
 
 @classes
 act play() -> Game:
     frm board : Board
-    board.command_points[0] = 1
-    board.command_points[1] = 0
+    frm sequence : AttackSequence
 
-    board.current_decision_maker = false  # Player 0's turn
-    # Player 0 chooses their unit
-    frm unit : Unit
+    while true:
+        actions:
+            act spawn_unit()
+                subaction*(board) spawn_unit = spawn_unit(board)
+            act skip()
+                break
+
     actions:
-        act select_infernus_squad()
-            unit = make_infernus_squad()
-        act select_terminator_squad()
-            unit = make_terminator_squad()
-
-    unit.owned_by_player1 = false
-    board.units.append(unit)
-
-    # Player 1's Terminator Squad
-    let enemy_unit = make_infernus_squad()
-    enemy_unit.owned_by_player1 = true
-    board.units.append(enemy_unit)
-
-    # Deploy units 12 inches apart
-    board.units[0].move_to(make_board_position(0, 0))
-    board.units[0].arrange()
-    board.units[1].move_to(make_board_position(0, 12))
-    board.units[1].arrange()
-
-    # Player 0 performs a ranged attack
-    board.attack = attack(board, unit_id(0), unit_id(1), false, false)
-    subaction*(board) board.attack
+        act only_shoot()
+            sequence = attack_sequence(board, false, false)
+            subaction*(board) sequence
+        act only_overwatch()
+            sequence = attack_sequence(board, true, false)
+            subaction*(board) sequence
+        act only_melee_attack()
+            sequence = attack_sequence(board, false, true)
+            subaction*(board) sequence
+        act fullgame()
+            subaction*(board) battle = battle(board)
 
 fun score(Game g, Int player_id) -> Float:
     let count = g.board.units[1].models.size()

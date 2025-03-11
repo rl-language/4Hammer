@@ -9,7 +9,14 @@ var alive_units = {}
 func _ready() -> void:
 	spawn_needed_models()
 	GlobalRules.on_state_changed.connect(self.on_state_change)
+	GlobalRules.on_state_reset.connect(self.on_reset)
 	InteractionManager.models = self
+
+func on_reset():
+	for child in get_children():
+		child.queue_free()
+	alive_nodes.clear()
+	alive_units.clear()
 
 func spawn_unit_for(unit_id):
 	if unit_id in alive_units:
@@ -21,7 +28,7 @@ func spawn_unit_for(unit_id):
 	alive_units[unit_id] = child
 	child.unit_id = unit_id
 	child.set_text(RLCLib.convert_string(GlobalRules.get_unit(unit_id).get_name().get_value()))
-
+	
 	return child
 
 func spawn_model_for(unit_id: int, model_id: int):

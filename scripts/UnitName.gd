@@ -3,6 +3,13 @@ extends CenterContainer
 var unit_id : int
 var models = []
 
+func _init() -> void:
+	GlobalRules.on_state_changed.connect(self.on_state_changed)
+
+func on_state_changed():
+	if GlobalRules.library.size(GlobalRules.get_state().get_board().get_units()) > unit_id:
+		set_text(RLCLib.convert_string(GlobalRules.get_unit(unit_id).get_name().get_value()))
+
 func remove():
 	get_parent().remove_unit(self)
 	queue_free()

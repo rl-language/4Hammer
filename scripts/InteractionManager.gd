@@ -4,12 +4,14 @@ var source : Sprite2D
 var intesity = 0.0
 var current_select_model_action = null
 var current_target_unit_action = null
+var current_select_unit_action = null
 var models = null
 
 func on_state_change():
 	clear()
 	current_select_model_action = GlobalRules.get_current_select_model_action()
 	current_target_unit_action = GlobalRules.get_current_target_action()
+	current_select_unit_action = GlobalRules.get_current_select_unit_action()
 	mark_possible_targets()
 		
 
@@ -18,6 +20,12 @@ func select(node : Node2D):
 		var content = current_select_model_action.get_member(0) as RLCModelID
 		content.get_id().set_value(node.model_id)
 		GlobalRules.apply_action(current_select_model_action)
+		return
+	if current_select_unit_action:
+		var content = current_select_unit_action.get_member(0) as RLCUnitID
+		content.get_id().set_value(node.unit_id)
+		GlobalRules.apply_action(current_select_unit_action)
+		return
 	if current_target_unit_action:
 		if source == null:
 			source = node
@@ -40,6 +48,11 @@ func mark_possible_target(node):
 		var content = current_select_model_action.get_member(0) as RLCModelID
 		content.get_id().set_value(node.model_id)
 		if GlobalRules.can_apply(current_select_model_action):
+			node.show_aura()
+	if current_select_unit_action:
+		var content = current_select_unit_action.get_member(0) as RLCUnitID
+		content.get_id().set_value(node.unit_id)
+		if GlobalRules.can_apply(current_select_unit_action):
 			node.show_aura()
 	if current_target_unit_action:
 		if source == null:

@@ -43,6 +43,18 @@ static godot::Variant rlc_string_to_godot_string(godot::Variant s) {
   return godot::String((char *)casted->content->get(index));
 }
 
+static godot::Variant godot_string_to_rlc_string(godot::String inputS) {
+  CharString char_str = inputS.utf8();
+  char *data = const_cast<char *>(char_str.get_data());
+
+  ::String *mallocated = (::String *)malloc(sizeof(::String));
+  godot::Ref<RLCString> to_return;
+  to_return.instantiate();
+  godot::Object::cast_to<RLCString>(*to_return)->setNonOwning(mallocated);
+  rl_s__strlit_r_String(mallocated, &data);
+  return to_return;
+}
+
 void initialize_example_module(ModuleInitializationLevel p_level) {
 
   if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
@@ -52,6 +64,9 @@ void initialize_example_module(ModuleInitializationLevel p_level) {
 
   godot::ClassDB::bind_static_method(
       "RLCLib", godot::D_METHOD("convert_string"), &rlc_string_to_godot_string);
+  godot::ClassDB::bind_static_method(
+      "RLCLib", godot::D_METHOD("godot_string_to_rlc_string"),
+      &godot_string_to_rlc_string);
 }
 
 void uninitialize_example_module(ModuleInitializationLevel p_level) {

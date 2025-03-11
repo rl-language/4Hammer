@@ -63,6 +63,9 @@ cls Model:
     fun distance(Model model) -> Float:
         return (model.position.as_vector() - self.position.as_vector()).length() - ((model.base_size_in_inches() + self.base_size_in_inches()) /2.0)
 
+    fun wounds_left() -> Int:
+        return self.profile.wounds() - self.suffered_wounds.value
+
 using ModelVector = BoundedVector<Model, 7>
 
 cls ModelID: # required
@@ -297,6 +300,9 @@ cls Unit:
 
     fun get(Int model_id) -> ref Model:
         return self.models[model_id]
+
+    fun get(ModelID model_id) -> ref Model:
+        return self.models[model_id.get()]
 
     fun arrange():
         if self.models.size() == 1:

@@ -1,9 +1,11 @@
-[gd_scene load_steps=5 format=3 uid="uid://dcwfqeyhcjyud"]
+[gd_scene load_steps=7 format=3 uid="uid://dcwfqeyhcjyud"]
 
 [ext_resource type="Script" path="res://scripts/Spawner.gd" id="1_lwvmf"]
 [ext_resource type="PackedScene" uid="uid://bomo4fmpfvsfk" path="res://scenes/UI.tscn" id="2_d0w1n"]
 [ext_resource type="Script" path="res://scripts/SelectPointManager.gd" id="3_ghfpk"]
 [ext_resource type="Script" path="res://scripts/CameraControls.gd" id="3_h3ntp"]
+[ext_resource type="Script" path="res://scripts/boardl.gd" id="5_gsjyu"]
+[ext_resource type="PackedScene" uid="uid://bc5tfqb5qlc86" path="res://scenes/objective.tscn" id="5_ksost"]
 
 [node name="MainNode" type="Node2D"]
 
@@ -12,16 +14,40 @@ script = ExtResource("1_lwvmf")
 
 [node name="UI" parent="." instance=ExtResource("2_d0w1n")]
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." node_paths=PackedStringArray("center_on")]
 position = Vector2(1000, 1000)
 zoom = Vector2(0.4, 0.4)
 script = ExtResource("3_h3ntp")
+center_on = NodePath("../Panel")
 
 [node name="SelectPointManager" type="Node2D" parent="."]
 script = ExtResource("3_ghfpk")
 
 [node name="Panel" type="Panel" parent="."]
-modulate = Color(0.27451, 0.639216, 0, 0.847059)
+self_modulate = Color(0.274581, 0.797447, 0.230579, 1)
 z_index = -2
-offset_right = 2816.0
-offset_bottom = 1920.0
+offset_left = -32.0
+offset_top = -32.0
+offset_right = 2784.0
+offset_bottom = 1888.0
+mouse_filter = 2
+script = ExtResource("5_gsjyu")
+
+[node name="ValidLocations" type="Control" parent="Panel"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Objective4" parent="Panel" instance=ExtResource("5_ksost")]
+position = Vector2(-16750, -16750)
+index = 3
+
+[node name="Objective1" parent="Panel" instance=ExtResource("5_ksost")]
+
+[node name="Objective3" parent="Panel" instance=ExtResource("5_ksost")]
+position = Vector2(-59625, -59625)
+index = 2
+
+[node name="Objective2" parent="Panel" instance=ExtResource("5_ksost")]
+position = Vector2(-4500, -4500)
+index = 1

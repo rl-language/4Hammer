@@ -1,30 +1,32 @@
-[gd_scene load_steps=8 format=3 uid="uid://bomo4fmpfvsfk"]
+[gd_scene load_steps=16 format=3 uid="uid://bomo4fmpfvsfk"]
 
 [ext_resource type="Script" path="res://scripts/UI.gd" id="1_0kuxd"]
 [ext_resource type="Script" path="res://scripts/AcceptRejectAction.gd" id="3_xtmgh"]
 [ext_resource type="Script" path="res://scripts/RollDiceButton.gd" id="5_oo60i"]
 [ext_resource type="PackedScene" uid="uid://bbeju8wn2shf6" path="res://scenes/all_actions_panel.tscn" id="6_2o12q"]
 [ext_resource type="Script" path="res://scripts/CurrentActionLabell.gd" id="6_s2qdh"]
+[ext_resource type="Script" path="res://scripts/reset_button.gd" id="6_ykt2e"]
+[ext_resource type="Script" path="res://scripts/save_state.gd" id="7_8mpiw"]
 [ext_resource type="Script" path="res://scripts/MultipleChoises.gd" id="7_hl21g"]
+[ext_resource type="Script" path="res://scripts/game_content.gd" id="8_2xslx"]
+[ext_resource type="Script" path="res://scripts/right_bar.gd" id="8_e40ae"]
 [ext_resource type="Script" path="res://scripts/TraceManager.gd" id="8_hfwxe"]
+
+[sub_resource type="InputEventAction" id="InputEventAction_x4sy6"]
+action = &"ResetState"
+
+[sub_resource type="Shortcut" id="Shortcut_cmyv0"]
+events = [SubResource("InputEventAction_x4sy6")]
+
+[sub_resource type="InputEventAction" id="InputEventAction_xlcf0"]
+action = &"ToggleAllActionsPanel"
+
+[sub_resource type="Shortcut" id="Shortcut_tfb78"]
+events = [SubResource("InputEventAction_xlcf0")]
 
 [node name="UI" type="CanvasLayer"]
 process_mode = 3
 script = ExtResource("1_0kuxd")
-
-[node name="EventScrollable" type="ScrollContainer" parent="."]
-anchors_preset = 11
-anchor_left = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 0
-grow_vertical = 2
-size_flags_horizontal = 3
-horizontal_scroll_mode = 0
-
-[node name="EventBar" type="VBoxContainer" parent="EventScrollable"]
-layout_mode = 2
-theme_override_constants/separation = 12
 
 [node name="AcceptRejectAction" type="VBoxContainer" parent="."]
 visible = false
@@ -139,6 +141,31 @@ grow_vertical = 2
 size_flags_vertical = 10
 alignment = 2
 
+[node name="ResetButton" type="Button" parent="LeftBar"]
+layout_mode = 2
+action_mode = 0
+shortcut = SubResource("Shortcut_cmyv0")
+text = "Reset"
+script = ExtResource("6_ykt2e")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="LeftBar"]
+layout_mode = 2
+
+[node name="SaveState" type="Button" parent="LeftBar/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+action_mode = 0
+shortcut = SubResource("Shortcut_cmyv0")
+text = "Save State"
+script = ExtResource("7_8mpiw")
+
+[node name="LoadState" type="Button" parent="LeftBar/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+action_mode = 0
+shortcut = SubResource("Shortcut_cmyv0")
+text = "Load State"
+
 [node name="AllActionsPanel" parent="LeftBar" instance=ExtResource("6_2o12q")]
 layout_mode = 2
 
@@ -154,7 +181,77 @@ size_flags_vertical = 8
 theme_override_font_sizes/font_size = 30
 text = "Next trace action"
 
+[node name="HideActionsPanel" type="Button" parent="LeftBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 8
+theme_override_font_sizes/font_size = 30
+action_mode = 0
+shortcut = SubResource("Shortcut_tfb78")
+text = "<<"
+
+[node name="RightBar" type="VBoxContainer" parent="."]
+custom_minimum_size = Vector2(257, 0)
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_constants/separation = 5
+script = ExtResource("8_e40ae")
+
+[node name="Panel" type="Control" parent="RightBar"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="EventScrollable" type="ScrollContainer" parent="RightBar/Panel"]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 0
+grow_vertical = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 0
+
+[node name="EventBar" type="VBoxContainer" parent="RightBar/Panel/EventScrollable"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="GameContent" type="TextEdit" parent="RightBar/Panel"]
+visible = false
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -8.0
+grow_horizontal = 0
+grow_vertical = 2
+text = "asdadas"
+script = ExtResource("8_2xslx")
+
+[node name="TogglePanels" type="Button" parent="RightBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 8
+theme_override_font_sizes/font_size = 30
+action_mode = 0
+text = ">>"
+
 [connection signal="button_down" from="AcceptRejectAction/HBoxContainer/OkButton" to="AcceptRejectAction" method="_on_ok_button_button_down"]
 [connection signal="button_down" from="AcceptRejectAction/HBoxContainer/CancelButton" to="AcceptRejectAction" method="_on_cancel_button_button_down"]
 [connection signal="button_down" from="RollDiceButton" to="RollDiceButton" method="_on_button_down"]
+[connection signal="pressed" from="LeftBar/ResetButton" to="LeftBar/ResetButton" method="_on_pressed"]
+[connection signal="pressed" from="LeftBar/HBoxContainer/SaveState" to="LeftBar/HBoxContainer/SaveState" method="_on_pressed"]
+[connection signal="pressed" from="LeftBar/HBoxContainer/LoadState" to="LeftBar/HBoxContainer/SaveState" method="_on_load_state_pressed"]
 [connection signal="button_down" from="LeftBar/TraceManager/NextTraceAction" to="LeftBar/TraceManager" method="_on_next_trace_action_button_down"]
+[connection signal="pressed" from="LeftBar/HideActionsPanel" to="LeftBar/AllActionsPanel" method="toggle"]
+[connection signal="focus_exited" from="RightBar/Panel/GameContent" to="RightBar/Panel/GameContent" method="_on_focus_exited"]
+[connection signal="text_changed" from="RightBar/Panel/GameContent" to="RightBar/Panel/GameContent" method="_on_text_changed"]
+[connection signal="pressed" from="RightBar/TogglePanels" to="RightBar" method="toggle"]

@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://bc5tfqb5qlc86"]
+
+[ext_resource type="Texture2D" uid="uid://ojood68ffu8e" path="res://scenes/circle.tres" id="1_nl47v"]
+[ext_resource type="Script" path="res://scripts/objective.gd" id="2_qvtrn"]
+
+[node name="Objective" type="Sprite2D"]
+self_modulate = Color(0.741176, 0.341176, 0.0784314, 0.627451)
+position = Vector2(-1000, -1000)
+scale = Vector2(3.5, 3.5)
+texture = ExtResource("1_nl47v")
+script = ExtResource("2_qvtrn")

@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/UnitName.gd" id="1_xuguj"]
 
 [node name="UnitName" type="CenterContainer"]
+process_mode = 3
 z_index = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -17,6 +18,7 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
+mouse_filter = 2
 script = ExtResource("1_xuguj")
 
 [node name="Label" type="Label" parent="."]

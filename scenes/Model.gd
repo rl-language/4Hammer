@@ -67,6 +67,7 @@ func _process(delta):
 	self.position.y = model.get_position().get_y().get_value()*64
 	var both_scale = GlobalRules.library.base_size(model.get_profile()) / 25.0
 	scale = Vector2(both_scale, both_scale)
+	$Wounds.text = str(GlobalRules.library.wounds_left(model))
 	
 func _on_area_2d_input_event(viewport, event, shape_idx):
 	if event is InputEventMouseButton:

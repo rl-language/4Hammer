@@ -1,0 +1,64 @@
+[gd_scene load_steps=8 format=3 uid="uid://bbeju8wn2shf6"]
+
+[ext_resource type="Script" path="res://scripts/AllActionsPanel.gd" id="1_2vwla"]
+[ext_resource type="Script" path="res://scripts/NextActionButton.gd" id="2_j0ih2"]
+
+[sub_resource type="InputEventAction" id="InputEventAction_7kpes"]
+action = &"RandomAction"
+
+[sub_resource type="Shortcut" id="Shortcut_lt8o1"]
+events = [SubResource("InputEventAction_7kpes")]
+
+[sub_resource type="InputEventAction" id="InputEventAction_0es8j"]
+action = &"SolveRandomness"
+
+[sub_resource type="Shortcut" id="Shortcut_8x670"]
+events = [SubResource("InputEventAction_0es8j")]
+
+[sub_resource type="Theme" id="Theme_3nmyr"]
+
+[node name="AllActionsPanel" type="PanelContainer"]
+size_flags_vertical = 3
+script = ExtResource("1_2vwla")
+
+[node name="VContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="NextActionButton" type="Button" parent="VContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 30
+shortcut = SubResource("Shortcut_lt8o1")
+text = "Random action"
+script = ExtResource("2_j0ih2")
+
+[node name="SolveRandomnessButton" type="Button" parent="VContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 30
+shortcut = SubResource("Shortcut_8x670")
+text = "Random actions"
+script = ExtResource("2_j0ih2")
+
+[node name="VSeparator" type="HSeparator" parent="VContainer"]
+layout_mode = 2
+
+[node name="ActionListScrollable" type="ScrollContainer" parent="VContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme = SubResource("Theme_3nmyr")
+horizontal_scroll_mode = 0
+
+[node name="ActionList" type="VBoxContainer" parent="VContainer/ActionListScrollable"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Button" type="Button" parent="VContainer/ActionListScrollable/ActionList"]
+layout_mode = 2
+size_flags_vertical = 0
+text = "sdasd"
+
+[connection signal="pressed" from="VContainer/NextActionButton" to="VContainer/NextActionButton" method="_on_button_down"]
+[connection signal="pressed" from="VContainer/SolveRandomnessButton" to="VContainer/SolveRandomnessButton" method="_on_button_down_actions"]

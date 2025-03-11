@@ -1,16 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://ftituuecgo5n"]
+[gd_scene load_steps=6 format=3 uid="uid://ftituuecgo5n"]
 
 [ext_resource type="Script" path="res://scenes/Model.gd" id="1_7y218"]
-
-[sub_resource type="Gradient" id="Gradient_2ed0p"]
-offsets = PackedFloat32Array(0, 0.668831, 0.707792, 0.728916)
-colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_kdlmd"]
-gradient = SubResource("Gradient_2ed0p")
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-fill_to = Vector2(1, 1)
+[ext_resource type="Texture2D" uid="uid://ojood68ffu8e" path="res://scenes/circle.tres" id="1_52okd"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_mnmnr"]
 radius = 31.0
@@ -26,7 +17,7 @@ fill_from = Vector2(0.5, 0.5)
 
 [node name="Model" type="Sprite2D"]
 position = Vector2(100, 100)
-texture = SubResource("GradientTexture2D_kdlmd")
+texture = ExtResource("1_52okd")
 script = ExtResource("1_7y218")
 
 [node name="Area2D" type="Area2D" parent="."]
@@ -41,6 +32,22 @@ modulate = Color(1, 1, 0.117647, 1)
 z_index = -1
 scale = Vector2(1.2, 1.2)
 texture = SubResource("GradientTexture2D_ebjdi")
+
+[node name="Wounds" type="Label" parent="."]
+modulate = Color(0, 0, 0, 1)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -32.0
+offset_top = -32.0
+offset_right = -32.0
+offset_bottom = -32.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 40
+text = "2"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [connection signal="input_event" from="Area2D" to="." method="_on_area_2d_input_event"]
 [connection signal="mouse_entered" from="Area2D" to="." method="_on_area_2d_mouse_entered"]

@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://dxwkpjnasdyp8"]
+
+[ext_resource type="Script" path="res://scripts/table_quad.gd" id="1_0owow"]
+
+[sub_resource type="Gradient" id="Gradient_k1g7e"]
+offsets = PackedFloat32Array(0.902335, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_12e80"]
+gradient = SubResource("Gradient_k1g7e")
+fill = 2
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 1)
+
+[node name="TableQuad" type="Sprite2D"]
+modulate = Color(0.886275, 0.878431, 0, 0.380392)
+texture = SubResource("GradientTexture2D_12e80")
+script = ExtResource("1_0owow")
