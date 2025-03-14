@@ -2,13 +2,13 @@ import bounded_arg
 import stats
 import vector2d
 import machine_learning
+import range
 
 using Wounds = LinearlyDistributedInt<0, 10>
 const MAX_WEAPONS = 4
 using WeaponsVector = BoundedVector<Weapon, MAX_WEAPONS>
 using Abilities = BoundedVector<AbilityKind, 4>
 using Keywords = BoundedVector<Keyword, 7>
-
 
 cls Model:
     BoardPosition position # required
@@ -102,6 +102,8 @@ cls Unit:
     Bool has_shoot
     Bool battle_socked
     Bool has_charged
+    Bool can_shoot
+    Bool can_charge
     ModelID starting_strenght
     PhaseModifiers phase_modifiers
 
@@ -111,6 +113,9 @@ cls Unit:
     fun clear_phase_modifiers():
         let mod : PhaseModifiers
         self.phase_modifiers = mod
+
+    fun is_lone_operative() -> Bool:
+        return self.has_ability(AbilityKind::lone_operative)
 
     fun can_reroll_charge() -> Bool:
         return self.has_ability(AbilityKind::unstoppable_valour)
@@ -314,11 +319,13 @@ cls Unit:
             model.position.x = model.position.x + int(1.0 + model.base_size_in_inches())
             i = i + 1
 
-    fun damage(Int target_model_id, Int damage):
+    fun damage(Int target_model_id, Int damage) -> Bool:
         ref target_model = self.models[target_model_id]
         target_model.suffered_wounds = target_model.suffered_wounds + damage 
         if target_model.suffered_wounds >= target_model.profile.wounds(): 
             self.models.erase(target_model_id)
+            return true
+        return false
         
 
 
@@ -418,7 +425,64 @@ fun make_octavius() -> Unit:
     profile.models.append(model)
     return profile
 
-fun make_octavious_strike_force(UnitVector out, Bool owner):
+fun make_death_shadow() -> Unit:
+    let profile : Unit 
+    let model : Model
+    model.profile = Profile::death_shadow
+    model.abilities.append(AbilityKind::infiltrators)
+    model.abilities.append(AbilityKind::lone_operative)
+    model.abilities.append(AbilityKind::stealth)
+    model.abilities.append(AbilityKind::shadow_in_the_warp)
+    model.abilities.append(AbilityKind::neural_disruption)
+    model.abilities.append(AbilityKind::psychological_saboteur)
+    model.keywords.append(Keyword::infantry)
+    model.keywords.append(Keyword::great_devourer)
+    model.keywords.append(Keyword::death_shadow)
+    model.keywords.append(Keyword::vanguard_invader)
+    model.keywords.append(Keyword::neurolictor)
+    model.keywords.append(Keyword::tyranids)
+    profile.name = "death's shadow"s
+    profile.models.append(model)
+    return profile
+
+fun make_lictor() -> Unit:
+    let profile : Unit 
+    let model : Model
+    model.profile = Profile::lictor
+    model.abilities.append(AbilityKind::infiltrators)
+    model.abilities.append(AbilityKind::lone_operative)
+    model.abilities.append(AbilityKind::stealth)
+    model.abilities.append(AbilityKind::fight_first)
+    model.abilities.append(AbilityKind::feeder_tendrils)
+    model.keywords.append(Keyword::infantry)
+    model.keywords.append(Keyword::great_devourer)
+    model.keywords.append(Keyword::lictor)
+    model.keywords.append(Keyword::vanguard_invader)
+    model.keywords.append(Keyword::tyranids)
+    profile.name = "lictor"s
+    profile.models.append(model)
+    return profile
+
+fun make_von_ryan_leaper() -> Unit:
+    let profile : Unit 
+    let model : Model
+    model.profile = Profile::von_ryan_leaper
+    model.abilities.append(AbilityKind::infiltrators)
+    model.abilities.append(AbilityKind::stealth)
+    model.abilities.append(AbilityKind::fight_first)
+    model.abilities.append(AbilityKind::pouncing_leap)
+    model.keywords.append(Keyword::infantry)
+    model.keywords.append(Keyword::von_ryan_leaper)
+    model.keywords.append(Keyword::great_devourer)
+    model.keywords.append(Keyword::vanguard_invader)
+    model.keywords.append(Keyword::tyranids)
+    profile.name = "von ryan's leaper"s
+    profile.models.append(model)
+    profile.models.append(model)
+    profile.models.append(model)
+    return profile
+
+fun make_octavious_strike_force(UnitVector out, Bool owner) -> Faction:
     out.append(make_octavius())
     out.back().owned_by_player1 = owner
     out.append(make_tantus())
@@ -427,3 +491,14 @@ fun make_octavious_strike_force(UnitVector out, Bool owner):
     out.back().owned_by_player1 = owner
     out.append(make_terminator_squad())
     out.back().owned_by_player1 = owner
+    return Faction::strike_force_octavius
+
+fun make_insidious_infiltrators(UnitVector out, Bool owner) -> Faction:
+    out.append(make_death_shadow())
+    out.back().owned_by_player1 = owner
+    out.append(make_lictor())
+    out.back().owned_by_player1 = owner
+    for i in range(3):
+        out.append(make_von_ryan_leaper())
+        out.back().owned_by_player1 = owner
+    return Faction::insidious_infiltrators

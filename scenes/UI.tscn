@@ -93,19 +93,6 @@ theme_override_font_sizes/font_size = 30
 text = "Roll Dice"
 script = ExtResource("5_oo60i")
 
-[node name="CurrentActionLabel" type="Label" parent="."]
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -20.0
-offset_right = 20.0
-offset_bottom = 23.0
-grow_horizontal = 2
-theme_override_font_sizes/font_size = 50
-text = "CurrentActionLabel
-"
-script = ExtResource("6_s2qdh")
-
 [node name="MultipleChoise" type="VBoxContainer" parent="."]
 anchors_preset = 7
 anchor_left = 0.5
@@ -120,11 +107,12 @@ grow_vertical = 0
 theme_override_constants/separation = 3
 script = ExtResource("7_hl21g")
 
-[node name="MultipleChoiseDecision" type="Label" parent="MultipleChoise"]
+[node name="CurrentActionLabel" type="Label" parent="MultipleChoise"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 30
-text = "Pick one of the following
+theme_override_font_sizes/font_size = 50
+text = "CurrentActionLabel
 "
+script = ExtResource("6_s2qdh")
 
 [node name="ChoiseList" type="HBoxContainer" parent="MultipleChoise"]
 layout_mode = 2

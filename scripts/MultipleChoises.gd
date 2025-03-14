@@ -35,7 +35,6 @@ func on_state_change():
 
 	if added != 0:	
 		visible = true
-		$MultipleChoiseDecision.visible = added != 1
 
 func clear():
 	for node in $ChoiseList.get_children():

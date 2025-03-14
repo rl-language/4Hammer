@@ -26,6 +26,8 @@ enum WeaponRuleKind:
     letal_hits 
     precision
     hazardous
+    anti_monster
+    anti_vehichle
 
     fun equal(WeaponRuleKind other) -> Bool:
         return self.value == other.value
@@ -183,6 +185,30 @@ enum Weapon:
         Int penetration = 2
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
+    death_shadow_claws_and_talons:
+        Int range = 0
+        Stat attacks = raw_stat(6)
+        Int skill = 2
+        Int strenght = 6
+        Int penetration = 2
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::precision))
+    lictor_claws_and_talons:
+        Int range = 0
+        Stat attacks = raw_stat(6)
+        Int skill = 2
+        Int strenght = 7
+        Int penetration = 2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::precision))
+    leapers_talon:
+        Int range = 0
+        Stat attacks = raw_stat(6)
+        Int skill = 3
+        Int strenght = 5
+        Int penetration = 1
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules()
 
     fun get_rule_parameter(WeaponRuleKind rule) -> Int:
         let i = 0
@@ -217,6 +243,14 @@ enum AbilityKind:
     unstoppable_valour
     fight_first
     fury_of_the_first
+    infiltrators
+    lone_operative
+    stealth
+    shadow_in_the_warp
+    neural_disruption
+    psychological_saboteur
+    feeder_tendrils 
+    pouncing_leap
 
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value
@@ -230,6 +264,7 @@ fun size_as_observation_tensor(AbilityKind kind) -> Int:
 
 enum Faction:
     strike_force_octavius
+    insidious_infiltrators
 
     fun equal(Faction other) -> Bool:
         return self.value == other.value
@@ -247,6 +282,13 @@ enum Keyword:
     psyker
     adeptus_astartes 
     librarian_tantus
+    great_devourer
+    death_shadow
+    vanguard_invader
+    neurolictor
+    von_ryan_leaper 
+    lictor
+    tyranids
     monster # only implemented for veteran instincts 
     vehicle # only implemented for vetern instincts
 
@@ -297,6 +339,33 @@ enum Profile:
         Int leadership = 6
         Int control = 1
         Float base_size = 40.0
+    death_shadow:
+        Int movement = 8
+        Int thoughness = 5
+        Int save = 4
+        Int invuln_save = 4
+        Int wounds = 7
+        Int leadership = 7
+        Int control = 1
+        Float base_size = 50.0
+    lictor:
+        Int movement = 8
+        Int thoughness = 6
+        Int save = 4
+        Int invuln_save = 10
+        Int wounds = 6
+        Int leadership = 7
+        Int control = 1
+        Float base_size = 50.0
+    von_ryan_leaper:
+        Int movement = 10
+        Int thoughness = 5
+        Int save = 4
+        Int invuln_save = 6
+        Int wounds = 3
+        Int leadership = 8
+        Int control = 1
+        Float base_size = 40.0
 
     fun equal(Profile other) -> Bool:
         return self.value == other.value
@@ -323,6 +392,14 @@ enum Stratagem:
         Int cost = 1 
     duty_and_honour:
         Int cost = 1 
+    heroic_intervention:
+        Int cost = 2
+    swift_kill:
+        Int cost = 1
+    pheromone_trace:
+        Int cost = 1
+    predators_not_prey:
+        Int cost = 1
 
     fun equal(Stratagem other) -> Bool:
         return self.value == other.value

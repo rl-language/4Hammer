@@ -1,95 +1,15 @@
-# game: 0
-select_terminator_squad {}
-no_defensive_stratagem {}
-no_offensive_stratagem {}
-select_weapon {weapon_id: 0} 
-roll {result: 1} 
-keep_it {do_it: true} 
-roll {result: 6} 
-keep_it {do_it: true} 
-roll {result: 1} 
-keep_it {do_it: true} 
-roll {result: 3} 
-keep_it {do_it: true} 
-roll {result: 3} 
-keep_it {do_it: true} 
-roll {result: 2} 
-keep_it {do_it: true} 
-select_weapon {weapon_id: 0} 
-roll {result: 5} 
-keep_it {do_it: true} 
-roll {result: 3} 
-keep_it {do_it: true} 
-roll {result: 5} 
-keep_it {do_it: true} 
-roll {result: 2} 
-keep_it {do_it: true} 
-roll {result: 6} 
-keep_it {do_it: true} 
-roll {result: 4} 
-keep_it {do_it: true} 
-allocate_wound {id: 4} 
-roll {result: 3} 
-roll {result: 5} 
-keep_it {do_it: true} 
-roll {result: 4} 
-keep_it {do_it: true} 
-allocate_wound {id: 4} 
-roll {result: 1} 
-select_weapon {weapon_id: 0} 
-roll {result: 6} 
-keep_it {do_it: true} 
-roll {result: 2} 
-keep_it {do_it: true} 
-roll {result: 2} 
-keep_it {do_it: true} 
-roll {result: 3} 
-keep_it {do_it: true} 
-roll {result: 4} 
-keep_it {do_it: true} 
-allocate_wound {id: 4} 
-roll {result: 5} 
-roll {result: 1} 
-keep_it {do_it: true} 
-select_weapon {weapon_id: 0} 
-roll {result: 2} 
-keep_it {do_it: true} 
-roll {result: 3} 
-keep_it {do_it: true} 
-roll {result: 2} 
-keep_it {do_it: true} 
-roll {result: 3} 
-keep_it {do_it: true} 
-roll {result: 6} 
-keep_it {do_it: true} 
-allocate_wound {id: 4} 
-roll {result: 2} 
-roll {result: 6} 
-keep_it {do_it: true} 
-roll {result: 3} 
-keep_it {do_it: true} 
-select_weapon {weapon_id: 1} 
-roll {result: 3} 
-keep_it {do_it: true} 
-roll {result: 2} 
-keep_it {do_it: true} 
-roll {result: 4} 
-keep_it {do_it: true} 
-roll {result: 2} 
-keep_it {do_it: true} 
-roll {result: 2} 
-keep_it {do_it: true} 
-roll {result: 1} 
-keep_it {do_it: true} 
-roll {result: 6} 
-keep_it {do_it: true} 
-roll {result: 4} 
-keep_it {do_it: true} 
-allocate_wound {id: 1} 
-roll {result: 2} 
-roll {result: 3} 
-keep_it {do_it: true} 
-roll {result: 3} 
-keep_it {do_it: true} 
-allocate_wound {id: 3} 
-roll {result: 1} 
+done_attaching {}
+done_attaching {}
+done_deploying {}
+done_deploying {}
+use_shadow_in_the_warp {do_it: true}
+skip {}
+skip {}
+end_move {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}

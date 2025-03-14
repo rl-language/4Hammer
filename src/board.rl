@@ -19,8 +19,11 @@ enum CurrentStateDescription:
 cls AttackSequenceInfo:
     UnitID source_unit_id # required
     UnitID target_unit_id # required
+    Bool penetration_bonus
     Bool hit_roll_bonus
+    Bool hit_roll_malus
     Bool wound_roll_malus
+    Bool wound_roll_bonus
     Bool reroll_hits
     Bool only_hits_on_6
     Bool reroll_wounds
@@ -41,8 +44,12 @@ cls PhaseInfo:
 cls Board:
     UnitVector units # required
     UnitVector reserve_units # required
+
     UnitID oath_of_moment_target
+    Bool[2] has_used_shadow_in_the_warp
+
     AttackSequenceInfo attack_info
+    Bool[2] obtained_extra_cp_this_round
     LinearlyDistributedInt<0, MAX_CP>[2] command_points
     LinearlyDistributedInt<0, MAX_ROUNDS> current_round
     Bool current_player
@@ -69,11 +76,33 @@ cls Board:
             self.units[i].clear_phase_modifiers()
             i = i + 1
 
+    fun add_extra_cp(Int player_id):
+        if self.obtained_extra_cp_this_round[player_id]:
+            return
+        self.obtained_extra_cp_this_round[player_id] = true
+        self.command_points[player_id] = self.command_points[player_id] + 1
+
     fun get_current_attacking_model() -> ref Model:
         return self[self.attack.source][self.attack.model]
 
     fun get_score(Int player_id) -> Int:
         return self.score[player_id].value
+
+    fun any_enemy_in_range_has_ability(Unit unit, Float allowed_range, AbilityKind ability) -> Bool:
+        for i in range(self.units.size()):
+            if self[i].owned_by_player1 == unit.owned_by_player1:
+                continue
+            if unit.distance(self[i]) > allowed_range:
+               continue 
+            if self[i].has_ability(ability):
+                return true
+        return false
+
+    fun can_use_strat(Bool player, Stratagem strat) -> Bool:
+        return self.command_points[int(player)] >= Stratagem::heroic_intervention.cost() and !self.has_used_strat(strat, int(!player))
+
+    fun pay_strat(Bool player, Stratagem strat):
+        self.command_points[int(player)] = self.command_points[int(player)] - strat.cost()
 
     fun mark_strat_used(Stratagem strat, Int player):
         self.phase_info.already_used_stratagems[player].append(strat)
@@ -101,6 +130,15 @@ cls Board:
                 count = count + self[i].models.size()
             i = i + 1 
         return count
+
+    fun is_in_melee(Unit u) -> Bool:
+        for model in u.models:
+            if self.least_distance_from_player_units(model.position, !u.owned_by_player1) < 1.0:
+                return true
+        return false
+
+    fun faction_of_unit(UnitID id) -> Faction:
+        return self.players_faction[int(self[id].owned_by_player1)]
 
     fun least_distance_from_player_units(BoardPosition position, Bool player) -> Float:
         let i = 0

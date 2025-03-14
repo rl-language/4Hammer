@@ -7,9 +7,10 @@ import stats
 import board
 
 fun required_wound_roll(AttackSequenceInfo info) -> Int:
+
     let strenght = info.source.strenght()
     let thoughness = info.target_toughness
-    let modifiers = int(info.wound_roll_malus) * -1
+    let modifiers = (int(info.wound_roll_malus) * -1) + int(info.wound_roll_bonus)
     if thoughness < strenght and info.greater_strenght_wound_protection:
         modifiers = modifiers + 1
 
@@ -53,7 +54,7 @@ act evaluate_random_stat(frm Stat stat, frm Int fixed_extra) -> RollStat:
 act rerollable_pair_dices_roll(ctx Board board, frm Bool reroll, frm Bool reroll_1s, frm Bool cp_rerollable, frm Int current_player) -> RerollableDicePair:
     act roll_pair(frm Dice result, frm Dice result2)
     frm is_non_cp_rerollable = reroll or (reroll_1s and result == 1)
-    let is_cp_rerollable = cp_rerollable and board.command_points[current_player] != 0 and !board.has_used_strat(Stratagem::reroll, current_player)
+    let is_cp_rerollable = cp_rerollable and board.can_use_strat(bool(current_player), Stratagem::reroll)
     if is_non_cp_rerollable or is_cp_rerollable:
         frm original_decision_maker = board.current_decision_maker
         board.current_decision_maker = bool(current_player)
@@ -72,7 +73,7 @@ act rerollable_pair_dices_roll(ctx Board board, frm Bool reroll, frm Bool reroll
 act rerollable_dice_roll(ctx Board board, frm Bool reroll, frm Bool reroll_1s, frm Bool cp_rerollable, frm Int current_player) -> RerollableDice:
     act roll(frm Dice result)
     frm is_non_cp_rerollable = reroll or (reroll_1s and result == 1)
-    let is_cp_rerollable = cp_rerollable and board.command_points[current_player] != 0 and !board.has_used_strat(Stratagem::reroll, current_player)
+    let is_cp_rerollable = cp_rerollable and board.can_use_strat(bool(current_player), Stratagem::reroll)
     if is_non_cp_rerollable or is_cp_rerollable:
         act keep_it(Bool do_it)
         if do_it:
@@ -88,15 +89,19 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
     frm generated_hits = 0
     frm generated_wounds = 0
     frm generated_effective_wounds = 0
+
+    # autohit attacks
     if board.attack_info.source.skill() == 0:
         generated_hits = 1
     else:
         board.current_state = CurrentStateDescription::hit_roll
         board.current_roll = rerollable_dice_roll(board, board.attack_info.reroll_hits, false, true, source_unit.owner_id())
         subaction*(board) board.current_roll
-        if board.current_roll.result < board.attack_info.source.skill() or board.current_roll.result == 1:
+        let roll_modifiers = int(board.attack_info.hit_roll_bonus) - int(board.attack_info.hit_roll_malus)
+        if board.current_roll.result + roll_modifiers < board.attack_info.source.skill() or board.current_roll.result == 1:
             board.current_state = CurrentStateDescription::none
             return
+        # sixes trigger a explosive hits
         if board.current_roll.result == 6:
            generated_hits = generated_hits + source_unit.max_weapon_parameter(board.attack_info.source, WeaponRuleKind::sustained_hit) 
         if board.attack_info.source.has_rule(WeaponRuleKind::letal_hits):
@@ -126,7 +131,10 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         return
 
     frm previous_decision_maker = board.current_decision_maker
-    board.current_decision_maker = target.owned_by_player1
+    if board.attack_info.source.has_rule(WeaponRuleKind::precision):
+        board.current_decision_maker = !target.owned_by_player1
+    else:
+        board.current_decision_maker = target.owned_by_player1
     board.current_state = CurrentStateDescription::allocate_wound
     act allocate_wound(frm ModelID id) {
         id.get() < target.models.size(),
@@ -141,7 +149,7 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         board.current_state = CurrentStateDescription::save_roll
         subaction*(board) board.current_roll 
         ref target_model = target.models[id.get()]
-        let best_save = min(target_model.profile.save() + board.attack_info.source.penetration(), target_model.profile.invuln_save())
+        let best_save = min(target_model.profile.save() + board.attack_info.source.penetration() + int(board.attack_info.penetration_bonus), target_model.profile.invuln_save())
         if board.current_roll.result >= best_save:
             continue
         board.current_state = CurrentStateDescription::damage_roll
@@ -149,7 +157,11 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         generated_effective_wounds = generated_effective_wounds + damage_roll.result
 
     ref target_model = target.models[id.get()]
-    target.damage(id.get(), generated_effective_wounds)
+    let is_character = target_model.is_character()
+    if target.damage(id.get(), generated_effective_wounds):
+        # destroyed checks
+        if is_character and source_unit.has_ability(AbilityKind::feeder_tendrils):
+            board.add_extra_cp(int(source_unit.owned_by_player1))
     board.current_state = CurrentStateDescription::none
 
 
@@ -171,7 +183,7 @@ act resolve_weapon(ctx Board board, frm Int source, frm Int current_model, frm I
             break
     current_model = current_model + 1
 
-fun _configure_attack(Board board, Int source, Int target, Bool overwatch):
+fun _configure_attack(Board board, Int source, Int target, Bool overwatch, Bool melee):
     let attack : AttackSequenceInfo
     attack.source_unit_id = source 
     attack.target_unit_id = target
@@ -180,6 +192,15 @@ fun _configure_attack(Board board, Int source, Int target, Bool overwatch):
 
     attack.target_toughness = board[target].get_unit_toughtness()
     attack.greater_strenght_wound_protection = board[target].has_greater_strenght_wound_protection()
+
+    if board[target].has_ability(AbilityKind::stealth) and !melee:
+        attack.hit_roll_malus = true
+
+    # neurolictor psycological sabuteur
+    if board[source].battle_socked and board.any_enemy_in_range_has_ability(board[source], 12.0, AbilityKind::psychological_saboteur):
+        attack.hit_roll_malus = true
+    if board[target].battle_socked and board.any_enemy_in_range_has_ability(board[target], 12.0, AbilityKind::psychological_saboteur):
+        attack.wound_roll_bonus = true
 
     if target == board.oath_of_moment_target.get():
         if board[source].has_ability(AbilityKind::oath_of_moment):
@@ -205,24 +226,33 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
         }
             board[target].phase_modifiers.greater_strenght_wound_protection = true
             board.command_points[target_player] = board.command_points[target_player] - 1
-            board.mark_strat_used(Stratagem::veteran_instincts, target_player)
+            board.mark_strat_used(Stratagem::gene_wrought_resiliance, target_player)
 
-    _configure_attack(board, source.get(), target.get(), overwatch)
+    _configure_attack(board, source.get(), target.get(), overwatch, melee)
 
     board.current_decision_maker = board[source].owned_by_player1
     actions:
         act no_offensive_stratagem()
         act use_veteran_instincts(){
-            board.command_points[1-target_player] != 0,
             board[source].has_keyword(Keyword::terminator),
-            board.has_used_strat(Stratagem::veteran_instincts, 1-target_player)
+            board.can_use_strat(!bool(target_player), Stratagem::veteran_instincts)
         }
             if board[target].has_keyword(Keyword::monster) or board[target].has_keyword(Keyword::vehicle):
                 board.attack_info.reroll_wounds = true 
             else:
                 board.attack_info.reroll1_wounds = true 
-            board.command_points[1-target_player] = board.command_points[1-target_player] - 1
+            board.pay_strat(!bool(target_player), Stratagem::veteran_instincts)
             board.mark_strat_used(Stratagem::veteran_instincts, 1-target_player)
+        act use_swift_kill(){
+            melee,
+            board[source].has_keyword(Keyword::terminator),
+
+            board.can_use_strat(!bool(target_player), Stratagem::swift_kill),
+            board.players_faction[1-target_player] == Faction::insidious_infiltrators
+        }
+            board.attack_info.penetration_bonus = true
+            board.pay_strat(!bool(target_player), Stratagem::swift_kill)
+            board.mark_strat_used(Stratagem::swift_kill, 1-target_player)
 
 
     frm current_model = 0
@@ -276,6 +306,12 @@ enum ProfileToUse:
         Unit unit = make_terminator_squad()
     infernus_squad:
         Unit unit = make_infernus_squad()
+    death_shadow:
+        Unit unit = make_death_shadow()
+    make_lictor:
+        Unit unit = make_lictor()
+    make_von_ryan_leaper:
+        Unit unit = make_von_ryan_leaper()
 
     fun equal(ProfileToUse other) -> Bool:
         return self.value == other.value
@@ -297,6 +333,20 @@ act spawn_unit(ctx Board board) -> PickUnit:
             unit.arrange()
             board.units.append(unit)
 
+act battle_shock_test(ctx Board board, ctx Unit unit) -> BattleShockTest:
+    if board.can_use_strat(!board.current_player, Stratagem::insane_bravery):
+        act insane_bravery(Bool do_it)
+        if do_it:
+            board.command_points[int(board.current_player)] = board.command_points[int(board.current_player)] - 1
+                
+            board.mark_strat_used(Stratagem::insane_bravery, int(board.current_player))
+                return
+
+    board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, true, int(board.current_player))
+    subaction*(board) board.current_pair_roll
+    if board.current_pair_roll.result.value + board.current_pair_roll.result2.value < unit.get_leadership():
+        unit.battle_socked = true
+
 act battle_shock_step(ctx Board board) -> BattleShockStep:
     frm i = 0
     while i != board.units.size():
@@ -306,52 +356,90 @@ act battle_shock_step(ctx Board board) -> BattleShockStep:
         board[i].has_shoot = false 
         board[i].has_moved = false 
         board[i].has_charged = false
-        if board.units[i].owned_by_player1 != board.current_player:
-            i = i + 1 
+        board[i].can_shoot = true
+        board[i].can_charge = true
+        if board[i].owned_by_player1 != board.current_player:
+            i = i + 1
             continue
-        if !board.units[i].is_below_half_strenght():
-            i = i + 1 
-            continue 
-        if board.has_used_strat(Stratagem::insane_bravery, int(!board.current_player)):
+        if !board[i].is_below_half_strenght():
+            i = i + 1
             continue
-        if board.command_points[int(board.current_player)] != 0:
-            act insane_bravery(Bool do_it)
-            if do_it:
-                board.command_points[int(board.current_player)] = board.command_points[int(board.current_player)] - 1
-                i = i + 1 
-                
-                board.mark_strat_used(Stratagem::insane_bravery, int(board.current_player))
-                continue
+        subaction*(board, board[i]) shock_test = battle_shock_test(board, board[i])
+        i = i + 1
 
-        board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, true, int(board.current_player))
-        subaction*(board) board.current_pair_roll
-        if board.current_pair_roll.result.value + board.current_pair_roll.result2.value < board.units[i].get_leadership():
-            board.units[i].battle_socked = true
-        i = i + 1 
+
+act shadow_in_the_warp(ctx Board board, frm Bool player) -> ShadowInTheWarp:
+    if !(board.players_faction[int(player)] == Faction::insidious_infiltrators):
+        return
+
+    board.current_decision_maker = player
+    if board.has_used_shadow_in_the_warp[int(player)]:
+        return
+
+    act use_shadow_in_the_warp(Bool do_it) 
+    if !do_it:
+        return
+
+    board.has_used_shadow_in_the_warp[int(player)] = true
+    frm i = 0
+    while i != board.units.size():
+        if board[i].owned_by_player1 != player:
+            subaction*(board, board[i]) shock_test = battle_shock_test(board, board[i])
+        i = i + 1
+
+act neural_disruption(ctx Board board) -> NeuralDisruption:
+    if !(board.players_faction[int(board.current_player)] == Faction::insidious_infiltrators):
+        return
+    frm i = 0
+    while i != board.units.size():
+        if board[i].owned_by_player1 == board.current_player and board[i].has_ability(AbilityKind::neural_disruption):
+            actions:
+                act select_neural_disruption_target(frm UnitID target) {
+                    target.get() < board.units.size(),
+                    board[target].owned_by_player1 != board.current_player,
+                    board[target].distance(board[i]) < 12.0
+                }
+                    subaction*(board, board[i]) shock_test = battle_shock_test(board, board[target])
+                act skip()
+        i = i + 1
 
 act command_phase(ctx Board board) -> CommandPhase:
-    board.command_points[0] = board.command_points[0] + 1
-    board.command_points[1] = board.command_points[1] + 1
+    for i in range(2):
+        board.command_points[i] = board.command_points[i] + 1
+        board.obtained_extra_cp_this_round[i] = false
+
+    # offer to play shadow in the warp to both players
+    subaction*(board) shadow1 = shadow_in_the_warp(board, board.current_player)
+    subaction*(board) shadow2 = shadow_in_the_warp(board, !board.current_player)
 
     board.current_decision_maker = board.current_player 
+    subaction*(board) neural_disruption = neural_disruption(board)
+
     if board.players_faction[int(board.current_player)] == Faction::strike_force_octavius:
         board.current_state = CurrentStateDescription::select_oath_of_moment_target
         actions:
             act select_oath_of_moment_target(frm UnitID unit) {
                 unit.get() < board.units.size(),
-                board[unit.get()].owned_by_player1 != board.current_player
+                board[unit].owned_by_player1 != board.current_player
             }
             board.oath_of_moment_target = unit
             act skip()
         board.current_state = CurrentStateDescription::use_duty_and_honour
         actions:
             act use_duty_and_honour(frm BInt<0, 4> objective) {
+                board.players_faction[int(board.current_player)] == Faction::strike_force_octavius,
                 board.get_objective_controller(objective.value) == int(board.current_player),
-                board.command_points[int(!board.current_player)] != 0,
-                !board.has_used_strat(Stratagem::duty_and_honour, int(board.current_player))
+                !board.can_use_strat(board.current_player, Stratagem::duty_and_honour)
             }
             board.mark_strat_used(Stratagem::duty_and_honour, int(board.current_player))
             board.pinned_objectives[int(board.current_player)][objective.value] = true
+            act use_pheromone_trail(frm BInt<0, 4> phero_objective) {
+                board.players_faction[int(board.current_player)] == Faction::insidious_infiltrators,
+                board.get_objective_controller(phero_objective.value) == int(board.current_player),
+                !board.can_use_strat(board.current_player, Stratagem::pheromone_trace)
+            }
+            board.mark_strat_used(Stratagem::pheromone_trace, int(board.current_player))
+            board.pinned_objectives[int(board.current_player)][phero_objective.value] = true
             act skip()
         board.current_state = CurrentStateDescription::none
 
@@ -364,7 +452,7 @@ act command_phase(ctx Board board) -> CommandPhase:
     
 
 act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
-    if board.command_points[int(!board.current_player)] == 0 or board.has_used_strat(Stratagem::overwatch, int(!board.current_player)):
+    if board.can_use_strat(!board.current_player, Stratagem::overwatch):
         return
     board.mark_strat_used(Stratagem::overwatch, int(!board.current_player))
     board.current_decision_maker = !board[moved_unit.get()].owned_by_player1
@@ -373,8 +461,10 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
         act skip()
         act overwatch(frm UnitID source) {
             source.get() < board.units.size(),
+            !board[moved_unit].is_lone_operative() or board[source].distance(board[source]) < 12.0,
             24.0 > board[source.get()].distance(board[moved_unit.get()]),
-            board[source.get()].owned_by_player1 == !board.current_player
+            board[source.get()].owned_by_player1 == !board.current_player,
+            board[source].can_shoot
         }
             board.command_points[int(!board.current_player)] = board.command_points[int(!board.current_player)] - 1
             board.attack = attack(board, source, moved_unit, false, true)
@@ -426,8 +516,24 @@ act fight_phase(ctx Board board) -> FightPhase:
     subaction*(board) fight_first_step = fight_step(board, true)
     subaction*(board) fight_step = fight_step(board, false)
 
+act charge(ctx Board board, frm UnitID source, frm UnitID target, Bool can_be_overwatched) -> Charge:
+    if can_be_overwatched:
+        board.overwatch = overwatch(board, source)
+        subaction*(board) board.overwatch
+        board[source.get()].has_charged = true
+
+    if board[source.get()].models.size() == 0 or board[target.get()].models.size() == 0:
+        return 
+    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source.get()].can_reroll_charge(), false, true, int(board.current_player))
+    subaction*(board) board.current_pair_roll
+    let vector = board[source.get()].get_shortest_vector_to(board[target.get()])
+    if vector.length() < float(board.current_pair_roll.result.value + board.current_pair_roll.result2.value):
+        board[source.get()].translate(vector * 0.9)
+    
+
 act charge_phase(ctx Board board) -> ChargePhase:
     board.current_decision_maker = board.current_player 
+    frm charge_act : Charge
     while true:
         actions:
             act end_charge()
@@ -438,22 +544,31 @@ act charge_phase(ctx Board board) -> ChargePhase:
                 !board[target.get()].empty(),
                 !board[source.get()].empty(),
                 !board.units[source.get()].has_run,
+                board.units[source.get()].can_charge,
                 !board.units[source.get()].has_charged,
                 board.units[source.get()].owned_by_player1 == board.current_player,
                 board.units[target.get()].owned_by_player1 != board.current_player,
                 board[target.get()].get_shortest_vector_to(board[source.get()]).length() < 12.0
             }
-                board.overwatch = overwatch(board, source)
-                subaction*(board) board.overwatch
-                board[source.get()].has_charged = true
-                if board[source.get()].models.size() == 0 or board[target.get()].models.size() == 0:
-                    continue
-                board.current_pair_roll = rerollable_pair_dices_roll(board, board[source.get()].can_reroll_charge(), false, true, int(board.current_player))
-                subaction*(board) board.current_pair_roll
-                let vector = board[source.get()].get_shortest_vector_to(board[target.get()])
-                if vector.length() < float(board.current_pair_roll.result.value + board.current_pair_roll.result2.value):
-                    board[source.get()].translate(vector * 0.9)
-                    
+                charge_act = charge(board, source, target, true)
+                subaction*(board) charge_act
+                actions:
+                    act skip()
+                    act use_heroic_intervention(frm UnitID interceptor) {
+                        interceptor.get() < board.units.size(),
+                        !board[interceptor].empty(),
+                        !board[source].empty(),
+                        board[interceptor.get()].get_shortest_vector_to(board[source.get()]).length() < 12.0,
+                        board[interceptor].owned_by_player1 != board[source].owned_by_player1,
+                        board.can_use_strat(!board.current_player, Stratagem::heroic_intervention) or board[interceptor].has_ability(AbilityKind::pouncing_leap)
+                    }
+                        if !board[interceptor].has_ability(AbilityKind::pouncing_leap):
+                            board.pay_strat(!board.current_player, Stratagem::heroic_intervention)
+                        board.mark_strat_used(Stratagem::heroic_intervention, int(!board.current_player))
+                        charge_act = charge(board, interceptor, source, false)
+                        subaction*(board) charge_act
+                
+
 act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeployment:
     frm done_deploying = false
     board.current_decision_maker = current_player 
@@ -477,9 +592,52 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
                 act nothing_to_deploy()
                     done_deploying = true
 
+act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
+    if !board[id].battle_socked:
+        return
+
+    if board.faction_of_unit(id) == Faction::insidious_infiltrators:
+        act use_predators_not_prey(Bool do_it) {
+            board.can_use_strat(board[id].owned_by_player1, Stratagem::predators_not_prey)
+        }
+        board.mark_strat_used(Stratagem::predators_not_prey, int(board[id].owned_by_player1))
+        board.pay_strat(board[id].owned_by_player1, Stratagem::predators_not_prey)
+        return
+
+    frm i = board[id].models.size()
+    while i != 0:
+        board.current_roll = rerollable_dice_roll(board, false, false, true, int(board[id].owned_by_player1))
+        subaction*(board) board.current_roll
+        if board.current_roll.result == 1:
+            board[id].models.erase(i)
+        i = i - 1
+
+act movement(ctx Board board, frm UnitID id) -> Movement:
+    frm player_move : Move
+    if board.is_in_melee(board[id]):
+        subaction*(board) desperate_escape = desperate_escape(board, id)
+        board[id].has_moved = true
+        board[id].can_shoot = false
+        board[id].can_charge = false
+        player_move = move(board, id, 0)
+        subaction*(board, id) player_move 
+        return
+
+    act advance(Bool do_it)
+    if !do_it:
+        board[id.get()].has_moved = true
+        player_move = move(board, id, 0)
+        subaction*(board, id) player_move 
+    else:
+        board[id.get()].has_moved = true
+        board[id.get()].has_run = true
+        board.current_roll = rerollable_dice_roll(board, false, false, true, int(board.current_player))
+        subaction*(board) board.current_roll
+        player_move = move(board, id, board.current_roll.result.value)
+        subaction*(board, id) player_move 
+
 act movement_phase(ctx Board board) -> MovementPhase:
     board.current_decision_maker = board.current_player 
-    frm player_move : Move
     while true:
         actions:
             act end_move()
@@ -489,18 +647,7 @@ act movement_phase(ctx Board board) -> MovementPhase:
                 board[id].owned_by_player1 == board.current_player,
                 !board[id].has_moved
             }
-                act advance(frm Bool do_it)
-                if !do_it:
-                    board[id.get()].has_moved = true
-                    player_move = move(board, id, 0)
-                    subaction*(board, id) player_move 
-                else:
-                    board[id.get()].has_moved = true
-                    board[id.get()].has_run = true
-                    board.current_roll = rerollable_dice_roll(board, false, false, true, int(board.current_player))
-                    subaction*(board) board.current_roll
-                    player_move = move(board, id, board.current_roll.result.value)
-                    subaction*(board, id) player_move 
+                subaction*(board) move = movement(board, id)
 
     board.current_decision_maker = board.current_player 
     # reserve managment
@@ -509,7 +656,7 @@ act movement_phase(ctx Board board) -> MovementPhase:
         if reserve_deployment.done_deploying:
             break
 
-    let can_rapid_ingress = board.command_points[int(!board.current_player)] != 0 and !board.has_used_strat(Stratagem::reroll, int(!board.current_player))
+    let can_rapid_ingress = board.can_use_strat(!board.current_player, Stratagem::rapid_ingress)
     if can_rapid_ingress:
         board.current_decision_maker = !board.current_player 
         subaction*(board) rapid_ingress = reserve_deployment(board, !board.current_player)
@@ -526,8 +673,11 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
             act select_target(frm UnitID source, frm UnitID target) {
                 source.get() < board.units.size(),
                 target.get() < board.units.size(),
-                !board.units[source.get()].has_run,
-                !board[source.get()].has_shoot,
+                !board[target].is_lone_operative() or board[source].distance(board[source]) < 12.0,
+                !board[source].has_shoot,
+                !board[source].has_run,
+                !board[source].has_shoot,
+                board[source].can_shoot,
                 board.units[source.get()].owned_by_player1 == board.current_player,
                 board.units[target.get()].owned_by_player1 != board.current_player
             }
@@ -575,6 +725,20 @@ act attach_leaders(ctx Board board) -> AttachLeaderStep:
             if !passed_players[int(!board.current_decision_maker)]:
                 board.current_decision_maker = !board.current_decision_maker
 
+fun deployment_position_valid(Board board, BoardPosition position, Bool current_player, Bool infiltrates) -> Bool:
+    if infiltrates:
+        if board.least_distance_from_player_units(position, !current_player) < 9.0:
+            return false
+        if current_player:
+            return position.y <= 18
+        else:
+            return position.y >= BOARD_HEIGHT - 18
+
+    if current_player:
+        return position.y <= 5
+    else:
+        return position.y >= BOARD_HEIGHT - 5
+
 act deploy(ctx Board board) -> Deployment:
     board.current_decision_maker = board.starting_player
     frm passed_players = [false, false]
@@ -587,9 +751,9 @@ act deploy(ctx Board board) -> Deployment:
                 unit_id.get() < board.reserve_units.size(),
                 board.reserve_units[unit_id.get()].owned_by_player1 == board.current_decision_maker 
             }
+                frm infiltrates = board.reserve_units[unit_id.get()].has_ability(AbilityKind::infiltrators)
                 act deploy_at(BoardPosition position) {
-                    board.current_decision_maker or position.y <= 5,
-                    !board.current_decision_maker or position.y >= BOARD_HEIGHT - 5
+                    deployment_position_valid(board, position, board.current_decision_maker, infiltrates)
                 }
                 board.units.append(board.reserve_units[unit_id.get()])
                 board.reserve_units.erase(unit_id.get())
@@ -608,7 +772,6 @@ act battle(ctx Board board) -> Battle:
 
 
 fun<T> set_state(T g, String s) -> Bool:
-    print("Hey") 
     return from_string(g, s)
 
 fun main() -> Int:
@@ -673,7 +836,7 @@ fun fuzz(Vector<Byte> input):
         if executable.size() == 0:
             assert(false, "zero valid actions")
 
-        print(executable.get(num_action % executable.size()))
+        #print(executable.get(num_action % executable.size()))
         apply(executable.get(num_action % executable.size()), state)
 
 
@@ -699,6 +862,14 @@ act attack_sequence(ctx Board board, frm Bool overwatch, frm Bool melee) -> Atta
 
 @classes
 act play() -> Game:
+    frm board : Board
+    board.players_faction[0] = make_octavious_strike_force(board.reserve_units, false)
+    board.players_faction[1] = make_insidious_infiltrators(board.reserve_units, true)
+    subaction*(board) battle = battle(board)
+    
+
+@classes
+act play2() -> Game2:
     frm board : Board
     frm sequence : AttackSequence
 
