@@ -10,7 +10,7 @@ fun required_wound_roll(AttackSequenceInfo info) -> Int:
 
     let strenght = info.source.strenght()
     let thoughness = info.target_toughness
-    let modifiers = (int(info.wound_roll_malus) * -1) + int(info.wound_roll_bonus)
+    let modifiers = info.total_wound_modifier() 
     if thoughness < strenght and info.greater_strenght_wound_protection:
         modifiers = modifiers + 1
 
@@ -85,6 +85,14 @@ act rerollable_dice_roll(ctx Board board, frm Bool reroll, frm Bool reroll_1s, f
         result = new_value
         return
 
+fun get_hit_roll_bonus(Board board) -> Int:
+    let sum = board.attack_info.total_hit_modifier() 
+    if sum >= 1:
+        return 1
+    if sum <= -1:
+        return -1
+    return 0
+
 act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> SingleAttack:
     frm generated_hits = 0
     frm generated_wounds = 0
@@ -95,16 +103,16 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         generated_hits = 1
     else:
         board.current_state = CurrentStateDescription::hit_roll
-        board.current_roll = rerollable_dice_roll(board, board.attack_info.reroll_hits, false, true, source_unit.owner_id())
+        board.current_roll = rerollable_dice_roll(board, board.attack_info.reroll_hits, board.attack_info.reroll1_hits, true, source_unit.owner_id())
         subaction*(board) board.current_roll
-        let roll_modifiers = int(board.attack_info.hit_roll_bonus) - int(board.attack_info.hit_roll_malus)
+        let roll_modifiers = get_hit_roll_bonus(board)
         if board.current_roll.result + roll_modifiers < board.attack_info.source.skill() or board.current_roll.result == 1:
             board.current_state = CurrentStateDescription::none
             return
         # sixes trigger a explosive hits
         if board.current_roll.result == 6:
-           generated_hits = generated_hits + source_unit.max_weapon_parameter(board.attack_info.source, WeaponRuleKind::sustained_hit) 
-        if board.attack_info.source.has_rule(WeaponRuleKind::letal_hits):
+           generated_hits = generated_hits + board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit) 
+        if board.attack_info.has_weapon_rule(board, WeaponRuleKind::letal_hits):
             generated_wounds = generated_wounds + 1
         else:
             generated_hits = generated_hits + 1
@@ -138,6 +146,7 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
     board.current_state = CurrentStateDescription::allocate_wound
     act allocate_wound(frm ModelID id) {
         id.get() < target.models.size(),
+        !(target[id].state == ModelState::fight_on_death),
         board.attack_info.source.has_rule(WeaponRuleKind::precision) or !target[id.get()].has_keyword(Keyword::character) or target.all_have_keyword(Keyword::character)
     }
     board.current_decision_maker = previous_decision_maker
@@ -156,13 +165,29 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         subaction* damage_roll = evaluate_random_stat(board.attack_info.source.damage(), 0)
         generated_effective_wounds = generated_effective_wounds + damage_roll.result
 
-    ref target_model = target.models[id.get()]
-    let is_character = target_model.is_character()
-    if target.damage(id.get(), generated_effective_wounds):
-        # destroyed checks
-        if is_character and source_unit.has_ability(AbilityKind::feeder_tendrils):
-            board.add_extra_cp(int(source_unit.owned_by_player1))
+    frm target_model = target[id]
+    if target.damage(id.get(), generated_effective_wounds, board.attack_info.fight_on_death):
+        subaction*(board, source_unit, target_model) on_model_destroyed = on_model_destroyed(board, source_unit, target_model)
     board.current_state = CurrentStateDescription::none
+
+act on_model_destroyed(ctx Board board, ctx Unit source, ctx Model destroyed) -> OnModelDestroyed:
+    if is_character and source.has_ability(AbilityKind::feeder_tendrils):
+        board.add_extra_cp(int(source.owned_by_player1))
+
+    if destroyed.has_keyword(Keyword::master_of_possession) and board.can_use_strat(!source.owned_by_player1, Stratagem::violent_unbidding):
+        actions:
+            act skip()
+            act use_violent_unbidding() 
+                board.pay_strat(!source.owned_by_player1, Stratagem::violent_unbidding)
+                board.mark_strat_used(Stratagem::violent_unbidding, 1-int(source.owned_by_player1))
+                act roll(frm Dice dice)
+                if dice == 1:
+                    return
+                if dice == 6:
+                    source.deal_mortal_wound_damage(3)
+                if dice == 5:
+                    act roll(frm Dice damage)
+                    source.deal_mortal_wound_damage(damage.value / 2)
 
 
 act resolve_weapon(ctx Board board, frm Int source, frm Int current_model, frm Int target) -> ResolveWeapon:
@@ -209,26 +234,44 @@ fun _configure_attack(Board board, Int source, Int target, Bool overwatch, Bool 
             attack.hit_roll_bonus = true
     board.attack_info = attack
 
-act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee, frm Bool overwatch) -> Attack:
-    if board[source].models.size() == 0:
-        return
-    if board[target].models.size() == 0:
-        return
+act resolve_model_attack(ctx Board board, frm UnitID source, frm UnitID target, frm Int current_model, frm Bool melee) -> ModelAttack:
+    ref model = board[source][current_model]
+    board.attack_info.source_profile = model.profile
+    frm hazardous_uses = 0
+    frm distance = board[target].distance(model)
+    board.current_state = CurrentStateDescription::select_weapon
+    actions:
+        act select_weapon(BInt<0, MAX_WEAPONS> weapon_id) {
+            weapon_id < board[source][current_model].weapons.size(),
+            !melee or board[source][current_model].weapons[weapon_id.value].range() == 0,
+            distance <= float(board[source][current_model].weapons[weapon_id.value].range())
+        }
+            board.attack_info.source = board[source][current_model].weapons[weapon_id.value]
+        act skip()
+            return
+    if board.attack_info.source.has_rule(WeaponRuleKind::hazardous):
+        hazardous_uses = hazardous_uses + 1
+    subaction*(board) resolve_weapon = resolve_weapon(board, source.get(), current_model, target.get())
 
+act use_attack_stratagems(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee) -> UseAttackStratagems:
     frm target_player = board[target].owner_id()
     board.current_decision_maker = board[target].owned_by_player1
     actions:
         act no_defensive_stratagem()
         act use_gene_wrought_resiliance() {
-            board.command_points[target_player] != 0,
-            board.players_faction[target_player] == Faction::strike_force_octavius,
-            board.has_used_strat(Stratagem::gene_wrought_resiliance, target_player)
+            board.can_use_strat(bool(target_player), Stratagem::gene_wrought_resiliance),
+            board.players_faction[target_player] == Faction::strike_force_octavius
         }
             board[target].phase_modifiers.greater_strenght_wound_protection = true
-            board.command_points[target_player] = board.command_points[target_player] - 1
+            board.pay_strat(bool(target_player), Stratagem::gene_wrought_resiliance)
             board.mark_strat_used(Stratagem::gene_wrought_resiliance, target_player)
-
-    _configure_attack(board, source.get(), target.get(), overwatch, melee)
+        act use_daemonic_fervour() {
+            board.can_use_strat(bool(target_player), Stratagem::demonic_fervour),
+            board.players_faction[target_player] == Faction::zarkan_daemonkin
+        }
+            board.pay_strat(bool(target_player), Stratagem::demonic_fervour)
+            board.mark_strat_used(Stratagem::demonic_fervour, target_player)
+            board.attack_info.fight_on_death = true
 
     board.current_decision_maker = board[source].owned_by_player1
     actions:
@@ -243,6 +286,21 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
                 board.attack_info.reroll1_wounds = true 
             board.pay_strat(!bool(target_player), Stratagem::veteran_instincts)
             board.mark_strat_used(Stratagem::veteran_instincts, 1-target_player)
+        act use_dark_pact(){
+            board.players_faction[1-target_player] == Faction::zarkan_daemonkin
+        }
+            board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, true, 1-target_player)
+            subaction*(board) board.current_roll 
+            if board.current_pair_roll.result < board[source].get_leadership():
+                board.current_roll = rerollable_dice_roll(board, false, false, false, 1 - target_player)
+                subaction*(board) board.current_roll 
+                board[source].deal_mortal_wound_damage(board.current_roll.result.value)
+            act select_ability(Bool use_letal_hits)
+            if use_letal_hits:
+                board.attack_info.add_letal_hits()
+            else:
+                board.attack_info.add_sustained_hits(1)
+                
         act use_swift_kill(){
             melee,
             board[source].has_keyword(Keyword::terminator),
@@ -253,30 +311,48 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             board.attack_info.penetration_bonus = true
             board.pay_strat(!bool(target_player), Stratagem::swift_kill)
             board.mark_strat_used(Stratagem::swift_kill, 1-target_player)
+        act use_vindictive_strategy(){
+            board.can_use_strat(!bool(target_player), Stratagem::vindictive_strategy),
+            board.players_faction[1-target_player] == Faction::zarkan_daemonkin
+        }
+            board.attack_info.reroll1_hits = true
+            if board[target].is_below_half_strenght():
+                board.attack_info.reroll1_wounds = true
+            board.pay_strat(!bool(target_player), Stratagem::vindictive_strategy)
+            board.mark_strat_used(Stratagem::vindictive_strategy, 1-target_player)
+        act use_sacrificial_dagger(){
+            board.players_faction[1-target_player] == Faction::zarkan_daemonkin,
+            board[source].has_ability(AbilityKind::sacrificial_dagger)
+        }
+            act select_model(frm ModelID model) {
+                model.get() < board[source].models.size()
+            }
+            board[source].damage(model.get(), 1)
+            board.attack_info.profile_hit_roll_bonus.append(Profile::aranis_zarkan)
+            board.attack_info.profile_wound_roll_bonus.append(Profile::aranis_zarkan)
 
 
-    frm current_model = 0
+
+act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee, frm Bool overwatch) -> Attack:
+    if board[source].models.size() == 0:
+        return
+    if board[target].models.size() == 0:
+        return
+
+    _configure_attack(board, source.get(), target.get(), overwatch, melee)
+
+    subaction*(board) strats = use_attack_stratagems(board, source, target, melee)
+
+    frm model = 0
     frm hazardous_uses = 0
     board.current_decision_maker = board[source].owned_by_player1
-    while current_model != board[source].models.size() and !board[target].models.empty():
-        ref model = board[source][current_model]
-        frm distance = board[target].distance(model)
-        board.current_state = CurrentStateDescription::select_weapon
-        actions:
-            act select_weapon(BInt<0, MAX_WEAPONS> weapon_id) {
-                weapon_id < board[source][current_model].weapons.size(),
-                !melee or board[source][current_model].weapons[weapon_id.value].range() == 0,
-                distance <= float(board[source][current_model].weapons[weapon_id.value].range())
-            }
-                board.attack_info.source = board[source][current_model].weapons[weapon_id.value]
-            act skip()
-                current_model = current_model + 1
-                continue
-        if board.attack_info.source.has_rule(WeaponRuleKind::hazardous):
-            hazardous_uses = hazardous_uses + 1
-        subaction*(board) resolve_weapon = resolve_weapon(board, source.get(), current_model, target.get())
-        current_model = current_model + 1
+    while model != board[source].models.size() and !board[target].models.empty():
+        subaction*(board) model_attack = resolve_model_attack(board, source, target, model, melee)
+        hazardous_uses = hazardous_uses + model_attack.hazardous_uses
+        model = model + 1
 
+
+    ### Dangerous weapons
     board.attack_info.target_unit_id = source
     board.current_decision_maker = board[source].owned_by_player1
     while hazardous_uses != 0 and !board[source].empty():
@@ -286,14 +362,23 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
         subaction*(board) board.current_roll
         if board.current_roll.result != 1:
             continue
-        act select_model(frm ModelID model) {
+        act select_model(ModelID model) {
             model.get() < board[source].models.size(),
             board[source][model.get()].has_weapon_rule(WeaponRuleKind::hazardous)
         }
         # ToDo: handle non character version
         board[source].damage(model.get(), 3)
     board.current_state = CurrentStateDescription::none
-
+    
+    ### fight on death
+    _configure_attack(board, target.get(), source.get(), overwatch, melee)
+    board.current_decision_maker = board[target].owned_by_player1
+    model = 0
+    while model != board[target].models.size() and !board[source].models.empty():
+        if board[target][model].state == ModelState::fight_on_death:
+            subaction*(board) fight_on_death_attack = resolve_model_attack(board, target, source, model, melee)
+        model = model + 1
+    board[target].remove_figth_on_death_models()
         
 
 
@@ -315,6 +400,7 @@ enum ProfileToUse:
 
     fun equal(ProfileToUse other) -> Bool:
         return self.value == other.value
+
 
 enum Player:
     player_1
@@ -836,7 +922,7 @@ fun fuzz(Vector<Byte> input):
         if executable.size() == 0:
             assert(false, "zero valid actions")
 
-        #print(executable.get(num_action % executable.size()))
+        print(executable.get(num_action % executable.size()))
         apply(executable.get(num_action % executable.size()), state)
 
 
@@ -860,11 +946,22 @@ act attack_sequence(ctx Board board, frm Bool overwatch, frm Bool melee) -> Atta
     board.attack = attack(board, source, target, overwatch, melee)
     subaction*(board) board.attack
 
+act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
+    board.current_decision_maker = current_player
+    actions:
+        act pick_strike_force_octavious()
+        board.players_faction[int(current_player)] = make_octavious_strike_force(board.reserve_units, current_player)
+        act pick_insidious_infiltrators()
+        board.players_faction[int(current_player)] = make_insidious_infiltrators(board.reserve_units, current_player)
+        act pick_zarkan_deamonkin()
+        board.players_faction[int(current_player)] = make_zarkan_deamonkin(board.reserve_units, current_player)
+            
+
 @classes
 act play() -> Game:
     frm board : Board
-    board.players_faction[0] = make_octavious_strike_force(board.reserve_units, false)
-    board.players_faction[1] = make_insidious_infiltrators(board.reserve_units, true)
+    subaction*(board) p1 = pick_army(board, false)
+    subaction*(board) p2 = pick_army(board, true)
     subaction*(board) battle = battle(board)
     
 

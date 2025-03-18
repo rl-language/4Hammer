@@ -22,16 +22,64 @@ cls AttackSequenceInfo:
     Bool penetration_bonus
     Bool hit_roll_bonus
     Bool hit_roll_malus
+    BoundedVector<Profile, 3> profile_hit_roll_bonus 
+    BoundedVector<WeaponRule, 3> temporary_weapon_abilities
     Bool wound_roll_malus
     Bool wound_roll_bonus
+    BoundedVector<Profile, 3> profile_wound_roll_bonus 
     Bool reroll_hits
+    Bool reroll1_hits
     Bool only_hits_on_6
     Bool reroll_wounds
     Bool reroll1_wounds
     Bool greater_strenght_wound_protection
+    Bool fight_on_death
     Int target_toughness
     Weapon source
+    Profile source_profile
     BInt<0, MAX_ROUNDS> current_round
+
+    fun add_letal_hits():
+        self.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::letal_hits))
+
+    fun add_sustained_hits(Int parameter):
+        self.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::sustained_hit, parameter))
+
+
+    fun max_weapon_parameter(Board board, WeaponRuleKind kind) -> Int:
+        return max(board[self.source_unit_id].max_weapon_parameter(self.source, kind), self._get_weapon_rule_parameter(kind))
+
+    fun has_weapon_rule(Board board, WeaponRuleKind kind) -> Bool:
+        return self.max_weapon_parameter(board, kind) != 0
+
+    fun _get_weapon_rule_parameter(WeaponRuleKind kind) -> Int:
+        let i = 0
+        while i != self.temporary_weapon_abilities.size():
+            if self.temporary_weapon_abilities[i].kind == kind:
+                return self.temporary_weapon_abilities[i].parameter
+            i = i + 1
+        return 0
+
+    fun total_hit_modifier() -> Int:
+        let result = int(self.hit_roll_bonus) - int(self.hit_roll_malus)
+        let i = 0
+        while i != self.profile_hit_roll_bonus.size():
+            if self.profile_hit_roll_bonus[i] == self.source_profile:
+                result = result + 1
+                break
+            i = i + 1
+        return result
+
+    fun total_wound_modifier() -> Int:
+        let result = int(self.wound_roll_bonus) - int(self.wound_roll_malus)
+        let i = 0
+        while i != self.profile_wound_roll_bonus.size():
+            if self.profile_wound_roll_bonus[i] == self.source_profile:
+                result = result + 1
+                break
+            i = i + 1
+        return result
+
 
 const MAX_CP = 4
 const MAX_ROUNDS = 6

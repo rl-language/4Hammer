@@ -1,15 +1,45 @@
+pick_insidious_infiltrators {}
+pick_strike_force_octavious {}
 done_attaching {}
+attack_character {unit_id: 8, char_id: 5}
+attack_character {unit_id: 7, char_id: 5}
 done_attaching {}
+select_unit {unit_id: 4}
+deploy_at {position: {x: 1, y: 17}}
+select_unit {unit_id: 5}
+deploy_at {position: {x: 3, y: 5}}
+select_unit {unit_id: 1}
+deploy_at {position: {x: 40, y: 18}}
 done_deploying {}
 done_deploying {}
 use_shadow_in_the_warp {do_it: true}
+roll_pair {result: 1, result2: 1}
+move_unit {id: 2}
+advance {do_it: true}
+roll {result: 5}
+move_to {position: {x: 34, y: 21}}
+overwatch {source: 1}
+no_defensive_stratagem {}
+no_offensive_stratagem {}
 skip {}
 skip {}
-end_move {}
-nothing_to_deploy {}
-end_shooting_phase {}
-end_charge {}
-end_fight_step {}
-end_fight_step {}
-end_fight_step {}
-end_fight_step {}
+skip {}
+skip {}
+skip {}
+skip {}
+select_weapon {weapon_id: 2}
+quantity {dice: 6}
+roll {result: 2}
+roll {result: 2}
+roll {result: 2}
+roll {result: 6}
+roll {result: 6}
+quantity {dice: 3}
+roll {result: 6}
+quantity {dice: 3}
+allocate_wound {id: 0}
+roll {result: 6}
+roll {result: 6}
+quantity {dice: 3}
+roll {result: 6}
+quantity {dice: 3}

@@ -28,6 +28,9 @@ enum WeaponRuleKind:
     hazardous
     anti_monster
     anti_vehichle
+    anti_psychic
+    heavy
+    melta
 
     fun equal(WeaponRuleKind other) -> Bool:
         return self.value == other.value
@@ -80,6 +83,23 @@ fun weapon_rules(WeaponRule rule, WeaponRule rule2, WeaponRule rule3) -> WeaponR
     to_return.append(rule3)
     return to_return
 
+fun weapon_rules(WeaponRule rule, WeaponRule rule2, WeaponRule rule3, WeaponRule rule4) -> WeaponRules:
+    let to_return : WeaponRules
+    to_return.append(rule)
+    to_return.append(rule2)
+    to_return.append(rule3)
+    to_return.append(rule4)
+    return to_return
+
+fun weapon_rules(WeaponRule rule, WeaponRule rule2, WeaponRule rule3, WeaponRule rule4, WeaponRule rule5) -> WeaponRules:
+    let to_return : WeaponRules
+    to_return.append(rule)
+    to_return.append(rule2)
+    to_return.append(rule3)
+    to_return.append(rule4)
+    to_return.append(rule5)
+    return to_return
+
 enum Weapon:
     captain_storm_bolter:
         Int range = 24
@@ -112,7 +132,10 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 2
         Stat damage = dice_stat(3)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::psychic), weapon_rule(WeaponRuleKind::hazardous), weapon_rule(WeaponRuleKind::devastating_wounds))
+        WeaponRules rules = weapon_rules(
+                        weapon_rule(WeaponRuleKind::psychic), 
+                        weapon_rule(WeaponRuleKind::hazardous), 
+                        weapon_rule(WeaponRuleKind::devastating_wounds))
     librarian_storm_bolter:
         Int range = 24
         Stat attacks = raw_stat(2)
@@ -144,7 +167,9 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::ignore_cover), weapon_rule(WeaponRuleKind::torrent))
+        WeaponRules rules = weapon_rules(
+                                weapon_rule(WeaponRuleKind::ignore_cover), 
+                                weapon_rule(WeaponRuleKind::torrent))
     close_combact_weapon:
         Int range = 0
         Stat attacks = raw_stat(3)
@@ -209,6 +234,136 @@ enum Weapon:
         Int penetration = 1
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
+    rite_of_possession:
+        Int range = 18
+        Stat attacks = raw_stat(2)
+        Int skill = 3
+        Int strenght = 4
+        Int penetration = -3
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+                                weapon_rule(WeaponRuleKind::psychic), 
+                                weapon_rule(WeaponRuleKind::anti_psychic), 
+                                weapon_rule(WeaponRuleKind::pistol), 
+                                weapon_rule(WeaponRuleKind::precision))
+    rite_of_possession_focused:
+        Int range = 18
+        Stat attacks = raw_stat(2)
+        Int skill = 3
+        Int strenght = 6
+        Int penetration = 2
+        Stat damage = raw_stat(3)
+        WeaponRules rules = weapon_rules(
+                                weapon_rule(WeaponRuleKind::psychic), 
+                                weapon_rule(WeaponRuleKind::hazardous), 
+                                weapon_rule(WeaponRuleKind::anti_psychic), 
+                                weapon_rule(WeaponRuleKind::pistol), 
+                                weapon_rule(WeaponRuleKind::precision))
+    staff_of_possession:
+        Int range = 0
+        Stat attacks = raw_stat(4)
+        Int skill = 3
+        Int strenght = 6
+        Int penetration = 1
+        Stat damage = dice_stat(3)
+        WeaponRules rules = weapon_rules(
+                                weapon_rule(WeaponRuleKind::psychic), 
+                                weapon_rule(WeaponRuleKind::anti_psychic))
+    hideous_mutations:
+        Int range = 0
+        Stat attacks = raw_stat(4)
+        Int skill = 3
+        Int strenght = 5
+        Int penetration = 1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules()
+    boltgun:
+        Int range = 24
+        Stat attacks = raw_stat(2)
+        Int skill = 3
+        Int strenght = 4
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules()
+    heavy_bolter:
+        Int range = 36
+        Stat attacks = raw_stat(3)
+        Int skill = 4
+        Int strenght = 5
+        Int penetration = 1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::heavy),
+            weapon_rule(WeaponRuleKind::sustained_hit, 1)
+        )
+    meltagun:
+        Int range = 12
+        Stat attacks = raw_stat(1)
+        Int skill = 3
+        Int strenght = 9
+        Int penetration = -4
+        Stat damage = dice_stat(6)  
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::melta, 2))
+    plasma_pistol_standard:
+        Int range = 12
+        Stat attacks = raw_stat(1)
+        Int skill = 3
+        Int strenght = 7
+        Int penetration = -2
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
+    plasma_pistol_supercharge:
+        Int range = 12
+        Stat attacks = raw_stat(1)
+        Int skill = 3
+        Int strenght = 8
+        Int penetration = -3
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::hazardous),
+            weapon_rule(WeaponRuleKind::pistol)
+        )
+    accursed_weapon:
+        Int range = 0
+        Stat attacks = raw_stat(4)
+        Int skill = 3
+        Int strenght = 5
+        Int penetration = -2
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules()
+    close_combat_weapon:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 3
+        Int strenght = 4
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules()
+    cultist_autopistol:
+        Int range = 12
+        Stat attacks = raw_stat(1)
+        Int skill = 4
+        Int strenght = 3
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
+    cultist_bolt_pistol:
+        Int range = 12
+        Stat attacks = raw_stat(1)
+        Int skill = 4
+        Int strenght = 4
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
+    brutal_assault_weapon:
+        Int range = 0
+        Stat attacks = raw_stat(2)
+        Int skill = 4
+        Int strenght = 3
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules()
+
 
     fun get_rule_parameter(WeaponRuleKind rule) -> Int:
         let i = 0
@@ -251,6 +406,9 @@ enum AbilityKind:
     psychological_saboteur
     feeder_tendrils 
     pouncing_leap
+    sacrificial_dagger 
+    dark_pacts
+    veterans_of_the_long_war
 
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value
@@ -265,6 +423,7 @@ fun size_as_observation_tensor(AbilityKind kind) -> Int:
 enum Faction:
     strike_force_octavius
     insidious_infiltrators
+    zarkan_daemonkin
 
     fun equal(Faction other) -> Bool:
         return self.value == other.value
@@ -289,6 +448,15 @@ enum Keyword:
     von_ryan_leaper 
     lictor
     tyranids
+    chaos_space_marine
+    master_of_possession
+    aranis_zarkan
+    daemon
+    possessed
+    chaos
+    legionaries
+    damned
+    cultist_mob
     monster # only implemented for veteran instincts 
     vehicle # only implemented for vetern instincts
 
@@ -366,6 +534,42 @@ enum Profile:
         Int leadership = 8
         Int control = 1
         Float base_size = 40.0
+    aranis_zarkan:
+        Int movement = 8
+        Int thoughness = 4
+        Int save = 3
+        Int invuln_save = 5
+        Int wounds = 4
+        Int leadership = 6
+        Int control = 1
+        Float base_size = 40.0
+    possessed:
+        Int movement = 9
+        Int thoughness = 6
+        Int save = 3
+        Int invuln_save = 5
+        Int wounds = 3
+        Int leadership = 6
+        Int control = 1
+        Float base_size = 40.0
+    legionaries:
+        Int movement = 6
+        Int thoughness = 4
+        Int save = 3
+        Int invuln_save = 10
+        Int wounds = 2
+        Int leadership = 6
+        Int control = 2
+        Float base_size = 32.0
+    cultist_mob:
+        Int movement = 6
+        Int thoughness = 3
+        Int save = 6
+        Int invuln_save = 10
+        Int wounds = 1
+        Int leadership = 7
+        Int control = 1
+        Float base_size = 25.0
 
     fun equal(Profile other) -> Bool:
         return self.value == other.value
@@ -399,6 +603,12 @@ enum Stratagem:
     pheromone_trace:
         Int cost = 1
     predators_not_prey:
+        Int cost = 1
+    vindictive_strategy:
+        Int cost = 1
+    violent_unbidding:
+        Int cost = 1
+    demonic_fervour:
         Int cost = 1
 
     fun equal(Stratagem other) -> Bool:

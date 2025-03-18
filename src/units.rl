@@ -10,6 +10,14 @@ using WeaponsVector = BoundedVector<Weapon, MAX_WEAPONS>
 using Abilities = BoundedVector<AbilityKind, 4>
 using Keywords = BoundedVector<Keyword, 7>
 
+# some rules specify that models are not to be removed after being destroyed until some other event happens, for example fight on death. We keep track of this special statuses with this enum
+enum ModelState:
+    normal
+    fight_on_death
+
+    fun equal(ModelState other) -> Bool:
+        return self.value == other.value
+
 cls Model:
     BoardPosition position # required
     Profile profile
@@ -17,6 +25,7 @@ cls Model:
     WeaponsVector weapons
     Abilities abilities 
     Keywords keywords 
+    ModelState state
 
     fun base_size_in_inches() -> Float:
         return self.profile.base_size() / 25.4
@@ -66,13 +75,15 @@ cls Model:
     fun wounds_left() -> Int:
         return self.profile.wounds() - self.suffered_wounds.value
 
-using ModelVector = BoundedVector<Model, 7>
+const MAX_UNIT_MODELS = 12
+using ModelVector = BoundedVector<Model, MAX_UNIT_MODELS>
 
 cls ModelID: # required
-    BInt<0, 7> id
+    BInt<0, MAX_UNIT_MODELS> id
 
     fun get() -> Int:
         return self.id.value
+
 
 const MAX_UNIT_COUNT = 10
 cls UnitID: # required
@@ -116,6 +127,13 @@ cls Unit:
 
     fun is_lone_operative() -> Bool:
         return self.has_ability(AbilityKind::lone_operative)
+
+    fun remove_figth_on_death_models():
+        let i = self.models.size() - 1
+        while i > 0:
+            if self.models[i].state == ModelState::fight_on_death:
+                self.models.erase(i)
+            i = i - 1
 
     fun can_reroll_charge() -> Bool:
         return self.has_ability(AbilityKind::unstoppable_valour)
@@ -326,6 +344,26 @@ cls Unit:
             self.models.erase(target_model_id)
             return true
         return false
+
+    fun damage(Int target_model_id, Int damage, Bool fight_on_death) -> Bool:
+        ref target_model = self.models[target_model_id]
+        target_model.suffered_wounds = target_model.suffered_wounds + damage 
+        if target_model.suffered_wounds >= target_model.profile.wounds(): 
+            if fight_on_death:
+                target_model.state = ModelState::fight_on_death
+            else:
+                self.models.erase(target_model_id)
+            return true
+        return false
+
+    fun damage(ModelID target_model_id) -> Bool:
+        return self.damage(target_model_id.get(), 1)
+
+    fun deal_mortal_wound_damage(Int wounds):
+        for i in range(wounds):
+            self.damage(0, 1)
+            if self.models.size() == 0:
+                return
         
 
 
@@ -441,6 +479,7 @@ fun make_death_shadow() -> Unit:
     model.keywords.append(Keyword::vanguard_invader)
     model.keywords.append(Keyword::neurolictor)
     model.keywords.append(Keyword::tyranids)
+    model.weapons.append(Weapon::death_shadow_claws_and_talons)
     profile.name = "death's shadow"s
     profile.models.append(model)
     return profile
@@ -459,6 +498,7 @@ fun make_lictor() -> Unit:
     model.keywords.append(Keyword::lictor)
     model.keywords.append(Keyword::vanguard_invader)
     model.keywords.append(Keyword::tyranids)
+    model.weapons.append(Weapon::lictor_claws_and_talons)
     profile.name = "lictor"s
     profile.models.append(model)
     return profile
@@ -476,11 +516,131 @@ fun make_von_ryan_leaper() -> Unit:
     model.keywords.append(Keyword::great_devourer)
     model.keywords.append(Keyword::vanguard_invader)
     model.keywords.append(Keyword::tyranids)
+    model.weapons.append(Weapon::leapers_talon)
     profile.name = "von ryan's leaper"s
     profile.models.append(model)
     profile.models.append(model)
     profile.models.append(model)
     return profile
+
+fun make_aranis_zarkan() -> Unit:
+    let profile : Unit 
+    let model : Model
+    model.profile = Profile::aranis_zarkan
+    model.abilities.append(AbilityKind::dark_pacts)
+    model.abilities.append(AbilityKind::leader)
+
+    model.keywords.append(Keyword::infantry)
+    model.keywords.append(Keyword::character)
+    model.keywords.append(Keyword::psyker)
+    model.keywords.append(Keyword::chaos)
+    model.keywords.append(Keyword::master_of_possession)
+    model.keywords.append(Keyword::aranis_zarkan)
+    model.weapons.append(Weapon::rite_of_possession)
+    model.weapons.append(Weapon::rite_of_possession_focused)
+    model.weapons.append(Weapon::staff_of_possession)
+    profile.name = "aranis zarkan"s
+    profile.models.append(model)
+    return profile
+
+fun make_possessed() -> Unit:
+    let profile : Unit 
+    let model : Model
+    
+    model.profile = Profile::possessed
+    
+    model.abilities.append(AbilityKind::dark_pacts)
+    
+    model.keywords.append(Keyword::infantry)
+    model.keywords.append(Keyword::chaos)
+    model.keywords.append(Keyword::daemon)      
+    model.keywords.append(Keyword::possessed)   
+
+    model.weapons.append(Weapon::hideous_mutations)
+    
+    profile.name = "Possessed"s
+    for i in range(5):
+        profile.models.append(model)
+    return profile
+
+fun make_cultist_mob() -> Unit:
+    let profile : Unit
+    let champion : Model
+    champion.profile = Profile::cultist_mob
+    champion.abilities.append(AbilityKind::dark_pacts)
+    champion.keywords.append(Keyword::infantry)
+    champion.keywords.append(Keyword::chaos)
+    champion.keywords.append(Keyword::damned)
+    champion.keywords.append(Keyword::cultist_mob) 
+    champion.weapons.append(Weapon::cultist_bolt_pistol)
+    champion.weapons.append(Weapon::brutal_assault_weapon)
+
+    let i = 0
+    while i != 9:
+        let cultist : Model
+        cultist.profile = Profile::cultist_mob
+        cultist.abilities.append(AbilityKind::dark_pacts)
+        cultist.keywords.append(Keyword::infantry)
+        cultist.keywords.append(Keyword::chaos)
+        cultist.keywords.append(Keyword::damned)
+        cultist.keywords.append(Keyword::cultist_mob)
+        cultist.weapons.append(Weapon::cultist_autopistol)
+        cultist.weapons.append(Weapon::brutal_assault_weapon)
+        profile.models.append(cultist)
+        i = i + 1
+
+    profile.models.append(champion)
+
+    profile.name = "Cultist Mob"s
+    return profile
+
+fun make_legionaries() -> Unit:
+    let profile : Unit
+    profile.name = "Legionaries (10 models)"s
+
+    # Prepare a single Model object with shared stats, abilities, and keywords
+    let model : Model
+    model.profile = Profile::legionaries
+    model.abilities.append(AbilityKind::dark_pacts)
+    # model.abilities.append(AbilityKind::veterans_of_the_long_war)  # if you’ve defined it
+
+    model.keywords.append(Keyword::infantry)
+    model.keywords.append(Keyword::chaos)
+    model.keywords.append(Keyword::damned)
+    model.keywords.append(Keyword::legionaries)
+    # model.keywords.append(Keyword::battleline)  # if you’ve defined it
+
+    # 1) ASPIRING CHAMPION
+    model.weapons.clear()
+    model.weapons.append(Weapon::plasma_pistol_standard)
+    model.weapons.append(Weapon::plasma_pistol_supercharge)
+    model.weapons.append(Weapon::accursed_weapon)
+    profile.models.append(model)  # This copies champion’s state into the unit
+
+    # 2) LEGIONARY with Meltagun
+    model.weapons.clear()
+    model.weapons.append(Weapon::bolt_pistol)
+    model.weapons.append(Weapon::meltagun)
+    model.weapons.append(Weapon::close_combat_weapon)
+    profile.models.append(model)  # Copies meltagun loadout
+
+    # 3) LEGIONARY with Heavy Bolter
+    model.weapons.clear()
+    model.weapons.append(Weapon::bolt_pistol)
+    model.weapons.append(Weapon::heavy_bolter)
+    model.weapons.append(Weapon::close_combat_weapon)
+    profile.models.append(model)  # Copies heavy bolter loadout
+
+    # 4) 7 LEGIONARIES with Boltgun
+    for i in range(7):
+        model.weapons.clear()
+        model.weapons.append(Weapon::bolt_pistol)
+        model.weapons.append(Weapon::boltgun)
+        model.weapons.append(Weapon::close_combat_weapon)
+        profile.models.append(model)  # Copies boltgun loadout each time
+
+    return profile
+
 
 fun make_octavious_strike_force(UnitVector out, Bool owner) -> Faction:
     out.append(make_octavius())
@@ -501,4 +661,15 @@ fun make_insidious_infiltrators(UnitVector out, Bool owner) -> Faction:
     for i in range(3):
         out.append(make_von_ryan_leaper())
         out.back().owned_by_player1 = owner
+    return Faction::insidious_infiltrators
+
+fun make_zarkan_deamonkin(UnitVector out, Bool owner) -> Faction:
+    out.append(make_aranis_zarkan())
+    out.back().owned_by_player1 = owner
+    out.append(make_possessed())
+    out.back().owned_by_player1 = owner
+    out.append(make_cultist_mob())
+    out.back().owned_by_player1 = owner
+    out.append(make_legionaries())
+    out.back().owned_by_player1 = owner
     return Faction::insidious_infiltrators
