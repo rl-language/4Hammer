@@ -641,6 +641,107 @@ fun make_legionaries() -> Unit:
 
     return profile
 
+fun make_beastboss_morgrim() -> Unit:
+    let boss_unit : Unit
+    let boss_model : Model
+    
+    # Use the pre-defined profile for Beastboss Morgrim
+    boss_model.profile = Profile::beastboss_morgrim
+    boss_model.abilities.append(AbilityKind::leader)
+    boss_model.abilities.append(AbilityKind::beast_snagga)
+    boss_model.abilities.append(AbilityKind::warboss)
+    boss_model.abilities.append(AbilityKind::beastboss)
+    boss_model.abilities.append(AbilityKind::morgrim)
+    
+    boss_model.keywords.append(Keyword::infantry)
+    boss_model.keywords.append(Keyword::character)
+    boss_model.keywords.append(Keyword::beastboss)
+
+    boss_model.weapons.append(Weapon::beat_boss_shoota)
+
+    boss_model.weapons.append(Weapon::beast_snagga_klaw)
+
+    boss_model.weapons.append(Weapon::beastchoppa)
+
+    boss_unit.models.append(boss_model)
+    boss_unit.name = "Beastboss Morgrim"s
+    return boss_unit
+
+fun make_beast_snagga_boyz() -> Unit:
+    let unit : Unit
+    unit.name = "Beast Snagga Boyz"s
+    let nob_model : Model
+    nob_model.profile = Profile::beast_snagga_nob
+    nob_model.abilities.append(AbilityKind::beast_snagga)
+    nob_model.keywords.append(Keyword::infantry)
+    nob_model.keywords.append(Keyword::mob)
+    nob_model.keywords.append(Keyword::monster_hunters)
+    nob_model.weapons.append(Weapon::slugga)
+    nob_model.weapons.append(Weapon::power_snappa)
+    unit.models.append(nob_model)
+    let thumpgun_boy : Model
+    thumpgun_boy.profile = Profile::beast_snagga_boy
+    thumpgun_boy.abilities.append(AbilityKind::beast_snagga)
+    thumpgun_boy.keywords.append(Keyword::infantry)
+    thumpgun_boy.keywords.append(Keyword::mob)
+    thumpgun_boy.keywords.append(Keyword::monster_hunters)
+
+    thumpgun_boy.weapons.append(Weapon::thump_gun)
+    thumpgun_boy.weapons.append(Weapon::close_combat_weapon)
+
+    unit.models.append(thumpgun_boy)
+
+    let boy : Model
+    boy.profile = Profile::beast_snagga_boy
+    boy.abilities.append(AbilityKind::beast_snagga)
+    boy.keywords.append(Keyword::infantry)
+    boy.keywords.append(Keyword::mob)
+    boy.keywords.append(Keyword::monster_hunters)
+
+    boy.weapons.append(Weapon::slugga)
+    boy.weapons.append(Weapon::choppa)
+
+    for i in range(8):
+        unit.models.append(boy)
+
+    return unit
+
+fun make_squighog_boyz() -> Unit:
+    let unit : Unit
+    unit.name = "Squighog Boyz"s
+
+    let nob_model : Model
+    nob_model.profile = Profile::nob_on_smasha_squig
+    nob_model.abilities.append(AbilityKind::beast_snagga)
+    nob_model.keywords.append(Keyword::mounted)
+    nob_model.keywords.append(Keyword::beast_snagga)
+    nob_model.keywords.append(Keyword::squighog_boyz)
+    
+    # Weapons: slugga, big choppa, squighog_jaws
+    nob_model.weapons.append(Weapon::slugga)
+    nob_model.weapons.append(Weapon::big_choppa)
+    nob_model.weapons.append(Weapon::squighog_jaws)
+    
+    unit.models.append(nob_model)
+
+    # 2) 3 standard Squighog Boyz
+    for i in range(3):
+        let hog_boy : Model
+        hog_boy.profile = Profile::squighog_boyz
+        hog_boy.abilities.append(AbilityKind::beast_snagga)
+        hog_boy.keywords.append(Keyword::mounted)
+        hog_boy.keywords.append(Keyword::beast_snagga)
+        hog_boy.keywords.append(Keyword::squighog_boyz)
+
+        # Weapons: saddlegit_weapons, stikka_ranged, squighog_jaws
+        hog_boy.weapons.append(Weapon::saddlegit_weapons)
+        hog_boy.weapons.append(Weapon::stikka_ranged)
+        hog_boy.weapons.append(Weapon::squighog_jaws)
+
+        unit.models.append(hog_boy)
+
+    return unit
+
 
 fun make_octavious_strike_force(UnitVector out, Bool owner) -> Faction:
     out.append(make_octavius())
@@ -671,5 +772,16 @@ fun make_zarkan_deamonkin(UnitVector out, Bool owner) -> Faction:
     out.append(make_cultist_mob())
     out.back().owned_by_player1 = owner
     out.append(make_legionaries())
+    out.back().owned_by_player1 = owner
+    return Faction::insidious_infiltrators
+
+fun make_morgrim_butchas(UnitVector out, Bool owner) -> Faction:
+    out.append(make_beastboss_morgrim())
+    out.back().owned_by_player1 = owner
+    out.append(make_squighog_boyz())
+    out.back().owned_by_player1 = owner
+    out.append(make_beast_snagga_boyz())
+    out.back().owned_by_player1 = owner
+    out.append(make_beast_snagga_boyz())
     out.back().owned_by_player1 = owner
     return Faction::insidious_infiltrators

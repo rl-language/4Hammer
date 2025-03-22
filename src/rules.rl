@@ -6,12 +6,14 @@ import vector2d
 import stats
 import board
 
-fun required_wound_roll(AttackSequenceInfo info) -> Int:
+fun required_wound_roll(Board board, AttackSequenceInfo info) -> Int:
 
     let strenght = info.source.strenght()
     let thoughness = info.target_toughness
     let modifiers = info.total_wound_modifier() 
     if thoughness < strenght and info.greater_strenght_wound_protection:
+        modifiers = modifiers + 1
+    if info.has_weapon_rule(board, WeaponRuleKind::lance) and board[info.source_unit_id].has_charged:
         modifiers = modifiers + 1
 
     let clamped_modifier = 0
@@ -123,7 +125,7 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         board.current_roll = rerollable_dice_roll(board, board.attack_info.reroll_wounds, board.attack_info.reroll1_wounds, true, source_unit.owner_id())
         subaction*(board) board.current_roll
 
-        if board.current_roll.result < required_wound_roll(board.attack_info) or board.current_roll.result == 1:
+        if board.current_roll.result < required_wound_roll(board, board.attack_info) or board.current_roll.result == 1:
             continue
 
 
@@ -199,10 +201,14 @@ act resolve_weapon(ctx Board board, frm Int source, frm Int current_model, frm I
     board.current_state = CurrentStateDescription::quantity_roll
     subaction* attacks_roll = evaluate_random_stat(board.attack_info.source.attacks(),  rapid_fire_attacks)
 
+    if board.attack_info.has_weapon_rule(board, WeaponRuleKind::blast):
+       attacks_roll.result = attacks_roll.result + board[target].models.size() / 5
+
     frm current_attack = 0
     while current_attack != attacks_roll.result:
         ref target_unit = board[target]
         subaction* (board, board[target], board[source]) attack = single_attack(board, board[target], board[source])
+
         current_attack = current_attack + 1
         if board[target].models.size() == 0:
             break
@@ -235,29 +241,50 @@ fun _configure_attack(Board board, Int source, Int target, Bool overwatch, Bool 
     board.attack_info = attack
 
 act resolve_model_attack(ctx Board board, frm UnitID source, frm UnitID target, frm Int current_model, frm Bool melee) -> ModelAttack:
+    board.current_state = CurrentStateDescription::select_weapon
+
     ref model = board[source][current_model]
-    board.attack_info.source_profile = model.profile
     frm hazardous_uses = 0
     frm distance = board[target].distance(model)
-    board.current_state = CurrentStateDescription::select_weapon
-    actions:
-        act select_weapon(BInt<0, MAX_WEAPONS> weapon_id) {
-            weapon_id < board[source][current_model].weapons.size(),
-            !melee or board[source][current_model].weapons[weapon_id.value].range() == 0,
-            distance <= float(board[source][current_model].weapons[weapon_id.value].range())
-        }
-            board.attack_info.source = board[source][current_model].weapons[weapon_id.value]
-        act skip()
+
+    board.attack_info.source_profile = model.profile
+    frm used_weapons : Bool[MAX_WEAPONS] 
+    while true:
+        actions:
+            act select_weapon(BInt<0, MAX_WEAPONS> weapon_id) {
+                weapon_id < board[source][current_model].weapons.size(),
+                !melee or board[source][current_model].weapons[weapon_id.value].range() == 0,
+                distance <= float(board[source][current_model].weapons[weapon_id.value].range()),
+                !board[source].has_run or board[source][current_model].weapons[weapon_id.value].has_rule(WeaponRuleKind::assault),
+                !used_weapons[weapon_id.value]
+            }
+                board.attack_info.source = board[source][current_model].weapons[weapon_id.value]            
+                used_weapons[weapon_id.value] = true
+            act skip()
+                return
+        if board.attack_info.source.has_rule(WeaponRuleKind::hazardous):
+            hazardous_uses = hazardous_uses + 1
+        subaction*(board) resolve_weapon = resolve_weapon(board, source.get(), current_model, target.get())
+        # in melee you can only attack with one weapon unless it has extra attacks
+        if melee and !board.attack_info.has_weapon_rule(board, WeaponRuleKind::extra_attacks):
             return
-    if board.attack_info.source.has_rule(WeaponRuleKind::hazardous):
-        hazardous_uses = hazardous_uses + 1
-    subaction*(board) resolve_weapon = resolve_weapon(board, source.get(), current_model, target.get())
+        
+        # pistols can be used instead of other weapons
+        if board.attack_info.has_weapon_rule(board, WeaponRuleKind::pistol):
+            return
 
 act use_attack_stratagems(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee) -> UseAttackStratagems:
     frm target_player = board[target].owner_id()
     board.current_decision_maker = board[target].owned_by_player1
     actions:
         act no_defensive_stratagem()
+        act tough_as_squig_hide() {
+            board.can_use_strat(bool(target_player), Stratagem::tough_as_squig_hide),
+            board.players_faction[target_player] == Faction::morgrim_butchas
+        }
+            board[target].phase_modifiers.greater_strenght_wound_protection = true
+            board.pay_strat(bool(target_player), Stratagem::tough_as_squig_hide)
+            board.mark_strat_used(Stratagem::tough_as_squig_hide, target_player)
         act use_gene_wrought_resiliance() {
             board.can_use_strat(bool(target_player), Stratagem::gene_wrought_resiliance),
             board.players_faction[target_player] == Faction::strike_force_octavius
@@ -599,6 +626,20 @@ act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
                     board.current_decision_maker = !board.current_decision_maker
 
 act fight_phase(ctx Board board) -> FightPhase:
+    if board.players_faction[int(board.current_player)] == Faction::morgrim_butchas:
+        actions:
+            act use_bestial_bellow(frm UnitID unit, frm UnitID target) {
+                unit.get() < board.units.size(),
+                board[unit].has_keyword(Keyword::beastboss) or board[unit].has_keyword(Keyword::squighog_boyz),
+                board.can_use_strat(board.current_player, Stratagem::bestial_bellow),
+                board[target].distance(board[unit]) < 3.0
+            }
+                board.pay_strat(!board.current_player, Stratagem::heroic_intervention)
+                board.mark_strat_used(Stratagem::heroic_intervention, int(!board.current_player))
+
+                subaction*(board, board[target]) shock_test = battle_shock_test(board, board[target])
+                
+            act skip()
     subaction*(board) fight_first_step = fight_step(board, true)
     subaction*(board) fight_step = fight_step(board, false)
 
@@ -760,8 +801,6 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
                 source.get() < board.units.size(),
                 target.get() < board.units.size(),
                 !board[target].is_lone_operative() or board[source].distance(board[source]) < 12.0,
-                !board[source].has_shoot,
-                !board[source].has_run,
                 !board[source].has_shoot,
                 board[source].can_shoot,
                 board.units[source.get()].owned_by_player1 == board.current_player,

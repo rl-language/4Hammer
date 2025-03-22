@@ -31,6 +31,10 @@ enum WeaponRuleKind:
     anti_psychic
     heavy
     melta
+    blast
+    lance
+    extra_attacks
+    assault
 
     fun equal(WeaponRuleKind other) -> Bool:
         return self.value == other.value
@@ -363,6 +367,122 @@ enum Weapon:
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
+    beat_boss_shoota:
+        Int range = 18
+        Stat attacks = raw_stat(2)
+        Int skill = 4
+        Int strenght = 4
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1))
+    beast_snagga_klaw:
+        Int range = 0
+        Stat attacks = raw_stat(4)
+        Int skill = 3
+        Int strenght = 10
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::anti_monster, 4),
+            weapon_rule(WeaponRuleKind::anti_vehichle, 4)
+        )
+    beastchoppa:
+        Int range = 0
+        Stat attacks = raw_stat(6)
+        Int skill = 2
+        Int strenght = 6
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::anti_monster, 4),
+            weapon_rule(WeaponRuleKind::anti_vehichle, 4))
+    slugga:
+        Int range = 12
+        Stat attacks = raw_stat(1)
+        Int skill = 5
+        Int strenght = 4
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
+    thump_gun:
+        Int range = 18
+        Stat attacks = dice_stat(3)  
+        Int skill = 5
+        Int strenght = 6
+        Int penetration = 0
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::blast))
+    choppa:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 3
+        Int strenght = 5
+        Int penetration = -1
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules()
+    power_snappa:
+        Int range = 0
+        Stat attacks = raw_stat(4)
+        Int skill = 3
+        Int strenght = 7
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules()
+    saddlegit_weapons:
+        Int range = 9
+        Stat attacks = raw_stat(1)
+        Int skill = 4
+        Int strenght = 3
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::assault)
+        )
+    stikka_ranged:
+        Int range = 9
+        Stat attacks = raw_stat(1)
+        Int skill = 5
+        Int strenght = 5
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::assault),
+            weapon_rule(WeaponRuleKind::anti_monster, 4),
+            weapon_rule(WeaponRuleKind::anti_vehichle, 4)
+        )
+    big_choppa:
+        Int range = 0
+        Stat attacks = raw_stat(4)
+        Int skill = 3
+        Int strenght = 6
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::anti_monster, 4),
+            weapon_rule(WeaponRuleKind::anti_vehichle, 4)
+        )
+    stikka_melee:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 3
+        Int strenght = 5
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::anti_monster, 4),
+            weapon_rule(WeaponRuleKind::anti_vehichle, 4),
+            weapon_rule(WeaponRuleKind::lance)
+        )
+    squighog_jaws:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 4
+        Int strenght = 6
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::extra_attacks)
+        )
 
 
     fun get_rule_parameter(WeaponRuleKind rule) -> Int:
@@ -409,6 +529,10 @@ enum AbilityKind:
     sacrificial_dagger 
     dark_pacts
     veterans_of_the_long_war
+    morgrim
+    beast_snagga
+    warboss
+    beastboss
 
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value
@@ -424,6 +548,7 @@ enum Faction:
     strike_force_octavius
     insidious_infiltrators
     zarkan_daemonkin
+    morgrim_butchas
 
     fun equal(Faction other) -> Bool:
         return self.value == other.value
@@ -457,6 +582,12 @@ enum Keyword:
     legionaries
     damned
     cultist_mob
+    mob
+    mounted
+    monster_hunters
+    beast_snagga
+    beastboss
+    squighog_boyz
     monster # only implemented for veteran instincts 
     vehicle # only implemented for vetern instincts
 
@@ -476,6 +607,7 @@ enum Profile:
         Int thoughness = 5
         Int save = 2
         Int invuln_save = 4
+        Int feel_no_pain = 10
         Int wounds = 6
         Int leadership = 6
         Int control = 1
@@ -485,6 +617,7 @@ enum Profile:
         Int thoughness = 5
         Int save = 2
         Int invuln_save = 4
+        Int feel_no_pain = 10
         Int wounds = 5
         Int leadership = 6
         Int control = 1
@@ -494,6 +627,7 @@ enum Profile:
         Int thoughness = 4
         Int save = 3
         Int invuln_save = 10
+        Int feel_no_pain = 10
         Int wounds = 2
         Int leadership = 6
         Int control = 1
@@ -512,6 +646,7 @@ enum Profile:
         Int thoughness = 5
         Int save = 4
         Int invuln_save = 4
+        Int feel_no_pain = 10
         Int wounds = 7
         Int leadership = 7
         Int control = 1
@@ -530,6 +665,7 @@ enum Profile:
         Int thoughness = 5
         Int save = 4
         Int invuln_save = 6
+        Int feel_no_pain = 10
         Int wounds = 3
         Int leadership = 8
         Int control = 1
@@ -548,6 +684,7 @@ enum Profile:
         Int thoughness = 6
         Int save = 3
         Int invuln_save = 5
+        Int feel_no_pain = 10
         Int wounds = 3
         Int leadership = 6
         Int control = 1
@@ -566,10 +703,62 @@ enum Profile:
         Int thoughness = 3
         Int save = 6
         Int invuln_save = 10
+        Int feel_no_pain = 10
         Int wounds = 1
         Int leadership = 7
         Int control = 1
         Float base_size = 25.0
+    beastboss_morgrim:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int invuln_save = 5
+        Int feel_no_pain = 5
+        Int wounds = 6
+        Int leadership = 6
+        Int control = 1
+        Float base_size = 50.0
+    beast_snagga_boy:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int invuln_save = 10
+        Int feel_no_pain = 6
+        Int wounds = 2
+        Int leadership = 7
+        Int control = 2
+        Float base_size = 32.0
+    beast_snagga_nob:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int invuln_save = 10
+        Int wounds = 3    
+        Int feel_no_pain = 6
+        Int leadership = 7
+        Int control = 2
+        Float base_size = 32.0
+    squighog_boyz:
+        Int movement = 10
+        Int thoughness = 7
+        Int save = 4
+        Int invuln_save = 10
+        Int feel_no_pain = 5
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 2
+        Float base_size = 75.0
+    nob_on_smasha_squig:
+        Int movement = 10
+        Int thoughness = 7
+        Int save = 4
+        Int invuln_save = 10
+        Int feel_no_pain = 5
+        Int wounds = 4
+        Int leadership = 7
+        Int control = 2
+        Float base_size = 90.0
+
 
     fun equal(Profile other) -> Bool:
         return self.value == other.value
@@ -609,6 +798,10 @@ enum Stratagem:
     violent_unbidding:
         Int cost = 1
     demonic_fervour:
+        Int cost = 1
+    tough_as_squig_hide:
+        Int cost = 1
+    bestial_bellow:
         Int cost = 1
 
     fun equal(Stratagem other) -> Bool:
