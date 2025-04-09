@@ -29,12 +29,12 @@ enum WeaponRuleKind:
     anti_monster
     anti_vehichle
     anti_psychic
-    heavy
-    melta
     blast
     lance
     extra_attacks
     assault
+    heavy
+    melta
 
     fun equal(WeaponRuleKind other) -> Bool:
         return self.value == other.value
@@ -483,6 +483,185 @@ enum Weapon:
         WeaponRules rules = weapon_rules(
             weapon_rule(WeaponRuleKind::extra_attacks)
         )
+    vaultswords_behemor:
+        Int range = 0
+        Stat attacks = raw_stat(6)
+        Int skill = 2
+        Int strenght = 7
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::precision))
+    vaultswords_hurricanus:
+        Int range = 0
+        Stat attacks = raw_stat(9)
+        Int skill = 2
+        Int strenght = 5
+        Int penetration = -1
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1))
+    vaultswords_victus:
+        Int range = 0
+        Stat attacks = raw_stat(5)
+        Int skill = 2
+        Int strenght = 6
+        Int penetration = -3
+        Stat damage = raw_stat(3)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::devastating_wounds))
+    sentinel_blade_ranged:
+        Int range = 12
+        Stat attacks = raw_stat(2)
+        Int skill = 2
+        Int strenght = 4
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::assault),
+            weapon_rule(WeaponRuleKind::pistol)
+        )
+    sentinel_blade_melee:
+        Int range = 0
+        Stat attacks = raw_stat(5)
+        Int skill = 2
+        Int strenght = 6
+        Int penetration = -2
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules()
+    castellan_axe_ranged:
+        Int range = 24
+        Stat attacks = raw_stat(2)
+        Int skill = 2
+        Int strenght = 4
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault))
+    guardian_spear_ranged:
+        Int range = 24
+        Stat attacks = raw_stat(2)
+        Int skill = 2
+        Int strenght = 4
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault))
+    castellan_axe_melee:
+        Int range = 0
+        Stat attacks = raw_stat(4)
+        Int skill = 2
+        Int strenght = 9
+        Int penetration = -1
+        Stat damage = raw_stat(3)
+        WeaponRules rules = weapon_rules()
+    guardian_spear_melee:
+        Int range = 0
+        Stat attacks = raw_stat(5)
+        Int skill = 2
+        Int strenght = 7
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules()
+    balistus_grenade_launcher:
+        Int range = 18
+        Stat attacks = dice_stat(6)  
+        Int skill = 2
+        Int strenght = 4
+        Int penetration = -1
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::blast))
+
+    guardian_spear_ranged_allarus:
+        Int range = 24
+        Stat attacks = raw_stat(2)
+        Int skill = 2
+        Int strenght = 4
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault))
+
+    guardian_spear_melee_allarus:
+        Int range = 0
+        Stat attacks = raw_stat(5)
+        Int skill = 2
+        Int strenght = 7
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules()
+    boltstorm_gauntlet:
+        Int range = 12
+        Stat attacks = raw_stat(3)
+        Int skill = 2
+        Int strenght = 4
+        Int penetration = -1
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
+    power_fist_zacharial:
+        Int range = 0
+        Stat attacks = raw_stat(5)
+        Int skill = 2
+        Int strenght = 8
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules()
+    relic_chainsword:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 2
+        Int strenght = 4
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::extra_attacks)
+        )
+    bolt_rifle:
+        Int range = 24
+        Stat attacks = raw_stat(2)
+        Int skill = 3
+        Int strenght = 4
+        Int penetration = -1
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::assault),
+            weapon_rule(WeaponRuleKind::heavy)
+        )
+    plasma_incinerator_standard:
+        Int range = 24
+        Stat attacks = raw_stat(2)
+        Int skill = 3
+        Int strenght = 7
+        Int penetration = -2
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::assault),
+            weapon_rule(WeaponRuleKind::heavy)
+        )
+
+    plasma_incinerator_supercharge:
+        Int range = 24
+        Stat attacks = raw_stat(2)
+        Int skill = 3
+        Int strenght = 8
+        Int penetration = -3
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(
+            weapon_rule(WeaponRuleKind::assault),
+            weapon_rule(WeaponRuleKind::hazardous),
+            weapon_rule(WeaponRuleKind::heavy)
+        )
+    heavy_bolt_pistol:
+        Int range = 18
+        Stat attacks = raw_stat(1)
+        Int skill = 3
+        Int strenght = 4
+        Int penetration = -1
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
+
+    master_crafted_power_weapon:
+        Int range = 0
+        Stat attacks = raw_stat(4)
+        Int skill = 3
+        Int strenght = 5
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules()
 
 
     fun get_rule_parameter(WeaponRuleKind rule) -> Int:
@@ -533,6 +712,11 @@ enum AbilityKind:
     beast_snagga
     warboss
     beastboss
+    refuse_to_yield
+    patrol_squads
+    bladeguard              
+    swords_of_the_chapter  
+    shields_of_the_chapter 
 
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value
@@ -549,6 +733,8 @@ enum Faction:
     insidious_infiltrators
     zarkan_daemonkin
     morgrim_butchas
+    tristraen_gilded_blade
+    vengeful_brethren
 
     fun equal(Faction other) -> Bool:
         return self.value == other.value
@@ -560,6 +746,8 @@ enum Keyword:
     terminator_squad
     tacticus
     infernus_squad
+    intercessor_squad
+    hellblaster_squad
     character
     captain
     octavius
@@ -588,6 +776,15 @@ enum Keyword:
     beast_snagga
     beastboss
     squighog_boyz
+    blade_champion
+    tristraen
+    custodian_guard
+    custodian_wardens
+    allarus_custodians
+    terminator
+    gravis
+    master_zacharial
+    bladeguard_veteran_squad
     monster # only implemented for veteran instincts 
     vehicle # only implemented for vetern instincts
 
@@ -758,6 +955,85 @@ enum Profile:
         Int leadership = 7
         Int control = 2
         Float base_size = 90.0
+    tristraen:
+        Int movement = 6
+        Int thoughness = 6
+        Int save = 2
+        Int invuln_save = 4
+        Int feel_no_pain = 10
+        Int wounds = 6
+        Int leadership = 6
+        Int control = 2
+        Float base_size = 40.0
+    custodian_wardens:
+        Int movement = 6
+        Int thoughness = 6
+        Int save = 2
+        Int invuln_save = 4
+        Int feel_no_pain = 10
+        Int wounds = 3
+        Int leadership = 6
+        Int control = 2
+        Float base_size = 40.0
+    allarus_custodians:
+        Int movement = 5
+        Int thoughness = 7
+        Int save = 2
+        Int invuln_save = 4
+        Int feel_no_pain = 10
+        Int wounds = 4
+        Int leadership = 6
+        Int control = 2
+        Float base_size = 40.0
+    custodian_guard:
+        Int movement = 6
+        Int thoughness = 6
+        Int save = 2
+        Int invuln_save = 4
+        Int feel_no_pain = 10
+        Int wounds = 4
+        Int leadership = 6
+        Int control = 2
+        Float base_size = 40.0
+    master_zacharial:
+        Int movement = 5
+        Int thoughness = 6
+        Int feel_no_pain = 10
+        Int save = 3
+        Int invuln_save = 4
+        Int wounds = 6
+        Int leadership = 6
+        Int control = 1
+        Float base_size = 40.0
+    intercessor_squad:
+        Int movement = 6
+        Int thoughness = 4
+        Int save = 3
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Int wounds = 2
+        Int leadership = 6
+        Int control = 2
+        Float base_size = 32.0
+    hellblaster_squad:
+        Int movement = 6
+        Int thoughness = 4
+        Int save = 3
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Int wounds = 2
+        Int leadership = 6
+        Int control = 1
+        Float base_size = 32.0
+    bladeguard_veteran_squad:
+        Int movement = 6
+        Int thoughness = 4
+        Int save = 3
+        Int invuln_save = 4
+        Int wounds = 3
+        Int leadership = 6
+        Int control = 1
+        Float base_size = 40.0
 
 
     fun equal(Profile other) -> Bool:
@@ -803,6 +1079,15 @@ enum Stratagem:
         Int cost = 1
     bestial_bellow:
         Int cost = 1
+    overawing_magnificence:
+        Int cost = 1
+    the_gilded_spear:
+        Int cost = 1
+    relic_munitions:
+        Int cost = 1
+    unyielding:
+        Int cost = 1
+
 
     fun equal(Stratagem other) -> Bool:
         return self.value == other.value

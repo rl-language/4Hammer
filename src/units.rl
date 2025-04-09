@@ -596,7 +596,7 @@ fun make_cultist_mob() -> Unit:
 
 fun make_legionaries() -> Unit:
     let profile : Unit
-    profile.name = "Legionaries (10 models)"s
+    profile.name = "Legionaries"s
 
     # Prepare a single Model object with shared stats, abilities, and keywords
     let model : Model
@@ -742,6 +742,118 @@ fun make_squighog_boyz() -> Unit:
 
     return unit
 
+fun make_tristrean() -> Unit:
+    let tristraen_unit : Unit
+
+    # Create the single model for Tristraen
+    let tristraen_model : Model
+    tristraen_model.profile = Profile::tristraen
+
+    # Abilities (Martial Ka’tah is not yet defined as an AbilityKind, so we omit it here)
+    # Add known abilities if you wish, or omit if they are not enumerated:
+    # tristraen_model.abilities.append(AbilityKind::some_ability) 
+
+    # Keywords
+    tristraen_model.keywords.append(Keyword::infantry)
+    tristraen_model.keywords.append(Keyword::character)
+    tristraen_model.keywords.append(Keyword::imperium)
+    tristraen_model.keywords.append(Keyword::blade_champion)
+    tristraen_model.keywords.append(Keyword::tristraen)
+    # (No enumerated keyword for “adeptus_custodes” currently, so we skip it.)
+
+    # Melee Weapons
+    tristraen_model.weapons.append(Weapon::vaultswords_behemor)
+    tristraen_model.weapons.append(Weapon::vaultswords_hurricanus)
+    tristraen_model.weapons.append(Weapon::vaultswords_victus)
+
+    # Finish building the unit
+    tristraen_unit.name = "Tristraen"s
+    tristraen_unit.models.append(tristraen_model)
+
+    return tristraen_unit
+
+fun make_custodian_guard() -> Unit:
+    let guard_unit : Unit
+    guard_unit.name = "Custodian Guard"s
+
+    # Each Guard model is Profile::custodian_guard (T=6, W=3, etc.).
+    # Praesidium Shield adds +1 to Wounds (to 4), but there is no direct code mechanism to
+    # modify an enum-based Profile. In a complete implementation, you might add a new Profile
+    # or some special logic for the shield. For now, we’ll just note it here.
+
+    let guard_model : Model
+    guard_model.profile = Profile::custodian_guard
+
+    # Add relevant Keywords (INFANTRY, IMPERIUM, CUSTODIAN GUARD).
+    guard_model.keywords.append(Keyword::infantry)
+    guard_model.keywords.append(Keyword::imperium)
+    # We do not have a dedicated enum entry for “CUSTODIAN GUARD,” but we can at least note it:
+    guard_model.keywords.append(Keyword::custodian_guard)
+
+    # Sentinel Blade (ranged + melee):
+    guard_model.weapons.append(Weapon::sentinel_blade_ranged)
+    guard_model.weapons.append(Weapon::sentinel_blade_melee)
+
+    # Make 3 models:
+    for i in range(3):
+        guard_unit.models.append(guard_model)
+
+    return guard_unit
+
+fun make_custodian_wardens() -> Unit:
+    let wardens_unit : Unit
+    wardens_unit.name = "Custodian Wardens"s
+
+    # Profile: custodian_wardens (M=6, T=6, Sv=2+, W=3, Ld=6, OC=2, Inv=4+)
+
+    # 1) WARDEN with Castellan Axe
+    let warden_with_axe : Model
+    warden_with_axe.profile = Profile::custodian_wardens
+    warden_with_axe.keywords.append(Keyword::infantry)
+    warden_with_axe.keywords.append(Keyword::imperium)
+    warden_with_axe.keywords.append(Keyword::custodian_wardens)
+    warden_with_axe.weapons.append(Weapon::castellan_axe_ranged)
+    warden_with_axe.weapons.append(Weapon::castellan_axe_melee)
+
+    # 2) WARDEN with Guardian Spear
+    let warden_with_spear : Model
+    warden_with_spear.profile = Profile::custodian_wardens
+    warden_with_spear.keywords.append(Keyword::infantry)
+    warden_with_spear.keywords.append(Keyword::imperium)
+    warden_with_spear.keywords.append(Keyword::custodian_wardens)
+    warden_with_spear.weapons.append(Weapon::guardian_spear_ranged)
+    warden_with_spear.weapons.append(Weapon::guardian_spear_melee)
+
+    # Add them to the unit: 1 with axe, 2 with spear
+    wardens_unit.models.append(warden_with_axe)
+    wardens_unit.models.append(warden_with_spear)
+    wardens_unit.models.append(warden_with_spear)
+
+    return wardens_unit
+
+fun make_allarus_custodians() -> Unit:
+    let allarus_unit : Unit
+    allarus_unit.name = "Allarus Custodians (2 models)"s
+
+    # Each Allarus Custodian model:
+    let allarus_model : Model
+    allarus_model.profile = Profile::allarus_custodians
+    allarus_model.keywords.append(Keyword::infantry)
+    allarus_model.keywords.append(Keyword::terminator)
+    allarus_model.keywords.append(Keyword::imperium)
+    allarus_model.keywords.append(Keyword::allarus_custodians)
+
+    # Weapons: balistus grenade launcher + guardian spear (both ranged and melee)
+    allarus_model.weapons.append(Weapon::balistus_grenade_launcher)
+    allarus_model.weapons.append(Weapon::guardian_spear_ranged_allarus)
+    allarus_model.weapons.append(Weapon::guardian_spear_melee_allarus)
+
+    # Add two models
+    allarus_unit.models.append(allarus_model)
+    allarus_unit.models.append(allarus_model)
+
+    return allarus_unit
+
 
 fun make_octavious_strike_force(UnitVector out, Bool owner) -> Faction:
     out.append(make_octavius())
@@ -785,3 +897,168 @@ fun make_morgrim_butchas(UnitVector out, Bool owner) -> Faction:
     out.append(make_beast_snagga_boyz())
     out.back().owned_by_player1 = owner
     return Faction::insidious_infiltrators
+
+fun make_tristrean_gilded_blade(UnitVector out, Bool owner) -> Faction:
+    # 1) Tristraen
+    out.append(make_tristrean())
+    out.back().owned_by_player1 = owner
+
+    # 2) Custodian Guard (3 models)
+    out.append(make_custodian_guard())
+    out.back().owned_by_player1 = owner
+
+    # 3) Custodian Wardens (3 models)
+    out.append(make_custodian_wardens())
+    out.back().owned_by_player1 = owner
+
+    # 4) Allarus Custodians (2 models)
+    out.append(make_allarus_custodians())
+    out.back().owned_by_player1 = owner
+
+    return Faction::tristraen_gilded_blade
+
+fun make_master_zacharial() -> Unit:
+    let zach_unit : Unit
+    
+    let zach_model : Model
+    zach_model.profile = Profile::master_zacharial
+
+    # Abilities
+    zach_model.abilities.append(AbilityKind::oath_of_moment)
+    zach_model.abilities.append(AbilityKind::refuse_to_yield)
+
+    # Keywords
+    zach_model.keywords.append(Keyword::infantry)
+    zach_model.keywords.append(Keyword::character)
+    zach_model.keywords.append(Keyword::imperium)
+    zach_model.keywords.append(Keyword::gravis)
+    zach_model.keywords.append(Keyword::captain)
+    zach_model.keywords.append(Keyword::master_zacharial)
+    # If you wish to note his Chapter, you can also add:
+    # zach_model.keywords.append(Keyword::adeptus_astartes)
+    # (No “dark_angels” keyword was enumerated, so we skip it.)
+
+    # Weapons
+    zach_model.weapons.append(Weapon::boltstorm_gauntlet)
+    zach_model.weapons.append(Weapon::power_fist_zacharial)
+    zach_model.weapons.append(Weapon::relic_chainsword)
+
+    zach_unit.name = "Master Zacharial"s
+    zach_unit.models.append(zach_model)
+
+    return zach_unit
+
+
+fun make_intercessor_squad() -> Unit:
+    let squad : Unit
+    squad.name = "Intercessor Squad"s
+
+    let base_model : Model
+    base_model.profile = Profile::intercessor_squad
+
+    # Abilities
+    base_model.abilities.append(AbilityKind::oath_of_moment)
+    base_model.abilities.append(AbilityKind::patrol_squads)
+
+    # Keywords
+    base_model.keywords.append(Keyword::infantry)
+    base_model.keywords.append(Keyword::imperium)
+    base_model.keywords.append(Keyword::tacticus)
+    base_model.keywords.append(Keyword::intercessor_squad)
+    # If you wish to add “BATTLELINE” or “DARK_ANGELS,” you would first need to define them
+    # in the enum Keyword, similar to:
+    #
+    #   battleline
+    #   dark_angels
+    #
+    # Then you could append them here.
+
+    # Weapons
+    base_model.weapons.append(Weapon::bolt_pistol)
+    base_model.weapons.append(Weapon::bolt_rifle)
+    base_model.weapons.append(Weapon::close_combat_weapon)
+
+    # Create 10 identical models
+    for i in range(10):
+        squad.models.append(base_model)
+
+    return squad
+
+fun make_hellblaster_squad() -> Unit:
+    let squad : Unit
+    squad.name = "Hellblaster Squad"s
+
+    let base_model : Model
+    base_model.profile = Profile::hellblaster_squad
+
+    # Abilities
+    base_model.abilities.append(AbilityKind::oath_of_moment)
+
+    # Keywords
+    base_model.keywords.append(Keyword::infantry)
+    base_model.keywords.append(Keyword::imperium)
+    base_model.keywords.append(Keyword::tacticus)
+    base_model.keywords.append(Keyword::hellblaster_squad)
+    # If you wish to add “ADEPTUS_ASTARTES” or “DARK_ANGELS,” define them similarly in enum Keyword first, then append.
+
+    # Weapons
+    base_model.weapons.append(Weapon::bolt_pistol)
+    base_model.weapons.append(Weapon::plasma_incinerator_standard)
+    base_model.weapons.append(Weapon::plasma_incinerator_supercharge)
+    base_model.weapons.append(Weapon::close_combat_weapon)
+
+    # 5 identical models
+    for i in range(5):
+        squad.models.append(base_model)
+
+    return squad
+
+fun make_bladeguard_veteran_squad() -> Unit:
+    let squad : Unit
+    squad.name = "Bladeguard Veteran Squad"s
+
+    # Prepare a single base Model
+    let base_model : Model
+    base_model.profile = Profile::bladeguard_veteran_squad
+
+    # Abilities
+    base_model.abilities.append(AbilityKind::oath_of_moment)
+    base_model.abilities.append(AbilityKind::bladeguard)
+    # Additional temporary “Swords of the Chapter” or “Shields of the Chapter” will be
+    # selected in the Fight phase, so we do not permanently append them here.
+
+    # Keywords
+    base_model.keywords.append(Keyword::infantry)
+    base_model.keywords.append(Keyword::imperium)
+    base_model.keywords.append(Keyword::tacticus)
+    base_model.keywords.append(Keyword::bladeguard_veteran_squad)
+    # Optionally add Adeptus Astartes or Dark Angels if you define them in the Keyword enum
+
+    # Weapons
+    base_model.weapons.append(Weapon::heavy_bolt_pistol)
+    base_model.weapons.append(Weapon::master_crafted_power_weapon)
+
+    # Add 3 identical models
+    for i in range(3):
+        squad.models.append(base_model)
+
+    return squad
+
+fun make_vengeful_brethren(UnitVector out, Bool owner) -> Faction:
+    # 1) Master Zacharial
+    out.append(make_master_zacharial())
+    out.back().owned_by_player1 = owner
+
+    # 2) Intercessor Squad (10 models)
+    out.append(make_intercessor_squad())
+    out.back().owned_by_player1 = owner
+
+    # 3) Hellblaster Squad (5 models)
+    out.append(make_hellblaster_squad())
+    out.back().owned_by_player1 = owner
+
+    # 4) Bladeguard Veteran Squad (3 models)
+    out.append(make_bladeguard_veteran_squad())
+    out.back().owned_by_player1 = owner
+
+    return Faction::vengeful_brethren

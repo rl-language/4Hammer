@@ -89,6 +89,9 @@ act rerollable_dice_roll(ctx Board board, frm Bool reroll, frm Bool reroll_1s, f
 
 fun get_hit_roll_bonus(Board board) -> Int:
     let sum = board.attack_info.total_hit_modifier() 
+    #board[board.attack_info.source_unit_id].
+    if board.attack_info.has_weapon_rule(board, WeaponRuleKind::heavy) and board[board.attack_info.source_unit_id].has_moved:
+        sum = sum + 1
     if sum >= 1:
         return 1
     if sum <= -1:
@@ -131,6 +134,10 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
 
         if board.current_roll.result == 6 and board.attack_info.source.has_rule(WeaponRuleKind::devastating_wounds):
             board.current_state = CurrentStateDescription::damage_roll
+            let extra_damage = 0 
+            if board.attack_info.has_weapon_rule(board, WeaponRuleKind::melta) and source_unit.distance(target) < 12.0:
+                extra_damage = board.attack_info.max_weapon_parameter(board, WeaponRuleKind::melta)
+                
             subaction* devastating_damage_roll = evaluate_random_stat(board.attack_info.source.damage(), 0)
             generated_effective_wounds = generated_effective_wounds + devastating_damage_roll.result
         else:
@@ -204,6 +211,7 @@ act resolve_weapon(ctx Board board, frm Int source, frm Int current_model, frm I
     if board.attack_info.has_weapon_rule(board, WeaponRuleKind::blast):
        attacks_roll.result = attacks_roll.result + board[target].models.size() / 5
 
+
     frm current_attack = 0
     while current_attack != attacks_roll.result:
         ref target_unit = board[target]
@@ -272,6 +280,9 @@ act resolve_model_attack(ctx Board board, frm UnitID source, frm UnitID target, 
         # pistols can be used instead of other weapons
         if board.attack_info.has_weapon_rule(board, WeaponRuleKind::pistol):
             return
+        # early out if we killed everyone
+        if board[target].models.size() == 0:
+            return
 
 act use_attack_stratagems(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee) -> UseAttackStratagems:
     frm target_player = board[target].owner_id()
@@ -299,6 +310,17 @@ act use_attack_stratagems(ctx Board board, frm UnitID source, frm UnitID target,
             board.pay_strat(bool(target_player), Stratagem::demonic_fervour)
             board.mark_strat_used(Stratagem::demonic_fervour, target_player)
             board.attack_info.fight_on_death = true
+            board.attack_info.fight_on_death_roll = 1
+        act use_unyielding() {
+            board.can_use_strat(bool(target_player), Stratagem::unyielding),
+            board.players_faction[target_player] == Faction::vengeful_brethren
+        }
+            board.pay_strat(bool(target_player), Stratagem::unyielding)
+            board.mark_strat_used(Stratagem::unyielding, target_player)
+            board.attack_info.fight_on_death = true
+            board.attack_info.fight_on_death_roll = 4
+            if board[source].has_ability(AbilityKind::bladeguard):
+                board.attack_info.fight_on_death_roll = 3
 
     board.current_decision_maker = board[source].owned_by_player1
     actions:
@@ -358,6 +380,14 @@ act use_attack_stratagems(ctx Board board, frm UnitID source, frm UnitID target,
             board.attack_info.profile_hit_roll_bonus.append(Profile::aranis_zarkan)
             board.attack_info.profile_wound_roll_bonus.append(Profile::aranis_zarkan)
 
+        if board.players_faction[1-target_player] == Faction::tristraen_gilded_blade:
+
+            actions:
+                act use_dacatarai_stance() 
+                board.attack_info.add_sustained_hits(1)
+                act use_rendax_stance()             
+                board.attack_info.add_letal_hits()
+
 
 
 act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee, frm Bool overwatch) -> Attack:
@@ -403,6 +433,10 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     model = 0
     while model != board[target].models.size() and !board[source].models.empty():
         if board[target][model].state == ModelState::fight_on_death:
+            if board.attack_info.fight_on_death_roll != 2:
+                act roll(Dice result)
+                if result < board.attack_info.fight_on_death_roll:
+                   continue 
             subaction*(board) fight_on_death_attack = resolve_model_attack(board, target, source, model, melee)
         model = model + 1
     board[target].remove_figth_on_death_models()
@@ -528,7 +562,8 @@ act command_phase(ctx Board board) -> CommandPhase:
     board.current_decision_maker = board.current_player 
     subaction*(board) neural_disruption = neural_disruption(board)
 
-    if board.players_faction[int(board.current_player)] == Faction::strike_force_octavius:
+    let faction = board.players_faction[int(board.current_player)]
+    if  faction == Faction::strike_force_octavius or faction == Faction::vengeful_brethren:
         board.current_state = CurrentStateDescription::select_oath_of_moment_target
         actions:
             act select_oath_of_moment_target(frm UnitID unit) {
@@ -678,7 +713,20 @@ act charge_phase(ctx Board board) -> ChargePhase:
                 board[target.get()].get_shortest_vector_to(board[source.get()]).length() < 12.0
             }
                 charge_act = charge(board, source, target, true)
+                frm charge_reduction : Bool
+                # before charge stratagems
+                actions:
+                    act skip()
+                    act use_overawing_magnificence() {
+                        board.faction_of_unit(target) == Faction::tristraen_gilded_blade,
+                        board.can_use_strat(!board.current_player, Stratagem::overawing_magnificence) 
+                    }
+                        charge_reduction = true
+                        board.pay_strat(!board.current_player, Stratagem::overawing_magnificence) 
+                        board.mark_strat_used(Stratagem::overawing_magnificence, int(!board.current_player)) 
                 subaction*(board) charge_act
+
+                # after charge stratagem
                 actions:
                     act skip()
                     act use_heroic_intervention(frm UnitID interceptor) {
@@ -739,7 +787,7 @@ act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
             board[id].models.erase(i)
         i = i - 1
 
-act movement(ctx Board board, frm UnitID id) -> Movement:
+act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> Movement:
     frm player_move : Move
     if board.is_in_melee(board[id]):
         subaction*(board) desperate_escape = desperate_escape(board, id)
@@ -749,11 +797,10 @@ act movement(ctx Board board, frm UnitID id) -> Movement:
         player_move = move(board, id, 0)
         subaction*(board, id) player_move 
         return
-
     act advance(Bool do_it)
     if !do_it:
         board[id.get()].has_moved = true
-        player_move = move(board, id, 0)
+        player_move = move(board, id, 2*int(use_the_gilded_spear))
         subaction*(board, id) player_move 
     else:
         board[id.get()].has_moved = true
@@ -774,7 +821,17 @@ act movement_phase(ctx Board board) -> MovementPhase:
                 board[id].owned_by_player1 == board.current_player,
                 !board[id].has_moved
             }
-                subaction*(board) move = movement(board, id)
+
+                # stratagems
+                frm use_gilded_spear : Bool
+                if board.get_current_player_faction() == Faction::tristraen_gilded_blade and board.can_use_strat(board.current_player, Stratagem::the_gilded_spear):
+                    act use_gilded_spear(Bool do_it)
+                    use_gilded_spear = do_it
+                    board.pay_strat(board.current_player, Stratagem::the_gilded_spear)
+                    board.mark_strat_used(Stratagem::the_gilded_spear, int(board.current_player))
+       
+                # move
+                subaction*(board) move = movement(board, id, use_gilded_spear)
 
     board.current_decision_maker = board.current_player 
     # reserve managment
@@ -994,6 +1051,13 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
         board.players_faction[int(current_player)] = make_insidious_infiltrators(board.reserve_units, current_player)
         act pick_zarkan_deamonkin()
         board.players_faction[int(current_player)] = make_zarkan_deamonkin(board.reserve_units, current_player)
+        act pick_morgrim_butcha()
+        board.players_faction[int(current_player)] = make_morgrim_butchas(board.reserve_units, current_player)
+        act pick_tristean_gilded_blade()
+        board.players_faction[int(current_player)] = make_tristrean_gilded_blade(board.reserve_units, current_player)
+
+        act pick_vengeful_brethren()
+        board.players_faction[int(current_player)] = make_vengeful_brethren(board.reserve_units, current_player)
             
 
 @classes

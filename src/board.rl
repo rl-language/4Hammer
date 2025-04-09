@@ -34,6 +34,7 @@ cls AttackSequenceInfo:
     Bool reroll1_wounds
     Bool greater_strenght_wound_protection
     Bool fight_on_death
+    Dice fight_on_death_roll
     Int target_toughness
     Weapon source
     Profile source_profile
@@ -123,6 +124,9 @@ cls Board:
         while i != self.units.size():
             self.units[i].clear_phase_modifiers()
             i = i + 1
+
+    fun get_current_player_faction() -> Faction:
+        return self.players_faction[int(self.current_player)]
 
     fun add_extra_cp(Int player_id):
         if self.obtained_extra_cp_this_round[player_id]:
