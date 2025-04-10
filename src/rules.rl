@@ -1094,6 +1094,8 @@ act play2() -> Game2:
             subaction*(board) battle = battle(board)
 
 fun score(Game g, Int player_id) -> Float:
+    if g.board.units.size() < 2:
+        return 0.0
     let count = g.board.units[1].models.size()
     if player_id == 0:
         # Player 0's score: models destroyed in player 1's unit

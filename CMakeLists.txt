@@ -118,3 +118,21 @@ rlc(rlc_rules_fuzzer
 add_custom_target(test-web
 	COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/exports && vivaldi 127.0.0.1:8000 && python ${CMAKE_CURRENT_SOURCE_DIR}/tools/open_server.py
 	DEPENDS export-web)
+
+###########
+#   doc   #
+###########
+
+function(gen_doc file)
+    add_custom_command(OUTPUT doc/${file}.md
+        COMMAND rlc-doc ${CMAKE_CURRENT_SOURCE_DIR}/src/${file}.rl -o ${CMAKE_CURRENT_SOURCE_DIR}/doc/${file}.md
+				   DEPENDS src/${file}.rl)
+    add_custom_target(${file}_doc ALL DEPENDS doc/${file}.md)
+endfunction()
+
+gen_doc(board)
+gen_doc(units)
+gen_doc(rules)
+gen_doc(stats)
+gen_doc(weapons)
+gen_doc(vector2d)
