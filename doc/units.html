@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Documentation - units.rl</title>
+</head>
+<body>
+<h1>units.rl</h1>
+<h2>Class Model</h2>
+<h3>Fields</h3>
+<ul>
+  <li><code>BoardPosition position</code></li>
+  <li><code>Profile profile</code></li>
+  <li><code>Wounds suffered_wounds</code></li>
+  <li><code>WeaponsVector weapons</code></li>
+  <li><code>Abilities abilities</code></li>
+  <li><code>Keywords keywords</code></li>
+  <li><code>ModelState state</code></li>
+</ul>
+<h3>Methods</h3>
+<ul>
+<li><strong>Function</strong>: <code>base_size_in_inches()  -> Float</code></li>
+<pre><code>
+ required
+
+</code></pre>
+<li><strong>Function</strong>: <code>is_below_half_wounds()  -> Bool</code></li>
+<li><strong>Function</strong>: <code>has_keyword(Keyword keyword)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>has_weapon_rule(WeaponRuleKind rule)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>has_ability(AbilityKind kind)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>consolidate_torward(Unit other) </code></li>
+<li><strong>Function</strong>: <code>is_character()  -> Bool</code></li>
+<li><strong>Function</strong>: <code>distance(Model model)  -> Float</code></li>
+<li><strong>Function</strong>: <code>wounds_left()  -> Int</code></li>
+</ul>
+<h2>Class ModelID</h2>
+<h3>Fields</h3>
+<ul>
+  <li><code>BInt<0, MAX_UNIT_MODELS> id</code></li>
+</ul>
+<h3>Methods</h3>
+<ul>
+<li><strong>Function</strong>: <code>get()  -> Int</code></li>
+</ul>
+<h2>Class UnitID</h2>
+<h3>Fields</h3>
+<ul>
+  <li><code>BInt<0, MAX_UNIT_COUNT> id</code></li>
+</ul>
+<h3>Methods</h3>
+<ul>
+<li><strong>Function</strong>: <code>get()  -> Int</code></li>
+<li><strong>Function</strong>: <code>assign(Int value) </code></li>
+</ul>
+<h2>Class PhaseModifiers</h2>
+<h3>Fields</h3>
+<ul>
+  <li><code>Bool greater_strenght_wound_protection</code></li>
+</ul>
+<h2>Class Unit</h2>
+<h3>Fields</h3>
+<ul>
+  <li><code>ModelVector models</code></li>
+  <li><code>Bool owned_by_player1</code></li>
+  <li><code>Hidden<String> name</code></li>
+  <li><code>Bool has_moved</code></li>
+  <li><code>Bool has_run</code></li>
+  <li><code>Bool has_fought</code></li>
+  <li><code>Bool has_shoot</code></li>
+  <li><code>Bool battle_socked</code></li>
+  <li><code>Bool has_charged</code></li>
+  <li><code>Bool can_shoot</code></li>
+  <li><code>Bool can_charge</code></li>
+  <li><code>ModelID starting_strenght</code></li>
+  <li><code>PhaseModifiers phase_modifiers</code></li>
+</ul>
+<h3>Methods</h3>
+<ul>
+<li><strong>Function</strong>: <code>has_greater_strenght_wound_protection()  -> Bool</code></li>
+<pre><code>
+ required
+ required
+ required
+
+</code></pre>
+<li><strong>Function</strong>: <code>clear_phase_modifiers() </code></li>
+<li><strong>Function</strong>: <code>is_lone_operative()  -> Bool</code></li>
+<li><strong>Function</strong>: <code>remove_figth_on_death_models() </code></li>
+<li><strong>Function</strong>: <code>can_reroll_charge()  -> Bool</code></li>
+<li><strong>Function</strong>: <code>owner_id()  -> Int</code></li>
+<li><strong>Function</strong>: <code>get_temporary_weapon_rules()  -> BoundedVector<WeaponRule, 1></code></li>
+<li><strong>Function</strong>: <code>empty()  -> Bool</code></li>
+<li><strong>Function</strong>: <code>consolidate_torward(Unit other) </code></li>
+<li><strong>Function</strong>: <code>attach_to(Unit other) </code></li>
+<li><strong>Function</strong>: <code>get_leadership()  -> Int</code></li>
+<li><strong>Function</strong>: <code>has_temporary_wepon_rule(WeaponRuleKind rule)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>is_below_half_strenght()  -> Bool</code></li>
+<li><strong>Function</strong>: <code>get_temporary_weapon_parameter(WeaponRuleKind rule)  -> Int</code></li>
+<li><strong>Function</strong>: <code>max_weapon_parameter(Weapon w, WeaponRuleKind kind)  -> Int</code></li>
+<li><strong>Function</strong>: <code>all_have_ability(AbilityKind kind)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>all_have_keyword(Keyword kind)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>has_keyword(Keyword kind)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>has_ability(AbilityKind kind)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>get_unit_toughtness()  -> Int</code></li>
+<li><strong>Function</strong>: <code>translate(Int x, Int y) </code></li>
+<li><strong>Function</strong>: <code>move_to(BoardPosition new_position) </code></li>
+<li><strong>Function</strong>: <code>translate(Vector2D v) </code></li>
+<li><strong>Function</strong>: <code>distance(BoardPosition position)  -> Float</code></li>
+<li><strong>Function</strong>: <code>distance(Unit unit)  -> Float</code></li>
+<li><strong>Function</strong>: <code>distance(Model model)  -> Float</code></li>
+<li><strong>Function</strong>: <code>get_shortest_vector_to(Unit other)  -> Vector2D</code></li>
+<li><strong>Function</strong>: <code>get_shortest_vector_to(Model model)  -> Vector2D</code></li>
+<li><strong>Function</strong>: <code>get_nearest_model_index(Model model)  -> Int</code></li>
+<li><strong>Function</strong>: <code>distance(Vector2D position)  -> Float</code></li>
+<li><strong>Function</strong>: <code>get(Int model_id)  -> ref Model</code></li>
+<li><strong>Function</strong>: <code>get(ModelID model_id)  -> ref Model</code></li>
+<li><strong>Function</strong>: <code>arrange() </code></li>
+<li><strong>Function</strong>: <code>damage(Int target_model_id, Int damage)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>damage(Int target_model_id, Int damage, Bool fight_on_death)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>damage(ModelID target_model_id)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>deal_mortal_wound_damage(Int wounds) </code></li>
+</ul>
+<h2>Free Functions</h2>
+<ul>
+<li><strong>Function</strong>: <code>unit_id(Int id)  -> UnitID</code></li>
+<li><strong>Function</strong>: <code>make_tantus()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_infernus_squad()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_terminator_squad()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_octavius()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_death_shadow()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_lictor()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_von_ryan_leaper()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_aranis_zarkan()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_possessed()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_cultist_mob()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_legionaries()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_beastboss_morgrim()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_beast_snagga_boyz()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_squighog_boyz()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_tristrean()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_custodian_guard()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_custodian_wardens()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_allarus_custodians()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_octavious_strike_force(UnitVector out, Bool owner)  -> Faction</code></li>
+<li><strong>Function</strong>: <code>make_insidious_infiltrators(UnitVector out, Bool owner)  -> Faction</code></li>
+<li><strong>Function</strong>: <code>make_zarkan_deamonkin(UnitVector out, Bool owner)  -> Faction</code></li>
+<li><strong>Function</strong>: <code>make_morgrim_butchas(UnitVector out, Bool owner)  -> Faction</code></li>
+<li><strong>Function</strong>: <code>make_tristrean_gilded_blade(UnitVector out, Bool owner)  -> Faction</code></li>
+<li><strong>Function</strong>: <code>make_master_zacharial()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_intercessor_squad()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_hellblaster_squad()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_bladeguard_veteran_squad()  -> Unit</code></li>
+<li><strong>Function</strong>: <code>make_vengeful_brethren(UnitVector out, Bool owner)  -> Faction</code></li>
+</ul>
+<h2>Enums</h2>
+<h2>Enum ModelState</h2>
+<pre><code>
+ some rules specify that models are not to be removed after being destroyed until some other event happens, for example fight on death. We keep track of this special statuses with this enum
+
+</code></pre>
+<ul>
+</ul>
+<br/>
+<ul>
+  <li><code>normal</code></li>
+  <li><code>fight_on_death</code></li>
+</ul>
+</body>
+</html>

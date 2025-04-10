@@ -25,8 +25,6 @@ There are two main modes of using 4Hammer, the first is as a **headless mode** w
 * **Textual and binary serializers for action traces**: actions and lists of actions can be serialized to be displayed or stored.
 * **Default machine learning serializer**: we provide a default machine learning serialization for the game state.the game state can be serialized to be displayed or stored.
 
-You can find the doc of the currently supported mechanics [here](./doc)
-
 #### Graphical model
 * **Load any game state**: the graphical components are able to load a game state and yield a image rappresenting the game state.
 * **Auto configuring graphical user interface**: modifications to the game sequences are automatically understood by the engine and correctly displayed.
@@ -70,10 +68,14 @@ There are two examples you can read, placed in the examples directory.
     print(rules.functions.size(state.board.reserve_units))
 ```
 
+You can find the doc of the currently supported mechanics [here](./doc), which you can visualize with any browser.
+
+
+
 ### Graphical Build Requirements
 
 **Mandatory:**
-- A Linux distribution (the project will work on any Godot-supported platform if you modify the `CMake` file accordingly).
+- A Linux distribution (the project has been designed to work on any Godot-supported platform but those configurations are not supported off-the-shelf at the moment).
 - Python 3.9+
 - [RLC](https://github.com/rl-language/rlc/).
 - CMake 3.10 or later.
@@ -105,6 +107,31 @@ make editor -j 1
 # after the opening the editor for the first time you can simply execute
 make run
 ```
+
+If you don't want to jit the rules in your python scripts and you don't want to generate them by hand, you can just, from the build directory, run. It will create the files rules.py and lib.so.
+```
+make python_wrapper
+```
+
+#### Examples
+
+You can find in the [graphical\_engine\_driver](./examples/graphical_engine_driver.py) the intended way of interacting with the godot server
+```
+    client = GodotClient()
+
+    while not client.state.is_done():
+        action = client.get_random_valid_action()
+        print(client.prog.to_string(action))
+        client.send_action(action)
+
+    img = client.get_image()
+    if img != None:
+        img.save("/tmp/img.png")
+```
+
+As shown in that example, if you want you can keep a client side copy of the game state, this allows you for example to enumerate the valid moves!
+
+When godot detects a connection, it reconfigures itself to generate 1 frame whenever a command is sent from the network. Unfortunatelly godot does not currently support offscreen rendering, when it will, we will provide a command line way of spawning godot in the right configuration immediately.
 
 ### Contacts
 

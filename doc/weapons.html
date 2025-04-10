@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Documentation - weapons.rl</title>
+</head>
+<body>
+<h1>weapons.rl</h1>
+<h2>Class WeaponRule</h2>
+<h3>Fields</h3>
+<ul>
+  <li><code>WeaponRuleKind kind</code></li>
+  <li><code>Int parameter</code></li>
+</ul>
+<h2>Free Functions</h2>
+<ul>
+<li><strong>Function</strong>: <code>raw_stat(Int value)  -> Stat</code></li>
+<li><strong>Function</strong>: <code>dice_stat(Int value)  -> Stat</code></li>
+<li><strong>Function</strong>: <code>write_in_observation_tensor(WeaponRuleKind obj, Int observer_id, Vector<Float> output, Int index) </code></li>
+<li><strong>Function</strong>: <code>size_as_observation_tensor(WeaponRuleKind kind)  -> Int</code></li>
+<li><strong>Function</strong>: <code>weapon_rule(WeaponRuleKind kind, Int parameter)  -> WeaponRule</code></li>
+<li><strong>Function</strong>: <code>weapon_rule(WeaponRuleKind kind)  -> WeaponRule</code></li>
+<li><strong>Function</strong>: <code>no_weapon_rules()  -> WeaponRules</code></li>
+<li><strong>Function</strong>: <code>weapon_rules()  -> WeaponRules</code></li>
+<li><strong>Function</strong>: <code>weapon_rules(WeaponRule rule)  -> WeaponRules</code></li>
+<li><strong>Function</strong>: <code>weapon_rules(WeaponRule rule, WeaponRule rule2)  -> WeaponRules</code></li>
+<li><strong>Function</strong>: <code>weapon_rules(WeaponRule rule, WeaponRule rule2, WeaponRule rule3)  -> WeaponRules</code></li>
+<li><strong>Function</strong>: <code>weapon_rules(WeaponRule rule, WeaponRule rule2, WeaponRule rule3, WeaponRule rule4)  -> WeaponRules</code></li>
+<li><strong>Function</strong>: <code>weapon_rules(WeaponRule rule, WeaponRule rule2, WeaponRule rule3, WeaponRule rule4, WeaponRule rule5)  -> WeaponRules</code></li>
+<li><strong>Function</strong>: <code>write_in_observation_tensor(Weapon obj, Int observer_id, Vector<Float> output, Int index) </code></li>
+<li><strong>Function</strong>: <code>size_as_observation_tensor(Weapon kind)  -> Int</code></li>
+</ul>
+<h2>Enums</h2>
+<h2>Enum WeaponRuleKind</h2>
+<ul>
+</ul>
+<br/>
+<ul>
+  <li><code>pistol</code></li>
+  <li><code>ignore_cover</code></li>
+  <li><code>torrent</code></li>
+  <li><code>rapid_fire</code></li>
+  <li><code>psychic</code></li>
+  <li><code>devastating_wounds</code></li>
+  <li><code>sustained_hit</code></li>
+  <li><code>letal_hits</code></li>
+  <li><code>precision</code></li>
+  <li><code>hazardous</code></li>
+  <li><code>anti_monster</code></li>
+  <li><code>anti_vehichle</code></li>
+  <li><code>anti_psychic</code></li>
+  <li><code>blast</code></li>
+  <li><code>lance</code></li>
+  <li><code>extra_attacks</code></li>
+  <li><code>assault</code></li>
+  <li><code>heavy</code></li>
+  <li><code>melta</code></li>
+</ul>
+<h2>Enum Weapon</h2>
+<ul>
+  <li><code>Int range</code></li>
+  <li><code>Stat attacks</code></li>
+  <li><code>Int skill</code></li>
+  <li><code>Int strenght</code></li>
+  <li><code>Int penetration</code></li>
+  <li><code>Stat damage</code></li>
+  <li><code>WeaponRules rules</code></li>
+</ul>
+<br/>
+<ul>
+  <li><code>captain_storm_bolter</code></li>
+  <li><code>relic_weapon</code></li>
+  <li><code>smite_witchfire</code></li>
+  <li><code>smite_focused_witchfire</code></li>
+  <li><code>librarian_storm_bolter</code></li>
+  <li><code>force_weapon</code></li>
+  <li><code>bolt_pistol</code></li>
+  <li><code>pyreblaster</code></li>
+  <li><code>close_combact_weapon</code></li>
+  <li><code>assault_cannon</code></li>
+  <li><code>terminator_storm_bolter</code></li>
+  <li><code>terminator_power_fist</code></li>
+  <li><code>terminator_power_weapon</code></li>
+  <li><code>death_shadow_claws_and_talons</code></li>
+  <li><code>lictor_claws_and_talons</code></li>
+  <li><code>leapers_talon</code></li>
+  <li><code>rite_of_possession</code></li>
+  <li><code>rite_of_possession_focused</code></li>
+  <li><code>staff_of_possession</code></li>
+  <li><code>hideous_mutations</code></li>
+  <li><code>boltgun</code></li>
+  <li><code>heavy_bolter</code></li>
+  <li><code>meltagun</code></li>
+  <li><code>plasma_pistol_standard</code></li>
+  <li><code>plasma_pistol_supercharge</code></li>
+  <li><code>accursed_weapon</code></li>
+  <li><code>close_combat_weapon</code></li>
+  <li><code>cultist_autopistol</code></li>
+  <li><code>cultist_bolt_pistol</code></li>
+  <li><code>brutal_assault_weapon</code></li>
+  <li><code>beat_boss_shoota</code></li>
+  <li><code>beast_snagga_klaw</code></li>
+  <li><code>beastchoppa</code></li>
+  <li><code>slugga</code></li>
+  <li><code>thump_gun</code></li>
+  <li><code>choppa</code></li>
+  <li><code>power_snappa</code></li>
+  <li><code>saddlegit_weapons</code></li>
+  <li><code>stikka_ranged</code></li>
+  <li><code>big_choppa</code></li>
+  <li><code>stikka_melee</code></li>
+  <li><code>squighog_jaws</code></li>
+  <li><code>vaultswords_behemor</code></li>
+  <li><code>vaultswords_hurricanus</code></li>
+  <li><code>vaultswords_victus</code></li>
+  <li><code>sentinel_blade_ranged</code></li>
+  <li><code>sentinel_blade_melee</code></li>
+  <li><code>castellan_axe_ranged</code></li>
+  <li><code>guardian_spear_ranged</code></li>
+  <li><code>castellan_axe_melee</code></li>
+  <li><code>guardian_spear_melee</code></li>
+  <li><code>balistus_grenade_launcher</code></li>
+  <li><code>guardian_spear_ranged_allarus</code></li>
+  <li><code>guardian_spear_melee_allarus</code></li>
+  <li><code>boltstorm_gauntlet</code></li>
+  <li><code>power_fist_zacharial</code></li>
+  <li><code>relic_chainsword</code></li>
+  <li><code>bolt_rifle</code></li>
+  <li><code>plasma_incinerator_standard</code></li>
+  <li><code>plasma_incinerator_supercharge</code></li>
+  <li><code>heavy_bolt_pistol</code></li>
+  <li><code>master_crafted_power_weapon</code></li>
+</ul>
+</body>
+</html>

@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://dcwfqeyhcjyud"]
+[gd_scene load_steps=8 format=3 uid="uid://dcwfqeyhcjyud"]
 
 [ext_resource type="Script" path="res://scripts/Spawner.gd" id="1_lwvmf"]
 [ext_resource type="PackedScene" uid="uid://bomo4fmpfvsfk" path="res://scenes/UI.tscn" id="2_d0w1n"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/CameraControls.gd" id="3_h3ntp"]
 [ext_resource type="Script" path="res://scripts/boardl.gd" id="5_gsjyu"]
 [ext_resource type="PackedScene" uid="uid://bc5tfqb5qlc86" path="res://scenes/objective.tscn" id="5_ksost"]
+[ext_resource type="Script" path="res://scripts/server.gd" id="7_4us4t"]
 
 [node name="MainNode" type="Node2D"]
 
@@ -51,3 +52,6 @@ index = 2
 [node name="Objective2" parent="Panel" instance=ExtResource("5_ksost")]
 position = Vector2(-4500, -4500)
 index = 1
+
+[node name="Server" type="Node" parent="."]
+script = ExtResource("7_4us4t")

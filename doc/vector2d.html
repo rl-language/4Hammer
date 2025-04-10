@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Documentation - vector2d.rl</title>
+</head>
+<body>
+<h1>vector2d.rl</h1>
+<h2>Class Vector2Df</h2>
+<h3>Fields</h3>
+<ul>
+  <li><code>Float x</code></li>
+  <li><code>Float y</code></li>
+</ul>
+<h3>Methods</h3>
+<ul>
+<li><strong>Function</strong>: <code>add(Vector2Df other)  -> Vector2Df</code></li>
+<li><strong>Function</strong>: <code>mul(Float other)  -> Vector2Df</code></li>
+<li><strong>Function</strong>: <code>div(Float other)  -> Vector2Df</code></li>
+<li><strong>Function</strong>: <code>sub(Vector2Df other)  -> Vector2Df</code></li>
+<li><strong>Function</strong>: <code>distance(Vector2Df other)  -> Float</code></li>
+<li><strong>Function</strong>: <code>length()  -> Float</code></li>
+<li><strong>Function</strong>: <code>normalized()  -> Vector2Df</code></li>
+<li><strong>Function</strong>: <code>as_int_vector()  -> Vector2D</code></li>
+</ul>
+<h2>Class Vector2D</h2>
+<h3>Fields</h3>
+<ul>
+  <li><code>Int x</code></li>
+  <li><code>Int y</code></li>
+</ul>
+<h3>Methods</h3>
+<ul>
+<li><strong>Function</strong>: <code>add(Vector2D other)  -> Vector2D</code></li>
+<li><strong>Function</strong>: <code>mul(Float other)  -> Vector2D</code></li>
+<li><strong>Function</strong>: <code>sub(Vector2D other)  -> Vector2D</code></li>
+<li><strong>Function</strong>: <code>distance(Vector2D other)  -> Float</code></li>
+<li><strong>Function</strong>: <code>length()  -> Float</code></li>
+<li><strong>Function</strong>: <code>as_float_vector()  -> Vector2Df</code></li>
+</ul>
+<h2>Class BoardPosition</h2>
+<h3>Fields</h3>
+<ul>
+  <li><code>CoordinateX x</code></li>
+  <li><code>CoordinateY y</code></li>
+</ul>
+<h3>Methods</h3>
+<ul>
+<li><strong>Function</strong>: <code>as_vector()  -> Vector2D</code></li>
+<li><strong>Function</strong>: <code>add(Vector2D other)  -> BoardPosition</code></li>
+<li><strong>Function</strong>: <code>sub(Vector2D other)  -> BoardPosition</code></li>
+</ul>
+<h2>Free Functions</h2>
+<ul>
+<li><strong>Function</strong>: <code>make_board_position(Int x, Int y)  -> BoardPosition</code></li>
+<li><strong>Function</strong>: <code>make_board_position(CoordinateX x, CoordinateY y)  -> BoardPosition</code></li>
+</ul>
+</body>
+</html>

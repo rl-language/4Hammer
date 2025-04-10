@@ -120,6 +120,13 @@ func _apply_action(action):
 	valid_actions = _valid_actions()
 	return actions
 
+func apply_buffered(actions):
+	for action in actions:
+		library.apply(action, state)
+	for act in actions:
+		on_action_applied.emit(act)
+	on_state_changed.emit()
+
 func get_current_state_description() -> String:
 	if get_state().get_board().get_current_state().get_value() == 0:
 		return ""
@@ -139,6 +146,14 @@ func apply_action(action):
 		on_action_applied.emit(act)
 	on_state_changed.emit()
 
+func apply_actions(actions):
+	for action in actions:
+		if not library.can_apply(action, state):
+			print("could not apply action")
+			print_rlc(action)
+			return
+		library.apply(action, state)
+
 
 func get_units_counts() -> int:
 	return library.size(get_state().get_board().get_units())
@@ -147,6 +162,12 @@ func get_unit(unit_id: int) -> RLCUnit:
 	if unit_id >= get_units_counts() or 0 > unit_id:
 		return null
 	return library.get(get_state().get_board().get_units(), unit_id) as RLCUnit
+	
+func action_from_string(data: String) -> RLCAnyGameAction:
+	var action = RLCAnyGameAction.make()
+	if not library.from_string(action, library.godot_string_to_rlc_string(data)):
+		return null
+	return action
 
 func get_model(unit_id: int, model_id: int) -> RLCModel:
 	var unit = get_unit(unit_id)
@@ -211,7 +232,7 @@ func is_terminal() -> bool:
 	return (state as RLCGame).get_resume_index() == -1
 	
 func get_question_action():
-	for action in GlobalRules.valid_actions:
+	for action in valid_actions:
 		var unwrapped = action.unwrap()
 		if unwrapped.get_member(0) is bool and unwrapped.members_count() == 0:
 			return unwrapped.make()

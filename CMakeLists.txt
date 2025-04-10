@@ -103,6 +103,9 @@ add_custom_target(editor
 add_custom_target(run
 	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} -m --verbose DEPENDS rules_x86_64_linux_debug)
 
+add_custom_target(run-background
+	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} -m --headless DEPENDS rules_x86_64_linux_debug)
+
 add_custom_target(export-web
 	COMMAND mkdir ${CMAKE_CURRENT_BINARY_DIR}/exports/ -p
 	COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${GODOT_EDITOR} --export-release Web ${CMAKE_CURRENT_BINARY_DIR}/exports/skirmish.html DEPENDS rules_web_release)
@@ -124,10 +127,10 @@ add_custom_target(test-web
 ###########
 
 function(gen_doc file)
-    add_custom_command(OUTPUT doc/${file}.md
-        COMMAND rlc-doc ${CMAKE_CURRENT_SOURCE_DIR}/src/${file}.rl -o ${CMAKE_CURRENT_SOURCE_DIR}/doc/${file}.md
-				   DEPENDS src/${file}.rl)
-    add_custom_target(${file}_doc ALL DEPENDS doc/${file}.md)
+	add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc/${file}.html
+		COMMAND rlc-doc ${CMAKE_CURRENT_SOURCE_DIR}/src/${file}.rl -o ${CMAKE_CURRENT_SOURCE_DIR}/doc/${file}.html
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/${file}.rl)
+	add_custom_target(${file}_doc ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/${file}.html)
 endfunction()
 
 gen_doc(board)

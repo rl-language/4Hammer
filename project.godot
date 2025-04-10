@@ -12,6 +12,7 @@ config_version=5
 
 config/name="skirmish"
 run/main_scene="res://scenes/main.tscn"
+run/main_loop_type="CustomMainLoop"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 boot_splash/image="res://imgs/RLC_logo.png"
 config/icon="res://icon.svg"

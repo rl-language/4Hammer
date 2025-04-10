@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Documentation - stats.rl</title>
+</head>
+<body>
+<h1>stats.rl</h1>
+<h2>Free Functions</h2>
+<ul>
+<li><strong>Function</strong>: <code>write_in_observation_tensor(AbilityKind obj, Int observer_id, Vector<Float> output, Int index) </code></li>
+<li><strong>Function</strong>: <code>size_as_observation_tensor(AbilityKind kind)  -> Int</code></li>
+<li><strong>Function</strong>: <code>write_in_observation_tensor(Keyword obj, Int observer_id, Vector<Float> output, Int index) </code></li>
+<li><strong>Function</strong>: <code>size_as_observation_tensor(Keyword kind)  -> Int</code></li>
+<li><strong>Function</strong>: <code>write_in_observation_tensor(Profile obj, Int observer_id, Vector<Float> output, Int index) </code></li>
+<li><strong>Function</strong>: <code>size_as_observation_tensor(Profile kind)  -> Int</code></li>
+</ul>
+<h2>Enums</h2>
+<h2>Enum AbilityKind</h2>
+<ul>
+</ul>
+<br/>
+<ul>
+  <li><code>deep_strike</code></li>
+  <li><code>oath_of_moment</code></li>
+  <li><code>veil_of_time</code></li>
+  <li><code>leader</code></li>
+  <li><code>unstoppable_valour</code></li>
+  <li><code>fight_first</code></li>
+  <li><code>fury_of_the_first</code></li>
+  <li><code>infiltrators</code></li>
+  <li><code>lone_operative</code></li>
+  <li><code>stealth</code></li>
+  <li><code>shadow_in_the_warp</code></li>
+  <li><code>neural_disruption</code></li>
+  <li><code>psychological_saboteur</code></li>
+  <li><code>feeder_tendrils</code></li>
+  <li><code>pouncing_leap</code></li>
+  <li><code>sacrificial_dagger</code></li>
+  <li><code>dark_pacts</code></li>
+  <li><code>veterans_of_the_long_war</code></li>
+  <li><code>morgrim</code></li>
+  <li><code>beast_snagga</code></li>
+  <li><code>warboss</code></li>
+  <li><code>beastboss</code></li>
+  <li><code>refuse_to_yield</code></li>
+  <li><code>patrol_squads</code></li>
+  <li><code>bladeguard</code></li>
+  <li><code>swords_of_the_chapter</code></li>
+  <li><code>shields_of_the_chapter</code></li>
+</ul>
+<h2>Enum Faction</h2>
+<ul>
+</ul>
+<br/>
+<ul>
+  <li><code>strike_force_octavius</code></li>
+  <li><code>insidious_infiltrators</code></li>
+  <li><code>zarkan_daemonkin</code></li>
+  <li><code>morgrim_butchas</code></li>
+  <li><code>tristraen_gilded_blade</code></li>
+  <li><code>vengeful_brethren</code></li>
+</ul>
+<h2>Enum Keyword</h2>
+<ul>
+</ul>
+<br/>
+<ul>
+  <li><code>infantry</code></li>
+  <li><code>imperium</code></li>
+  <li><code>terminator</code></li>
+  <li><code>terminator_squad</code></li>
+  <li><code>tacticus</code></li>
+  <li><code>infernus_squad</code></li>
+  <li><code>intercessor_squad</code></li>
+  <li><code>hellblaster_squad</code></li>
+  <li><code>character</code></li>
+  <li><code>captain</code></li>
+  <li><code>octavius</code></li>
+  <li><code>psyker</code></li>
+  <li><code>adeptus_astartes</code></li>
+  <li><code>librarian_tantus</code></li>
+  <li><code>great_devourer</code></li>
+  <li><code>death_shadow</code></li>
+  <li><code>vanguard_invader</code></li>
+  <li><code>neurolictor</code></li>
+  <li><code>von_ryan_leaper</code></li>
+  <li><code>lictor</code></li>
+  <li><code>tyranids</code></li>
+  <li><code>chaos_space_marine</code></li>
+  <li><code>master_of_possession</code></li>
+  <li><code>aranis_zarkan</code></li>
+  <li><code>daemon</code></li>
+  <li><code>possessed</code></li>
+  <li><code>chaos</code></li>
+  <li><code>legionaries</code></li>
+  <li><code>damned</code></li>
+  <li><code>cultist_mob</code></li>
+  <li><code>mob</code></li>
+  <li><code>mounted</code></li>
+  <li><code>monster_hunters</code></li>
+  <li><code>beast_snagga</code></li>
+  <li><code>beastboss</code></li>
+  <li><code>squighog_boyz</code></li>
+  <li><code>blade_champion</code></li>
+  <li><code>tristraen</code></li>
+  <li><code>custodian_guard</code></li>
+  <li><code>custodian_wardens</code></li>
+  <li><code>allarus_custodians</code></li>
+  <li><code>terminator</code></li>
+  <li><code>gravis</code></li>
+  <li><code>master_zacharial</code></li>
+  <li><code>bladeguard_veteran_squad</code></li>
+  <li><code>monster</code></li>
+  <li><code>vehicle</code></li>
+</ul>
+<h2>Enum Profile</h2>
+<ul>
+  <li><code>Int movement</code></li>
+  <li><code>Int thoughness</code></li>
+  <li><code>Int save</code></li>
+  <li><code>Int invuln_save</code></li>
+  <li><code>Int feel_no_pain</code></li>
+  <li><code>Int wounds</code></li>
+  <li><code>Int leadership</code></li>
+  <li><code>Int control</code></li>
+  <li><code>Float base_size</code></li>
+</ul>
+<br/>
+<ul>
+  <li><code>captain_octavius</code></li>
+  <li><code>librarian_tantus</code></li>
+  <li><code>infernus_squad</code></li>
+  <li><code>terminator_squad</code></li>
+  <li><code>death_shadow</code></li>
+  <li><code>lictor</code></li>
+  <li><code>von_ryan_leaper</code></li>
+  <li><code>aranis_zarkan</code></li>
+  <li><code>possessed</code></li>
+  <li><code>legionaries</code></li>
+  <li><code>cultist_mob</code></li>
+  <li><code>beastboss_morgrim</code></li>
+  <li><code>beast_snagga_boy</code></li>
+  <li><code>beast_snagga_nob</code></li>
+  <li><code>squighog_boyz</code></li>
+  <li><code>nob_on_smasha_squig</code></li>
+  <li><code>tristraen</code></li>
+  <li><code>custodian_wardens</code></li>
+  <li><code>allarus_custodians</code></li>
+  <li><code>custodian_guard</code></li>
+  <li><code>master_zacharial</code></li>
+  <li><code>intercessor_squad</code></li>
+  <li><code>hellblaster_squad</code></li>
+  <li><code>bladeguard_veteran_squad</code></li>
+</ul>
+<h2>Enum Stratagem</h2>
+<ul>
+  <li><code>Int cost</code></li>
+</ul>
+<br/>
+<ul>
+  <li><code>reroll</code></li>
+  <li><code>overwatch</code></li>
+  <li><code>rapid_ingress</code></li>
+  <li><code>insane_bravery</code></li>
+  <li><code>veteran_instincts</code></li>
+  <li><code>gene_wrought_resiliance</code></li>
+  <li><code>duty_and_honour</code></li>
+  <li><code>heroic_intervention</code></li>
+  <li><code>swift_kill</code></li>
+  <li><code>pheromone_trace</code></li>
+  <li><code>predators_not_prey</code></li>
+  <li><code>vindictive_strategy</code></li>
+  <li><code>violent_unbidding</code></li>
+  <li><code>demonic_fervour</code></li>
+  <li><code>tough_as_squig_hide</code></li>
+  <li><code>bestial_bellow</code></li>
+  <li><code>overawing_magnificence</code></li>
+  <li><code>the_gilded_spear</code></li>
+  <li><code>relic_munitions</code></li>
+  <li><code>unyielding</code></li>
+</ul>
+</body>
+</html>
