@@ -13,7 +13,7 @@ act play() -> Game:
 
 # maximize the number of your models vs those of the opponent
 fun score(Game g, Int player_id) -> Float:
-    return float(g.board.count_models(1 - player_id) - g.board.count_models(1 - player_id)) / 40.0
+    return float(g.board.count_models(player_id) - g.board.count_models(1 - player_id)) / 40.0
 
 fun get_current_player(Game g) -> Int:
     return default_get_current_player(g)
