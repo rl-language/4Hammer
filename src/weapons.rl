@@ -2,11 +2,13 @@ import bounded_arg
 import vector2d
 
 using Dice = BInt<1, 7>
-using Stat = Int | Dice 
+using Stat = LinearlyDistributedInt<0, 20> | Dice 
 
 fun raw_stat(Int value) ->  Stat:
+    let to_set : LinearlyDistributedInt<0, 20>
+    to_set = value
     let stat : Stat 
-    stat = value
+    stat = to_set
     return stat
 
 fun dice_stat(Int value) ->  Stat:

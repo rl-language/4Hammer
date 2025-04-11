@@ -84,6 +84,9 @@ cls ModelID: # required
     fun get() -> Int:
         return self.id.value
 
+    fun assign(Int other):
+        self.id = other
+
 
 const MAX_UNIT_COUNT = 10
 cls UnitID: # required

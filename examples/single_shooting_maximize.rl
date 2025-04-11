@@ -37,10 +37,7 @@ fun get_current_player(Game g) -> Int:
     return default_get_current_player(g)
 
 fun score(Game g, Int player_id) -> Float:
-    if player_id == 0:
-        return float(10 - g.board.count_models(1)) / 10.0
-    else:
-        return float(g.board.count_models(1)) / 10.0
+    return float(g.board.score[player_id] - g.board.score[1-player_id])
 
 fun log_alive_models_player1(Game g) -> Int:
     return g.board.count_models(0)

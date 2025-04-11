@@ -35,7 +35,7 @@ cls AttackSequenceInfo:
     Bool greater_strenght_wound_protection
     Bool fight_on_death
     Dice fight_on_death_roll
-    Int target_toughness
+    LinearlyDistributedInt<0, 20> target_toughness
     Weapon source
     Profile source_profile
     BInt<0, MAX_ROUNDS> current_round
