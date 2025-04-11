@@ -489,13 +489,15 @@ act attack(ctx Board board,
 
     subaction*(board) strats = use_attack_stratagems(board, source, target, melee)
 
-    frm model : ModelID
+    frm model : ModelIterator
     frm hazardous_uses : LinearlyDistributedInt<0, 10>
     board.current_decision_maker = board[source].owned_by_player1
-    while model.get() != board[source].models.size() and !board[target].models.empty():
-        subaction*(board) model_attack = resolve_model_attack(board, source, target, model, melee)
+    while model != board[source].models.size() and !board[target].models.empty():
+        let id : ModelID
+        id = model.value
+        subaction*(board) model_attack = resolve_model_attack(board, source, target, id, melee)
         hazardous_uses = hazardous_uses + model_attack.hazardous_uses
-        model = model.get() + 1
+        model = model + 1
 
 
     ### Dangerous weapons
@@ -521,15 +523,17 @@ act attack(ctx Board board,
     _configure_attack(board, target.get(), source.get(), overwatch, melee)
     board.current_decision_maker = board[target].owned_by_player1
     model = 0
-    while model.get() != board[target].models.size() and !board[source].models.empty():
-        if board[target][model.get()].state == ModelState::fight_on_death:
+    while model != board[target].models.size() and !board[source].models.empty():
+        if board[target][model.value].state == ModelState::fight_on_death:
             if board.attack_info.fight_on_death_roll != 2:
                 # 2+ fight on death dice roll
                 act roll(Dice result)
                 if result < board.attack_info.fight_on_death_roll:
                    continue 
-            subaction*(board) fight_on_death_attack = resolve_model_attack(board, target, source, model, melee)
-        model = model.get() + 1
+            let id : ModelID
+            id = model.value
+            subaction*(board) fight_on_death_attack = resolve_model_attack(board, target, source, id, melee)
+        model = model + 1
     board[target].remove_figth_on_death_models()
         
 
@@ -589,24 +593,24 @@ act battle_shock_test(ctx Board board, ctx Unit unit) -> BattleShockTest:
 
 # the core rules battle shock step
 act battle_shock_step(ctx Board board) -> BattleShockStep:
-    frm i : UnitID
-    while i.get() != board.units.size():
-        board[i].battle_socked = false 
-        board[i].has_run  = false 
-        board[i].has_fought  = false 
-        board[i].has_shoot = false 
-        board[i].has_moved = false 
-        board[i].has_charged = false
-        board[i].can_shoot = true
-        board[i].can_charge = true
-        if board[i].owned_by_player1 != board.current_player:
-            i = i.get() + 1
+    frm i : UnitIterator
+    while i != board.units.size():
+        board[i.value].battle_socked = false 
+        board[i.value].has_run  = false 
+        board[i.value].has_fought  = false 
+        board[i.value].has_shoot = false 
+        board[i.value].has_moved = false 
+        board[i.value].has_charged = false
+        board[i.value].can_shoot = true
+        board[i.value].can_charge = true
+        if board[i.value].owned_by_player1 != board.current_player:
+            i = i + 1
             continue
-        if !board[i].is_below_half_strenght():
-            i = i.get() + 1
+        if !board[i.value].is_below_half_strenght():
+            i = i + 1
             continue
-        subaction*(board, board[i]) shock_test = battle_shock_test(board, board[i])
-        i = i.get() + 1
+        subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value])
+        i = i + 1
 
 
 # tyranids shadow in the warp rules
@@ -623,28 +627,28 @@ act shadow_in_the_warp(ctx Board board, frm Bool player) -> ShadowInTheWarp:
         return
 
     board.has_used_shadow_in_the_warp[int(player)] = true
-    frm i : UnitID
-    while i.get() != board.units.size():
-        if board[i].owned_by_player1 != player:
-            subaction*(board, board[i]) shock_test = battle_shock_test(board, board[i])
-        i = i.get() + 1
+    frm i : UnitIterator
+    while i != board.units.size():
+        if board[i.value].owned_by_player1 != player:
+            subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value])
+        i = i + 1
 
 # tyranids neural disruption rules 
 act neural_disruption(ctx Board board) -> NeuralDisruption:
     if !(board.players_faction[int(board.current_player)] == Faction::insidious_infiltrators):
         return
-    frm i : UnitID
-    while i.get() != board.units.size():
-        if board[i].owned_by_player1 == board.current_player and board[i].has_ability(AbilityKind::neural_disruption):
+    frm i : UnitIterator
+    while i != board.units.size():
+        if board[i.value].owned_by_player1 == board.current_player and board[i.value].has_ability(AbilityKind::neural_disruption):
             actions:
                 act select_neural_disruption_target(frm UnitID target) {
                     target.get() < board.units.size(),
                     board[target].owned_by_player1 != board.current_player,
-                    board[target].distance(board[i]) < 12.0
+                    board[target].distance(board[i.value]) < 12.0
                 }
-                    subaction*(board, board[i]) shock_test = battle_shock_test(board, board[target])
+                    subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[target])
                 act skip()
-        i = i.get() + 1
+        i = i + 1
 
 # core rule command phase 
 act command_phase(ctx Board board) -> CommandPhase:
@@ -888,14 +892,14 @@ act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
         board.pay_strat(board[id].owned_by_player1, Stratagem::predators_not_prey)
         return
 
-    frm i : ModelID
+    frm i : UnitIterator
     i = board[id].models.size()
-    while i.get() != 0:
+    while i != 0:
         board.current_roll = rerollable_dice_roll(board, false, false, true, board[id].owned_by_player1)
         subaction*(board) board.current_roll
         if board.current_roll.result == 1:
-            board[id].models.erase(i.get() - 1)
-        i = i.get() - 1
+            board[id].models.erase(i.value - 1)
+        i = i - 1
 
 # movement of a single unit, including possibly advancing and falling back 
 act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> Movement:

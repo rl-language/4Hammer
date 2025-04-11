@@ -135,7 +135,7 @@ cls Board:
         self.command_points[player_id] = self.command_points[player_id] + 1
 
     fun get_current_attacking_model() -> ref Model:
-        return self[self.attack.source][self.attack.model]
+        return self[self.attack.source][self.attack.model.value]
 
     fun get_score(Int player_id) -> Int:
         return self.score[player_id].value

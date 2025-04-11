@@ -76,6 +76,7 @@ cls Model:
         return self.profile.wounds() - self.suffered_wounds.value
 
 const MAX_UNIT_MODELS = 12
+const MAX_UNIT_MODELS_PLUS1 = 13
 using ModelVector = BoundedVector<Model, MAX_UNIT_MODELS>
 
 cls ModelID: # required
@@ -87,8 +88,10 @@ cls ModelID: # required
     fun assign(Int other):
         self.id = other
 
+using ModelIterator = LinearlyDistributedInt<0, MAX_UNIT_MODELS_PLUS1>
 
 const MAX_UNIT_COUNT = 10
+const MAX_UNIT_COUNT_PLUS1 = 11
 cls UnitID: # required
     BInt<0, MAX_UNIT_COUNT> id
 
@@ -97,6 +100,8 @@ cls UnitID: # required
 
     fun assign(Int value):
         self.id = value
+
+using UnitIterator = BInt<0, MAX_UNIT_COUNT_PLUS1> 
 
 fun unit_id(Int id) -> UnitID:
     let to_return :  UnitID
