@@ -589,8 +589,8 @@ act battle_shock_test(ctx Board board, ctx Unit unit) -> BattleShockTest:
 
 # the core rules battle shock step
 act battle_shock_step(ctx Board board) -> BattleShockStep:
-    frm i = 0
-    while i != board.units.size():
+    frm i : UnitID
+    while i.get() != board.units.size():
         board[i].battle_socked = false 
         board[i].has_run  = false 
         board[i].has_fought  = false 
@@ -600,13 +600,13 @@ act battle_shock_step(ctx Board board) -> BattleShockStep:
         board[i].can_shoot = true
         board[i].can_charge = true
         if board[i].owned_by_player1 != board.current_player:
-            i = i + 1
+            i = i.get() + 1
             continue
         if !board[i].is_below_half_strenght():
-            i = i + 1
+            i = i.get() + 1
             continue
         subaction*(board, board[i]) shock_test = battle_shock_test(board, board[i])
-        i = i + 1
+        i = i.get() + 1
 
 
 # tyranids shadow in the warp rules
@@ -623,18 +623,18 @@ act shadow_in_the_warp(ctx Board board, frm Bool player) -> ShadowInTheWarp:
         return
 
     board.has_used_shadow_in_the_warp[int(player)] = true
-    frm i = 0
-    while i != board.units.size():
+    frm i : UnitID
+    while i.get() != board.units.size():
         if board[i].owned_by_player1 != player:
             subaction*(board, board[i]) shock_test = battle_shock_test(board, board[i])
-        i = i + 1
+        i = i.get() + 1
 
 # tyranids neural disruption rules 
 act neural_disruption(ctx Board board) -> NeuralDisruption:
     if !(board.players_faction[int(board.current_player)] == Faction::insidious_infiltrators):
         return
-    frm i = 0
-    while i != board.units.size():
+    frm i : UnitID
+    while i.get() != board.units.size():
         if board[i].owned_by_player1 == board.current_player and board[i].has_ability(AbilityKind::neural_disruption):
             actions:
                 act select_neural_disruption_target(frm UnitID target) {
@@ -644,7 +644,7 @@ act neural_disruption(ctx Board board) -> NeuralDisruption:
                 }
                     subaction*(board, board[i]) shock_test = battle_shock_test(board, board[target])
                 act skip()
-        i = i + 1
+        i = i.get() + 1
 
 # core rule command phase 
 act command_phase(ctx Board board) -> CommandPhase:
@@ -718,19 +718,23 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
 
 # core rules movement rules, including the possiblity 
 # of advancing and the triggering of overwatches
-act move(ctx Board board, ctx UnitID unit, frm Int additional_movement) -> Move:
+act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement) -> Move:
     if board[unit.get()].models.size() == 0:
         return
     board.current_decision_maker = board.current_player
     act move_to(BoardPosition position) {
-        (position.as_vector() - board[unit.get()][0].position.as_vector()).length() <= float(board[unit.get()][0].profile.movement() + additional_movement)
+        (position.as_vector() - board[unit.get()][0].position.as_vector()).length() <= float(board[unit.get()][0].profile.movement() + additional_movement.value)
     }
 
     board[unit.get()].move_to(position)
 
     board.overwatch = overwatch(board, unit)
     subaction*(board) board.overwatch
-    
+
+fun move(Board board, UnitID unit, Int additional_movement) -> Move:
+    let modifier : StatModifier
+    modifier = additional_movement
+    return move(board, unit, modifier)
 
 # core rules fight step 
 act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
@@ -884,13 +888,14 @@ act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
         board.pay_strat(board[id].owned_by_player1, Stratagem::predators_not_prey)
         return
 
-    frm i = board[id].models.size()
-    while i != 0:
+    frm i : ModelID
+    i = board[id].models.size()
+    while i.get() != 0:
         board.current_roll = rerollable_dice_roll(board, false, false, true, board[id].owned_by_player1)
         subaction*(board) board.current_roll
         if board.current_roll.result == 1:
-            board[id].models.erase(i)
-        i = i - 1
+            board[id].models.erase(i.get() - 1)
+        i = i.get() - 1
 
 # movement of a single unit, including possibly advancing and falling back 
 act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> Movement:
