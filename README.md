@@ -71,6 +71,19 @@ There are two examples you can read, placed in the examples directory.
 You can find the doc of the currently supported mechanics [here](./doc), which you can visualize with any browser.
 
 
+#### Learning
+
+Since the rules are written in pure Rulebook language we can use the off-the-shelf implementation provided by rlc, while not efficiet enough learn from a whole game, if is good enough to learn from smaller situations, such as a single shooting sequence.
+
+[Here](./examples/single_shooting_maximize.rl) you can find a simple script that shows how 4hammer rulebook code can be reused. That file contains a small sequence where a enemy unit is spawned, the player is asked to decide between two possible units, one of them is spawned and then the objective is to maximize the damage dealt to the opponent unit.
+
+You can use
+```
+rlc-learn examples/single_shooting_maximize.rl -o /tmp/net -i src/ --steps-per-env 1000 --lr 0.00001
+```
+to have a network learn to maximize the given objective.
+![example learning](./imgs/example_leaerning.png)
+
 
 ### Graphical Build Requirements
 
@@ -80,6 +93,7 @@ You can find the doc of the currently supported mechanics [here](./doc), which y
 - [RLC](https://github.com/rl-language/rlc/).
 - CMake 3.10 or later.
 - Godot 4.3.
+- Ninja build system (make not supported at the moment)
 
 **Optional (to run the project in a browser):**
 - Emscripten 3.39 or later.
@@ -99,18 +113,18 @@ source .venv/bin/activate.sh
 pip install rl_language
 mkdir build
 cd build
-cmake .. -DGODOT_EDITOR=/PATH/TO/GODOT/EDITOR/EXECUTABLE
+cmake .. -DGODOT_EDITOR=/PATH/TO/GODOT/EDITOR/EXECUTABLE -G Ninja
 
 # build  the first build must be executed with -j 1 due to godot scons
-make editor -j 1
+ninja editor -j 1
 
 # after the opening the editor for the first time you can simply execute
-make run
+ninja run
 ```
 
 If you don't want to jit the rules in your python scripts and you don't want to generate them by hand, you can just, from the build directory, run. It will create the files rules.py and lib.so.
 ```
-make python_wrapper
+ninja python_wrapper
 ```
 
 #### Examples
@@ -131,7 +145,7 @@ You can find in the [graphical\_engine\_driver](./examples/graphical_engine_driv
 
 As shown in that example, if you want you can keep a client side copy of the game state, this allows you for example to enumerate the valid moves!
 
-When godot detects a connection, it reconfigures itself to generate 1 frame whenever a command is sent from the network. Unfortunatelly godot does not currently support offscreen rendering, when it will, we will provide a command line way of spawning godot in the right configuration immediately.
+When godot detects a connection, it reconfigures itself to generate 1 frame whenever a command is sent from the network. It sets a fixed zoom level and hides the user GUI as well. Unfortunatelly godot does not currently support offscreen rendering, when it will, we will provide a command line way of spawning godot in the right configuration immediately.
 
 ### Contacts
 

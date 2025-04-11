@@ -22,6 +22,7 @@ config/icon="res://icon.svg"
 InteractionManager="*res://scenes/interaction_manager.tscn"
 GlobalRules="*res://scripts/Rules.gd"
 GlobalPopup="*res://scenes/Popup.tscn"
+Server="*res://scripts/server.gd"
 
 [display]
 

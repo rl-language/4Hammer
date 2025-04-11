@@ -3,20 +3,24 @@ extends Node
 var server := TCPServer.new()
 var clients := []
 var send_images = false
+signal on_connection
 
 func _ready():
 	server.listen(8527)
 	print("Listening on port 4242")
 
+func has_connection():
+	return self.clients.size() != 0
+
 func _process(_delta):
 	if clients.size() != 0:
 		RenderingServer.render_loop_enabled = false
 		Engine.time_scale = 1000
-		get_viewport().get_camera_2d().zoom  = Vector2(0.3, 0.3)
 	if server.is_connection_available():
 		var client = server.take_connection()
 		clients.append(client)
 		print("New client connected")
+		on_connection.emit()
 		
 	if send_images:
 		for client in clients:

@@ -1064,65 +1064,6 @@ fun main() -> Int:
         return 0
     return 1
 
-fun get_num_players() -> Int:
-    return 2
-
-fun max_game_lenght() -> Int:
-    return 5000
-
-fun gen_methods():
-    let x : Vector<Bool>
-    let action : AnyGameAction
-    let board : Board
-    for alternative of action:
-        pretty_string(board, alternative)
-    pretty_string(board, action)
-    let profile = make_tantus()
-    to_string(Weapon::captain_storm_bolter)
-    to_string(Profile::captain_octavius)
-    profile.models.size()
-    to_string(profile)
-    to_string(profile.models[0])
-    print(profile)
-    to_string(action)
-    print(action)
-    to_string(enumerate(action))
-    to_string(true)
-    to_string(CurrentStateDescription::none)
-    print(enumerate(action))
-
-fun fuzz(Vector<Byte> input):
-    let state = play()
-    let x : AnyGameAction
-    let enumeration = enumerate(x)
-    let index = 0
-    while index + 8 < input.size() and !state.is_done():
-        let num_action : Int
-        from_byte_vector(num_action, input, index)
-        if num_action < 0:
-          num_action = num_action * -1 
-        if num_action < 0:
-          num_action = 0 
-
-        let executable : Vector<AnyGameAction>
-        let i = 0
-        #print("VALIDS")
-        while i < enumeration.size():
-          if can apply(enumeration.get(i), state):
-            #print(enumeration.get(i))
-            executable.append(enumeration.get(i))
-          i = i + 1
-        #print("ENDVALIDS")
-        if executable.size() == 0:
-            assert(false, "zero valid actions")
-
-        print(executable.get(num_action % executable.size()))
-        apply(executable.get(num_action % executable.size()), state)
-
-
-fun pretty_print(Game game):
-    print_indented(game)
-
 fun<T> pretty_string(Board b, T obj) -> String:
     if obj is GameSelectWeapon:
         if !(b.get_current_attacking_model().weapons.size() > obj.weapon_id.value):
@@ -1149,41 +1090,4 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
         act pick_vengeful_brethren()
         board.players_faction[int(current_player)] = make_vengeful_brethren(board.reserve_units, current_player)
 
-# a whole game, including army selection
-@classes
-act play() -> Game:
-    frm board : Board
-    subaction*(board) p1 = pick_army(board, false)
-    subaction*(board) p2 = pick_army(board, true)
-    subaction*(board) battle = battle(board)
 
-
-fun score(Game g, Int player_id) -> Float:
-    if g.board.units.size() < 2:
-        return 0.0
-    let count = g.board.units[1].models.size()
-    if player_id == 0:
-        # Player 0's score: models destroyed in player 1's unit
-        return float(5- count)
-    else:
-        # Player 1's score: models remaining in their unit
-        return float(count)
-
-fun get_current_player(Game g) -> Int:
-    if g.is_done():
-        return -4
-    let d : Dice
-    d.value = 1
-    if can g.roll(d):
-        return -1
-    if can g.reroll(d):
-        return -1
-    if can g.quantity(d):
-        return -1
-    return int(g.board.current_decision_maker)
-
-fun log_alive_models_player1(Game g) -> Int:
-    return g.board.count_models(0)
-
-fun log_alive_models_player2(Game g) -> Int:
-    return g.board.count_models(1)

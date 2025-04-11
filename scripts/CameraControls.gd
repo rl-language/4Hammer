@@ -8,6 +8,7 @@ var positions : Array = [Vector2(), Vector2()]
 
 
 func _ready():
+	Server.on_connection.connect(self.on_server_connected)
 	var viewport_size = get_viewport_rect().size
 	var viewport_width = viewport_size.y
 	var zoom_factor = viewport_width / center_on.size.y
@@ -15,6 +16,12 @@ func _ready():
 	zoom = Vector2(zoom_factor, zoom_factor)
 	position.x = center_on.size.x / 2 + center_on.position.x
 	position.y = center_on.size.y / 2 + center_on.position.y
+	
+func on_server_connected():
+	var viewport_size = get_viewport_rect().size
+	var viewport_width = viewport_size.y
+	var zoom_factor = viewport_width / center_on.size.y
+	zoom = Vector2(zoom_factor * 0.8, zoom_factor * 0.8)
 
 func _process(delta: float) -> void:
 	if Input.is_key_pressed(KEY_A):

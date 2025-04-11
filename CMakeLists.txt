@@ -47,7 +47,7 @@ function(build_rules_for_target ARCH OS LIBGODOT_TARGET_TYPE)
   rlc(${TARGET_NAME}
 	DEBUG_INFO
 	SHARED
-	INPUT src/rules.rl
+	INPUT src/full_game.rl
 	OUTPUT ${RLC_RULES_LIB}
 	GODOT rules.inc
 	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks --abort-symbol rlc_abort -g
@@ -76,7 +76,7 @@ rlc(skirmish_rules_wasm32
 	OPTIMIZE
 	SHARED
 	COMPILE
-	INPUT src/rules.rl
+	INPUT src/full_game.rl
 	OUTPUT librlcrules_web_release.o
 	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks --target=wasm32-unknown-emscripten --abort-symbol rlc_abort
 )
@@ -84,7 +84,7 @@ rlc(skirmish_rules_wasm32
 rlc(python_wrapper
 	OPTIMIZE
 	PYTHON skirmish.py
-	INPUT src/rules.rl
+	INPUT src/full_game.rl
 	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks
 )
 
@@ -113,7 +113,7 @@ add_custom_target(export-web
 rlc(rlc_rules_fuzzer
 	OPTIMIZE
 	DEBUG_INFO
-	INPUT src/rules.rl
+	INPUT src/full_game.rl
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/rules_fuzzer
 	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks -g --fuzzer --sanitize
 )

@@ -37,7 +37,11 @@ func _process(delta: float) -> void:
 	else:
 		position = lerp(position, new_position, delta)
 	
-	modulate.a = lerp(modulate.a, float(0.8 > get_viewport().get_camera_2d().zoom.length()), delta * 10)
+	# when we are driven by a remote connection, always show the name
+	if Server.has_connection():
+		modulate.a = 1
+	else:
+		modulate.a = lerp(modulate.a, float(0.8 > get_viewport().get_camera_2d().zoom.length()), delta * 10)
 
 func set_text(text):
 	$Label.text = text

@@ -1,550 +1,448 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Documentation - rules.rl</title>
-</head>
-<body>
-<h1>rules.rl</h1>
-<h2>Actions</h2>
-<div><strong>Action</strong>: <code>evaluate_random_stat(frm Stat, frm Int) -> RollStat</code></div>
-<pre><code>
+# rules.rl
+
+
+### Actions 
+
+* act `evaluate_random_stat(frm Stat, frm Int) -> RollStat`
+
+```
  Rappresents the evaluation of stats such as the damage stat
  of weapons, which sometime is written as 1D6 + 3
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>quantity(Dice dice)</code></li>
-<pre><code>
+   * act `quantity(Dice dice)`
+
+        ```
  if the stat has a dice component, 
  selects the value for that dice 
+```
+* act `rerollable_pair_dices_roll(ctx Board, frm Bool, frm Bool, frm Bool, frm Int) -> RerollableDicePair`
 
-</code></pre>
-</ul>
-<div><strong>Action</strong>: <code>rerollable_pair_dices_roll(ctx Board, frm Bool, frm Bool, frm Bool, frm Int) -> RerollableDicePair</code></div>
-<pre><code>
+```
  This action rappresents charge rolls and morale tests, where the user 
  must roll two dices, can sometime benefit from a reroll due to special rules
  and finally can use a command point to reroll the dices.
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>roll_pair(frm Dice result, frm Dice result2)</code></li>
-<pre><code>
+   * act `roll_pair(frm Dice result, frm Dice result2)`
+
+        ```
  sets the value for the rolled pair
+```
+   * act `keep_it(Bool do_it)`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>keep_it(Bool do_it)</code></li>
-<pre><code>
+        ```
  reject the possibility of rerolling the dice and 
  keep the value of the dice.
+```
+   * act `reroll_pair(Dice new_value, Dice new_value2)`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>reroll_pair(Dice new_value, Dice new_value2)</code></li>
-<pre><code>
+        ```
  set a new value of the rolled pair
+```
+* act `rerollable_dice_roll(ctx Board, frm Bool, frm Bool, frm Bool, frm Int) -> RerollableDice`
 
-</code></pre>
-</ul>
-<div><strong>Action</strong>: <code>rerollable_dice_roll(ctx Board, frm Bool, frm Bool, frm Bool, frm Int) -> RerollableDice</code></div>
-<pre><code>
+```
  Rappresents all those situations in which a player must roll a dice
  for example advance rolls or hit rolls, and can sometime benefit 
  from a temporary reroll rule, or can spend a command point
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>roll(frm Dice result)</code></li>
-<pre><code>
+   * act `roll(frm Dice result)`
+
+        ```
  sets the value for the rolled dice
+```
+   * act `keep_it(Bool do_it)`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>keep_it(Bool do_it)</code></li>
-<pre><code>
+        ```
  reject the possibility of rerolling the dice and keep the current result
+```
+   * act `reroll(Dice new_value)`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>reroll(Dice new_value)</code></li>
-<pre><code>
+        ```
  resets the rolled value
+```
+* act `single_attack(ctx Board, ctx Unit, ctx Unit) -> SingleAttack`
 
-</code></pre>
-</ul>
-<div><strong>Action</strong>: <code>single_attack(ctx Board, ctx Unit, ctx Unit) -> SingleAttack</code></div>
-<pre><code>
+```
  Evaulates a single attack from a given model to a target unit
  A single attack can generate multiple hits, for example because
  of rules such as sutained_hits. 
  If the target is destroyed, this action triggers eventual on death
  mechanics.
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>allocate_wound(frm ModelID id)</code></li>
-<pre><code>
+   * act `allocate_wound(frm ModelID id)`
+
+        ```
  autohit attacks
  sixes trigger a explosive hits
  Elects which model to allocate a suffered wounds too
+```
+* act `on_model_destroyed(ctx Board, ctx Unit, ctx Model) -> OnModelDestroyed`
 
-</code></pre>
-</ul>
-<div><strong>Action</strong>: <code>on_model_destroyed(ctx Board, ctx Unit, ctx Model) -> OnModelDestroyed</code></div>
-<pre><code>
+```
  game sequence where stratagems that trigger on death
  can be used
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_violent_unbidding()</code></li>
-<pre><code>
+   * act `skip()`
+
+   * act `use_violent_unbidding()`
+
+        ```
  master of possessions can use violent unbidding
+```
+   * act `roll(frm Dice dice)`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>roll(frm Dice dice)</code></li>
-<pre><code>
+        ```
  roll the dice to select the amount of mortal wounds inflicted
+```
+   * act `roll(frm Dice damage)`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>roll(frm Dice damage)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>resolve_weapon(ctx Board, frm Int, frm Int, frm Int) -> ResolveWeapon</code></div>
-<pre><code>
+* act `resolve_weapon(ctx Board, frm Int, frm Int, frm Int) -> ResolveWeapon`
+
+```
  resolve all attacks from one source model to a target model,
  given a particular weapon used. the weapon is provided by 
  configuring board.attack_info.source
+```
 
-</code></pre>
-<div><strong>Action</strong>: <code>resolve_model_attack(ctx Board, frm UnitID, frm UnitID, frm Int, frm Bool) -> ModelAttack</code></div>
-<pre><code>
+* act `resolve_model_attack(ctx Board, frm UnitID, frm UnitID, frm Int, frm Bool) -> ModelAttack`
+
+```
  this is the game sequence where a player selects one or more
  weapons, depending how many the model can use, to fight with 
  the target unit, and resolves those weapons one at the time
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_weapon(BInt<0, MAX_WEAPONS> weapon_id)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-</ul>
-<div><strong>Action</strong>: <code>use_attack_stratagems(ctx Board, frm UnitID, frm UnitID, frm Bool) -> UseAttackStratagems</code></div>
-<pre><code>
+   * act `select_weapon(BInt<0, MAX_WEAPONS> weapon_id)`
+
+   * act `skip()`
+
+* act `use_attack_stratagems(ctx Board, frm UnitID, frm UnitID, frm Bool) -> UseAttackStratagems`
+
+```
  rappresents all the various stratagems that can 
  be triggered after a target has been elected to attack,
  but before attacks get resolved.
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>no_defensive_stratagem()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>tough_as_squig_hide()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_gene_wrought_resiliance()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_daemonic_fervour()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_unyielding()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>no_offensive_stratagem()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_veteran_instincts()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_dark_pact()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_ability(Bool use_letal_hits)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_swift_kill()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_vindictive_strategy()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_sacrificial_dagger()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_model(frm ModelID model)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_dacatarai_stance()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_rendax_stance()</code></li>
-</ul>
-<div><strong>Action</strong>: <code>attack(ctx Board, frm UnitID, frm UnitID, frm Bool, frm Bool) -> Attack</code></div>
-<pre><code>
+   * act `no_defensive_stratagem()`
+
+   * act `tough_as_squig_hide()`
+
+   * act `use_gene_wrought_resiliance()`
+
+   * act `use_daemonic_fervour()`
+
+   * act `use_unyielding()`
+
+   * act `no_offensive_stratagem()`
+
+   * act `use_veteran_instincts()`
+
+   * act `use_dark_pact()`
+
+   * act `select_ability(Bool use_letal_hits)`
+
+   * act `use_swift_kill()`
+
+   * act `use_vindictive_strategy()`
+
+   * act `use_sacrificial_dagger()`
+
+   * act `select_model(frm ModelID model)`
+
+   * act `use_dacatarai_stance()`
+
+   * act `use_rendax_stance()`
+
+* act `attack(ctx Board, frm UnitID, frm UnitID, frm Bool, frm Bool) -> Attack`
+
+```
  One of the most important sequences of the game,
  it handles a full melee, ranged or overwatch attack 
  from a given target to a given source, including
  the activation of stratagems, the resolution of 
  dangerous weapons, fight on death, and so on.
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_model(ModelID model)</code></li>
-<pre><code>
+   * act `select_model(ModelID model)`
+
+        ```
  select a model to damage because of a hazardous roll
+```
+   * act `roll(Dice result)`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>roll(Dice result)</code></li>
-<pre><code>
+        ```
  ToDo: handle non character version
  2+ fight on death dice roll
+```
+* act `spawn_unit(ctx Board) -> PickUnit`
 
-</code></pre>
-</ul>
-<div><strong>Action</strong>: <code>spawn_unit(ctx Board) -> PickUnit</code></div>
-<ul>
-  <li><strong>Action Statement</strong>: <code>spawn(frm ProfileToUse profile)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>set_owner(frm Player player)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>place_in_reserve()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>place_at(frm BoardPosition position)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>battle_shock_test(ctx Board, ctx Unit) -> BattleShockTest</code></div>
-<pre><code>
+
+   * act `spawn(frm ProfileToUse profile)`
+
+   * act `set_owner(frm Player player)`
+
+   * act `place_in_reserve()`
+
+   * act `place_at(frm BoardPosition position)`
+
+* act `battle_shock_test(ctx Board, ctx Unit) -> BattleShockTest`
+
+```
  The sequence to perform a battle shock test, 
  including using stratagems to avoid it
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>insane_bravery(Bool do_it)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>battle_shock_step(ctx Board) -> BattleShockStep</code></div>
-<pre><code>
+   * act `insane_bravery(Bool do_it)`
+
+* act `battle_shock_step(ctx Board) -> BattleShockStep`
+
+```
  the core rules battle shock step
+```
 
-</code></pre>
-<div><strong>Action</strong>: <code>shadow_in_the_warp(ctx Board, frm Bool) -> ShadowInTheWarp</code></div>
-<pre><code>
+* act `shadow_in_the_warp(ctx Board, frm Bool) -> ShadowInTheWarp`
+
+```
  tyranids shadow in the warp rules
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_shadow_in_the_warp(Bool do_it)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>neural_disruption(ctx Board) -> NeuralDisruption</code></div>
-<pre><code>
+   * act `use_shadow_in_the_warp(Bool do_it)`
+
+* act `neural_disruption(ctx Board) -> NeuralDisruption`
+
+```
  tyranids neural disruption rules 
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_neural_disruption_target(frm UnitID target)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-</ul>
-<div><strong>Action</strong>: <code>command_phase(ctx Board) -> CommandPhase</code></div>
-<pre><code>
+   * act `select_neural_disruption_target(frm UnitID target)`
+
+   * act `skip()`
+
+* act `command_phase(ctx Board) -> CommandPhase`
+
+```
  core rule command phase 
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_oath_of_moment_target(frm UnitID unit)</code></li>
-<pre><code>
+   * act `select_oath_of_moment_target(frm UnitID unit)`
+
+        ```
  offer to play shadow in the warp to both players
+```
+   * act `skip()`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_duty_and_honour(frm BInt<0, 4> objective)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_pheromone_trail(frm BInt<0, 4> phero_objective)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-</ul>
-<div><strong>Action</strong>: <code>overwatch(ctx Board, frm UnitID) -> Overwatch</code></div>
-<pre><code>
+   * act `use_duty_and_honour(frm BInt<0, 4> objective)`
+
+   * act `use_pheromone_trail(frm BInt<0, 4> phero_objective)`
+
+   * act `skip()`
+
+* act `overwatch(ctx Board, frm UnitID) -> Overwatch`
+
+```
  core rules overwatch sequence
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>overwatch(frm UnitID source)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>move(ctx Board, ctx UnitID, frm Int) -> Move</code></div>
-<pre><code>
+   * act `skip()`
+
+   * act `overwatch(frm UnitID source)`
+
+* act `move(ctx Board, ctx UnitID, frm Int) -> Move`
+
+```
  core rules movement rules, including the possiblity 
  of advancing and the triggering of overwatches
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>move_to(BoardPosition position)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>fight_step(ctx Board, frm Bool) -> FightStep</code></div>
-<pre><code>
+   * act `move_to(BoardPosition position)`
+
+* act `fight_step(ctx Board, frm Bool) -> FightStep`
+
+```
  core rules fight step 
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>end_fight_step()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_target(frm UnitID source, frm UnitID target)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>fight_phase(ctx Board) -> FightPhase</code></div>
-<pre><code>
+   * act `end_fight_step()`
+
+   * act `select_target(frm UnitID source, frm UnitID target)`
+
+* act `fight_phase(ctx Board) -> FightPhase`
+
+```
  core rules fight phase
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_bestial_bellow(frm UnitID unit, frm UnitID target)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-</ul>
-<div><strong>Action</strong>: <code>charge(ctx Board, frm UnitID, frm UnitID, Bool) -> Charge</code></div>
-<pre><code>
+   * act `use_bestial_bellow(frm UnitID unit, frm UnitID target)`
+
+   * act `skip()`
+
+* act `charge(ctx Board, frm UnitID, frm UnitID, Bool) -> Charge`
+
+```
  charge sequence 
+```
 
-</code></pre>
-<div><strong>Action</strong>: <code>charge_phase(ctx Board) -> ChargePhase</code></div>
-<pre><code>
+* act `charge_phase(ctx Board) -> ChargePhase`
+
+```
  core rules charge step
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>end_charge()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_target(frm UnitID source, frm UnitID target)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-<pre><code>
+   * act `end_charge()`
+
+   * act `select_target(frm UnitID source, frm UnitID target)`
+
+   * act `skip()`
+
+        ```
  before charge stratagems
+```
+   * act `use_overawing_magnificence()`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_overawing_magnificence()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-<pre><code>
+   * act `skip()`
+
+        ```
  after charge stratagem
+```
+   * act `use_heroic_intervention(frm UnitID interceptor)`
 
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_heroic_intervention(frm UnitID interceptor)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>reserve_deployment(ctx Board, frm Bool) -> ReserveDeployment</code></div>
-<pre><code>
+* act `reserve_deployment(ctx Board, frm Bool) -> ReserveDeployment`
+
+```
  core rules reserve deployment 
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>nothing_to_deploy()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_reserve_unit(frm UnitID id)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>place_at(BoardPosition position)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>nothing_to_deploy()</code></li>
-</ul>
-<div><strong>Action</strong>: <code>desperate_escape(ctx Board, frm UnitID) -> DesperateEscapeTest</code></div>
-<pre><code>
+   * act `nothing_to_deploy()`
+
+   * act `select_reserve_unit(frm UnitID id)`
+
+   * act `place_at(BoardPosition position)`
+
+   * act `nothing_to_deploy()`
+
+* act `desperate_escape(ctx Board, frm UnitID) -> DesperateEscapeTest`
+
+```
  core rules desperate escape 
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_predators_not_prey(Bool do_it)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>movement(ctx Board, frm UnitID, frm Bool) -> Movement</code></div>
-<pre><code>
+   * act `use_predators_not_prey(Bool do_it)`
+
+* act `movement(ctx Board, frm UnitID, frm Bool) -> Movement`
+
+```
  movement of a single unit, including possibly advancing and falling back 
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>advance(Bool do_it)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>movement_phase(ctx Board) -> MovementPhase</code></div>
-<pre><code>
+   * act `advance(Bool do_it)`
+
+* act `movement_phase(ctx Board) -> MovementPhase`
+
+```
  core rules movement phase
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>end_move()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>move_unit(frm UnitID id)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>use_gilded_spear(Bool do_it)</code></li>
-<pre><code>
+   * act `end_move()`
+
+   * act `move_unit(frm UnitID id)`
+
+   * act `use_gilded_spear(Bool do_it)`
+
+        ```
  stratagems
+```
+* act `shooting_phase(ctx Board) -> ShootingPhase`
 
-</code></pre>
-</ul>
-<div><strong>Action</strong>: <code>shooting_phase(ctx Board) -> ShootingPhase</code></div>
-<pre><code>
+```
  core rules shooting phase
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>end_shooting_phase()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_target(frm UnitID source, frm UnitID target)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>turn(ctx Board, frm Bool) -> Turn</code></div>
-<pre><code>
+   * act `end_shooting_phase()`
+
+   * act `select_target(frm UnitID source, frm UnitID target)`
+
+* act `turn(ctx Board, frm Bool) -> Turn`
+
+```
  one of the most important sequences, the whole turn of a single
  player, as specified by the core rules
+```
 
-</code></pre>
-<div><strong>Action</strong>: <code>round(ctx Board) -> Round</code></div>
-<pre><code>
+* act `round(ctx Board) -> Round`
+
+```
  a turn of both players
+```
 
-</code></pre>
-<div><strong>Action</strong>: <code>attach_leaders(ctx Board) -> AttachLeaderStep</code></div>
-<pre><code>
+* act `attach_leaders(ctx Board) -> AttachLeaderStep`
+
+```
  the game sequence before the battle start where players
  can elect to attach leaders to units
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>done_attaching()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>attack_character(frm UnitID unit_id, frm UnitID char_id)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>deploy(ctx Board) -> Deployment</code></div>
-<pre><code>
+   * act `done_attaching()`
+
+   * act `attack_character(frm UnitID unit_id, frm UnitID char_id)`
+
+* act `deploy(ctx Board) -> Deployment`
+
+```
  the core rules sequence where players
  alterante deploying units in a valid position 
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>done_deploying()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_unit(frm UnitID unit_id)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>deploy_at(BoardPosition position)</code></li>
-</ul>
-<div><strong>Action</strong>: <code>battle(ctx Board) -> Battle</code></div>
-<pre><code>
+   * act `done_deploying()`
+
+   * act `select_unit(frm UnitID unit_id)`
+
+   * act `deploy_at(BoardPosition position)`
+
+* act `battle(ctx Board) -> Battle`
+
+```
  a 5 rounds battle, inlcuding deployment. 
+```
 
-</code></pre>
-<div><strong>Action</strong>: <code>pick_army(ctx Board, frm Bool) -> PickFaction</code></div>
-<pre><code>
+* act `pick_army(ctx Board, frm Bool) -> PickFaction`
+
+```
  the game sequence where players are allowed to pick units.
+```
 
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>pick_strike_force_octavious()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>pick_insidious_infiltrators()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>pick_zarkan_deamonkin()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>pick_morgrim_butcha()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>pick_tristean_gilded_blade()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>pick_vengeful_brethren()</code></li>
-</ul>
-<div><strong>Action</strong>: <code>play() -> Game</code></div>
-<pre><code>
- a whole game, including army selection
+   * act `pick_strike_force_octavious()`
 
-</code></pre>
-<h2>Free Functions</h2>
-<ul>
-<li><strong>Function</strong>: <code>required_wound_roll(Board board, AttackSequenceInfo info)  -> Int</code></li>
-<pre><code>
+   * act `pick_insidious_infiltrators()`
+
+   * act `pick_zarkan_deamonkin()`
+
+   * act `pick_morgrim_butcha()`
+
+   * act `pick_tristean_gilded_blade()`
+
+   * act `pick_vengeful_brethren()`
+
+
+### Free functions
+
+* fun `required_wound_roll(Board board, AttackSequenceInfo info)  -> Int`
+```
  Calculates the required roll to wound given a particular game state,
  that is, the calculation includes situational condition like the usage
  of a lance weapon, instead of only considering strenght and toughness
-
-</code></pre>
-<li><strong>Function</strong>: <code>get_hit_roll_bonus(Board board)  -> Int</code></li>
-<li><strong>Function</strong>: <code>deployment_position_valid(Board board, BoardPosition position, Bool current_player, Bool infiltrates)  -> Bool</code></li>
-<li><strong>Function</strong>: <code>set_state&lt;T&gt;(T g, String s)  -> Bool</code></li>
-<li><strong>Function</strong>: <code>main()  -> Int</code></li>
-<li><strong>Function</strong>: <code>get_num_players()  -> Int</code></li>
-<li><strong>Function</strong>: <code>max_game_lenght()  -> Int</code></li>
-<li><strong>Function</strong>: <code>gen_methods() </code></li>
-<li><strong>Function</strong>: <code>fuzz(Vector<Byte> input) </code></li>
-<li><strong>Function</strong>: <code>pretty_print(Game game) </code></li>
-<li><strong>Function</strong>: <code>pretty_string&lt;T&gt;(Board b, T obj)  -> String</code></li>
-<li><strong>Function</strong>: <code>score(Game g, Int player_id)  -> Float</code></li>
-<li><strong>Function</strong>: <code>get_current_player(Game g)  -> Int</code></li>
-<li><strong>Function</strong>: <code>log_alive_models_player1(Game g)  -> Int</code></li>
-<li><strong>Function</strong>: <code>log_alive_models_player2(Game g)  -> Int</code></li>
-</ul>
-<h2>Enums</h2>
-<h2>Enum ProfileToUse</h2>
-<ul>
-  <li><code>Unit unit</code></li>
-</ul>
-<br/>
-<ul>
-  <li><code>captain_octavius</code></li>
-  <li><code>librarian_tantus</code></li>
-  <li><code>terminator_squad</code></li>
-  <li><code>infernus_squad</code></li>
-  <li><code>death_shadow</code></li>
-  <li><code>make_lictor</code></li>
-  <li><code>make_von_ryan_leaper</code></li>
-</ul>
-<h2>Enum Player</h2>
-<ul>
-</ul>
-<br/>
-<ul>
-  <li><code>player_1</code></li>
-  <li><code>player_2</code></li>
-</ul>
-</body>
-</html>
+```
+* fun `get_hit_roll_bonus(Board board)  -> Int`
+* fun `deployment_position_valid(Board board, BoardPosition position, Bool current_player, Bool infiltrates)  -> Bool`
+* fun `set_state<T>(T g, String s)  -> Bool`
+* fun `main()  -> Int`
+* fun `get_num_players()  -> Int`
+* fun `max_game_lenght()  -> Int`
+* fun `gen_methods() `
+* fun `fuzz(Vector<Byte> input) `
+* fun `pretty_string<T>(Board b, T obj)  -> String`
