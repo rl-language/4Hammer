@@ -480,6 +480,7 @@ act attack(ctx Board board,
            frm UnitID target, 
            frm Bool melee, 
            frm Bool overwatch) -> Attack:
+    assert (board[source].models.size() != 5, "WRONG")
     if board[source].models.size() == 0:
         return
     if board[target].models.size() == 0:
