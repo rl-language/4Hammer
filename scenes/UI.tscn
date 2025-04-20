@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://bomo4fmpfvsfk"]
+[gd_scene load_steps=17 format=3 uid="uid://bomo4fmpfvsfk"]
 
 [ext_resource type="Script" path="res://scripts/UI.gd" id="1_0kuxd"]
 [ext_resource type="Script" path="res://scripts/AcceptRejectAction.gd" id="3_xtmgh"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://scripts/game_content.gd" id="8_2xslx"]
 [ext_resource type="Script" path="res://scripts/right_bar.gd" id="8_e40ae"]
 [ext_resource type="Script" path="res://scripts/TraceManager.gd" id="8_hfwxe"]
+[ext_resource type="Script" path="res://scripts/llm_thoughts.gd" id="12_s8ajt"]
 
 [sub_resource type="InputEventAction" id="InputEventAction_x4sy6"]
 action = &"ResetState"
@@ -231,6 +232,17 @@ size_flags_vertical = 8
 theme_override_font_sizes/font_size = 30
 action_mode = 0
 text = ">>"
+
+[node name="llm_thoughts" type="Label" parent="."]
+custom_minimum_size = Vector2(600, 0)
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 1.0
+grow_vertical = 2
+size_flags_horizontal = 0
+theme_override_font_sizes/font_size = 40
+autowrap_mode = 3
+script = ExtResource("12_s8ajt")
 
 [connection signal="button_down" from="AcceptRejectAction/HBoxContainer/OkButton" to="AcceptRejectAction" method="_on_ok_button_button_down"]
 [connection signal="button_down" from="AcceptRejectAction/HBoxContainer/CancelButton" to="AcceptRejectAction" method="_on_cancel_button_button_down"]

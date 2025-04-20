@@ -1,6 +1,6 @@
 extends VBoxContainer
 
-
+var active = true
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	GlobalRules.on_state_changed.connect(on_state_change)
@@ -16,6 +16,8 @@ func make_choise(name: String, action: RLCAnyGameAction):
 
 func on_state_change():
 	clear()
+	if not active:
+		return
 	var added = 0
 	for action in GlobalRules.valid_actions:
 		var unwrapped = action.unwrap()

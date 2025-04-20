@@ -4,6 +4,7 @@ var server := TCPServer.new()
 var clients := []
 var send_images = false
 signal on_connection
+signal on_message
 
 func _ready():
 	server.listen(8527)
@@ -13,9 +14,6 @@ func has_connection():
 	return self.clients.size() != 0
 
 func _process(_delta):
-	if clients.size() != 0:
-		RenderingServer.render_loop_enabled = false
-		Engine.time_scale = 1000
 	if server.is_connection_available():
 		var client = server.take_connection()
 		clients.append(client)
@@ -40,11 +38,15 @@ func _process(_delta):
 						send_images = true
 					elif message == "_engine_reset":
 						GlobalRules.reset()
+						on_message.emit("")
+					elif message == "_engine_stop_rendering":
+						RenderingServer.render_loop_enabled = false
+						Engine.time_scale = 1000
+					elif message.begins_with("_engine_message"):
+						on_message.emit(message.substr(15).replace("\\n", "\n"))
 				else:
 					buffered_messages.append(message)
 			parse_input(buffered_messages)
-			
-
 
 func parse_input(data: Array):
 	var decoded = []

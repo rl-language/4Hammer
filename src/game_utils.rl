@@ -44,7 +44,7 @@ fun fuzz(Vector<Byte> input):
         if executable.size() == 0:
             assert(false, "zero valid actions")
 
-        print(executable.get(num_action % executable.size()))
+        #print(executable.get(num_action % executable.size()))
         apply(executable.get(num_action % executable.size()), state)
 
 
@@ -54,6 +54,8 @@ fun default_get_current_player(Game g) -> Int:
     let d : Dice
     d.value = 1
     if can g.roll(d):
+        return -1
+    if can g.roll_pair(d, d):
         return -1
     if can g.reroll(d):
         return -1

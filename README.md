@@ -84,11 +84,18 @@ rlc-learn examples/single_shooting_maximize.rl -o /tmp/net -i src/ --steps-per-e
 to have a network learn to maximize the given objective.
 ![example learning](./imgs/example_leaerning.png)
 
+If you have the hardware, you can as well try to learn the full game. On the hardware available (NVIDIA GeForce RTX 4070, Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz) to us we only managed to have it learn from playing a single turn, using `cd src && rlc-learn ../examples/single_turn.rl --steps-per-env 3500 --lr 0.00001 -i src/ --league-play `
+
+Using this off-the-shelf implementation, we achieved the following (expected) poor results:
+![p1 rewards](./imgs/player1-single-turn-rewards.png)
+![p2 rewards](./imgs/player2-single-turn-rewards.png)
+
 
 ### Graphical Build Requirements
 
 **Mandatory:**
 - A Linux distribution (the project has been designed to work on any Godot-supported platform but those configurations are not supported off-the-shelf at the moment).
+- scons
 - Python 3.9+
 - [RLC](https://github.com/rl-language/rlc/).
 - CMake 3.10 or later.
@@ -132,6 +139,7 @@ ninja python_wrapper
 You can find in the [graphical\_engine\_driver](./examples/graphical_engine_driver.py) the intended way of interacting with the godot server
 ```
     client = GodotClient()
+    client.stop_rendering()
 
     while not client.state.is_done():
         action = client.get_random_valid_action()
@@ -143,9 +151,27 @@ You can find in the [graphical\_engine\_driver](./examples/graphical_engine_driv
         img.save("/tmp/img.png")
 ```
 
-As shown in that example, if you want you can keep a client side copy of the game state, this allows you for example to enumerate the valid moves!
+As shown in that example, if you want you can keep a client side copy of the game state, this allows you for example to enumerate the valid moves! When the engine detects a connection it sets a fixed zoom level and hides the user GUI as well. Unfortunatelly godot does not currently support offscreen rendering, when it will, we will provide a command line way of spawning godot in the right configuration immediately.
 
-When godot detects a connection, it reconfigures itself to generate 1 frame whenever a command is sent from the network. It sets a fixed zoom level and hides the user GUI as well. Unfortunatelly godot does not currently support offscreen rendering, when it will, we will provide a command line way of spawning godot in the right configuration immediately.
+`client.stop_rendering`, configures godot to emit 1 frame whenever a command is sent from the network and does not render otherwise.
+
+If you instead want to see the game play out, you can take a look at [llm\_to\_engine](./examples/llm_to_engine.py) example, which uses gemini 2.0 flash to play out a game and then render it on screen.
+
+```
+    with load_program_from_args(args) as program:
+        client = GodotClient(program)
+        llm = GeminiStateless(program)
+        rules = get_included_conents_from_args(args)
+        for (action, thought) in run_game(llm=llm, program=program, rules=rules):
+            client.send_action(action)
+            if len(thought) == 0:
+                continue
+            client.send_text_to_display(thought)
+            sleep(1)
+```
+
+You can as well see a full game being played out [here](https://www.youtube.com/watch?v=T0Tj7zPuQVI). Once again, as expected, the results are fairly poor.
+
 
 ### Contacts
 

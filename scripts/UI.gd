@@ -8,12 +8,18 @@ func _ready() -> void:
 	Server.on_connection.connect(self.on_remote_mode_activated)
 	
 func on_remote_mode_activated():
-	self.hide()
+	$AcceptRejectAction.hide()
+	$RollDiceButton.hide()
+	$MultipleChoise.active = false
+	$LeftBar.hide()
 
 func add_message(message: String):
 	var message_obj = event_bar_message_prefab.instantiate()
 	message_obj.text = message
-	$RightBar/Panel/EventScrollable/EventBar.add_child(message_obj)
+	var event_bar = $RightBar/Panel/EventScrollable/EventBar
+	event_bar.add_child(message_obj)
+	$RightBar/Panel/EventScrollable.scroll_vertical = $RightBar/Panel/EventScrollable.get_v_scroll_bar().max_value
+	#event_bar.move_child(event_bar.get_children().back(), 0)
 
 func on_action(action):
 	var casted = action.unwrap()

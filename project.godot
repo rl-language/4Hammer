@@ -28,6 +28,10 @@ Server="*res://scripts/server.gd"
 
 window/size/mode=2
 
+[editor]
+
+movie_writer/movie_file="/tmp/file2.avi"
+
 [input]
 
 RandomAction={
