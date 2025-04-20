@@ -163,7 +163,7 @@ As shown in that example, if you want you can keep a client side copy of the gam
 
 If you instead want to see the game play out, you can take a look at [llm\_to\_engine](./examples/llm_to_engine.py) example, which uses gemini 2.0 flash to play out a game and then render it on screen.
 
-```
+```python
 with load_program_from_args(args) as program:
         client = GodotClient(program)
         llm = GeminiStateless(program)
