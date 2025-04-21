@@ -841,7 +841,7 @@ fun make_custodian_wardens() -> Unit:
 
 fun make_allarus_custodians() -> Unit:
     let allarus_unit : Unit
-    allarus_unit.name = "Allarus Custodians (2 models)"s
+    allarus_unit.name = "Allarus Custodians"s
 
     # Each Allarus Custodian model:
     let allarus_model : Model
