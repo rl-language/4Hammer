@@ -1,5 +1,4 @@
 import rules
-import game_utils
 
 @classes 
 act play() -> Game:
@@ -34,10 +33,29 @@ act play() -> Game:
 
 # use the same decision making as a normal game
 fun get_current_player(Game g) -> Int:
-    return default_get_current_player(g)
+    if g.is_done():
+        return -4
+    let d : Dice
+    d.value = 1
+    if can g.roll(d):
+        return -1
+    if can g.reroll(d):
+        return -1
+    if can g.quantity(d):
+        return -1
+    return int(g.board.current_decision_maker)
+
 
 fun score(Game g, Int player_id) -> Float:
-    return float(g.board.score[player_id] - g.board.score[1-player_id])
+    if g.board.units.size() < 2:
+        return 0.0
+    let count = g.board.units[1].models.size()
+    if player_id == 0:
+        # Player 0's score: models destroyed in player 1's unit
+        return float(5- count)
+    else:
+        # Player 1's score: models remaining in their unit
+        return float(count)
 
 fun log_alive_models_player1(Game g) -> Int:
     return g.board.count_models(0)

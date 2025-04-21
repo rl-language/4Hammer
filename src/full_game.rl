@@ -11,15 +11,7 @@ act play() -> Game:
 
 
 fun score(Game g, Int player_id) -> Float:
-    if g.board.units.size() < 2:
-        return 0.0
-    let count = g.board.units[1].models.size()
-    if player_id == 0:
-        # Player 0's score: models destroyed in player 1's unit
-        return float(5- count)
-    else:
-        # Player 1's score: models remaining in their unit
-        return float(count)
+    return float(g.board.score[player_id].value - g.board.score[1-player_id].value)
 
 fun get_current_player(Game g) -> Int:
     return default_get_current_player(g)
