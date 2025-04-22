@@ -8,7 +8,7 @@ def main():
     args = parser.parse_args()
     with load_program_from_args(args) as program:
         client = GodotClient(program)
-        llm = GeminiStateless(program,model="gemini-2.5-flash-preview-04-17")
+        llm = GeminiStateless(program,model="gemini-2.0-flash")
         rules = get_included_conents_from_args(args)
         for (action, thought) in run_game(llm=llm, program=program, rules=rules):
             client.send_action(action)

@@ -6,7 +6,7 @@ from random import choice
 # and then stick them into a gym like environment.
 def main():
     # compile the rules and load the python wrapper
-    program = compile(["./src/rules.rl"]) # equivalent to "import wrapper as program"
+    program = compile(["./src/full_game.rl"]) # equivalent to "import wrapper as program"
 
     # validate environment
     exit_on_invalid_env(program, forced_one_player=True, needs_score=True)

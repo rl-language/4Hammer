@@ -35,8 +35,8 @@ Creating an agent that excels at this game is challenging, as evidenced by its p
 
 ```bash
 # Clone the repository
-git clone https://github.com/drblallo/skirmish.git
-cd skirmish
+git clone https://github.com/rl-language/4Hammer
+cd 4Hammer
 
 # Setup Python environment
 python3 -m pip install virtualenv
@@ -45,11 +45,11 @@ source .venv/bin/activate
 pip install rl_language
 
 # Test the compiler (compilation takes a few seconds)
-rlc-random src/rules.rl
+rlc-random src/full_game.rl
 ```
 
 Examples can be found in the `examples` directory:
-- [gym\_jit\_example.py](./examples/gym_jit_example.py): Demonstrates typical ML usage with just-in-time rule compilation and interaction via a gym-like interface.
+- [gym\_jit\_example.py](./examples/gym_jit_example.py): Demonstrates typical ML usage with just-in-time rule compilation and interaction via a gym-like interface. The scripts expects to be run from the root of the repository, not not from the example directory.
 
 ```python
 env = SingleRLCEnvironment(program)
@@ -59,8 +59,15 @@ while not env.is_done_underling():
     env.step(action_index)
 ```
 
-- [use\_rules\_from\_python.py](./examples/use_rules_from_python.py): Illustrates ahead-of-time compilation and direct function invocation from Python.
+- [use\_rules\_from\_python.py](./examples/use_rules_from_python.py): Illustrates ahead-of-time compilation and direct function invocation from Python. Yout need to compile the libraries by hand with
 
+```bash
+rlc src/full_game.rl  -o examples/lib.so -O2 --shared # compile rules library
+rlc src/full_game.rl -o examples/wrapper.py --python # emit the wrapper
+python examples/use_rules_from_python.py  # executes the example
+```
+
+The example shows that you can inspect the content of the rules directly from python.
 ```python
 state = rules.functions.play()
 print(rules.functions.size(state.board.reserve_units))
@@ -104,7 +111,6 @@ Results:
 - [RLC](https://github.com/rl-language/rlc/)
 - CMake 3.10+
 - Godot 4.3
-- Ninja build system
 
 **Optional (for browser deployment):**
 - Emscripten 3.39+ (older versions silently fail).
@@ -116,8 +122,8 @@ Results:
 ```bash
 # Clone repository and setup
 
- git clone https://github.com/drblallo/skirmish.git
- cd skirmish
+ git clone https://github.com/rl-language/4Hammer
+ cd 4Hammer
  python3 -m pip install virtualenv
  python3 -m virtualenv .venv
  source .venv/bin/activate
@@ -126,11 +132,14 @@ Results:
  cd build
  cmake .. -DGODOT_EDITOR=/PATH/TO/GODOT/EDITOR/EXECUTABLE -G Ninja
 
-# Build (initial build with -j 1)
-ninja editor -j 1
+# YOU MUST RUN THIS ONCE TO GET GODOT TO BUILD THE PROJECT, AND TO BUILD
+# THE 4Hammer PLUGIN
+#
+# -j 1 is necessary because of issues with scons
+make editor -j 1
 
-# Run after initial build
-ninja run
+# Run after initial build you can skip spawning the editor
+make run
 ```
 
 To generate Python wrappers without JIT compilation:
@@ -142,6 +151,18 @@ ninja python_wrapper
 #### Examples
 
 Interaction with Godot server demonstrated in [graphical\_engine\_driver.py](./examples/graphical_engine_driver.py):
+
+From two different shells
+```bash
+# shell 1
+cd build
+make run
+
+# shell 2
+python ./examples/graphical_engine_driver.py
+```
+
+You will see the game being played out at random in the graphical engine.
 
 ```python
 client = GodotClient()
@@ -157,11 +178,21 @@ if img:
     img.save("/tmp/img.png")
 ```
 
-As shown in that example, if you want you can keep a client side copy of the game state, this allows you for example to enumerate the valid moves! When the engine detects a connection it sets a fixed zoom level and hides the user GUI as well. Unfortunatelly godot does not currently support offscreen rendering, when it will, we will provide a command line way of spawning godot in the right configuration immediately.
+This example shows that you can keep a client side copy of the game state, this allows you for example to enumerate the valid moves! When the engine detects a connection it sets a fixed zoom level and hides the user GUI as well. Unfortunatelly godot does not currently support offscreen rendering, when it will, we will provide a command line way of spawning godot in the right configuration immediately.
 
 `client.stop_rendering`, configures godot to emit 1 frame whenever a command is sent from the network and does not render otherwise.
 
 If you instead want to see the game play out, you can take a look at [llm\_to\_engine](./examples/llm_to_engine.py) example, which uses gemini 2.0 flash to play out a game and then render it on screen.
+
+```bash
+# shell 1
+cd build
+make run
+
+# shell 2
+pip install google-genai # you will have to set you gemini API key
+python ./examples/llvm_to_engine.py src/full_game.rl
+```
 
 ```python
 with load_program_from_args(args) as program:
