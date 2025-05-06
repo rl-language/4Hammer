@@ -8,7 +8,7 @@ def main():
 
     while not client.state.is_done():
         action = client.get_random_valid_action()
-        print(client.prog.to_string(action))
+        print(action)
         client.send_action(action)
 
     img = client.get_image()

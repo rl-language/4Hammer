@@ -15,7 +15,7 @@ def main():
     env = SingleRLCEnvironment(program)
     while not env.is_done_underling():
         action_index = env.random_valid_action_index()
-        print(program.to_string(env.actions()[action_index]))
+        print(env.actions()[action_index])
         env.step(action_index)
 
 if __name__ == "__main__":

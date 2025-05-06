@@ -69,10 +69,11 @@ python examples/use_rules_from_python.py  # executes the example
 
 The example shows that you can inspect the content of the rules directly from python.
 ```python
-state = rules.functions.play()
-print(rules.functions.size(state.board.reserve_units))
-rules.functions.pick_insidious_infiltrators(state)
-print(rules.functions.size(state.board.reserve_units))
+state = rules.play()
+print(state.board.reserve_units.size())
+rules.can_pick_insidious_infiltrators(state)
+rules.pick_insidious_infiltrators(state)
+print(state.board.reserve_units.size())
 ```
 
 Detailed documentation of supported mechanics is available [here](./doc).

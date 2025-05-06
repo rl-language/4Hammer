@@ -7,17 +7,18 @@ def main():
     import wrapper as rules
 
     # invokes play defined in rules.rl, and starts the game
-    state = rules.functions.play()
+    state = rules.play()
 
     # prints 0, the player has not picked a faction yet
     # so he has no units
-    print(rules.functions.size(state.board.reserve_units))
+    print(state.board.reserve_units.size())
 
     # picks a faction for player 0
-    rules.functions.pick_insidious_infiltrators(state)
+    assert state.can_pick_insidious_infiltrators()
+    state.pick_insidious_infiltrators()
 
     # prints 5
-    print(rules.functions.size(state.board.reserve_units))
+    print(state.board.reserve_units.size())
 
 if __name__ == "__main__":
     main()

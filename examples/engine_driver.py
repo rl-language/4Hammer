@@ -25,7 +25,7 @@ class GodotClient:
         if not self.state.can_apply(action):
             return False
         self.state.step(action)
-        self._send_message(self.prog.to_string(action))
+        self._send_message(str(action))
         return True
 
     def get_random_valid_action(self):
