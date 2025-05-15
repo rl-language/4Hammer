@@ -43,6 +43,7 @@ fun fuzz(Vector<Byte> input):
         #print("ENDVALIDS")
         if executable.size() == 0:
             assert(false, "zero valid actions")
+            return
 
         #print(executable.get(num_action % executable.size()))
         apply(executable.get(num_action % executable.size()), state)

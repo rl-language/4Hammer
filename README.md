@@ -98,10 +98,11 @@ cd src && rlc-learn ../examples/single_turn.rl --steps-per-env 3500 --lr 0.00001
 
 Results:
 
-![Player 1 Rewards](./imgs/player1-single-turn-rewards.png)
-![Player 2 Rewards](./imgs/player2-single-turn-rewards.png)
+![Player 1 Returns](./imgs/player1-single-turn-rewards.png)
+![Player 2 Returns](./imgs/player2-single-turn-rewards.png)
 
 ---
+Since it is a adversarial setup, players can always reduce the opponent score by being more conservative, so the end game returns displayed in the image do not always trend higher as you would expect from a single player game.
 
 ### Graphical Build Requirements
 
@@ -214,5 +215,7 @@ Full gameplay demonstration available [here](https://www.youtube.com/watch?v=T0T
 
 ### Contacts
 
-Join us on [Discord](https://discord.gg/saSEj9PAt3).
+Join us on [Discord](https://discord.gg/saSEj9PAt3) or mail us at massimo.fioravanti@polimi.it
+
+
 
