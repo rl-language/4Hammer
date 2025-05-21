@@ -1,68 +1,62 @@
-# game: 0
-attack_character {unit_id: 3, char_id: 1} 
-attack_character {unit_id: 5, char_id: 3} 
+# game 0
+pick_vengeful_brethren {}
+pick_morgrim_butcha {}
+attack_character {unit_id: 2, char_id: 0} 
+attack_character {unit_id: 6, char_id: 3} 
 done_attaching {}
-attack_character {unit_id: 4, char_id: 3} 
 done_attaching {}
-select_unit {unit_id: 2} 
-deploy_at {position: {x: 37, y: 27}} 
+done_deploying {}
 select_unit {unit_id: 3} 
-deploy_at {position: {x: 6, y: 0}} 
-select_unit {unit_id: 1} 
-deploy_at {position: {x: 37, y: 27}} 
-select_unit {unit_id: 1} 
-deploy_at {position: {x: 6, y: 0}} 
+deploy_at {position: {x: 39, y: 1}} 
 done_deploying {}
-done_deploying {}
-select_oath_of_moment_target {unit: 3} 
+use_shadow_in_the_warp {do_it: true} 
 skip {}
-move_unit {id: 2} 
-advance {do_it: true} 
-roll {result: 4} 
-move_to {position: {x: 33, y: 20}} 
-overwatch {source: 3} 
-no_defensive_stratagem {}
-no_offensive_stratagem {}
-skip {}
-skip {}
-skip {}
-skip {}
-skip {}
-skip {}
-select_weapon {weapon_id: 0} 
-select_weapon {weapon_id: 2} 
-quantity {dice: 4} 
-roll {result: 4} 
-roll {result: 2} 
-roll {result: 5} 
-roll {result: 2} 
-roll {result: 4} 
-roll {result: 4} 
-allocate_wound {id: 1} 
-roll {result: 3} 
-quantity {dice: 1} 
-roll {result: 4} 
-roll {result: 1} 
-select_weapon {weapon_id: 1} 
-quantity {dice: 1} 
-roll {result: 6} 
-roll {result: 2} 
-roll {result: 4} 
-allocate_wound {id: 1} 
-roll {result: 5} 
-skip {}
-roll {result: 3} 
-move_unit {id: 0} 
-advance {do_it: true} 
-roll {result: 6} 
-move_to {position: {x: 42, y: 22}} 
 skip {}
 end_move {}
 nothing_to_deploy {}
-select_target {source: 2, target: 3} 
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_move {}
+nothing_to_deploy {}
+select_reserve_unit {id: 0} 
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+select_oath_of_moment_target {unit: 0} 
+skip {}
+end_move {}
+select_reserve_unit {id: 1} 
+place_at {position: {x: 3, y: 16}} 
+select_reserve_unit {id: 0} 
+place_at {position: {x: 5, y: 9}} 
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+move_unit {id: 0} 
+advance {do_it: true} 
+roll {result: 3} 
+keep_it {do_it: true} 
+move_to {position: {x: 33, y: 0}} 
+end_move {}
+nothing_to_deploy {}
+select_reserve_unit {id: 0} 
+place_at {position: {x: 20, y: 1}} 
+select_target {source: 0, target: 1} 
 no_defensive_stratagem {}
 no_offensive_stratagem {}
-skip {}
 skip {}
 skip {}
 skip {}
@@ -73,19 +67,245 @@ end_fight_step {}
 end_fight_step {}
 end_fight_step {}
 end_fight_step {}
-select_oath_of_moment_target {unit: 2} 
+select_oath_of_moment_target {unit: 0} 
 skip {}
 move_unit {id: 3} 
-advance {do_it: true} 
-roll {result: 2} 
-move_to {position: {x: 8, y: 7}} 
+advance {do_it: false} 
+move_to {position: {x: 24, y: 3}} 
 move_unit {id: 1} 
-advance {do_it: true} 
-roll {result: 6} 
-move_to {position: {x: 8, y: 7}} 
+advance {do_it: false} 
+move_to {position: {x: 3, y: 12}} 
 end_move {}
 nothing_to_deploy {}
 nothing_to_deploy {}
+select_target {source: 2, target: 0} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+select_weapon {weapon_id: 1} 
+skip {}
+skip {}
+skip {}
+skip {}
+select_weapon {weapon_id: 1} 
+skip {}
+skip {}
+select_weapon {weapon_id: 1} 
+skip {}
+select_target {source: 3, target: 0} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+select_weapon {weapon_id: 0} 
+skip {}
+skip {}
+select_target {source: 1, target: 0} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+skip {}
+select_weapon {weapon_id: 2} 
+select_weapon {weapon_id: 1} 
+skip {}
+skip {}
+roll {result: 5} 
+keep_it {do_it: true} 
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_move {}
+select_reserve_unit {id: 1} 
+place_at {position: {x: 41, y: 28}} 
+nothing_to_deploy {}
+nothing_to_deploy {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+skip {}
+skip {}
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+select_target {source: 3, target: 4} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+select_target {source: 1, target: 0} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+skip {}
+select_weapon {weapon_id: 1} 
+select_weapon {weapon_id: 2} 
+skip {}
+skip {}
+roll {result: 5} 
+keep_it {do_it: false} 
+reroll {new_value: 5} 
+select_target {source: 2, target: 0} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+select_weapon {weapon_id: 1} 
+skip {}
+select_weapon {weapon_id: 1} 
+skip {}
+select_weapon {weapon_id: 1} 
+skip {}
+select_weapon {weapon_id: 1} 
+skip {}
+skip {}
+select_weapon {weapon_id: 1} 
+skip {}
+skip {}
+end_shooting_phase {}
+select_target {source: 3, target: 0} 
+skip {}
+roll_pair {result: 4, result2: 2} 
+keep_it {do_it: true} 
+skip {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+move_unit {id: 0} 
+advance {do_it: false} 
+move_to {position: {x: 29, y: 8}} 
+move_unit {id: 4} 
+advance {do_it: false} 
+move_to {position: {x: 42, y: 29}} 
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+select_target {source: 0, target: 2} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+select_weapon {weapon_id: 0} 
+select_weapon {weapon_id: 1} 
+skip {}
+skip {}
+select_weapon {weapon_id: 1} 
+skip {}
+end_shooting_phase {}
+select_target {source: 0, target: 3} 
+skip {}
+roll_pair {result: 6, result2: 5} 
+keep_it {do_it: false} 
+reroll_pair {new_value: 6, new_value2: 4} 
+use_heroic_intervention {interceptor: 3} 
+roll_pair {result: 4, result2: 2} 
+keep_it {do_it: false} 
+reroll_pair {new_value: 4, new_value2: 1} 
+end_charge {}
+end_fight_step {}
+select_target {source: 0, target: 3} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+skip {}
+end_fight_step {}
+end_fight_step {}
+select_target {source: 3, target: 0} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+end_fight_step {}
+end_fight_step {}
+select_oath_of_moment_target {unit: 4} 
+skip {}
+move_unit {id: 3} 
+move_to {position: {x: 29, y: 2}} 
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+select_target {source: 1, target: 4} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+select_target {source: 2, target: 4} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+end_shooting_phase {}
+end_charge {}
+end_fight_step {}
+end_fight_step {}
+end_fight_step {}
+select_target {source: 3, target: 0} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+select_target {source: 0, target: 3} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+select_weapon {weapon_id: 2} 
+end_fight_step {}
+end_fight_step {}
+move_unit {id: 0} 
+move_to {position: {x: 28, y: 5}} 
+move_unit {id: 4} 
+advance {do_it: true} 
+roll {result: 3} 
+keep_it {do_it: true} 
+move_to {position: {x: 38, y: 21}} 
+end_move {}
+nothing_to_deploy {}
+nothing_to_deploy {}
+select_target {source: 4, target: 2} 
+no_defensive_stratagem {}
+no_offensive_stratagem {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
+skip {}
 end_shooting_phase {}
 end_charge {}
 end_fight_step {}

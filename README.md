@@ -4,6 +4,8 @@
 
 ![RLC Logo](./imgs/skirmish.png)
 
+[Documentation](https://rl-language.github.io/4hammer.html) [paper](https://arxiv.org/abs/2505.13638)
+
 ### Rationale
 
 **Warhammer 40,000 (10th edition)** is a non-deterministic, zero-sum board game requiring several hours to play. Successfully playing it necessitates:
