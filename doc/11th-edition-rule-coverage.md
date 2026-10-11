@@ -10,6 +10,8 @@ Inventory: **156 numbered subsections**, **31 supplemental entries**, **1114 ret
 
 Task 3's [state foundations report](state-foundations.md) records tested bounded storage/capacity, identity, provenance, archive/history and schema changes. CP/Advance storage (08.02/09.06) and actual-cost/own-player stratagem checks (15.01) now have passing assertions, alongside lifecycle boundary tests. Their complete subsection workflows remain owned by later tasks; the original table rows below are not promoted to full-rule implementation. Task 4's [geometry report](geometry-foundations.md) records quad-preserving measurements, coherency/engagement, transactional paths/setup and tested binding compatibility. The current suite has 74 passing assertions and 8 remaining mandatory discrepancy fixes. Full movement modes, setup-specific constraints, terrain/visibility and end-turn incoherency removal remain with their later owners. Consult ROADMAP.md for task completion status.
 
+Task 7's [Command/Battle-shock report](command-battle-shock.md) records tested Leadership, exact strength boundaries, Command recovery, shock gates and Insane Bravery limits. The current suite has 120 passing assertions and five remaining mandatory discrepancy fixes in tasks 8/9. The original rows for 01.06/01.07, 08.01–08.05 and U17 are historical inspection findings: use the report for implemented behavior and its explicit task-8/15/17 and offboard source limits. Task 6 is deferred by the user until full datasheets arrive.
+
 ## Status conventions
 
 - **partial**: related structures or behavior exist; audit/change/test still required.

@@ -142,3 +142,9 @@ CTest integration validation: the tests-only configuration discovered 107 entrie
 Deployment editor regression: `godot_state.gd` loads the actual choice panel and interaction script, presses deployment buttons for both armies, checks the opposite deployment regions and owners, rejects the incorrect battlefield ID, and verifies battlefield clicking is disabled while choosing reserves. The previous choice panel fails this regression; the fixed scripts pass against the matching task-5 native bindings. No rule source, action/state schema or quad coordinates changed in this UI fix.
 
 The deployment harness also presses “Done deploying” for Army 1 and verifies that only Army 2 can subsequently deploy, including retention of Army 2 ownership after placement. It repeats the finish handoff with identical armies. Deployment and finish buttons identify Army 1/2 explicitly, since unit names alone cannot distinguish identical armies and placement alternates decision ownership.
+
+## Command phase and Battle-shock (task 7)
+
+The suite has **120 PASS, 5 XFAIL, 0 XPASS**. CTest registers **127 entries**, including two compilation fixtures and five explicit expected-failure skips. [The task-7 report](../doc/command-battle-shock.md) gives rule scope, page citations and validation evidence. State/observation schemas are **6**; action schema stays **3**. Matching native Godot artifacts are in `/workspace/4hammer-validation/task7-godot`. The headless harness saves/reloads a pending Command recovery roll and checks chance ownership and shock gates.
+
+CMake now prefers the activated Python environment and checks `rlc.program` during configuration. For an existing build cached with the wrong interpreter, reconfigure with `-DPython3_EXECUTABLE=/workspace/4hammer-venv/bin/python`; fresh builds select the activated environment automatically.

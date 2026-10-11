@@ -155,3 +155,11 @@ Report test counts/results, gameplay scope, fuzzer build and run outcome/duratio
 ## User-directed attachment deferral
 
 The user deferred task 6 (attachments and unit characteristics) until they supply full unit datasheets after the other work. Skip attachment implementation for now; retain its unresolved scope in ROADMAP.md and proceed with task 7 and subsequent independent tasks. Do not infer attachment permissions from old factories or invent datasheet rules.
+
+## Command phase and Battle-shock
+
+Read [the task-7 report](doc/command-battle-shock.md). Leadership uses the complete 2D6 total and the lowest threshold. Command recovery requires a roll for already-shocked or at/below-half friendly units; only success in that step clears its initial shock snapshot. Opponent shock and successful outside-step rolls do not clear shock. Use doubled remaining counts/wounds for exact/odd thresholds; keep strict below-half separate from at-or-below eligibility.
+
+Use unit-level shock inheritance, `model_objective_control`, `allows_action_start` and `allows_action_completion` when integrating later mechanics. The latter are only shock gates; task 15 must implement full action eligibility and completion. Insane Bravery is own Command-step only, blocked by existing shock targeting, once per battle independently for each player; its Board usage record must survive cleanup and saves. Do not bypass centralized battle/phase/target expenditure checks.
+
+Current validation is **120 PASS, 5 XFAIL, 0 XPASS**; state/observation schemas **6**, action schema **3**. Task 6 remains deferred by user instruction; task 8 is next. Fixed characteristics and objective aggregation/ties remain mandatory fixes. Resolve offboard source gate D10 when integrating reserves/passengers; do not infer a general recovery policy from the battlefield loop. CMake prefers the activated Python and rejects missing `rlc` during configuration; explicitly set `Python3_EXECUTABLE` when replacing a stale cached interpreter.
