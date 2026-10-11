@@ -28,12 +28,6 @@ fun test_05_02_exact_half_strength() -> Bool:
     info.target_toughness = info.source.strenght() * 2
     return required_wound_roll(board, info) == 6
 
-# Rule 01.06, p.9. Success against at least one Ld means the lowest threshold.
-fun test_01_06_mixed_leadership() -> Bool:
-    let unit = make_infernus_squad()
-    unit[1].profile = Profile::beast_snagga_boy
-    return unit.get_leadership() == 6
-
 # Rule 14.02, p.52. Two OC1 models beat one OC2 model only with an extra OC1.
 fun test_14_02_sum_objective_control() -> Bool:
     let board : Board

@@ -14,11 +14,6 @@
     "task": 9,
     "category": "existing calculation defect"
   },
-  "test_01_06_mixed_leadership": {
-    "source": "01.06, p.9",
-    "task": 7,
-    "category": "source conflict; edition provenance unverified"
-  },
   "test_14_02_sum_objective_control": {
     "source": "14.02, p.52",
     "task": 8,

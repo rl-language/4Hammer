@@ -1123,3 +1123,59 @@ fun test_timing_opponent_charge_restores_roles() -> Bool:
     sequence.roll_pair(board, one, one)
     sequence.keep_it(board, true)
     return sequence.is_done() and !board.timing.active_player and !board.current_decision_maker
+
+# Rule 01.06, p.9. Success against at least one Ld means the lowest threshold.
+fun test_01_06_mixed_leadership() -> Bool:
+    let unit = make_infernus_squad()
+    unit[1].profile = Profile::beast_snagga_boy
+    return unit.get_leadership() == 6
+
+# p.86: odd model counts cannot be exactly half; use the unrounded threshold.
+fun test_half_strength_odd_and_even_model_counts() -> Bool:
+    let unit = make_infernus_squad()
+    unit.capture_starting_strength()
+    unit.models.erase(4)
+    unit.models.erase(3)
+    if unit.is_at_or_below_half_strength() or unit.is_below_half_strenght():
+        return false
+    unit.models.erase(2)
+    if !unit.is_at_or_below_half_strength() or !unit.is_below_half_strenght():
+        return false
+    unit.starting_strenght = 4
+    return unit.is_at_or_below_half_strength() and !unit.is_below_half_strenght()
+
+# p.86: a lone model uses remaining wounds, including exact and odd boundaries.
+fun test_half_strength_single_model_wounds() -> Bool:
+    let unit = make_octavius()
+    unit.capture_starting_strength()
+    unit[0].suffered_wounds = 2
+    if unit.is_at_or_below_half_strength():
+        return false
+    unit[0].suffered_wounds = 3
+    if !unit.is_at_or_below_half_strength() or unit.is_below_half_strenght():
+        return false
+    unit[0].suffered_wounds = 4
+    if !unit.is_below_half_strenght():
+        return false
+    unit[0].profile = Profile::librarian_tantus
+    unit[0].suffered_wounds = 2
+    if unit.is_at_or_below_half_strength():
+        return false
+    unit[0].suffered_wounds = 3
+    return unit.is_at_or_below_half_strength() and unit.is_below_half_strenght()
+
+# p.86: a surviving full-health leader uses combined initial strength.
+# This fixture verifies the threshold only; task 6 attachment changes are deferred.
+fun test_half_strength_combined_count_survives_casualties() -> Bool:
+    let unit = make_octavius()
+    unit.starting_strenght = 6
+    return unit.is_at_or_below_half_strength() and unit.is_below_half_strenght()
+
+# pp.19/86: retired/empty/uninitialized fixtures cannot require a shock roll.
+fun test_half_strength_empty_and_uninitialized_units() -> Bool:
+    let unit : Unit
+    if unit.is_at_or_below_half_strength() or unit.is_below_half_strenght():
+        return false
+    unit = make_octavius()
+    unit.starting_strenght = 0
+    return !unit.is_at_or_below_half_strength() and !unit.is_below_half_strenght()

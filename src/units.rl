@@ -290,13 +290,15 @@ cls Unit:
         other.attached_units.value.append(component)
         self.models.erase(0)
 
+    # Success against any Leadership characteristic uses the lowest threshold
+    # (Leadership rolls p.9, procedural A7). Empty units cannot roll.
     fun get_leadership() -> Int:
         if self.models.empty():
             return 0
         let best_leadership = self.models[0].profile.leadership()
         let i = 1
         while i != self.models.size():
-            best_leadership = max(best_leadership, self.models[i].profile.leadership())
+            best_leadership = min(best_leadership, self.models[i].profile.leadership())
             i = i + 1
 
         return best_leadership
@@ -310,11 +312,23 @@ cls Unit:
             i = i + 1
         return false
 
+    # Compare doubled counts without rounding odd starting strengths (p.86).
+    # Strict below-half is distinct from Command phase at-or-below eligibility.
     fun is_below_half_strenght() -> Bool:
+        if self.empty() or self.starting_strenght.value == 0:
+            return false
         if self.starting_strenght.value == 1:
-            return self.models[0].is_below_half_wounds()
-        
-        return self.starting_strenght.value / 2 > self.models.size()
+            return self.models[0].wounds_left() * 2 < self.models[0].profile.wounds()
+        return self.models.size() * 2 < self.starting_strenght.value
+
+    # Command rolls include exactly half-strength (p.30); one-model units use
+    # remaining wounds, combined units retain their original model count (p.86).
+    fun is_at_or_below_half_strength() -> Bool:
+        if self.empty() or self.starting_strenght.value == 0:
+            return false
+        if self.starting_strenght.value == 1:
+            return self.models[0].wounds_left() * 2 <= self.models[0].profile.wounds()
+        return self.models.size() * 2 <= self.starting_strenght.value
 
     fun get_temporary_weapon_parameter(WeaponRuleKind rule) -> Int: 
         let temp_rules = self.get_temporary_weapon_rules()
