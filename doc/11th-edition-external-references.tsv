@@ -2,9 +2,9 @@ locator	source_page	referenced_entry	availability	gate
 P05-05	5	Example App Reference	illustrative reference label	none
 P09-19	9	Player’s Rules	app definition not supplied	D04
 P09-20	9	Rules Sequencing	app definition not supplied	D04
-P09-22	9	Closest Model/Unit	app definition not supplied	D05
+P09-22	9	Closest Model/Unit	user-supplied definition; see geometry-foundations.md	D05
 P09-23	9	Table Quarter	app definition not supplied	D05
-P09-24	9	Within/Wholly Within	app definition not supplied	D05
+P09-24	9	Within/Wholly Within	user-supplied definition; see geometry-foundations.md	D05
 P09-26	9	Automatically Successful	app definition not supplied	D03
 P09-27	9	Modifying Dice Rolls	app definition not supplied	D03
 P09-28	9	Re‑rolls	app definition not supplied	D03
