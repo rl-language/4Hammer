@@ -1,5 +1,16 @@
 # CTest fixtures compile each suite once, including when running a filtered test.
+# Prefer the activated toolchain over a newer system Python without rlc.
+# Respect an explicitly supplied strategy/interpreter.
+if(NOT DEFINED Python3_FIND_STRATEGY)
+  set(Python3_FIND_STRATEGY LOCATION)
+endif()
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
+execute_process(COMMAND "${Python3_EXECUTABLE}" -c "from rlc.program import Program"
+  RESULT_VARIABLE rule_python_status ERROR_VARIABLE rule_python_error)
+if(NOT rule_python_status EQUAL 0)
+  message(FATAL_ERROR
+    "Rule tests require rlc in ${Python3_EXECUTABLE}. Activate the repository Python environment or set Python3_EXECUTABLE. ${rule_python_error}")
+endif()
 find_program(RLC_TEST_COMPILER NAMES rlc)
 if(NOT RLC_TEST_COMPILER)
   message(FATAL_ERROR "Rule tests require rlc; activate the repository Python environment")
