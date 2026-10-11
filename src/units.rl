@@ -308,6 +308,29 @@ cls Unit:
     fun leadership_roll_succeeds(Int total) -> Bool:
         return !self.empty() and total >= self.get_leadership()
 
+    # Shock applies to every model without duplicating a status that could
+    # drift from its unit; new/revived members inherit the unit's shock (p.9).
+    fun model_is_battle_shocked(Int model) -> Bool:
+        return model >= 0 and model < self.models.size() and self.battle_socked
+
+    # '-' Objective Control contributes nothing while shocked (p.9).
+    # Objective aggregation, marker geometry and securing remain task 8.
+    fun model_objective_control(Int model) -> Int:
+        assert(model >= 0 and model < self.models.size(), "invalid control model")
+        if self.battle_socked:
+            return 0
+        return self.models[model].profile.control()
+
+    # Shock prohibits starting an action (p.9). This is only the shock gate;
+    # task 15 must combine it with all action eligibility/mission requirements.
+    fun allows_action_start() -> Bool:
+        return !self.battle_socked
+
+    # An already started action cannot complete while shocked (p.9).
+    # Recovery removes this prohibition, not any other completion condition.
+    fun allows_action_completion() -> Bool:
+        return !self.battle_socked
+
     fun has_temporary_wepon_rule(WeaponRuleKind rule) -> Bool: 
         let temp_rules = self.get_temporary_weapon_rules()
         let i = 0

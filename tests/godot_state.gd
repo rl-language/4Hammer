@@ -128,7 +128,39 @@ func check_bindings():
 	assert(deployment_buttons(choices).size() == 4)
 	for button in deployment_buttons(choices):
 		assert(button.text.begins_with("deploy army 2:"))
-	print("PASS: Godot schema exports, army choices, target/unit/location selectors, rejected edge placement, both armies through deployment buttons, done-deploying handoff with different/identical armies and save replacement")
+	# Continue into a real Command recovery roll with Army 2 as first player.
+	deployment_buttons(choices)[0].button_down.emit()
+	location = rules.get_location_saction()
+	location.get_member(0).get_x().set_value(2)
+	location.get_member(0).get_y().set_value(2)
+	assert(rules.can_apply(location))
+	rules.apply_action(location)
+	var unit = rules.library.get(rules.state.get_board().get_units(), 0)
+	assert(unit.get_owned_by_player1())
+	unit.set_battle_socked(true)
+	assert(rules.library.model_is_battle_shocked(unit, 0))
+	assert(rules.library.model_objective_control(unit, 0) == 0)
+	assert(not rules.library.allows_action_start(unit))
+	assert(not rules.library.allows_action_completion(unit))
+	rules.state.get_board().set_starting_player(true)
+	for button in choices.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text == "done deploying army 2":
+			button.button_down.emit()
+			break
+	assert(rules.library.get_current_player(rules.state) == -1)
+	assert(unit.get_battle_socked())
+	var recovery = RLCGameRollPair.make()
+	recovery.get_member(0).set_value(3)
+	recovery.get_member(1).set_value(3)
+	assert(rules.can_apply(recovery))
+	# The existing pair payload and chance classifier survive the new frame.
+	rules.apply_action(recovery)
+	assert(not unit.get_battle_socked())
+	assert(rules.library.model_objective_control(unit, 0) == 1)
+	assert(rules.library.allows_action_start(unit))
+	assert(rules.library.allows_action_completion(unit))
+	assert(rules.library.get_current_player(rules.state) == 1)
+	print("PASS: Godot schema exports, army choices, target/unit/location selectors, rejected edge placement, both armies through deployment buttons, done-deploying handoff with different/identical armies, Command recovery and shock gates, and save replacement")
 	# Clean up the test-owned library; production ownership changes are out of scope.
 	rules.library.free()
 	call_deferred("quit", 0)

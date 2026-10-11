@@ -266,15 +266,20 @@ cls Board:
                 return true
         return false
 
+    # Insane Bravery has a battle-long limit (p.56), independent of phase
+    # records. Other stratagems retain their own printed restrictions (task 15).
+    fun stratagem_battle_limit_available(Bool player, Stratagem strat) -> Bool:
+        return !(strat == Stratagem::insane_bravery and self.has_used_insane_bravery[int(player)])
+
     # Check the requested cost and using player, not a different stratagem or
     # opponent record (stratagem use p.54). Per-unit/windows remain tasks 5/15.
     fun can_use_strat(Bool player, Stratagem strat) -> Bool:
-        return self.command_points[int(player)] >= strat.cost() and !self.has_used_strat(strat, int(player))
+        return self.command_points[int(player)] >= strat.cost() and !self.has_used_strat(strat, int(player)) and self.stratagem_battle_limit_available(player, strat)
 
     # Printed extra costs/free-use effects must still obey phase restrictions
     # (p.54). Cost overrides are explicit internal inputs, not invented rules.
     fun can_use_strat_with_cost(Bool player, Stratagem strat, Int cost) -> Bool:
-        return cost >= 0 and self.command_points[int(player)] >= cost and !self.has_used_strat(strat, int(player))
+        return cost >= 0 and self.command_points[int(player)] >= cost and !self.has_used_strat(strat, int(player)) and self.stratagem_battle_limit_available(player, strat)
 
     # Target bookkeeping belongs to each payer independently; shock blocks
     # the controlling player's stratagems on that unit (pp.9/54).
@@ -321,6 +326,9 @@ cls Board:
     # Keep one usage entry per player/phase without duplicates filling storage
     # (stratagem-use restrictions p.54; complete targeting limits are task 15).
     fun mark_strat_used(Stratagem strat, Int player):
+        # Battle-long Bravery usage must survive phase cleanup (p.56).
+        if strat == Stratagem::insane_bravery:
+            self.has_used_insane_bravery[player] = true
         if !self.has_used_strat(strat, player):
             self.phase_info.already_used_stratagems[player].append(strat)
 
@@ -393,6 +401,8 @@ cls Board:
                self.units[i].retired = true
             i = i - 1 
 
+    # Shocked models contribute no OC (p.9). This legacy objective query
+    # still needs task 8's aggregation/ties and base-aware marker rules (p.52).
     fun get_objective_controller(Int x, Int y) -> Int:
         let v : Vector2D
         v.x = x
@@ -403,8 +413,8 @@ cls Board:
             ref unit = self[i]
             let j = 0
             while j != unit.models.size():
-                if 3.0 >= unit[j].position.as_vector().distance(v):
-                    oc[unit.owner_id()] = unit.models[j].profile.control()
+                if !unit.battle_socked and 3.0 >= unit[j].position.as_vector().distance(v):
+                    oc[unit.owner_id()] = unit.model_objective_control(j)
                 j = j + 1
             i = i + 1
         if oc[0] == 0 and oc[1] == 0: 

@@ -1345,6 +1345,54 @@ fun test_command_cp_then_shock_then_abilities() -> Bool:
     command.roll_pair(board, three, three)
     return !board[0].battle_socked and (can command.choose_timing_rule(board, TimingRule::oath_of_moment)) and board.current_decision_maker == board.current_player
 
+# Rule 01.07, p.9. Battle-shocked models contribute no OC.
+fun test_01_07_shock_removes_objective_control() -> Bool:
+    let board : Board
+    let unit = make_tantus()
+    unit.move_to(make_board_position(10, 10))
+    unit.battle_socked = true
+    board.units.append(unit)
+    return board.get_objective_controller(10, 10) == -1
+
+
+# p.9: every model inherits shock, OC '-', and the action start/completion ban.
+# Full mission-action workflow remains task 15; these are its required gates.
+fun test_shock_model_control_and_action_restrictions() -> Bool:
+    let unit = make_infernus_squad()
+    unit.history.action_started = true
+    if !unit.allows_action_start() or !unit.allows_action_completion():
+        return false
+    unit.battle_socked = true
+    for i in range(unit.models.size()):
+        if !unit.model_is_battle_shocked(i) or unit.model_objective_control(i) != 0:
+            return false
+    if unit.allows_action_start() or unit.allows_action_completion():
+        return false
+    unit.battle_socked = false
+    return unit.allows_action_start() and unit.allows_action_completion() and !unit.model_is_battle_shocked(0) and unit.model_objective_control(0) == 1 and unit.history.action_started
+
+# p.9: a shocked friendly unit cannot erase a healthy unit's contribution.
+# This tests the shock exclusion, not task 8's unfinished aggregation formula.
+fun test_shock_control_exclusion_preserves_other_friendly_models() -> Bool:
+    let board : Board
+    let unit = make_tantus()
+    unit[0].position = board_position(10, 10)
+    board.units.append(unit)
+    unit.battle_socked = true
+    board.units.append(unit)
+    return board.get_objective_controller(10, 10) == 0
+
+# pp.54/56: all spending entrypoints observe battle-long Bravery usage.
+fun test_bravery_central_battle_limit_and_independent_players() -> Bool:
+    let board = timing_fixture()
+    board.commit_stratagem(false, Stratagem::insane_bravery, board[0])
+    board.clear_phase_modifiers()
+    if board.can_use_strat(false, Stratagem::insane_bravery) or board.can_target_strat_with_cost(false, Stratagem::insane_bravery, board[0], 0):
+        return false
+    if board.try_use_strat(false, Stratagem::insane_bravery, board[0], 0):
+        return false
+    return board.can_target_strat(true, Stratagem::insane_bravery, board[1]) and board.can_target_strat(false, Stratagem::reroll, board[0]) and board.command_points[0] == 2
+
 # p.9: the existing Dark Pact consumer must use both Leadership dice.
 # This does not claim new-edition faction effect/eligibility certification.
 fun test_leadership_consumer_uses_complete_pair_total() -> Bool:

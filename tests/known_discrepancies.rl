@@ -56,15 +56,6 @@ fun test_14_02_tied_objective_uncontrolled() -> Bool:
     board.units.append(b)
     return board.get_objective_controller(10, 10) == -1
 
-# Rule 01.07, p.9. Battle-shocked models contribute no OC.
-fun test_01_07_shock_removes_objective_control() -> Bool:
-    let board : Board
-    let unit = make_tantus()
-    unit.move_to(make_board_position(10, 10))
-    unit.battle_socked = true
-    board.units.append(unit)
-    return board.get_objective_controller(10, 10) == -1
-
 # Rule 15.01, p.54. A 1CP stratagem is affordable with 1CP.
 # Rule 15.01, p.54. Usage belongs to the player who used the stratagem.
 # Rule 08.02, p.30. Core CP gain must not disappear at the arbitrary storage cap.

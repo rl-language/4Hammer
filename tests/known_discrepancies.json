@@ -23,10 +23,5 @@
     "source": "14.02, p.52",
     "task": 8,
     "category": "existing tie-handling defect"
-  },
-  "test_01_07_shock_removes_objective_control": {
-    "source": "01.07, p.9",
-    "task": 7,
-    "category": "missing shock effect"
   }
 }

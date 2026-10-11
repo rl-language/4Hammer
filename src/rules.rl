@@ -880,7 +880,6 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         act insane_bravery(Bool do_it)
         if do_it:
             board.commit_stratagem(unit.owned_by_player1, Stratagem::insane_bravery, unit)
-            board.has_used_insane_bravery[int(unit.owned_by_player1)] = true
             auto_pass = true
     if !auto_pass:
         # Leadership/Battle-shock is absent from Command Re-roll's list (p.56).
