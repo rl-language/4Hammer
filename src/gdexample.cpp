@@ -1,6 +1,8 @@
 #include "stdint.h"
 #include <gdextension_interface.h>
 #include <godot_cpp/classes/node.hpp>
+#include <godot_cpp/classes/ref.hpp>
+#include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/classes/wrapped.hpp>
 #include <godot_cpp/godot.hpp>
 
