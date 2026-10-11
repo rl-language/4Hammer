@@ -90,6 +90,9 @@ cls PhaseInfo:
     AlreadyUsedStratagems[2] already_used_stratagems
     
 cls Board:
+    Int next_identity
+    Int phase_serial
+    Int turn_serial
     UnitVector units # required
     UnitVector reserve_units # required
 
@@ -116,12 +119,72 @@ cls Board:
 
     CurrentStateDescription current_state
 
+    # Implementation identity allocation: removals/returns must keep the same entity
+    # behind stored references (destruction p.19; returning models p.88).
+    fun identify_unit(Unit unit):
+        if unit.identity.value == -1:
+            unit.identity = self.next_identity
+            self.next_identity = self.next_identity + 1
+        let i = 0
+        while i < unit.models.size():
+            ref model = unit.models[i]
+            if model.identity.value == -1:
+                model.identity = self.next_identity
+                self.next_identity = self.next_identity + 1
+                model.original_unit = unit.identity
+            i = i + 1
+
+    # Assign roster identities before attachment/deployment so component provenance
+    # survives transfer (Leader/Support pp.66–67; starting strength p.86).
+    fun identify_units():
+        let i = 0
+        while i < self.reserve_units.size():
+            self.identify_unit(self.reserve_units[i])
+            i = i + 1
+        i = 0
+        while i < self.units.size():
+            self.identify_unit(self.units[i])
+            i = i + 1
+
+    # Resolve an entity rather than reuse a vacated positional target; this is a
+    # storage invariant supporting attack targets/destruction (pp.17/19).
+    fun find_unit(EntityIdentity identity) -> Int:
+        if identity.value < 0:
+            return -1
+        let i = 0
+        while i < self.units.size():
+            if self.units[i].identity == identity and !self.units[i].retired:
+                return i
+            i = i + 1
+        return -1
+
+    # Reset turn-local storage without erasing phase-independent usage; supports
+    # turn/phase restrictions (pp.28–30, movement pp.32–33). Timing is task 5.
+    fun start_turn_history():
+        self.turn_serial = self.turn_serial + 1
+        let i = 0
+        while i < self.units.size():
+            self.units[i].reset_turn_history()
+            i = i + 1
+
+    # Freeze combined model counts after attachments, before casualties change
+    # current strength (starting strength p.86; attachment pp.66–67).
+    fun capture_starting_strengths():
+        let i = 0
+        while i < self.reserve_units.size():
+            self.reserve_units[i].capture_starting_strength()
+            i = i + 1
+
+    # Expire phase-local effects/usage while retaining turn/battle history
+    # (phase sequence pp.28–30; stratagem duration/usage pp.54–57).
     fun clear_phase_modifiers():
+        self.phase_serial = self.phase_serial + 1
         self.phase_info.already_used_stratagems[0].clear()
         self.phase_info.already_used_stratagems[1].clear()
         let i = 0
         while i != self.units.size():
             self.units[i].clear_phase_modifiers()
+            self.units[i].history.used_stratagem_this_phase = false
             i = i + 1
 
     fun get_current_player_faction() -> Faction:
@@ -213,11 +276,13 @@ cls Board:
         
         return position.x < 6 or position.y < 6 or position.x > BOARD_WIDTH - 6 or position.y > BOARD_HEIGHT - 6
 
+    # Retire empty battlefield slots instead of shifting persistent targets after
+    # destruction (p.19). Slot retention is implementation policy, not a game rule.
     fun remove_empty_units():
         let i = self.units.size() - 1
         while i >= 0:
             if self[i].models.empty():
-               self.units.erase(i)
+               self.units[i].retired = true
             i = i - 1 
 
     fun get_objective_controller(Int x, Int y) -> Int:

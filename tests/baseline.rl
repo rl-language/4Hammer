@@ -134,11 +134,96 @@ fun test_09_06_advance_increment_not_truncated() -> Bool:
     let id = unit_id(0)
     let movement = move(board, id, 5)
     return can movement.move_to(board, id, make_board_position(13, 10))
+
+
+# Task 3: model/unit lifecycle, pp.19–24 and 86–88. Action slots stay positional;
+# persistent handles follow the entity and return -1 when it is gone.
+fun test_identity_model_removal_does_not_retarget() -> Bool:
+    let board : Board
+    board.units.append(make_infernus_squad())
+    board.identify_units()
+    let removed = board[0][0].identity
+    let survivor = board[0][1].identity
+    board[0].damage(0, 2)
+    return board[0].find_model(removed) == -1 and board[0].find_model(survivor) == 0 and board[0].destroyed_models.value[0].identity == removed
+
+fun test_identity_unit_slots_are_not_reassigned() -> Bool:
+    let board : Board
+    board.units.append(make_tantus())
+    board.units.append(make_octavius())
+    board.identify_units()
+    let removed = board[0].identity
+    let survivor = board[1].identity
+    board[0].damage(0, 100)
+    board.remove_empty_units()
+    return board.units.size() == 2 and board[0].retired and board.find_unit(removed) == -1 and board.find_unit(survivor) == 1
+
+# Attachment component provenance is retained; eligibility is task 6 (pp.66–67).
+fun test_attachment_preserves_component_identity() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_infernus_squad())
+    board.reserve_units.append(make_tantus())
+    board.identify_units()
+    let origin = board.reserve_units[1].identity
+    let model = board.reserve_units[1][0].identity
+    board.reserve_units[1].attach_to(board.reserve_units[0])
+    board.reserve_units[0].capture_starting_strength()
+    return board.reserve_units[0].starting_strenght == 6 and board.reserve_units[0][5].identity == model and board.reserve_units[0][5].original_unit == origin and board.reserve_units[0].attached_units.value[0].identity == origin and board.reserve_units[0].attached_units.value[0].starting_strength == 1
+
+# p.86: starting strength counts models, not the legal model-index domain.
+fun test_starting_strength_accepts_full_capacity() -> Bool:
+    let unit : Unit
+    let model : Model
+    unit.models.resize(MAX_UNIT_MODELS)
+    unit.capture_starting_strength()
+    return unit.starting_strenght == MAX_UNIT_MODELS and !unit.models.try_append(model) and unit.models.size() == MAX_UNIT_MODELS
+
 fun test_collection_overflow_is_explicit() -> Bool:
     let collection : CheckedVector<Int, 2>
     collection.append(1)
     collection.append(2)
     return !collection.has_capacity() and !collection.try_append(3) and collection.size() == 2 and collection[1] == 2
+
+# pp.19–24: a large damage amount must destroy a model, not saturate below W.
+fun test_damage_storage_handles_large_attack() -> Bool:
+    let unit = make_tantus()
+    if !unit.damage(0, 100):
+        return false
+    return unit.empty() and unit.destroyed_models.value[0].suffered_wounds == 100
+
+# p.83 One Shot and p.88 returning models: preserve per-model usage in archives.
+fun test_destroyed_model_keeps_weapon_usage_history() -> Bool:
+    let unit = make_tantus()
+    unit[0].used_once_per_battle_weapon[0] = true
+    unit.damage(0, 100)
+    let copy = unit
+    return copy.destroyed_models.value[0].used_once_per_battle_weapon[0]
+
+# pp.78–88: deferred destruction also handles the first/only model.
+fun test_fight_on_death_removes_index_zero() -> Bool:
+    let unit = make_tantus()
+    unit.damage(0, 100, true)
+    if unit.models.size() != 1:
+        return false
+    unit.remove_figth_on_death_models()
+    return unit.empty() and unit.destroyed_models.value.size() == 1
+fun test_history_survives_copy_and_phase_reset() -> Bool:
+    let board : Board
+    board.units.append(make_tantus())
+    board[0].history.last_ranged_attack_turn = 7
+    board[0].history.used_stratagem_this_phase = true
+    board.has_used_shadow_in_the_warp[0] = true
+    let copy = board
+    copy.clear_phase_modifiers()
+    return copy[0].history.last_ranged_attack_turn == 7 and !copy[0].history.used_stratagem_this_phase and copy.has_used_shadow_in_the_warp[0] and board[0].history.used_stratagem_this_phase
+fun test_empty_unit_is_not_a_shooting_target() -> Bool:
+    let board = attack_fixture()
+    board[0].can_shoot = true
+    board[1].models.clear()
+    let phase = shooting_phase(board)
+    let source = unit_id(0)
+    let target = unit_id(1)
+    return !(can phase.select_target(board, source, target)) and (can phase.end_shooting_phase(board))
 fun test_oversized_collection_decode_is_rejected() -> Bool:
     let unchecked : BoundedVector<Int, 2>
     unchecked._data.append(1)
@@ -147,6 +232,22 @@ fun test_oversized_collection_decode_is_rejected() -> Bool:
     let checked : CheckedVector<Int, 2>
     checked.append(42)
     return !from_string(checked, to_string(unchecked)) and checked.size() == 1 and checked[0] == 42
+
+fun test_unassigned_identity_never_resolves() -> Bool:
+    let board : Board
+    board.units.append(make_tantus())
+    let unassigned : EntityIdentity
+    return board.find_unit(unassigned) == -1 and board[0].find_model(unassigned) == -1
+
+fun test_phase_movement_and_setup_history() -> Bool:
+    let board : Board
+    board.units.append(make_tantus())
+    board[0].mark_set_up()
+    board[0].translate(3, 4)
+    if !board[0][0].history.was_set_up_this_turn or board[0][0].history.distance_moved_this_turn.value != 5.0:
+        return false
+    board.start_turn_history()
+    return board.turn_serial == 1 and !board[0].history.was_set_up_this_turn and !board[0][0].history.was_set_up_this_turn and board[0][0].history.distance_moved_this_turn.value == 0.0
 # Bounds are reflected directly in standard enumeration/ML layout.
 fun test_bounded_cp_layout_and_domain() -> Bool:
     let value : CommandPoints

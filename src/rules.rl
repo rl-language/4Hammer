@@ -47,6 +47,9 @@ using StatModifier = LinearlyDistributedInt<0, MAX_STAT_MODIFIER>
 using RandomStatResult = LinearlyDistributedInt<0, MAX_RANDOM_STAT_RESULT>
 # Rappresents the evaluation of stats such as the damage stat
 # of weapons, which sometime is written as 1D6 + 3
+# Expose chance results for random attack/damage characteristics and retain
+# their full supported increment (pp.17/19; Advance p.33). Fixed-stat evaluation
+# is a known task-9 defect; this storage change does not certify it.
 act evaluate_random_stat(frm Stat stat, frm  StatModifier fixed_extra) -> RollStat:
     frm result : RandomStatResult 
 
@@ -142,6 +145,8 @@ fun get_hit_roll_bonus(Board board) -> Int:
 # of rules such as sutained_hits. 
 # If the target is destroyed, this action triggers eventual on death
 # mechanics.
+# Hold generated hit/wound/damage counters across dice decisions
+# (attack sequence pp.18–19). The new-edition pipeline remains tasks 9/10.
 act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> SingleAttack:
     frm generated_hits : CombatCounter
     frm generated_wounds : CombatCounter
@@ -313,6 +318,8 @@ fun _configure_attack(Board board, Int source, Int target, Bool overwatch, Bool 
 # this is the game sequence where a player selects one or more
 # weapons, depending how many the model can use, to fight with 
 # the target unit, and resolves those weapons one at the time
+# Retain per-model weapon/Hazardous counts through attack decisions
+# (weapon declarations p.17; Hazardous p.81). Resolution rewrite is task 9.
 act resolve_model_attack(ctx Board board, 
                          frm UnitID source, 
                          frm UnitID target, 
@@ -475,6 +482,8 @@ act use_attack_stratagems(ctx Board board,
 # from a given target to a given source, including
 # the activation of stratagems, the resolution of 
 # dangerous weapons, fight on death, and so on.
+# Retain unit/model attack iteration and Hazardous-use storage across actions
+# (attacks pp.16–23; Hazardous p.81). Group declarations remain task 9.
 act attack(ctx Board board, 
            frm UnitID source, 
            frm UnitID target, 
@@ -562,11 +571,15 @@ enum Player:
     player_1
     player_2
 
+# Editor fixture helper: initialize entity identity/starting strength on creation
+# to support later lifecycle rules (starting strength p.86; destruction p.19).
 act spawn_unit(ctx Board board) -> PickUnit:
     act spawn(frm ProfileToUse profile)
     act set_owner(frm Player player)
     frm unit = profile.unit()
     unit.owned_by_player1 = player.value == 0
+    board.identify_unit(unit)
+    unit.capture_starting_strength()
     actions:
         act place_in_reserve()
             board.reserve_units.append(unit)
@@ -634,6 +647,8 @@ act shadow_in_the_warp(ctx Board board, frm Bool player) -> ShadowInTheWarp:
         i = i + 1
 
 # tyranids neural disruption rules 
+# Exclude destroyed target slots from this existing faction decision
+# (destroyed units p.19). Neural Disruption itself needs supplied faction data.
 act neural_disruption(ctx Board board) -> NeuralDisruption:
     if !(board.players_faction[int(board.current_player)] == Faction::insidious_infiltrators):
         return
@@ -643,6 +658,7 @@ act neural_disruption(ctx Board board) -> NeuralDisruption:
             actions:
                 act select_neural_disruption_target(frm UnitID target) {
                     target.get() < board.units.size(),
+                    !board[target].empty(),
                     board[target].owned_by_player1 != board.current_player,
                     board[target].distance(board[i.value]) < 12.0
                 }
@@ -651,6 +667,8 @@ act neural_disruption(ctx Board board) -> NeuralDisruption:
         i = i + 1
 
 # core rule command phase 
+# Store core CP gains without the former cap of three and exclude retired
+# target slots (CP p.30; destroyed units p.19). Phase order is still task 7.
 act command_phase(ctx Board board) -> CommandPhase:
     for i in range(2):
         board.command_points[i] = board.command_points[i] + 1
@@ -669,6 +687,7 @@ act command_phase(ctx Board board) -> CommandPhase:
         actions:
             act select_oath_of_moment_target(frm UnitID unit) {
                 unit.get() < board.units.size(),
+                !board[unit].empty(),
                 board[unit].owned_by_player1 != board.current_player
             }
             board.oath_of_moment_target = unit
@@ -722,6 +741,8 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
 
 # core rules movement rules, including the possiblity 
 # of advancing and the triggering of overwatches
+# Keep the full Advance increment and record the movement phase
+# (Normal/Advance pp.32–33). Model paths and movement modes remain tasks 4/11.
 act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement) -> Move:
     if board[unit.get()].models.size() == 0:
         return
@@ -730,17 +751,22 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
         (position.as_vector() - board[unit.get()][0].position.as_vector()).length() <= float(board[unit.get()][0].profile.movement() + additional_movement.value)
     }
 
+    board[unit.get()].history.last_move_phase = board.phase_serial
     board[unit.get()].move_to(position)
 
     board.overwatch = overwatch(board, unit)
     subaction*(board) board.overwatch
 
+# Convert an internal movement increment to its bounded state domain
+# so a full D6 Advance fits (p.33); the bound also drives inferred ML layout.
 fun move(Board board, UnitID unit, Int additional_movement) -> Move:
     let modifier : StatModifier
     modifier = additional_movement
     return move(board, unit, modifier)
 
 # core rules fight step 
+# Do not expose empty retired slots as fighting participants/targets
+# (destroyed units p.19; fighting pp.38–43). Fight sequencing is task 14.
 act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
     board.current_decision_maker = !board.current_player
     frm have_passed = [false, false]
@@ -751,7 +777,9 @@ act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
                 board.current_decision_maker = !board.current_decision_maker
             act select_target(frm UnitID source, frm UnitID target) {
                 source.get() < board.units.size(),
+                !board[source].empty(),
                 target.get() < board.units.size(),
+                !board[target].empty(),
                 !board[target.get()].empty(),
                 !board[source.get()].empty(),
                 !board[source.get()].has_fought,
@@ -804,6 +832,8 @@ act charge(ctx Board board, frm UnitID source, frm UnitID target, Bool can_be_ov
     
 
 # core rules charge step
+# Exclude destroyed slots from charging/interception choices
+# (destroyed units p.19; charges pp.36–37). Revised sequence is task 13.
 act charge_phase(ctx Board board) -> ChargePhase:
     board.current_decision_maker = board.current_player 
     frm charge_act : Charge
@@ -813,7 +843,9 @@ act charge_phase(ctx Board board) -> ChargePhase:
                 break
             act select_target(frm UnitID source, frm UnitID target) {
                 source.get() < board.units.size(),
+                !board[source].empty(),
                 target.get() < board.units.size(),
+                !board[target].empty(),
                 !board[target.get()].empty(),
                 !board[source.get()].empty(),
                 !board.units[source.get()].has_run,
@@ -843,6 +875,7 @@ act charge_phase(ctx Board board) -> ChargePhase:
                     act use_heroic_intervention(frm UnitID interceptor) {
                         interceptor.get() < board.units.size(),
                         !board[interceptor].empty(),
+                        !board[interceptor].empty(),
                         !board[source].empty(),
                         board[interceptor.get()].get_shortest_vector_to(board[source.get()]).length() < 12.0,
                         board[interceptor].owned_by_player1 != board[source].owned_by_player1,
@@ -856,6 +889,8 @@ act charge_phase(ctx Board board) -> ChargePhase:
                 
 
 # core rules reserve deployment 
+# Preserve setup history when a reserve unit transfers to the battlefield
+# (reserves/setup pp.68–71); placement/timing updates remain task 11.
 act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeployment:
     frm done_deploying = false
     board.current_decision_maker = current_player 
@@ -872,6 +907,7 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
                     board.is_position_valid_for_reserve(position, board.reserve_units[id.get()])
                 }
                 board.units.append(board.reserve_units[id.get()])
+                board.units.back().mark_set_up()
                 board.units.back().move_to(position)
                 board.units.back().arrange()
                 board.units.back().has_moved = true
@@ -880,6 +916,8 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
                     done_deploying = true
 
 # core rules desperate escape 
+# Route casualties through the identity/history archive rather than bare erase
+# (Desperate Escape p.33; destroyed/returning models pp.19/88). Mode rules are task 11.
 act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
     if !board[id].battle_socked:
         return
@@ -898,7 +936,7 @@ act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
         board.current_roll = rerollable_dice_roll(board, false, false, true, board[id].owned_by_player1)
         subaction*(board) board.current_roll
         if board.current_roll.result == 1:
-            board[id].models.erase(i.value - 1)
+            board[id].remove_model(i.value - 1)
         i = i - 1
 
 # movement of a single unit, including possibly advancing and falling back 
@@ -926,6 +964,8 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
         subaction*(board, id) player_move 
 
 # core rules movement phase
+# Exclude empty retired slots from movement decisions (destruction p.19;
+# movement pp.32–33). Exact modes/stratagem windows remain tasks 11/15.
 act movement_phase(ctx Board board) -> MovementPhase:
     board.current_decision_maker = board.current_player 
     while true:
@@ -934,6 +974,7 @@ act movement_phase(ctx Board board) -> MovementPhase:
                 break
             act move_unit(frm UnitID id) {
                 id.get() < board.units.size(),
+                !board[id].empty(),
                 board[id].owned_by_player1 == board.current_player,
                 !board[id].has_moved
             }
@@ -965,6 +1006,8 @@ act movement_phase(ctx Board board) -> MovementPhase:
         
 
 # core rules shooting phase
+# Exclude destroyed source/target slots and retain last-attack turn history
+# (shooting pp.34–35; destruction p.19). Mode/eligibility rewrite is task 12.
 act shooting_phase(ctx Board board) -> ShootingPhase:
     board.current_decision_maker = board.current_player 
     while true:
@@ -973,7 +1016,9 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
                 break
             act select_target(frm UnitID source, frm UnitID target) {
                 source.get() < board.units.size(),
+                !board[source].empty(),
                 target.get() < board.units.size(),
+                !board[target].empty(),
                 !board[target].is_lone_operative() or board[source].distance(board[source]) < 12.0,
                 !board[source].has_shoot,
                 board[source].can_shoot,
@@ -981,15 +1026,21 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
                 board.units[target.get()].owned_by_player1 != board.current_player
             }
                 board[source.get()].has_shoot = true
+                board[source.get()].history.last_ranged_attack_turn = board.turn_serial
                 board.attack = attack(board, source, target, false, false)
                 subaction*(board) board.attack
     
 # one of the most important sequences, the whole turn of a single
 # player, as specified by the core rules
+# Reset turn-local carriers and expire per-phase records at existing boundaries
+# (turn/phase sequence pp.28–30). Explicit start/end windows remain task 5.
 act turn(ctx Board board, frm Bool player_id) -> Turn:
     board.current_player = player_id
+    board.start_turn_history()
     subaction*(board) command_phase = command_phase(board)
+    board.clear_phase_modifiers()
     subaction*(board) movement_phase = movement_phase(board)
+    board.clear_phase_modifiers()
     subaction*(board) shooting_phase = shooting_phase(board)
     board.clear_phase_modifiers() 
     subaction*(board) charge_phase = charge_phase(board)
@@ -1062,6 +1113,7 @@ act deploy(ctx Board board) -> Deployment:
                 }
                 board.units.append(board.reserve_units[unit_id.get()])
                 board.reserve_units.erase(unit_id.get())
+                board.units.back().mark_set_up()
                 board.units.back().move_to(position)
                 board.units.back().arrange()
                 if !passed_players[int(!board.current_decision_maker)]:
@@ -1069,8 +1121,12 @@ act deploy(ctx Board board) -> Deployment:
         
 
 # a 5 rounds battle, inlcuding deployment. 
+# Initialize identities before attachments and freeze combined starting counts
+# afterward (Leader/Support pp.66–67; starting strength p.86).
 act battle(ctx Board board) -> Battle:
+    board.identify_units()
     subaction*(board) attach_leaders = attach_leaders(board)
+    board.capture_starting_strengths()
     subaction*(board) deploy = deploy(board)
     while board.current_round != 5:
         subaction*(board) round = round(board)
@@ -1099,6 +1155,8 @@ fun<T> pretty_string(Board b, T obj) -> String:
 
 
 # the game sequence where players are allowed to pick units.
+# Assign entity identities as roster models enter state, before attachment or
+# casualty bookkeeping (attachments pp.66–67; destruction/returns pp.19/88).
 act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
     board.current_decision_maker = current_player
     actions:
@@ -1115,3 +1173,7 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
 
         act pick_vengeful_brethren()
         board.players_faction[int(current_player)] = make_vengeful_brethren(board.reserve_units, current_player)
+
+
+
+    board.identify_units()

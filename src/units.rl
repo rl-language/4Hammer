@@ -27,6 +27,10 @@ cls Model:
     Abilities abilities 
     Keywords keywords 
     ModelState state
+    EntityIdentity identity
+    EntityIdentity original_unit
+    ModelHistory history
+    Bool[MAX_WEAPONS] used_once_per_battle_weapon
 
     fun base_size_in_inches() -> Float:
         return self.profile.base_size() / 25.4
@@ -86,7 +90,9 @@ cls ModelID: # required
     fun get() -> Int:
         return self.id.value
 
+    # Reject invalid positional model selectors; finite editor domains are implementation metadata.
     fun assign(Int other):
+        assert(other >= 0 and other < MAX_UNIT_MODELS, "invalid model slot")
         self.id = other
 
 using ModelIterator = LinearlyDistributedInt<0, MAX_UNIT_MODELS_PLUS1>
@@ -99,7 +105,10 @@ cls UnitID: # required
     fun get() -> Int:
         return self.id.value
 
+    # Reject invalid positional unit selectors before they can address roster storage.
+    # Selector layout is implementation metadata supporting target selection (p.17).
     fun assign(Int value):
+        assert(value >= 0 and value < MAX_UNIT_COUNT, "invalid unit slot")
         self.id = value
 
 using UnitIterator = BInt<0, MAX_UNIT_COUNT_PLUS1> 
@@ -125,7 +134,58 @@ cls Unit:
     Bool can_shoot
     Bool can_charge
     StartingStrength starting_strenght
+    EntityIdentity identity
+    Hidden<Vector<Model>> destroyed_models
+    Hidden<Vector<AttachmentComponent>> attached_units
+    UnitHistory history
+    Bool retired
     PhaseModifiers phase_modifiers
+
+    # Archived models retain identity, origin and once-per-battle weapon usage.
+    # Return-to-unit legality is implemented by the later lifecycle tasks.
+    # Archive identity, origin and weapon-use history before compacting live models
+    # (destroyed models p.19; One Shot p.83; returning models p.88).
+    fun remove_model(Int index):
+        self.destroyed_models.value.append(self.models[index])
+        self.models.erase(index)
+        if self.models.empty():
+            self.retired = true
+
+    # Resolve a persistent model handle after casualty compaction, avoiding a
+    # different model receiving a stored reference (damage p.19; returns p.88).
+    fun find_model(EntityIdentity identity) -> Int:
+        if identity.value < 0:
+            return -1
+        let i = 0
+        while i < self.models.size():
+            if self.models[i].identity == identity:
+                return i
+            i = i + 1
+        return -1
+
+    # Retain setup history for later eligibility checks after reinforcement entry
+    # (reserves/setup pp.68–71). This helper does not implement placement rules.
+    fun mark_set_up():
+        self.history.was_set_up_this_turn = true
+        let i = 0
+        while i < self.models.size():
+            self.models[i].history.was_set_up_this_turn = true
+            i = i + 1
+
+    # Reset setup/distance carriers for the new turn without clearing battle-long
+    # usage (turn pp.28–30; movement pp.32–33; One Shot p.83).
+    fun reset_turn_history():
+        self.history.was_set_up_this_turn = false
+        let i = 0
+        while i < self.models.size():
+            self.models[i].history.was_set_up_this_turn = false
+            self.models[i].history.distance_moved_this_turn = 0.0
+            i = i + 1
+
+    # Starting strength is the initial/combined model count, not a model index
+    # (p.86; attached units pp.66–67). Strength thresholds are task 7.
+    fun capture_starting_strength():
+        self.starting_strenght = self.models.size()
 
     fun has_greater_strenght_wound_protection() -> Bool:
         return self.phase_modifiers.greater_strenght_wound_protection 
@@ -137,11 +197,13 @@ cls Unit:
     fun is_lone_operative() -> Bool:
         return self.has_ability(AbilityKind::lone_operative)
 
+    # Finish deferred removals including index zero and preserve archive history
+    # (destroyed models pp.19/87); enabling Fight on Death still needs ability data.
     fun remove_figth_on_death_models():
         let i = self.models.size() - 1
-        while i > 0:
+        while i >= 0:
             if self.models[i].state == ModelState::fight_on_death:
-                self.models.erase(i)
+                self.remove_model(i)
             i = i - 1
 
     fun can_reroll_charge() -> Bool:
@@ -165,9 +227,16 @@ cls Unit:
             self.models[i].consolidate_torward(other)
             i = i + 1
 
+    # Preserve component identity/count when transferring an attached model
+    # (Leader/Support pp.66–67; combined starting strength p.86). Eligibility is task 6.
     fun attach_to(Unit other):
         assert(self.models.size() == 1, "only units with one model can be attached")
         other.models.append(self.models[0])
+        let component : AttachmentComponent
+        component.identity = self.identity
+        component.starting_strength = self.models.size()
+        component.name = self.name
+        other.attached_units.value.append(component)
         self.models.erase(0)
 
     fun get_leadership() -> Int:
@@ -263,11 +332,15 @@ cls Unit:
         let v = new_position.as_vector() - self.models[0].position.as_vector()
         self.translate(v)
 
+    # Record actual model displacement for later movement/eligibility checks
+    # (pp.32–33). Individual paths and exact geometry remain task 4.
     fun translate(Vector2D v):
         let i = 0
         while i != self.models.size():
             ref model = self.models[i]
+            let before = model.position
             model.position = model.position + v
+            model.history.distance_moved_this_turn = model.history.distance_moved_this_turn.value + (model.position.as_vector() - before.as_vector()).length()
             i = i + 1
 
     fun distance(BoardPosition position) -> Float:
@@ -346,14 +419,18 @@ cls Unit:
             model.position.x = model.position.x + int(1.0 + model.base_size_in_inches())
             i = i + 1
 
+    # Remove/archive the allocated model when wounds reach its characteristic;
+    # excess normal damage does not spill (damage sequence p.19; reference 05.04).
     fun damage(Int target_model_id, Int damage) -> Bool:
         ref target_model = self.models[target_model_id]
         target_model.suffered_wounds = target_model.suffered_wounds + damage 
         if target_model.suffered_wounds >= target_model.profile.wounds(): 
-            self.models.erase(target_model_id)
+            self.remove_model(target_model_id)
             return true
         return false
 
+    # Retain a deferred destroyed model until cleanup, otherwise archive it now
+    # (damage/destruction pp.19/87). Ability-specific timing needs supplied data.
     fun damage(Int target_model_id, Int damage, Bool fight_on_death) -> Bool:
         ref target_model = self.models[target_model_id]
         target_model.suffered_wounds = target_model.suffered_wounds + damage 
@@ -361,7 +438,7 @@ cls Unit:
             if fight_on_death:
                 target_model.state = ModelState::fight_on_death
             else:
-                self.models.erase(target_model_id)
+                self.remove_model(target_model_id)
             return true
         return false
 
