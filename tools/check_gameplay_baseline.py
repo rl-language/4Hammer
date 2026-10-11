@@ -34,6 +34,12 @@ def main():
                 raise RuntimeError(f"Invalid decision owner {owner} at action {step}")
             actions = state.legal_actions
             if not actions:
+                # Preserve the exact failing legal-choice sequence before raising.
+                stem = Path(args.source).stem + f"-seed-{args.seed}-stalled"
+                (args.output / (stem + ".trace")).write_text("\n".join(trace) + "\n")
+                (args.output / (stem + ".bin")).write_bytes(
+                    b"".join(struct.pack("<q", value) for value in choices) + struct.pack("<q", 0) + b"\0")
+                (args.output / (stem + ".state")).write_text(str(state.state))
                 raise RuntimeError(f"Nonterminal state has no legal actions at {step}")
             rank = rng.randrange(len(actions))
             action = actions[rank]
