@@ -1847,3 +1847,42 @@ fun test_05_02_exact_half_strength() -> Bool:
     info.source = Weapon::captain_storm_bolter
     info.target_toughness = info.source.strenght() * 2
     return required_wound_roll(board, info) == 6
+
+# Supplied appendix 02.02.01: operation order and only-final rounding; amounts
+# use standard bounded numeric storage, separate from observation encoding.
+fun test_attack_modifier_order_final_rounding_and_zero_lock() -> Bool:
+    let modifiers : RuleModifiers
+    let rule : RuleModifier
+    rule.operation = ModifierOperation::subtract
+    rule.amount = 1
+    modifiers.append(rule)
+    rule.operation = ModifierOperation::divide
+    rule.amount = 2
+    modifiers.append(rule)
+    rule.operation = ModifierOperation::add
+    rule.amount = 1
+    modifiers.append(rule)
+    rule.operation = ModifierOperation::multiply
+    rule.amount = 2
+    modifiers.append(rule)
+    if apply_rule_modifiers(2, modifiers, false) != 2 or apply_rule_modifiers(-2, modifiers, true) != -2:
+        return false
+    rule.operation = ModifierOperation::replace
+    rule.amount = 0
+    modifiers.append(rule)
+    return modified_characteristic(2, ModifiedCharacteristic::strength, modifiers, false) == 0
+
+# Supplied appendix 02.02.01: characteristic, dice, charge and CP cost limits
+# apply after cumulative arithmetic, without clamping stored CP balances.
+fun test_attack_modifier_characteristic_roll_and_cost_bounds() -> Bool:
+    if characteristic_limit(ModifiedCharacteristic::ballistic_skill, 7) != 6 or characteristic_limit(ModifiedCharacteristic::weapon_skill, 1) != 2 or characteristic_limit(ModifiedCharacteristic::leadership, 9) != 8 or characteristic_limit(ModifiedCharacteristic::leadership, 4) != 5:
+        return false
+    if characteristic_limit(ModifiedCharacteristic::save, 1) != 2 or characteristic_limit(ModifiedCharacteristic::armour_penetration, 2) != 0 or characteristic_limit(ModifiedCharacteristic::objective_control, -1) != 0 or characteristic_limit(ModifiedCharacteristic::detection_range, 31) != 30:
+        return false
+    let modifiers : RuleModifiers
+    let rule : RuleModifier
+    rule.operation = ModifierOperation::add
+    rule.amount = 4
+    modifiers.append(rule)
+    return modified_dice_result(5, modifiers, true, false) == 6 and modified_dice_result(6, modifiers, false, false) == 10 and modified_dice_result(11, modifiers, false, true) == 12 and modified_cp_cost(1, modifiers) == 2
+

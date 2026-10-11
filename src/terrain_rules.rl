@@ -1,4 +1,5 @@
 import board
+import modifiers
 
 # Cover/Hidden area eligibility belongs to each model, not inherited keywords
 # from its unit (pp.50/67/87). Other models may still gain intervening cover.
@@ -21,7 +22,8 @@ fun model_is_hidden(Board board, Unit unit, Model model) -> Bool:
 # Hidden still restricts enemy detection to 15in by default (p.50); supplied
 # rules may call the override with their actual range, without invented data.
 fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model target, Int detection_range) -> Bool:
-    return detection_range >= 0 and (!model_is_hidden(board, target_unit, target) or observer.distance(target) <= float(detection_range))
+    # User-supplied appendix 02.02.01 clamps modified detection to 9–30in.
+    return detection_range >= 0 and (!model_is_hidden(board, target_unit, target) or observer.distance(target) <= float(characteristic_limit(ModifiedCharacteristic::detection_range, detection_range)))
 
 # Printed default detection is inclusive 15in; this is not model-silhouette LOS.
 fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model target) -> Bool:
@@ -101,6 +103,9 @@ fun effective_attack_skill(Board board, AttackSequenceInfo info) -> Int:
     let skill = info.source.skill()
     if skill != 0 and info.source.range() > 0 and info.target_has_cover and !attack_ignores_cover(board, info):
         skill = skill + 1
+    # User-supplied appendix 02.02.01: modified BS/WS remain 2+ through 6+.
+    if skill != 0:
+        skill = characteristic_limit(ModifiedCharacteristic::ballistic_skill, skill)
     return skill
 
 # A natural 1 fails and a natural 6 hits regardless of changed BS/modifiers
