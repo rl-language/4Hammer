@@ -1419,3 +1419,199 @@ fun test_bravery_battle_limit_save_round_trip() -> Bool:
         return false
     state.board.schema_version.value = 5
     return !set_state(restored, to_string(state)) and restored.board.has_used_insane_bravery[0]
+
+# Rule 14.02, p.52. Two OC1 models beat one OC2 model only with an extra OC1.
+fun test_14_02_sum_objective_control() -> Bool:
+    let board : Board
+    let friendly = make_infernus_squad()
+    friendly.models.erase(4)
+    friendly.models.erase(3)
+    friendly.move_to(make_board_position(10, 10))
+    friendly.owned_by_player1 = false
+    let enemy = make_beast_snagga_boyz()
+    while enemy.models.size() > 1:
+        enemy.models.erase(enemy.models.size() - 1)
+    enemy.move_to(make_board_position(10, 10))
+    enemy.owned_by_player1 = true
+    board.units.append(friendly)
+    board.units.append(enemy)
+    return board.get_objective_controller(10, 10) == 0
+
+# Rule 14.02, p.52. An unsecured equal nonzero total is uncontrolled.
+fun test_14_02_tied_objective_uncontrolled() -> Bool:
+    let board : Board
+    let a = make_tantus()
+    a.move_to(make_board_position(10, 10))
+    let b = a
+    b.owned_by_player1 = true
+    board.units.append(a)
+    board.units.append(b)
+    return board.get_objective_controller(10, 10) == -1
+
+# Rule 15.01, p.54. A 1CP stratagem is affordable with 1CP.
+# Rule 15.01, p.54. Usage belongs to the player who used the stratagem.
+# Rule 08.02, p.30. Core CP gain must not disappear at the arbitrary storage cap.
+# Does not assert a general additional-CP-generation policy (external gate D12).
+# Rule 09.06, p.33. D6=5 must provide the complete five-inch increment.
+
+# Area fixture uses whole-inch boundaries and explicit categories (pp.46–47).
+fun terrain_area(Int x1, Int y1, Int x2, Int y2, Bool dense) -> TerrainArea:
+    let area : TerrainArea
+    area.lower = geometry_point(x1 * MICROMETRES_PER_INCH, y1 * MICROMETRES_PER_INCH, 0)
+    area.upper = geometry_point(x2 * MICROMETRES_PER_INCH, y2 * MICROMETRES_PER_INCH, 0)
+    area.dense = dense
+    area.exposed = !dense
+    return area
+
+# p.88: closest base/marker edges, not centres, with separate vertical limit.
+fun test_objective_marker_base_and_height_boundaries() -> Bool:
+    let board : Board
+    let model = make_octavius()[0]
+    let objective : Objective
+    objective.position = board_position(10, 10)
+    model.position = board_position(14, 10)
+    model.geometry.elevation = 5
+    if !board.model_in_objective_range(model, objective):
+        return false
+    model.geometry.elevation = 6
+    if board.model_in_objective_range(model, objective):
+        return false
+    model.geometry.elevation = 0
+    model.position.x = 15
+    if board.model_in_objective_range(model, objective):
+        return false
+    # 40mm marker + 50mm base is 45mm: at 4in centres the edge gap is <3in.
+    model.position.x = 14
+    model.geometry.unsupported_footprint = true
+    return !board.model_in_objective_range(model, objective)
+
+# pp.52/88: the whole terrain area is the objective, without a marker's height cap.
+fun test_terrain_objective_uses_area_and_base_intersection() -> Bool:
+    let board : Board
+    board.terrain_areas.append(terrain_area(9, 9, 15, 15, true))
+    board.set_objective_position(0, board_position(10, 10))
+    if !board.link_objective_terrain_areas():
+        return false
+    let model = make_tantus()[0]
+    model.position = board_position(15, 15)
+    model.geometry.elevation = 10
+    if !board.model_in_objective_range(model, board.objective_range_definition(0)):
+        return false
+    model.position = board_position(18, 10)
+    return !board.model_in_objective_range(model, board.objective_range_definition(0))
+
+# p.52: initial control is none, then snapshots change only at boundaries.
+fun test_objective_control_initial_and_boundary_snapshot() -> Bool:
+    let board : Board
+    let unit = make_tantus()
+    unit[0].position = board_position(12, 15)
+    board.units.append(unit)
+    if board.get_objective_controller(0) != -1:
+        return false
+    board.update_objective_control(true)
+    if board.get_objective_controller(0) != 0:
+        return false
+    board[0][0].position = board_position(2, 2)
+    if board.get_objective_controller(0) != 0:
+        return false
+    board.update_objective_control(false)
+    return board.get_objective_controller(0) == -1
+
+# p.52: securing survives absence and ties, and expires on superior opponent OC.
+fun test_secured_objective_absence_tie_and_phase_loss() -> Bool:
+    let board : Board
+    let unit = make_tantus()
+    unit[0].position = board_position(12, 15)
+    board.units.append(unit)
+    board.update_objective_control(true)
+    board.grant_secured_objective(0, false)
+    board[0][0].position = board_position(2, 2)
+    board.update_objective_control(true)
+    if board.get_objective_controller(0) != 0:
+        return false
+    unit.owned_by_player1 = true
+    board.units.append(unit)
+    board.update_objective_control(false)
+    if board.get_objective_controller(0) != 0:
+        return false
+    board.update_objective_control(true)
+    return board.get_objective_controller(0) == 1 and board.objectives[0].secured_by == ObjectiveController::none
+
+# p.52: a secured tie keeps its owner; unsecure equal nonzero totals lose control.
+fun test_secured_objective_equal_nonzero_totals() -> Bool:
+    let board : Board
+    let unit = make_tantus()
+    unit[0].position = board_position(12, 15)
+    board.units.append(unit)
+    board.update_objective_control(true)
+    board.grant_secured_objective(0, false)
+    unit.owned_by_player1 = true
+    board.units.append(unit)
+    board.update_objective_control(true)
+    return board.get_objective_controller(0) == 0 and board.objectives[0].secured_by == ObjectiveController::army_0
+
+# p.53: controlling unit requires own army control, range and positive OC.
+fun test_objective_controlling_unit_and_shock() -> Bool:
+    let board : Board
+    let unit = make_tantus()
+    unit[0].position = board_position(12, 15)
+    board.units.append(unit)
+    board.update_objective_control(true)
+    if !board.unit_controls_objective(board[0], 0):
+        return false
+    board[0].battle_socked = true
+    if board.unit_controls_objective(board[0], 0):
+        return false
+    board.update_objective_control(true)
+    return board.get_objective_controller(0) == -1 and !board.unit_controls_objective(board[0], -1)
+
+# pp.30/52: core control grants no points; explicit legacy mission scores each ID.
+fun test_mission_scoring_explicit_and_correct_for_both_players() -> Bool:
+    let board : Board
+    board.objectives[0].controller = ObjectiveController::army_0
+    board.objectives[1].controller = ObjectiveController::army_1
+    board.objectives[2].controller = ObjectiveController::army_0
+    board.objectives[3].controller = ObjectiveController::army_1
+    board.score()
+    if board.score[0] != 0 or board.score[1] != 0:
+        return false
+    board.mission_scoring = MissionScoringMode::legacy_four_markers
+    board.score()
+    board.current_player = true
+    board.score()
+    return board.score[0] == 10 and board.score[1] == 10
+
+# p.52: phase/turn hooks update control; start hooks must not do so.
+fun test_objective_phase_and_turn_control_hooks() -> Bool:
+    let board : Board
+    let unit = make_tantus()
+    unit[0].position = board_position(12, 15)
+    board.units.append(unit)
+    let start = resolve_timing_window(board, TimingWindow::movement_start)
+    if !start.is_done() or board.get_objective_controller(0) != -1:
+        return false
+    let end = resolve_timing_window(board, TimingWindow::movement_end)
+    if !end.is_done() or board.get_objective_controller(0) != 0:
+        return false
+    board[0][0].position = board_position(2, 2)
+    let turn_end = resolve_timing_window(board, TimingWindow::turn_end)
+    return turn_end.is_done() and board.get_objective_controller(0) == -1
+
+# Save/configuration infrastructure retains boundary/secured state (p.52),
+# rejects malformed areas and dangling links, and preserves schema compatibility.
+fun test_objective_and_area_save_integrity() -> Bool:
+    let state = play()
+    state.board.terrain_areas.append(terrain_area(9, 9, 15, 15, true))
+    state.board.set_objective_position(0, board_position(10, 10))
+    state.board.link_objective_terrain_areas()
+    state.board.objectives[0].controller = ObjectiveController::army_1
+    state.board.objectives[0].secured_by = ObjectiveController::army_1
+    let restored = play()
+    if !set_state(restored, to_string(state)) or restored.board.get_objective_controller(0) != 1:
+        return false
+    state.board.objectives[0].area_id = 15
+    if set_state(restored, to_string(state)):
+        return false
+    state.board.objectives[0].area_id = 0
+    state.board.terrain_areas[0].upper = state.board.terrain_areas[0].lower
+    return !set_state(restored, to_string(state)) and restored.board.objectives[0].secured_by == ObjectiveController::army_1

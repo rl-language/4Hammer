@@ -82,6 +82,32 @@ cls AttackSequenceInfo:
         return result
 
 
+enum ObjectiveController:
+    none
+    army_0
+    army_1
+
+    fun equal(ObjectiveController other) -> Bool:
+        return self.value == other.value
+
+# Objectives use the existing four-slot editor domain; this is a supported
+# mission configuration capacity, not a restriction imposed by p.52.
+cls Objective:
+    BoardPosition position
+    Bool custom_position
+    Bool terrain_objective
+    BInt<0, 16> area_id
+    ObjectiveController controller
+    ObjectiveController secured_by
+
+
+enum MissionScoringMode:
+    none
+    legacy_four_markers
+
+    fun equal(MissionScoringMode other) -> Bool:
+        return self.value == other.value
+
 const MAX_ROUNDS = 6
 
 using AlreadyUsedStratagems = CheckedVector<Stratagem, 32>
@@ -98,6 +124,9 @@ cls Board:
     UnitVector units # required
     UnitVector reserve_units # required
     TerrainGeometryVector terrain_geometry
+    TerrainAreaVector terrain_areas
+    Objective[4] objectives
+    MissionScoringMode mission_scoring
 
     UnitID oath_of_moment_target
     # Insane Bravery is once per battle, not reset by phase/turn cleanup (p.56).
@@ -113,7 +142,6 @@ cls Board:
     Bool current_decision_maker
     Faction[2] players_faction
     VictoryPoints[2] score
-    Bool[4][2] pinned_objectives
 
     PhaseInfo phase_info
 
@@ -401,64 +429,168 @@ cls Board:
                self.units[i].retired = true
             i = i - 1 
 
-    # Shocked models contribute no OC (p.9). This legacy objective query
-    # still needs task 8's aggregation/ties and base-aware marker rules (p.52).
-    fun get_objective_controller(Int x, Int y) -> Int:
-        let v : Vector2D
-        v.x = x
-        v.y = y
-        let oc : Int[2] 
-        let i = 0
-        while i != self.units.size():
+    # Keep default mission points separate from construction of the rest of
+    # Board state. Explicitly configured points override these legacy fixtures
+    # (p.52: location comes from the mission, not the core rules).
+    fun objective_position(Int objective_id) -> BoardPosition:
+        assert(objective_id >= 0 and objective_id < 4, "invalid objective")
+        if self.objectives[objective_id].custom_position:
+            return self.objectives[objective_id].position
+        if objective_id == 0:
+            return make_board_position(12, 15)
+        if objective_id == 1:
+            return make_board_position(32, 15)
+        if objective_id == 2:
+            return make_board_position(22, 9)
+        return make_board_position(22, 21)
+
+    # Mission/editor configuration stays on the existing whole-quad domain
+    # (user constraint; objective location p.52). Control is still boundary state.
+    fun set_objective_position(Int objective_id, BoardPosition position):
+        assert(objective_id >= 0 and objective_id < 4, "invalid objective")
+        self.objectives[objective_id].position = position
+        self.objectives[objective_id].custom_position = true
+
+    # Build a range-query value with the configured/default point (pp.52/88),
+    # without replacing the stored boundary ownership and securing flags.
+    fun objective_range_definition(Int objective_id) -> Objective:
+        let result = self.objectives[objective_id]
+        result.position = self.objective_position(objective_id)
+        return result
+
+    # Model membership uses any part of its supported circular base (p.9 and
+    # the user's Within definition); terrain areas do not impose a height limit.
+    fun model_in_terrain_area(Model model, Int area_id) -> Bool:
+        if area_id < 0 or area_id >= self.terrain_areas.size() or model.geometry.unsupported_footprint:
+            return false
+        ref area = self.terrain_areas[area_id]
+        let point = model.geometry_position()
+        let radius = model.base_radius_micrometres()
+        return valid_terrain_area(area) and point_area_distance_squared(float(point.x.value), float(point.y.value), area) <= radius * radius
+
+    # Link mission objective points to their terrain areas before the battle
+    # (p.52); outside every area they use a 40mm marker (p.88). Overlapping
+    # objective areas require an explicit mission choice rather than guessing.
+    fun link_objective_terrain_areas() -> Bool:
+        let candidate = self.objectives
+        let valid = true
+        for area_index in range(self.terrain_areas.size()):
+            if !valid_terrain_area(self.terrain_areas[area_index]):
+                valid = false
+        for i in range(4):
+            ref objective = candidate[i]
+            let count = 0
+            for j in range(self.terrain_areas.size()):
+                if point_in_terrain_area(self.objective_position(i), self.terrain_areas[j]):
+                    objective.area_id = j
+                    count = count + 1
+            objective.terrain_objective = count > 0
+            if count > 1:
+                valid = false
+        if valid:
+            self.objectives = candidate
+        return valid
+
+    # Within a terrain objective means any part of the base in its agreed
+    # area (p.52); outside terrain use closest parts of a 40mm marker and the
+    # inclusive 3-inch horizontal/5-inch vertical limits (p.88).
+    fun model_in_objective_range(Model model, Objective objective) -> Bool:
+        if model.geometry.unsupported_footprint:
+            return false
+        if objective.terrain_objective:
+            if objective.area_id.value >= self.terrain_areas.size():
+                return false
+            return self.model_in_terrain_area(model, objective.area_id.value)
+        let dx = float((model.position.x.value - objective.position.x.value) * MICROMETRES_PER_INCH)
+        let dy = float((model.position.y.value - objective.position.y.value) * MICROMETRES_PER_INCH)
+        let range = float(3 * MICROMETRES_PER_INCH + 20000) + model.base_radius_micrometres()
+        return dx * dx + dy * dy <= range * range and model.geometry.elevation.value <= 5
+
+    # Add every eligible model's OC; shock contributes nothing (pp.9/52).
+    # Raw totals are computed values, not unbounded stored ML state.
+    fun objective_control_level(Objective objective, Bool player) -> Int:
+        let total = 0
+        for i in range(self.units.size()):
             ref unit = self[i]
-            let j = 0
-            while j != unit.models.size():
-                if !unit.battle_socked and 3.0 >= unit[j].position.as_vector().distance(v):
-                    oc[unit.owner_id()] = unit.model_objective_control(j)
-                j = j + 1
-            i = i + 1
-        if oc[0] == 0 and oc[1] == 0: 
+            if unit.owned_by_player1 == player:
+                for j in range(unit.models.size()):
+                    if self.model_in_objective_range(unit[j], objective):
+                        total = total + max(0, unit.model_objective_control(j))
+        return total
+
+    # Stateless marker query retained for existing diagnostic fixtures. Real
+    # objective ownership uses boundary snapshots, not continuous updates (p.52).
+    fun get_objective_controller(Int x, Int y) -> Int:
+        let objective : Objective
+        objective.position = make_board_position(x, y)
+        let a = self.objective_control_level(objective, false)
+        let b = self.objective_control_level(objective, true)
+        if a == b:
             return -1
-        if oc[0] > oc[1]:
+        if a > b:
             return 0
         return 1
 
-    fun score_objective(Int x, Int y, Int objective_id):
-        ref pinned_objective = self.pinned_objectives[int(self.current_player)][objective_id]
-        let controller = self.get_objective_controller(x, y)
-        if controller == 0:
-            if pinned_objective:
-                self.score[int(self.current_player)] = self.score[int(self.current_player)] + 5
-            return
-        if controller == int(self.current_player):
-            self.score[int(self.current_player)] = self.score[int(self.current_player)] + 5
-        else:
-            pinned_objective = false
-
+    # No control at battle start; use the last phase/turn boundary result (p.52).
     fun get_objective_controller(Int objective_id) -> Int:
-        if objective_id == 0:
-            return self.get_objective_controller(12, 15)
-        if objective_id == 1:
-            return self.get_objective_controller(32, 15)
-        if objective_id == 2:
-            return self.get_objective_controller(22, 9)
-        if objective_id == 3:
-            return self.get_objective_controller(22, 21)
-        assert(false, "unrechable")
-        return -1
+        if objective_id < 0 or objective_id >= 4:
+            return -1
+        return int(self.objectives[objective_id].controller.value) - 1
 
+    # Snapshot all totals at phase/turn end. Secured control survives ties or
+    # absence; only superior opposing OC at phase end removes it (p.52).
+    fun update_objective_control(Bool phase_end):
+        for i in range(4):
+            ref objective = self.objectives[i]
+            let definition = self.objective_range_definition(i)
+            let a = self.objective_control_level(definition, false)
+            let b = self.objective_control_level(definition, true)
+            if phase_end:
+                if (objective.secured_by == ObjectiveController::army_0 and b > a) or (objective.secured_by == ObjectiveController::army_1 and a > b):
+                    objective.secured_by = ObjectiveController::none
+            if !(objective.secured_by == ObjectiveController::none):
+                objective.controller = objective.secured_by
+            else if a == b:
+                objective.controller = ObjectiveController::none
+            else if a > b:
+                objective.controller = ObjectiveController::army_0
+            else:
+                objective.controller = ObjectiveController::army_1
+
+    # A supplied effect secures an objective already controlled by this army
+    # (p.52). This does not grant any new faction/mission ability by itself.
+    fun grant_secured_objective(Int objective_id, Bool player):
+        assert(objective_id >= 0 and objective_id < 4, "invalid objective")
+        assert(self.get_objective_controller(objective_id) == int(player), "cannot secure uncontrolled objective")
+        self.objectives[objective_id].secured_by = self.objectives[objective_id].controller
+
+    # A unit controls an objective only when its army controls it, it is within
+    # range and contains at least one OC-positive model (p.53).
+    fun unit_controls_objective(Unit unit, Int objective_id) -> Bool:
+        if self.get_objective_controller(objective_id) != unit.owner_id() or unit.empty():
+            return false
+        let in_range = false
+        let positive = false
+        for i in range(unit.models.size()):
+            in_range = in_range or self.model_in_objective_range(unit[i], self.objective_range_definition(objective_id))
+            positive = positive or unit.model_objective_control(i) >= 1
+        return in_range and positive
+
+    # Render the configured objective points on existing quad coordinates;
+    # area objectives use their mission point, not a newly invented grid shape.
     fun get_objectives_locations() -> Vector<BoardPosition>:
-        let to_return : Vector<BoardPosition>
-        to_return.append(make_board_position(12, 15))
-        to_return.append(make_board_position(32, 15))
-        to_return.append(make_board_position(22, 9))
-        to_return.append(make_board_position(22, 21))
-        return to_return
+        let result : Vector<BoardPosition>
+        for i in range(4):
+            result.append(self.objective_position(i))
+        return result
 
+    # Legacy five-point Command scoring is an explicitly selected mission
+    # fixture, not a core control rule (pp.30/52). Index each marker correctly.
     fun score():
-        let pos = self.get_objectives_locations()
-        for val in pos:
-            self.score_objective(val.x.value, val.y.value, 0)
+        if self.mission_scoring == MissionScoringMode::legacy_four_markers:
+            for i in range(4):
+                if self.get_objective_controller(i) == int(self.current_player):
+                    self.score[int(self.current_player)] = self.score[int(self.current_player)] + 5
 
 fun append_to_string(ModelID to_add, String output):
     append_to_string(to_add.id, output)
@@ -525,6 +657,20 @@ fun valid_state_foundations(Board board) -> Bool:
         if !valid_terrain_geometry(board.terrain_geometry[terrain_index]):
             return false
         terrain_index = terrain_index + 1
+    # Area extents/categories and objective links are save/configuration
+    # invariants, supporting the agreed layout and control rules (pp.46/52).
+    for index in range(board.terrain_areas.size()):
+        if !valid_terrain_area(board.terrain_areas[index]):
+            return false
+    for index in range(4):
+        ref objective = board.objectives[index]
+        if objective.terrain_objective:
+            if objective.area_id.value >= board.terrain_areas.size() or !point_in_terrain_area(board.objective_position(index), board.terrain_areas[objective.area_id.value]):
+                return false
+        else:
+            for area_index in range(board.terrain_areas.size()):
+                if point_in_terrain_area(board.objective_position(index), board.terrain_areas[area_index]):
+                    return false
     let seen : Vector<Int>
     let i = 0
     while i < board.units.size():

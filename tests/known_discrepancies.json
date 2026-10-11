@@ -13,15 +13,5 @@
     "source": "05.02, p.18",
     "task": 9,
     "category": "existing calculation defect"
-  },
-  "test_14_02_sum_objective_control": {
-    "source": "14.02, p.52",
-    "task": 8,
-    "category": "existing aggregation defect"
-  },
-  "test_14_02_tied_objective_uncontrolled": {
-    "source": "14.02, p.52",
-    "task": 8,
-    "category": "existing tie-handling defect"
   }
 }

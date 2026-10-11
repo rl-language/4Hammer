@@ -5,6 +5,9 @@ import game_utils
 @classes
 act play() -> Game:
     frm board : Board
+    # Preserve the old playable mission only as an explicit fixture (p.52);
+    # real mission scoring/layout must be supplied in task 17.
+    board.mission_scoring = MissionScoringMode::legacy_four_markers
     subaction*(board) p1 = pick_army(board, false)
     subaction*(board) p2 = pick_army(board, true)
     subaction*(board) battle = battle(board)

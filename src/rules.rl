@@ -781,14 +781,14 @@ act timing_objective_stratagem(ctx Board board) -> TimingObjectiveStratagem:
             board.can_use_strat(board.current_player, Stratagem::duty_and_honour)
         }
             board.commit_stratagem(board.current_player, Stratagem::duty_and_honour)
-            board.pinned_objectives[int(board.current_player)][objective.value] = true
+            board.grant_secured_objective(objective.value, board.current_player)
         act use_pheromone_trail(frm BInt<0, 4> phero_objective) {
             board.players_faction[int(board.current_player)] == Faction::insidious_infiltrators,
             board.get_objective_controller(phero_objective.value) == int(board.current_player),
             board.can_use_strat(board.current_player, Stratagem::pheromone_trace)
         }
             board.commit_stratagem(board.current_player, Stratagem::pheromone_trace)
-            board.pinned_objectives[int(board.current_player)][phero_objective.value] = true
+            board.grant_secured_objective(phero_objective.value, board.current_player)
         act skip()
     board.current_state = CurrentStateDescription::none
 
@@ -839,9 +839,13 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
                     board.current_decision_maker = player
         player = !player
         count = count + 1
-    # Existing mission fixture scoring follows all non-mission effects;
-    # replacing its objective/scoring formula remains tasks 8/17 (p.30).
+    # Control is recalculated at every phase/turn end after non-mission
+    # effects, before mission achievements (pp.28–30/52).
     board.timing.stage = TimingStage::mission_rules
+    if window == TimingWindow::command_end or window == TimingWindow::movement_end or window == TimingWindow::shooting_end or window == TimingWindow::charge_end or window == TimingWindow::fight_end:
+        board.update_objective_control(true)
+    if window == TimingWindow::turn_end:
+        board.update_objective_control(false)
     if window == TimingWindow::command_end:
         board.score()
     board.close_timing_window()

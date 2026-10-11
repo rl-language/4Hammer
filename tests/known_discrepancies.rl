@@ -28,36 +28,3 @@ fun test_05_02_exact_half_strength() -> Bool:
     info.target_toughness = info.source.strenght() * 2
     return required_wound_roll(board, info) == 6
 
-# Rule 14.02, p.52. Two OC1 models beat one OC2 model only with an extra OC1.
-fun test_14_02_sum_objective_control() -> Bool:
-    let board : Board
-    let friendly = make_infernus_squad()
-    friendly.models.erase(4)
-    friendly.models.erase(3)
-    friendly.move_to(make_board_position(10, 10))
-    friendly.owned_by_player1 = false
-    let enemy = make_beast_snagga_boyz()
-    while enemy.models.size() > 1:
-        enemy.models.erase(enemy.models.size() - 1)
-    enemy.move_to(make_board_position(10, 10))
-    enemy.owned_by_player1 = true
-    board.units.append(friendly)
-    board.units.append(enemy)
-    return board.get_objective_controller(10, 10) == 0
-
-# Rule 14.02, p.52. An unsecured equal nonzero total is uncontrolled.
-fun test_14_02_tied_objective_uncontrolled() -> Bool:
-    let board : Board
-    let a = make_tantus()
-    a.move_to(make_board_position(10, 10))
-    let b = a
-    b.owned_by_player1 = true
-    board.units.append(a)
-    board.units.append(b)
-    return board.get_objective_controller(10, 10) == -1
-
-# Rule 15.01, p.54. A 1CP stratagem is affordable with 1CP.
-# Rule 15.01, p.54. Usage belongs to the player who used the stratagem.
-# Rule 08.02, p.30. Core CP gain must not disappear at the arbitrary storage cap.
-# Does not assert a general additional-CP-generation policy (external gate D12).
-# Rule 09.06, p.33. D6=5 must provide the complete five-inch increment.

@@ -27,6 +27,17 @@ cls ModelGeometry:
     # be supplied explicitly rather than pretending a hull/oval is a circle.
     Bool unsupported_footprint
 
+# User-approved task-8 abstraction: areas only, with category flags for mixed
+# areas (pp.46–47). No physical features/openings or continuous positions.
+cls TerrainArea:
+    GeometryPoint lower
+    GeometryPoint upper
+    Bool exposed
+    Bool light
+    Bool dense
+
+using TerrainAreaVector = CheckedVector<TerrainArea, 16>
+
 cls TerrainGeometry:
     GeometryPoint lower
     GeometryPoint upper
@@ -148,3 +159,28 @@ fun segment_terrain_distance_squared(Float ax, Float ay, Float bx, Float by, Ter
 # All stored terrain corners and movement destinations must use whole-inch cells.
 fun geometry_point_on_grid(GeometryPoint point) -> Bool:
     return point.x.value % MICROMETRES_PER_INCH == 0 and point.y.value % MICROMETRES_PER_INCH == 0 and point.z.value % MICROMETRES_PER_INCH == 0
+
+# Terrain areas are agreed horizontal boundaries, distinct from physical solids
+# (pp.46–47). Rectangular whole-quad areas are the currently supported shape.
+fun valid_terrain_area(TerrainArea area) -> Bool:
+    return geometry_point_on_grid(area.lower) and geometry_point_on_grid(area.upper) and area.lower.z.value == 0 and area.upper.z.value == 0 and area.lower.x.value < area.upper.x.value and area.lower.y.value < area.upper.y.value and (area.exposed or area.light or area.dense)
+
+# Closest-part area distance tests base intersection (p.9; user's Within
+# definition), rather than testing only a model's centre.
+fun point_area_distance_squared(Float x, Float y, TerrainArea area) -> Float:
+    let dx = 0.0
+    let dy = 0.0
+    if x < float(area.lower.x.value):
+        dx = float(area.lower.x.value) - x
+    else if x > float(area.upper.x.value):
+        dx = x - float(area.upper.x.value)
+    if y < float(area.lower.y.value):
+        dy = float(area.lower.y.value) - y
+    else if y > float(area.upper.y.value):
+        dy = y - float(area.upper.y.value)
+    return dx * dx + dy * dy
+
+# Objective/terrain points are associated with areas by their agreed boundary
+# (pp.46/52); category flags do not manufacture a physical blocking feature.
+fun point_in_terrain_area(BoardPosition point, TerrainArea area) -> Bool:
+    return point_area_distance_squared(float(point.x.value * MICROMETRES_PER_INCH), float(point.y.value * MICROMETRES_PER_INCH), area) == 0.0
