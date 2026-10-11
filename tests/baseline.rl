@@ -894,3 +894,67 @@ fun test_timing_turn_flags_reset_only_active_army() -> Bool:
     return !board[0].has_moved and board[1].has_moved
 
 # pp.9/54/56: accept CP reroll -> spend -> chance; restore caller afterward.
+
+# Task 5: active/decision roles and rerolls (core pp.8–9/54/56).
+fun test_timing_pair_reroll_owner_spend_and_restore() -> Bool:
+    let board = timing_fixture()
+    board.current_decision_maker = false
+    let dice_roll = rerollable_pair_dices_roll(board, false, false, true, true, unit_id(1))
+    let one : Dice
+    one = 1
+    dice_roll.roll_pair(board, one, one)
+    if board.current_decision_maker != true or !(can dice_roll.keep_it(board, false)):
+        return false
+    dice_roll.keep_it(board, false)
+    if board.command_points[1] != 2 or !board[1].history.stratagem_targeted_by_player[1] or !(can dice_roll.reroll_pair(board, one, one)):
+        return false
+    dice_roll.reroll_pair(board, one, one)
+    return dice_roll.is_done() and !board.current_decision_maker
+
+# p.56: a declined CP reroll changes no expenditure/history and restores owner.
+fun test_timing_declining_cp_reroll_preserves_state() -> Bool:
+    let board = timing_fixture()
+    board.current_decision_maker = true
+    let dice_roll = rerollable_dice_roll(board, false, false, true, false, unit_id(0))
+    let one : Dice
+    one = 1
+    dice_roll.roll(board, one)
+    if board.current_decision_maker:
+        return false
+    dice_roll.keep_it(board, true)
+    return dice_roll.is_done() and board.command_points[0] == 3 and !board.has_used_strat(Stratagem::reroll, 0) and board.current_decision_maker
+
+# p.56: targetless/leadership compatibility cannot offer a CP reroll.
+fun test_timing_targetless_roll_cannot_spend_cp() -> Bool:
+    let board = timing_fixture()
+    let dice_roll = rerollable_pair_dices_roll(board, false, false, true, false)
+    let one : Dice
+    one = 1
+    dice_roll.roll_pair(board, one, one)
+    return dice_roll.is_done() and board.command_points[0] == 3
+
+# p.30 and user's sequencing definition: current group first, then opponent.
+fun test_timing_opponent_move_restores_roles() -> Bool:
+    let board = timing_fixture()
+    let source = unit_id(1)
+    let movement = move(board, source, 0)
+    if !board.timing.active_player or !board.current_decision_maker or board.current_player:
+        return false
+    movement.skip(board, source)
+    return movement.is_done() and !board.timing.active_player and !board.current_decision_maker and !board.current_player
+
+# p.8: shooting active role follows attacker even while defender decides.
+fun test_timing_opponent_attack_restores_roles() -> Bool:
+    let board = timing_fixture()
+    let sequence = attack(board, unit_id(1), unit_id(0), false, true)
+    if !board.timing.active_player or board.current_decision_maker:
+        return false
+    sequence.no_defensive_stratagem(board)
+    if !board.current_decision_maker or !board.timing.active_player:
+        return false
+    sequence.no_offensive_stratagem(board)
+    sequence.skip(board)
+    return sequence.is_done() and !board.timing.active_player and !board.current_decision_maker and !board.current_player
+
+# p.14 and supplied sequencing: opposing coherency is also mandatory,
+# after the current player's removals have finished.
