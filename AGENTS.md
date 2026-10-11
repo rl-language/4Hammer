@@ -151,3 +151,7 @@ test -x /workspace/4hammer-validation/rules_fuzzer-0.4.13
 Seed the corpus with byte sequences long enough to drive actions: fuzz() consumes 8-byte action choices while `index + 8 < input.size()`. Inputs of at most 8 bytes do not exercise an action. The harness maps choices to currently legal actions and asserts on a nonterminal state with none. Fuzzing finds crashes, assertions and sanitizer failures; deterministic tests must establish the intended rule semantics. Preserve failing inputs, reproduce them, and add regression coverage. Do not disable checks to get a passing run. Keep generated outputs outside the checkout or in existing ignored build paths.
 
 Report test counts/results, gameplay scope, fuzzer build and run outcome/duration, any reproducer, and GUI checks performed or unavailable. Distinguish repository bugs from missing tools. Never claim a check ran or passed without evidence.
+
+## User-directed attachment deferral
+
+The user deferred task 6 (attachments and unit characteristics) until they supply full unit datasheets after the other work. Skip attachment implementation for now; retain its unresolved scope in ROADMAP.md and proceed with task 7 and subsequent independent tasks. Do not infer attachment permissions from old factories or invent datasheet rules.
