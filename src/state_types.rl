@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 4
-const ACTION_SCHEMA_VERSION = 2
-const OBSERVATION_SCHEMA_VERSION = 4
+const STATE_SCHEMA_VERSION = 5
+const ACTION_SCHEMA_VERSION = 3
+const OBSERVATION_SCHEMA_VERSION = 5
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -130,6 +130,7 @@ cls UnitHistory:
     Int last_ranged_attack_turn
     Bool was_set_up_this_turn
     Bool used_stratagem_this_phase
+    Bool[2] stratagem_targeted_by_player
     Bool action_started
     Bool action_completed
 
@@ -139,6 +140,8 @@ cls UnitHistory:
         self.last_ranged_attack_turn = -1
         self.was_set_up_this_turn = false
         self.used_stratagem_this_phase = false
+        self.stratagem_targeted_by_player[0] = false
+        self.stratagem_targeted_by_player[1] = false
         self.action_started = false
         self.action_completed = false
 
@@ -175,3 +178,68 @@ cls AttachmentComponent:
 # infrastructure preserves roster contents and casualties (pp.19/86).
 fun<T, Int capacity> append_to_string(CheckedVector<T, capacity> value, String output):
     append_to_string(value._data, output)
+
+# Explicit timing state supports printed round/turn/phase boundaries (pp.28–30)
+# and the user's sequencing definition; these enums are bounded ML state.
+enum BattlePhase:
+    none
+    command
+    movement
+    shooting
+    charge
+    fight
+
+    fun equal(BattlePhase other) -> Bool:
+        return self.value == other.value
+
+enum TimingWindow:
+    none
+    round_start
+    round_end
+    turn_start
+    turn_end
+    command_start
+    command_abilities
+    command_end
+    movement_start
+    movement_end
+    shooting_start
+    shooting_end
+    charge_start
+    charge_end
+    fight_start
+    fight_end
+
+    fun equal(TimingWindow other) -> Bool:
+        return self.value == other.value
+
+enum TimingStage:
+    closed
+    current_player_rules
+    opposing_player_rules
+    mission_rules
+
+    fun equal(TimingStage other) -> Bool:
+        return self.value == other.value
+
+enum TimingRule:
+    regain_coherency
+    rapid_ingress
+    fire_overwatch
+    shadow_in_the_warp
+    neural_disruption
+    oath_of_moment
+    objective_stratagem
+    heroic_intervention
+
+    fun equal(TimingRule other) -> Bool:
+        return self.value == other.value
+
+cls TimingState:
+    # Active role is distinct from turn owner and from the decision/chance owner (p.8).
+    Bool active_player
+    BattlePhase phase
+    TimingWindow window
+    TimingStage stage
+    Bool open
+    Bool controller

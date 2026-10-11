@@ -94,6 +94,7 @@ cls Board:
     Int next_identity
     Int phase_serial
     Int turn_serial
+    TimingState timing
     UnitVector units # required
     UnitVector reserve_units # required
     TerrainGeometryVector terrain_geometry
@@ -161,12 +162,24 @@ cls Board:
         return -1
 
     # Reset turn-local storage without erasing phase-independent usage; supports
-    # turn/phase restrictions (pp.28–30, movement pp.32–33). Timing is task 5.
+    # turn/phase restrictions (pp.28–30, movement pp.32–33).
     fun start_turn_history():
         self.turn_serial = self.turn_serial + 1
         let i = 0
         while i < self.units.size():
             self.units[i].reset_turn_history()
+            if self.units[i].owned_by_player1 == self.current_player:
+                self.units[i].has_run = false
+                self.units[i].has_fought = false
+                self.units[i].has_shoot = false
+                self.units[i].has_moved = false
+                self.units[i].has_charged = false
+                self.units[i].can_shoot = true
+                self.units[i].can_charge = true
+            i = i + 1
+        i = 0
+        while i < self.reserve_units.size():
+            self.reserve_units[i].reset_turn_history()
             i = i + 1
 
     # Freeze combined model counts after attachments, before casualties change
@@ -186,8 +199,45 @@ cls Board:
         let i = 0
         while i != self.units.size():
             self.units[i].clear_phase_modifiers()
+            # Every army may fight once in a Fight phase (pp.38–40).
+            self.units[i].has_fought = false
             self.units[i].history.used_stratagem_this_phase = false
+            self.units[i].history.stratagem_targeted_by_player[0] = false
+            self.units[i].history.stratagem_targeted_by_player[1] = false
             i = i + 1
+
+        i = 0
+        while i < self.reserve_units.size():
+            self.reserve_units[i].clear_phase_modifiers()
+            self.reserve_units[i].has_fought = false
+            self.reserve_units[i].history.used_stratagem_this_phase = false
+            self.reserve_units[i].history.stratagem_targeted_by_player[0] = false
+            self.reserve_units[i].history.stratagem_targeted_by_player[1] = false
+            i = i + 1
+
+    # A phase starts with fresh phase usage and effects, before its start window
+    # (pp.28–30/54). End effects are resolved before this state is expired.
+    fun begin_phase(BattlePhase phase):
+        self.clear_phase_modifiers()
+        self.timing.phase = phase
+        self.current_decision_maker = self.current_player
+
+    # Window controllers follow the user-supplied order: active rules first,
+    # then opposing rules, each chosen by their owner (core pp.8–9/28–30).
+    fun open_timing_window(TimingWindow window):
+        assert(!self.timing.open, "nested timing window")
+        self.timing.window = window
+        self.timing.stage = TimingStage::current_player_rules
+        self.timing.controller = self.timing.active_player
+        self.timing.open = true
+
+    # Mission end rules follow non-mission rules (pp.28–30); actual mission
+    # achievements are unavailable and remain task 17, not invented here.
+    fun close_timing_window():
+        self.timing.stage = TimingStage::mission_rules
+        self.timing.open = false
+        self.timing.stage = TimingStage::closed
+        self.current_decision_maker = self.current_player
 
     fun get_current_player_faction() -> Faction:
         return self.players_faction[int(self.current_player)]
@@ -219,9 +269,51 @@ cls Board:
     fun can_use_strat(Bool player, Stratagem strat) -> Bool:
         return self.command_points[int(player)] >= strat.cost() and !self.has_used_strat(strat, int(player))
 
+    # Printed extra costs/free-use effects must still obey phase restrictions
+    # (p.54). Cost overrides are explicit internal inputs, not invented rules.
+    fun can_use_strat_with_cost(Bool player, Stratagem strat, Int cost) -> Bool:
+        return cost >= 0 and self.command_points[int(player)] >= cost and !self.has_used_strat(strat, int(player))
+
+    # Target bookkeeping belongs to each payer independently; shock blocks
+    # the controlling player's stratagems on that unit (pp.9/54).
+    fun can_target_strat_with_cost(Bool player, Stratagem strat, Unit target, Int cost) -> Bool:
+        return self.can_use_strat_with_cost(player, strat, cost) and !target.empty() and !target.history.stratagem_targeted_by_player[int(player)] and !(target.battle_socked and target.owned_by_player1 == player)
+
+    # Each player may target a unit only once per phase (p.54).
+    fun can_target_strat(Bool player, Stratagem strat, Unit target) -> Bool:
+        return self.can_target_strat_with_cost(player, strat, target, strat.cost())
+
+    # Untargeted legacy faction options still need supplied target definitions;
+    # their expenditure/phase bookkeeping is nevertheless atomic (p.54).
+    fun commit_stratagem(Bool player, Stratagem strat):
+        assert(self.can_use_strat(player, strat), "illegal stratagem use")
+        self.pay_strat(player, strat)
+        self.mark_strat_used(strat, int(player))
+
+    # Commit a supplied target/cost before resolving the effect (p.54).
+    fun commit_stratagem_with_cost(Bool player, Stratagem strat, Unit target, Int cost):
+        assert(self.can_target_strat_with_cost(player, strat, target, cost), "illegal stratagem target")
+        self.command_points[int(player)] = self.command_points[int(player)] - cost
+        self.mark_strat_used(strat, int(player))
+        target.history.stratagem_targeted_by_player[int(player)] = true
+        target.history.used_stratagem_this_phase = true
+
+    # Normal targeted use uses the printed base cost (p.54).
+    fun commit_stratagem(Bool player, Stratagem strat, Unit target):
+        self.commit_stratagem_with_cost(player, strat, target, strat.cost())
+
+    # Invalid targets/costs fail without partial expenditure or history changes
+    # (p.54); this recoverable primitive supports legality/rollback tests.
+    fun try_use_strat(Bool player, Stratagem strat, Unit target, Int cost) -> Bool:
+        if !self.can_target_strat_with_cost(player, strat, target, cost):
+            return false
+        self.commit_stratagem_with_cost(player, strat, target, cost)
+        return true
+
     # Charge the player whose eligibility was checked, at the selected cost
     # (CP expenditure for stratagems p.54; reference 15.01).
     fun pay_strat(Bool player, Stratagem strat):
+        assert(self.command_points[int(player)] >= strat.cost(), "insufficient CP")
         self.command_points[int(player)] = self.command_points[int(player)] - strat.cost()
 
     # Keep one usage entry per player/phase without duplicates filling storage

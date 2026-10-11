@@ -828,3 +828,69 @@ fun test_geometry_coherency_vertical_limit() -> Bool:
         return false
     board[0][1].geometry.elevation = 6
     return !board[0].is_coherent()
+
+# Task 5: phase/target bookkeeping (core pp.9/28–30/54).
+fun timing_fixture() -> Board:
+    let board = geometry_fixture()
+    let other = board[0]
+    other.owned_by_player1 = true
+    other[0].position = board_position(20, 5)
+    board.units.append(other)
+    board.identify_unit(board[0])
+    board.identify_unit(board[1])
+    board.command_points[0] = 3
+    board.command_points[1] = 3
+    return board
+
+# p.54: a player's second stratagem on the same unit is forbidden, even
+# when it is a different stratagem; the other player's record is independent.
+fun test_timing_per_player_unit_stratagem_limit() -> Bool:
+    let board = timing_fixture()
+    if !board.try_use_strat(false, Stratagem::reroll, board[0], 1):
+        return false
+    if board.can_target_strat(false, Stratagem::overwatch, board[0]):
+        return false
+    return board.can_target_strat(true, Stratagem::overwatch, board[0]) and board.command_points[0] == 2 and board.command_points[1] == 3
+
+# pp.9/54: shock bans the controller's target, not the opposing payer's target.
+fun test_timing_shock_stratagem_target_ownership() -> Bool:
+    let board = timing_fixture()
+    board[0].battle_socked = true
+    return !board.can_target_strat(false, Stratagem::reroll, board[0]) and board.can_target_strat(true, Stratagem::reroll, board[0])
+
+# p.54: invalid cost, insufficient CP and repeat use have no partial effects.
+fun test_timing_stratagem_failure_is_atomic() -> Bool:
+    let board = timing_fixture()
+    let before = to_string(board)
+    if board.try_use_strat(false, Stratagem::reroll, board[0], -1) or board.try_use_strat(false, Stratagem::reroll, board[0], 4):
+        return false
+    return before == to_string(board)
+
+# p.54: overrides including free use retain phase and per-unit restrictions.
+fun test_timing_free_use_still_consumes_usage() -> Bool:
+    let board = timing_fixture()
+    board.command_points[0] = 0
+    if !board.try_use_strat(false, Stratagem::reroll, board[0], 0):
+        return false
+    return board.command_points[0] == 0 and !board.can_use_strat_with_cost(false, Stratagem::reroll, 0) and !board.can_target_strat_with_cost(false, Stratagem::overwatch, board[0], 0)
+
+# pp.28–30/54: phase reset includes reserves and both payers, not turn flags.
+fun test_timing_phase_reset_includes_reserves() -> Bool:
+    let board = timing_fixture()
+    board.reserve_units.append(board[0])
+    board.commit_stratagem(false, Stratagem::reroll, board[0])
+    board.reserve_units[0].history.stratagem_targeted_by_player[1] = true
+    board[0].has_moved = true
+    board[1].has_fought = true
+    board.begin_phase(BattlePhase::shooting)
+    return board.timing.phase == BattlePhase::shooting and board.can_target_strat(false, Stratagem::reroll, board[0]) and !board.reserve_units[0].history.stratagem_targeted_by_player[1] and board[0].has_moved and !board[1].has_fought
+
+# pp.28–30: the turn owner's flags reset without erasing enemy turn choices.
+fun test_timing_turn_flags_reset_only_active_army() -> Bool:
+    let board = timing_fixture()
+    board[0].has_moved = true
+    board[1].has_moved = true
+    board.start_turn_history()
+    return !board[0].has_moved and board[1].has_moved
+
+# pp.9/54/56: accept CP reroll -> spend -> chance; restore caller afterward.

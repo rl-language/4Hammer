@@ -99,6 +99,9 @@ enum Keyword:
     bladeguard_veteran_squad
     monster # only implemented for veteran instincts 
     vehicle # only implemented for vetern instincts
+    aircraft
+    titanic
+    walker
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value
