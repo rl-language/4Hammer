@@ -12,6 +12,8 @@ def main():
     parser.add_argument('--build-path', type=Path, required=True,
                         help='Directory containing matching librules.so and librlcrules.so')
     parser.add_argument('--godot', default='godot')
+    parser.add_argument('--timeout', type=float, default=30,
+                        help='Seconds allowed for the headless regression; increase for larger schemas')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     with tempfile.TemporaryDirectory(prefix='4hammer-godot-') as directory:
@@ -41,7 +43,7 @@ def main():
         try:
             result = subprocess.run(
                 [args.godot, '--headless', '--path', str(project), '--script', 'validate.gd'],
-                env=environment, text=True, capture_output=True, timeout=30)
+                env=environment, text=True, capture_output=True, timeout=args.timeout)
         except subprocess.TimeoutExpired as error:
             for output in (error.stdout, error.stderr):
                 if output:
