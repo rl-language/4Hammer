@@ -5,6 +5,7 @@ import learn
 import vector2d
 import stats
 import board
+import movement_geometry
 
 # Calculates the required roll to wound given a particular game state,
 # that is, the calculation includes situational condition like the usage
@@ -747,17 +748,17 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
 # core rules movement rules, including the possiblity 
 # of advancing and the triggering of overwatches
 # Keep the full Advance increment and record the movement phase
-# (Normal/Advance pp.32–33). Model paths and movement modes remain tasks 4/11.
+# (Normal/Advance pp.32–33). Validate each model/path and final coherency (p.12);
+# independent-model selection and full movement-mode timing remain task 11.
 act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement) -> Move:
     if board[unit.get()].models.size() == 0:
         return
     board.current_decision_maker = board.current_player
     act move_to(BoardPosition position) {
-        (position.as_vector() - board[unit.get()][0].position.as_vector()).length() <= float(board[unit.get()][0].profile.movement() + additional_movement.value)
+        can_translate_unit(board, unit, position, additional_movement.value)
     }
 
-    board[unit.get()].history.last_move_phase = board.phase_serial
-    board[unit.get()].move_to(position)
+    try_translate_unit(board, unit, position, additional_movement.value)
 
     board.overwatch = overwatch(board, unit)
     subaction*(board) board.overwatch
@@ -911,15 +912,17 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
             id.get() < board.reserve_units.size(),
             board.reserve_units[id.get()].owned_by_player1 == current_player
         }
+            # Failed/cancelled setup retains the reserve unit (p.14).
             actions:
+                act skip()
                 act place_at(BoardPosition position) {
                     board.least_distance_from_player_units(position, !current_player) > 9.0,
-                    board.is_position_valid_for_reserve(position, board.reserve_units[id.get()])
+                    board.is_position_valid_for_reserve(position, board.reserve_units[id.get()]),
+                    setup_candidate_valid(board, board.reserve_units[id.get()], position)
                 }
                 board.units.append(board.reserve_units[id.get()])
                 board.units.back().mark_set_up()
-                board.units.back().move_to(position)
-                board.units.back().arrange()
+                board.units.back().try_arrange_at(position)
                 board.units.back().has_moved = true
                 board.reserve_units.erase(id.get())
                 act nothing_to_deploy()
@@ -1118,16 +1121,20 @@ act deploy(ctx Board board) -> Deployment:
                 board.reserve_units[unit_id.get()].owned_by_player1 == board.current_decision_maker 
             }
                 frm infiltrates = board.reserve_units[unit_id.get()].has_ability(AbilityKind::infiltrators)
-                act deploy_at(BoardPosition position) {
-                    deployment_position_valid(board, position, board.current_decision_maker, infiltrates)
-                }
-                board.units.append(board.reserve_units[unit_id.get()])
-                board.reserve_units.erase(unit_id.get())
-                board.units.back().mark_set_up()
-                board.units.back().move_to(position)
-                board.units.back().arrange()
-                if !passed_players[int(!board.current_decision_maker)]:
-                    board.current_decision_maker = !board.current_decision_maker
+                # Setup failure/cancellation must leave the unit in its original
+                # location and allow a later attempt, not stall the action (p.14).
+                actions:
+                    act skip()
+                    act deploy_at(BoardPosition position) {
+                        deployment_position_valid(board, position, board.current_decision_maker, infiltrates),
+                        setup_candidate_valid(board, board.reserve_units[unit_id.get()], position)
+                    }
+                        board.units.append(board.reserve_units[unit_id.get()])
+                        board.reserve_units.erase(unit_id.get())
+                        board.units.back().mark_set_up()
+                        board.units.back().try_arrange_at(position)
+                        if !passed_players[int(!board.current_decision_maker)]:
+                            board.current_decision_maker = !board.current_decision_maker
         
 
 # a 5 rounds battle, inlcuding deployment. 

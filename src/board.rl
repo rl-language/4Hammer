@@ -96,6 +96,7 @@ cls Board:
     Int turn_serial
     UnitVector units # required
     UnitVector reserve_units # required
+    TerrainGeometryVector terrain_geometry
 
     UnitID oath_of_moment_target
     Bool[2] has_used_shadow_in_the_warp
@@ -254,10 +255,14 @@ cls Board:
             i = i + 1 
         return count
 
+    # Engagement is any opposing model pair within inclusive horizontal/vertical
+    # limits, measured between bases rather than centre-only points (pp.14–15).
     fun is_in_melee(Unit u) -> Bool:
-        for model in u.models:
-            if self.least_distance_from_player_units(model.position, !u.owned_by_player1) < 1.0:
+        let i = 0
+        while i < self.units.size():
+            if self.units[i].owned_by_player1 != u.owned_by_player1 and u.is_engaged_with(self.units[i]):
                 return true
+            i = i + 1
         return false
 
     fun faction_of_unit(UnitID id) -> Faction:
