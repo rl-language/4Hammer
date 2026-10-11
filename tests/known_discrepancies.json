@@ -1,17 +1,1 @@
-{
-  "test_02_04_fixed_attack_characteristic": {
-    "source": "02.04/04.03, pp.10/17",
-    "task": 9,
-    "category": "existing fixed-characteristic evaluation defect; shooting can complete without attacks"
-  },
-  "test_05_02_exact_double_strength": {
-    "source": "05.02, p.18",
-    "task": 9,
-    "category": "existing calculation defect"
-  },
-  "test_05_02_exact_half_strength": {
-    "source": "05.02, p.18",
-    "task": 9,
-    "category": "existing calculation defect"
-  }
-}
+{}

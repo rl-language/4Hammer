@@ -30,13 +30,13 @@ fun required_wound_roll(Board board, AttackSequenceInfo info) -> Int:
     if strenght == thoughness:
         return 4 + clamped_modifier
 
-    if strenght * 2 < thoughness:
+    if strenght * 2 <= thoughness:
         return 6 + clamped_modifier
     
     if strenght < thoughness:
         return 5 + clamped_modifier
 
-    if strenght > thoughness * 2:
+    if strenght >= thoughness * 2:
         return 2 + clamped_modifier
     
     if strenght > thoughness:
@@ -50,13 +50,13 @@ using RandomStatResult = LinearlyDistributedInt<0, MAX_RANDOM_STAT_RESULT>
 # Rappresents the evaluation of stats such as the damage stat
 # of weapons, which sometime is written as 1D6 + 3
 # Expose chance results for random attack/damage characteristics and retain
-# their full supported increment (pp.17/19; Advance p.33). Fixed-stat evaluation
-# is a known task-9 defect; this storage change does not certify it.
+# their full supported increment (pp.17/19; Advance p.33). Fixed characteristics
+# are bounded FixedStat values, not primitive Int alternatives (pp.10/17).
 act evaluate_random_stat(frm Stat stat, frm  StatModifier fixed_extra) -> RollStat:
     frm result : RandomStatResult 
 
-    if stat is Int:
-        result = stat + fixed_extra.value
+    if stat is FixedStat:
+        result = stat.value + fixed_extra.value
         return
 
     if stat is Dice:
