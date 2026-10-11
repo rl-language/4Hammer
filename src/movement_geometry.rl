@@ -132,6 +132,10 @@ fun segment_crosses_terrain(Model moving, GeometryPoint start, GeometryPoint end
             last = upper
         if first > last or last < 0.0 or first > 1.0:
             return false
+        # The upper surface is excluded from the solid volume (p.48).
+        # A segment touching only that roof must not count as entering terrain.
+        if first == last and float(start.z.value) + float(end.z.value - start.z.value) * first >= float(terrain.upper.z.value):
+            return false
     let ax = float(start.x.value)
     let ay = float(start.y.value)
     let dx = float(end.x.value - start.x.value)
@@ -182,9 +186,19 @@ fun model_segment_valid(Board board, Unit unit, Model model, GeometryPoint start
 # per-model M budget and final-placement condition passes. Failure leaves all
 # positions/history unchanged, including earlier valid paths (pp.12/87).
 fun try_move_models(Board board, UnitID slot, Vector<ModelPath> paths, Int extra_distance, MovementGeometryPolicy policy, Bool require_unengaged) -> Bool:
-    if slot.get() >= board.units.size() or board[slot].empty() or extra_distance < 0:
+    if slot.get() >= board.units.size():
         return false
     let candidate = board[slot]
+    let valid = validate_movement_candidate(board, slot, candidate, paths, extra_distance, policy, require_unengaged)
+    if valid:
+        board[slot] = candidate
+    return valid
+
+# Validate the staged unit without owning copies on early-return paths;
+# failed movement is discarded by try_move_models (pp.12/87).
+fun validate_movement_candidate(Board board, UnitID slot, Unit candidate, Vector<ModelPath> paths, Int extra_distance, MovementGeometryPolicy policy, Bool require_unengaged) -> Bool:
+    if slot.get() >= board.units.size() or board[slot].empty() or extra_distance < 0:
+        return false
     let seen : Bool[MAX_UNIT_MODELS]
     let i = 0
     while i < paths.size():
@@ -213,7 +227,6 @@ fun try_move_models(Board board, UnitID slot, Vector<ModelPath> paths, Int extra
     if !unit_placement_valid(board, candidate, slot.get(), require_unengaged):
         return false
     candidate.history.last_move_phase = board.phase_serial
-    board[slot] = candidate
     return true
 
 # Within is any part of any base; Wholly Within is every point of every base
@@ -256,19 +269,20 @@ fun unit_within_point(Unit unit, GeometryPoint point, Int inches, Bool wholly) -
 fun try_translate_unit(Board board, UnitID slot, BoardPosition target, Int extra_distance) -> Bool:
     if slot.get() >= board.units.size() or board[slot].empty():
         return false
-    let candidate = board
-    let unit = candidate[slot]
+    ref unit = board[slot]
     let origin = unit[0].geometry_position()
     let dx = target.x.value * MICROMETRES_PER_INCH - origin.x.value
     let dy = target.y.value * MICROMETRES_PER_INCH - origin.y.value
     let paths : Vector<ModelPath>
+    let valid = true
     let i = 0
     while i < unit.models.size():
         let start = unit[i].geometry_position()
         let x = start.x.value + dx
         let y = start.y.value + dy
         if x < 0 or x > BOARD_WIDTH * MICROMETRES_PER_INCH or y < 0 or y > BOARD_HEIGHT * MICROMETRES_PER_INCH:
-            return false
+            valid = false
+            break
         let path : ModelPath
         path.model = i
         path.final_rotation = unit[i].geometry.rotation
@@ -276,10 +290,9 @@ fun try_translate_unit(Board board, UnitID slot, BoardPosition target, Int extra
         paths.append(path)
         i = i + 1
     let policy : MovementGeometryPolicy
-    if !try_move_models(candidate, slot, paths, extra_distance, policy, true):
-        return false
-    board[slot] = candidate[slot]
-    return true
+    if valid:
+        valid = try_move_models(board, slot, paths, extra_distance, policy, true)
+    return valid
 
 # Legality must not mutate the shared board while action enumeration probes
 # every candidate; commit the same validated translation only on apply (p.12).

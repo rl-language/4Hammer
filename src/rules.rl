@@ -585,9 +585,9 @@ act spawn_unit(ctx Board board) -> PickUnit:
     actions:
         act place_in_reserve()
             board.reserve_units.append(unit)
-        act place_at(frm BoardPosition position)
-            unit[0].position = position
-            unit.arrange()
+        act place_at(frm BoardPosition position) {setup_candidate_valid(board, unit, position)}
+            # Fixture setup must obey full-base placement too (pp.12/14).
+            unit.try_arrange_at(position)
             board.units.append(unit)
 
 # The sequence to perform a battle shock test, 

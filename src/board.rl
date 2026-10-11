@@ -414,6 +414,13 @@ fun valid_unit_identities(Unit unit, Int next_identity, Vector<Int> seen) -> Boo
 fun valid_state_foundations(Board board) -> Bool:
     if board.schema_version.value != STATE_SCHEMA_VERSION or board.next_identity < 0 or board.phase_serial < 0 or board.turn_serial < 0:
         return false
+    # Terrain storage must preserve the user's quad grid and valid extents;
+    # malformed saved geometry cannot become a legal path/placement (p.12).
+    let terrain_index = 0
+    while terrain_index < board.terrain_geometry.size():
+        if !valid_terrain_geometry(board.terrain_geometry[terrain_index]):
+            return false
+        terrain_index = terrain_index + 1
     let seen : Vector<Int>
     let i = 0
     while i < board.units.size():

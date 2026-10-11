@@ -66,12 +66,19 @@ cls Model:
             i = i + 1
         return false
 
+    # Retain the legacy whole-quad consolidation direction without silently
+    # clamping a base across the battlefield edge (p.12). Fight rules: task 14.
     fun consolidate_torward(Unit other):
         let consolidation = other.get_shortest_vector_to(self) * -1.0
     
         if consolidation.length() > 2.0:
             consolidation = (consolidation.as_float_vector().normalized() * 2.0).as_int_vector()
-        self.position = self.position + consolidation
+        let x = self.position.x.value + consolidation.x
+        let y = self.position.y.value + consolidation.y
+        let radius = self.base_radius_micrometres()
+        if !self.geometry.unsupported_footprint and float(x * MICROMETRES_PER_INCH) >= radius and float(y * MICROMETRES_PER_INCH) >= radius and float(x * MICROMETRES_PER_INCH) + radius <= float(BOARD_WIDTH * MICROMETRES_PER_INCH) and float(y * MICROMETRES_PER_INCH) + radius <= float(BOARD_HEIGHT * MICROMETRES_PER_INCH):
+            self.position.x = x
+            self.position.y = y
 
     fun is_character() -> Bool:
         return self.has_keyword(Keyword::character)
@@ -380,9 +387,17 @@ cls Unit:
     # clamping. Failure preserves all models/history (battlefield edge p.12).
     fun try_translate(Vector2D v) -> Bool:
         let candidate = self
+        let valid = candidate.apply_translation(v)
+        if valid:
+            self = candidate
+        return valid
+
+    # Work on the caller's staged unit so failed edge checks are discarded
+    # (p.12). Keep owning copies in single-exit wrappers for RLC 0.4.13 cleanup.
+    fun apply_translation(Vector2D v) -> Bool:
         let i = 0
-        while i < candidate.models.size():
-            ref model = candidate[i]
+        while i < self.models.size():
+            ref model = self[i]
             let old = model.geometry_position()
             let x = old.x.value + v.x * MICROMETRES_PER_INCH
             let y = old.y.value + v.y * MICROMETRES_PER_INCH
@@ -392,7 +407,6 @@ cls Unit:
             model.set_geometry_position(geometry_point(x, y, old.z.value))
             model.history.distance_moved_this_turn = model.history.distance_moved_this_turn.value + v.length()
             i = i + 1
-        self = candidate
         return true
 
     # Legacy fixture/charge relocation delegates to the checked translation;
@@ -521,33 +535,42 @@ cls Unit:
     # This preset is fixture/UI convenience, not a required tabletop formation.
     fun try_arrange_columns(BoardPosition anchor, Int columns) -> Bool:
         let candidate = self
+        let valid = candidate.arrange_candidate_columns(anchor, columns)
+        if valid:
+            self = candidate
+        return valid
+
+    # Populate a staged formation; only the wrapper commits a valid complete
+    # candidate (pp.12/14). RLC 0.4.13 owning locals require a single exit.
+    fun arrange_candidate_columns(BoardPosition anchor, Int columns) -> Bool:
+        if columns <= 0 or self.empty():
+            return false
         let radius = 0.0
         let i = 0
-        while i < candidate.models.size():
-            if candidate[i].geometry.unsupported_footprint:
+        while i < self.models.size():
+            if self[i].geometry.unsupported_footprint:
                 return false
-            if candidate[i].base_radius_micrometres() > radius:
-                radius = candidate[i].base_radius_micrometres()
+            if self[i].base_radius_micrometres() > radius:
+                radius = self[i].base_radius_micrometres()
             i = i + 1
         let spacing = 1
         while float(spacing * MICROMETRES_PER_INCH) < radius * 2.0:
             spacing = spacing + 1
         let stagger = spacing == 2 and radius * 2.0 <= sqrt(2.0) * float(MICROMETRES_PER_INCH)
         i = 0
-        while i < candidate.models.size():
+        while i < self.models.size():
             let row = i / columns
             let x = anchor.x.value + (i % columns) * spacing
             let y = anchor.y.value + row * spacing
             if stagger:
                 x = x + row % 2
                 y = anchor.y.value + row
-            if float(x * MICROMETRES_PER_INCH) < candidate[i].base_radius_micrometres() or float(y * MICROMETRES_PER_INCH) < candidate[i].base_radius_micrometres() or float(x * MICROMETRES_PER_INCH) + candidate[i].base_radius_micrometres() > float(BOARD_WIDTH * MICROMETRES_PER_INCH) or float(y * MICROMETRES_PER_INCH) + candidate[i].base_radius_micrometres() > float(BOARD_HEIGHT * MICROMETRES_PER_INCH):
+            if float(x * MICROMETRES_PER_INCH) < self[i].base_radius_micrometres() or float(y * MICROMETRES_PER_INCH) < self[i].base_radius_micrometres() or float(x * MICROMETRES_PER_INCH) + self[i].base_radius_micrometres() > float(BOARD_WIDTH * MICROMETRES_PER_INCH) or float(y * MICROMETRES_PER_INCH) + self[i].base_radius_micrometres() > float(BOARD_HEIGHT * MICROMETRES_PER_INCH):
                 return false
-            candidate[i].set_geometry_position(geometry_point(x * MICROMETRES_PER_INCH, y * MICROMETRES_PER_INCH, 0))
+            self[i].set_geometry_position(geometry_point(x * MICROMETRES_PER_INCH, y * MICROMETRES_PER_INCH, 0))
             i = i + 1
-        if !candidate.is_coherent():
+        if !self.is_coherent():
             return false
-        self = candidate
         return true
 
     # Search compact whole-quad presets without clamping or partially moving

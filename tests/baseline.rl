@@ -539,3 +539,279 @@ fun test_geometry_coherency_requires_neighbour_and_all_pairs() -> Bool:
     unit[3].position.x = 16
     return !unit.is_coherent()
 
+# pp.12/14: preset placement fits all bases, remains coherent and keeps whole cells.
+fun test_geometry_quad_formation_has_no_overlapping_bases() -> Bool:
+    let unit = make_infernus_squad()
+    let anchor = board_position(5, 5)
+    if !unit.try_arrange_at(anchor) or !unit.is_coherent():
+        return false
+    let i = 0
+    while i < unit.models.size():
+        if !geometry_point_on_grid(unit[i].geometry_position()):
+            return false
+        let j = i + 1
+        while j < unit.models.size():
+            if model_bases_overlap(unit[i], unit[j]):
+                return false
+            j = j + 1
+        i = i + 1
+    return true
+
+# pp.12/14: failed setup and edge translations preserve original positions/history.
+fun test_geometry_failed_placement_and_translation_are_atomic() -> Bool:
+    let unit = make_infernus_squad()
+    let anchor = board_position(5, 5)
+    if !unit.try_arrange_at(anchor):
+        return false
+    let before = to_string(unit)
+    let edge = board_position(43, 29)
+    if unit.try_arrange_at(edge) or to_string(unit) != before:
+        return false
+    let offset : Vector2D
+    offset.x = -10
+    return !unit.try_translate(offset) and to_string(unit) == before
+
+# p.12: the entire base must be inside the board, including at legal centre cells.
+fun test_geometry_base_bounds_and_unsupported_footprint() -> Bool:
+    let board = geometry_fixture()
+    let edge = geometry_point(0, 5 * MICROMETRES_PER_INCH, 0)
+    if model_inside_battlefield(board[0][0], edge):
+        return false
+    board[0][0].geometry.unsupported_footprint = true
+    return !model_placement_valid(board, board[0][0])
+
+# p.12: sum the whole path, rather than only displacement, including retracing.
+fun test_geometry_path_budget_counts_all_segments() -> Bool:
+    let board = geometry_fixture()
+    let paths : Vector<ModelPath>
+    let path = geometry_path(0, 8, 5, 0)
+    path.points.append(geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0))
+    paths.append(path)
+    let slot : UnitID
+    let policy : MovementGeometryPolicy
+    if !try_move_models(board, slot, paths, 0, policy, true) or board[0][0].history.distance_moved_this_turn.value != 6.0:
+        return false
+    let before = to_string(board)
+    paths[0].points[1].x = 4 * MICROMETRES_PER_INCH
+    return !try_move_models(board, slot, paths, 0, policy, true) and to_string(board) == before
+
+# p.87: movement characteristics belong to individual models, including mixed units.
+fun test_geometry_mixed_movement_budgets_and_rollback() -> Bool:
+    let board = geometry_fixture()
+    let fast = board[0][0]
+    fast.profile = Profile::possessed
+    fast.position = board_position(7, 5)
+    board[0].models.append(fast)
+    let paths : Vector<ModelPath>
+    paths.append(geometry_path(0, 11, 5, 0))
+    paths.append(geometry_path(1, 16, 5, 0))
+    let slot : UnitID
+    let policy : MovementGeometryPolicy
+    let before = to_string(board)
+    if try_move_models(board, slot, paths, 0, policy, true) or to_string(board) != before:
+        return false
+    paths[1].points[0].x = 13 * MICROMETRES_PER_INCH
+    if !try_move_models(board, slot, paths, 0, policy, true):
+        return false
+    board[0][1].position = board_position(7, 5)
+    board[0][0].position = board_position(5, 5)
+    paths[0].points[0].x = 13 * MICROMETRES_PER_INCH
+    paths[1].points[0].x = 15 * MICROMETRES_PER_INCH
+    let mixed_before = to_string(board)
+    return !try_move_models(board, slot, paths, 0, policy, true) and to_string(board) == mixed_before
+
+# p.12: friendly traversal is permitted, but final overlap is prohibited.
+fun test_geometry_friendly_traversal_and_final_overlap() -> Bool:
+    let board = geometry_fixture()
+    let obstacle = board[0]
+    obstacle[0].position = board_position(8, 5)
+    board.units.append(obstacle)
+    let slot : UnitID
+    let target = board_position(11, 5)
+    if !try_translate_unit(board, slot, target, 0):
+        return false
+    let before = to_string(board)
+    target = board_position(8, 5)
+    return !try_translate_unit(board, slot, target, 0) and to_string(board) == before
+
+# p.12: crossing an enemy is illegal even when the end position is clear.
+fun test_geometry_enemy_path_crossing_is_rejected() -> Bool:
+    let board = geometry_fixture()
+    let obstacle = board[0]
+    obstacle.owned_by_player1 = true
+    obstacle[0].position = board_position(8, 5)
+    board.units.append(obstacle)
+    let slot : UnitID
+    let target = board_position(11, 5)
+    let before = to_string(board)
+    return !try_translate_unit(board, slot, target, 0) and to_string(board) == before
+
+# p.12: failed legality probes must never mutate live state.
+fun test_geometry_translation_probe_is_pure() -> Bool:
+    let board = geometry_fixture()
+    let before = to_string(board)
+    let slot : UnitID
+    let target = board_position(11, 5)
+    return can_translate_unit(board, slot, target, 0) and to_string(board) == before
+
+# p.12: reject off-grid paths, repeated model choices, and out-of-range model selectors.
+fun test_geometry_invalid_paths_are_atomic() -> Bool:
+    let board = geometry_fixture()
+    let before = to_string(board)
+    let slot : UnitID
+    let policy : MovementGeometryPolicy
+    let paths : Vector<ModelPath>
+    paths.append(geometry_path(0, 6, 5, 0))
+    paths[0].points[0].x = 6 * MICROMETRES_PER_INCH + 1
+    if try_move_models(board, slot, paths, 0, policy, true) or to_string(board) != before:
+        return false
+    paths[0].points[0].x = 6 * MICROMETRES_PER_INCH
+    paths.append(paths[0])
+    if try_move_models(board, slot, paths, 0, policy, true) or to_string(board) != before:
+        return false
+    paths.erase(paths.size() - 1)
+    paths[0].model = 1
+    return !try_move_models(board, slot, paths, 0, policy, true) and to_string(board) == before
+
+# p.12: rotation has no movement cost; on circular fixtures it does not change footprint.
+fun test_geometry_rotation_is_free_on_circle_fixture() -> Bool:
+    let board = geometry_fixture()
+    let path : ModelPath
+    path.final_rotation = 270000
+    let paths : Vector<ModelPath>
+    paths.append(path)
+    let slot : UnitID
+    let policy : MovementGeometryPolicy
+    return try_move_models(board, slot, paths, 0, policy, true) and board[0][0].history.distance_moved_this_turn.value == 0.0 and board[0][0].geometry.rotation.value == 270000 and board[0][0].position.x.value == 5
+
+# p.12: check swept bases through solid terrain, not just legal endpoints.
+fun test_geometry_wall_crossing_is_rejected() -> Bool:
+    let board = geometry_fixture()
+    board.terrain_geometry.append(geometry_box(7, 3, 0, 9, 7, 2))
+    let slot : UnitID
+    let target = board_position(11, 5)
+    let before = to_string(board)
+    return !try_translate_unit(board, slot, target, 0) and to_string(board) == before
+
+# p.48: elevated placement needs full support; upper-surface travel does not enter the solid.
+fun test_geometry_roof_support_and_overhang() -> Bool:
+    let board = geometry_fixture()
+    let terrain = geometry_box(4, 4, 0, 8, 8, 2)
+    board.terrain_geometry.append(terrain)
+    board[0][0].geometry.elevation = 2
+    if !model_placement_valid(board, board[0][0]):
+        return false
+    let start = geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 2 * MICROMETRES_PER_INCH)
+    let end = geometry_point(7 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 2 * MICROMETRES_PER_INCH)
+    if segment_crosses_terrain(board[0][0], start, end, terrain):
+        return false
+    board[0][0].position.x = 4
+    return !model_placement_valid(board, board[0][0])
+
+# p.48: touching a roof only at the start/end does not enter its solid volume.
+fun test_geometry_roof_endpoint_is_not_interior() -> Bool:
+    let board = geometry_fixture()
+    let terrain = geometry_box(4, 4, 0, 8, 8, 2)
+    let roof = geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 2 * MICROMETRES_PER_INCH)
+    let above = geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 3 * MICROMETRES_PER_INCH)
+    let below = geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, MICROMETRES_PER_INCH)
+    return !segment_crosses_terrain(board[0][0], roof, above, terrain) and !segment_crosses_terrain(board[0][0], above, roof, terrain) and segment_crosses_terrain(board[0][0], roof, below, terrain)
+
+# pp.12/48: horizontal plus vertical movement, not the hypotenuse, consumes M.
+fun test_geometry_vertical_cost_and_terrain_proximity() -> Bool:
+    let board = geometry_fixture()
+    let start = geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0)
+    let end = geometry_point(8 * MICROMETRES_PER_INCH, 9 * MICROMETRES_PER_INCH, 2 * MICROMETRES_PER_INCH)
+    if segment_length(start, end) != float(7 * MICROMETRES_PER_INCH):
+        return false
+    let policy : MovementGeometryPolicy
+    let up = geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 2 * MICROMETRES_PER_INCH)
+    if model_segment_valid(board, board[0], board[0][0], start, up, policy):
+        return false
+    board.terrain_geometry.append(geometry_box(6, 4, 0, 8, 8, 2))
+    return model_segment_valid(board, board[0], board[0][0], start, up, policy)
+
+# p.14: cancelled/failed reserve setup retains the source rather than partly placing it.
+fun test_geometry_setup_validation_preserves_reserve() -> Bool:
+    let board = geometry_fixture()
+    board.reserve_units.append(board[0])
+    let before = to_string(board)
+    let occupied = board_position(5, 5)
+    let free = board_position(20, 5)
+    return !setup_candidate_valid(board, board.reserve_units[0], occupied) and setup_candidate_valid(board, board.reserve_units[0], free) and to_string(board) == before
+
+# p.12: footprint tangency is allowed; a one-micrometre inward sweep overlaps.
+# These calculation-only points never become model positions or player choices.
+fun test_geometry_swept_base_tangency() -> Bool:
+    let board = geometry_fixture()
+    let radius = int(board[0][0].base_radius_micrometres() * 2.0)
+    let obstacle = board[0][0]
+    let centre = obstacle.geometry_position()
+    let start = geometry_point(centre.x.value - 25400, centre.y.value + radius, 0)
+    let end = geometry_point(centre.x.value + 25400, centre.y.value + radius, 0)
+    if segment_crosses_model(board[0][0], start, end, obstacle):
+        return false
+    start.y = start.y.value - 1
+    end.y = end.y.value - 1
+    return segment_crosses_model(board[0][0], start, end, obstacle)
+
+# p.12 / quad storage invariant: reject malformed or off-grid terrain in saves.
+fun test_geometry_state_rejects_malformed_terrain() -> Bool:
+    let board = geometry_fixture()
+    board.identify_units()
+    board.terrain_geometry.append(geometry_box(7, 3, 0, 9, 7, 2))
+    if !valid_state_foundations(board):
+        return false
+    board.terrain_geometry[0].lower.x = 7 * MICROMETRES_PER_INCH + 1
+    if valid_state_foundations(board):
+        return false
+    board.terrain_geometry[0].lower = board.terrain_geometry[0].upper
+    return !valid_state_foundations(board)
+
+# Geometry storage is bounded implementation infrastructure; match board dimensions.
+fun test_geometry_physical_bounds_match_quad_board() -> Bool:
+    return MAX_GEOMETRY_X == BOARD_WIDTH * MICROMETRES_PER_INCH + 1 and MAX_GEOMETRY_Y == BOARD_HEIGHT * MICROMETRES_PER_INCH + 1 and MAX_ELEVATION == 30 * MICROMETRES_PER_INCH + 1
+
+# p.14: an illegal deployment keeps the selected reserve; cancellation permits retry.
+fun test_geometry_deployment_cancel_retains_unit_and_owner() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_infernus_squad())
+    let sequence = deploy(board)
+    let slot : UnitID
+    sequence.select_unit(board, slot)
+    let edge = board_position(43, 29)
+    if (can sequence.deploy_at(board, edge)) or board.units.size() != 0:
+        return false
+    sequence.skip(board)
+    return board.reserve_units.size() == 1 and board.units.size() == 0 and !board.current_decision_maker and (can sequence.select_unit(board, slot))
+
+# p.12: a model's full base must fit through a gap between enemy bases.
+fun test_geometry_full_base_clearance_through_gap() -> Bool:
+    let board = geometry_fixture()
+    let obstacle = board[0]
+    obstacle.owned_by_player1 = true
+    obstacle[0].position = board_position(8, 4)
+    let second = obstacle[0]
+    second.position.y = 6
+    obstacle.models.append(second)
+    board.units.append(obstacle)
+    let start = board[0][0].geometry_position()
+    let end = geometry_point(11 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0)
+    let policy : MovementGeometryPolicy
+    if model_segment_valid(board, board[0], board[0][0], start, end, policy):
+        return false
+    board[1][0].position.y = 3
+    board[1][1].position.y = 7
+    return model_segment_valid(board, board[0], board[0][0], start, end, policy)
+
+# p.14: coherency's five-inch vertical limit applies to every model pair.
+fun test_geometry_coherency_vertical_limit() -> Bool:
+    let board = geometry_fixture()
+    let second = board[0][0]
+    second.position.x = 7
+    second.geometry.elevation = 5
+    board[0].models.append(second)
+    if !board[0].is_coherent():
+        return false
+    board[0][1].geometry.elevation = 6
+    return !board[0].is_coherent()
