@@ -2274,3 +2274,13 @@ fun test_attack_finishes_selected_target_before_next_and_each_weapon_once() -> B
     for i in range(4):
         sequence.roll(board, attack_test_die(1))
     return sequence.is_done() and sequence.declarations[0].made_attacks and sequence.declarations[1].made_attacks
+
+# p.19: AP is nonpositive; old factories mixed signs and could improve saves.
+fun test_damage_all_weapon_ap_signs_are_consistent() -> Bool:
+    let weapon : Weapon
+    for i in range(max(weapon) + 1):
+        weapon.value = i
+        if weapon.penetration() > 0:
+            return false
+    return Weapon::relic_weapon.penetration() == -2 and Weapon::smite_witchfire.penetration() == -1
+

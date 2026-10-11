@@ -110,6 +110,8 @@ fun weapon_rules(WeaponRule rule, WeaponRule rule2, WeaponRule rule3, WeaponRule
     to_return.append(rule5)
     return to_return
 
+# Legacy factories contained mixed AP signs. Preserve their magnitudes while
+# storing all AP as nonpositive values for the p.19 save-result calculation.
 enum Weapon:
     captain_storm_bolter:
         Int range = 24
@@ -124,7 +126,7 @@ enum Weapon:
         Stat attacks = raw_stat(6)
         Int skill = 2
         Int strenght = 5
-        Int penetration = 2
+        Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::letal_hits), weapon_rule(WeaponRuleKind::precision))
     smite_witchfire:
@@ -132,7 +134,7 @@ enum Weapon:
         Stat attacks = dice_stat(6)
         Int skill = 3
         Int strenght = 5
-        Int penetration = 1
+        Int penetration = -1
         Stat damage = dice_stat(3)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::psychic))
     smite_focused_witchfire:
@@ -140,7 +142,7 @@ enum Weapon:
         Stat attacks = dice_stat(6)
         Int skill = 3
         Int strenght = 4
-        Int penetration = 2
+        Int penetration = -2
         Stat damage = dice_stat(3)
         WeaponRules rules = weapon_rules(
                         weapon_rule(WeaponRuleKind::psychic), 
@@ -159,7 +161,7 @@ enum Weapon:
         Stat attacks = raw_stat(4)
         Int skill = 3
         Int strenght = 6
-        Int penetration = 1
+        Int penetration = -1
         Stat damage = dice_stat(3)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::psychic))
     bolt_pistol:
@@ -209,7 +211,7 @@ enum Weapon:
         Stat attacks = raw_stat(3)
         Int skill = 3
         Int strenght = 8
-        Int penetration = 2
+        Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules()
     terminator_power_weapon:
@@ -217,7 +219,7 @@ enum Weapon:
         Stat attacks = raw_stat(4)
         Int skill = 3
         Int strenght = 5
-        Int penetration = 2
+        Int penetration = -2
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
     death_shadow_claws_and_talons:
@@ -225,7 +227,7 @@ enum Weapon:
         Stat attacks = raw_stat(6)
         Int skill = 2
         Int strenght = 6
-        Int penetration = 2
+        Int penetration = -2
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::precision))
     lictor_claws_and_talons:
@@ -233,7 +235,7 @@ enum Weapon:
         Stat attacks = raw_stat(6)
         Int skill = 2
         Int strenght = 7
-        Int penetration = 2
+        Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::precision))
     leapers_talon:
@@ -241,7 +243,7 @@ enum Weapon:
         Stat attacks = raw_stat(6)
         Int skill = 3
         Int strenght = 5
-        Int penetration = 1
+        Int penetration = -1
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
     rite_of_possession:
@@ -261,7 +263,7 @@ enum Weapon:
         Stat attacks = raw_stat(2)
         Int skill = 3
         Int strenght = 6
-        Int penetration = 2
+        Int penetration = -2
         Stat damage = raw_stat(3)
         WeaponRules rules = weapon_rules(
                                 weapon_rule(WeaponRuleKind::psychic), 
@@ -274,7 +276,7 @@ enum Weapon:
         Stat attacks = raw_stat(4)
         Int skill = 3
         Int strenght = 6
-        Int penetration = 1
+        Int penetration = -1
         Stat damage = dice_stat(3)
         WeaponRules rules = weapon_rules(
                                 weapon_rule(WeaponRuleKind::psychic), 
@@ -284,7 +286,7 @@ enum Weapon:
         Stat attacks = raw_stat(4)
         Int skill = 3
         Int strenght = 5
-        Int penetration = 1
+        Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules()
     boltgun:
@@ -300,7 +302,7 @@ enum Weapon:
         Stat attacks = raw_stat(3)
         Int skill = 4
         Int strenght = 5
-        Int penetration = 1
+        Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
             weapon_rule(WeaponRuleKind::heavy),
