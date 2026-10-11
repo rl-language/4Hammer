@@ -113,16 +113,17 @@ rlc-random examples/single_shooting_maximize.rl -i src --iterations 3 --max-acti
 
 The first is bounded gameplay, not a completed full game. Confirm the shooting scenarios finish rather than exhaust the action limit (this CLI shares the action budget across iterations). Use `tools/check_gameplay_baseline.py` for seeded completion, decision-owner checks, payload round trips and replay inputs. Also exercise Python JIT/wrapper behavior when public state/actions change; `tools/check_gym_baseline.py` provides a bounded check, and `examples/gym_jit_example.py` runs from the repository root.
 
-Build the sanitized fuzzer after changes. CMakeLists.txt defines target `rlc_rules_fuzzer`, output `rules_fuzzer`, with optimized/debug, precondition, bounds and sanitizer instrumentation. If a Godot-configured CMake build exists, build only that target rather than unrelated GUI/web/doc targets. Clang and its sanitizer runtime are required in addition to RLC. Task 2 prepared Clang 19.1.7 and sanitizer libraries under `/workspace/4hammer-validation/toolchain`; recreate them with `python tools/prepare_validation_clang.py` on this Debian 13 amd64 environment. See tests/README.md for prerequisites and checksum-pinned downloads. The following direct build matches the RLC flags, avoids Godot dependencies, and successfully built in task 2:
+Build the sanitized fuzzer after changes. CMakeLists.txt defines target `rlc_rules_fuzzer`, output `rules_fuzzer`, with optimized/debug, precondition, bounds and sanitizer instrumentation. If a Godot-configured CMake build exists, build only that target rather than unrelated GUI/web/doc targets. Clang and its sanitizer runtime are required in addition to RLC. The current RLC 0.4.13 uses LLVM 21. Clang 21.1.8 and matching runtimes are prepared under `/workspace/4hammer-validation/toolchain21`; recreate them with `python tools/prepare_validation_clang21.py` on Debian 13 amd64. Its checksum pins come from verified LLVM repository metadata; runtime symlinks adapt Debian's layout without mixing versions. System GCC 14/libc headers, binutils and runtime dependencies must remain available. The older task-2 Clang 19 helper is historical and cannot link the current RLC fuzzer. Inspect linker diagnostics and require a runnable output: RLC may return zero even on link failure. See tests/README.md for the current commands and recorded result. The following direct build matches the RLC flags, avoids Godot dependencies, and successfully builds with RLC 0.4.13/Clang 21:
 
 ```bash
 mkdir -p /workspace/4hammer-validation/corpus /workspace/4hammer-validation/artifacts
-export LD_LIBRARY_PATH="/workspace/4hammer-validation/toolchain/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="/workspace/4hammer-validation/toolchain21/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 rlc src/full_game.rl -O2 -g --fuzzer --sanitize \
   --emit-precondition-checks --emit-bound-checks \
-  --clang=/workspace/4hammer-validation/toolchain/usr/lib/llvm-19/bin/clang \
-  -o /workspace/4hammer-validation/rules_fuzzer
-/workspace/4hammer-validation/rules_fuzzer \
+  --clang=/workspace/4hammer-validation/toolchain21/usr/lib/llvm-21/bin/clang \
+  -o /workspace/4hammer-validation/rules_fuzzer-0.4.13
+test -x /workspace/4hammer-validation/rules_fuzzer-0.4.13
+/workspace/4hammer-validation/rules_fuzzer-0.4.13 \
   /workspace/4hammer-validation/corpus -max_total_time=60 -max_len=4096 \
   -artifact_prefix=/workspace/4hammer-validation/artifacts/
 ```

@@ -29,16 +29,17 @@ The gym check exercises JIT/wrappers, legal masks and finite observations for 20
 
 ## Sanitized fuzzer
 
-The prepared Debian 13 amd64 environment has libLLVM-19, GCC, libc headers and binutils. Clang 19 and its compiler runtime were extracted into writable workspace storage because system package installation is unavailable. Recreate that local toolchain from checksum-pinned packages with:
+The prepared Debian 13 amd64 environment has GCC 14, libc headers, binutils and the runtime dependencies. RLC 0.4.13 needs Clang 21.1.8 and matching sanitizer/fuzzer runtimes, extracted into writable workspace storage. Recreate that local toolchain from checksum-pinned LLVM packages with:
 
 ```bash
-python tools/prepare_validation_clang.py
-export LD_LIBRARY_PATH="/workspace/4hammer-validation/toolchain/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+python tools/prepare_validation_clang21.py
+export LD_LIBRARY_PATH="/workspace/4hammer-validation/toolchain21/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 mkdir -p /workspace/4hammer-validation/corpus /workspace/4hammer-validation/artifacts
 rlc src/full_game.rl -O2 -g --fuzzer --sanitize \
   --emit-precondition-checks --emit-bound-checks \
-  --clang=/workspace/4hammer-validation/toolchain/usr/lib/llvm-19/bin/clang \
-  -o /workspace/4hammer-validation/rules_fuzzer
+  --clang=/workspace/4hammer-validation/toolchain21/usr/lib/llvm-21/bin/clang \
+  -o /workspace/4hammer-validation/rules_fuzzer-0.4.13
+test -x /workspace/4hammer-validation/rules_fuzzer-0.4.13
 ```
 
 This matches the repository's fuzzer instrumentation without requiring the Godot CMake build. It does not install a complete general-purpose LLVM development environment. On other machines use an appropriate installed Clang/sanitizer runtime instead.
@@ -60,7 +61,7 @@ inputs = {
 for name, choices in inputs.items():
     (root / name).write_bytes(b''.join(struct.pack('<q', value) for value in choices) + b'\0')
 PY
-/workspace/4hammer-validation/rules_fuzzer \
+/workspace/4hammer-validation/rules_fuzzer-0.4.13 \
   /workspace/4hammer-validation/corpus -seed=40000 \
   -max_total_time=60 -max_len=4096 \
   -artifact_prefix=/workspace/4hammer-validation/artifacts/
@@ -104,4 +105,4 @@ Numeric state uses standard bounded Rulebook types for inferred ML domains/encod
 
 Use `rl_language==0.4.13` and matching core package. After correcting the bare `is_character` name to `destroyed.is_character()`, the runner passes 45 tests with 8 XFAIL and 0 XPASS. Two added regressions cover the existing Feeder Tendrils character-casualty/attacker-ability gate; its faction source remains external. The compiler had misleadingly located the bad Boolean operand at the method declaration.
 
-The prepared Clang 19 toolchain cannot link this compiler's sanitized fuzzer: RLC 0.4.13 requests Clang 21 fuzzer/ASan archives. Its build command exits zero despite linker errors, so inspect diagnostics and require a produced runnable binary. A matching Clang 21 runtime is required; no new mutation campaign ran. Existing 0.3.3 native/Godot libraries are historical and cannot validate the upgraded compiler.
+The initial Clang 19 mismatch is resolved by the helper above. Its six pinned LLVM 21 packages were authenticated against the signed repository metadata with fingerprint `6084F3CF814B57C1CF12EFD515CF4D18AF4F7421`; every download is checksum-verified. Same-version x86_64 runtime symlinks adapt Debian's layout to RLC's per-target paths. The installation was repeated successfully. The resulting sanitized fuzzer completes 118 runs in 62 seconds with seed 40000, coverage 6,565 and feature count 18,472, without reported failures or failure artifacts; a fresh three-input corpus drives actions. RLC may exit zero despite linker errors, so inspect diagnostics and require a produced runnable binary. Existing 0.3.3 native/Godot libraries are historical and cannot validate the upgraded compiler.
