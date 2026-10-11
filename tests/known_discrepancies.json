@@ -1,0 +1,62 @@
+{
+  "test_02_04_fixed_attack_characteristic": {
+    "source": "02.04/04.03, pp.10/17",
+    "task": 9,
+    "category": "existing fixed-characteristic evaluation defect; shooting can complete without attacks"
+  },
+  "test_05_02_exact_double_strength": {
+    "source": "05.02, p.18",
+    "task": 9,
+    "category": "existing calculation defect"
+  },
+  "test_05_02_exact_half_strength": {
+    "source": "05.02, p.18",
+    "task": 9,
+    "category": "existing calculation defect"
+  },
+  "test_01_06_mixed_leadership": {
+    "source": "01.06, p.9",
+    "task": 7,
+    "category": "source conflict; edition provenance unverified"
+  },
+  "test_14_02_sum_objective_control": {
+    "source": "14.02, p.52",
+    "task": 8,
+    "category": "existing aggregation defect"
+  },
+  "test_14_02_tied_objective_uncontrolled": {
+    "source": "14.02, p.52",
+    "task": 8,
+    "category": "existing tie-handling defect"
+  },
+  "test_01_07_shock_removes_objective_control": {
+    "source": "01.07, p.9",
+    "task": 7,
+    "category": "missing shock effect"
+  },
+  "test_08_03_opponent_shock_persists": {
+    "source": "08.03, p.30",
+    "task": 7,
+    "category": "shock lifecycle requires migration"
+  },
+  "test_08_02_core_cp_gain_not_truncated": {
+    "source": "08.02, p.30",
+    "task": 3,
+    "category": "insufficient CP storage capacity"
+  },
+  "test_09_06_advance_increment_not_truncated": {
+    "source": "09.06, p.33",
+    "task": 3,
+    "category": "insufficient Advance modifier storage capacity"
+  },
+  "test_15_01_actual_stratagem_cost": {
+    "source": "15.01, p.54",
+    "task": 5,
+    "category": "wrong selected stratagem cost"
+  },
+  "test_15_01_own_player_usage": {
+    "source": "15.01, p.54",
+    "task": 5,
+    "category": "wrong player usage record"
+  }
+}
