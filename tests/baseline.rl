@@ -1,5 +1,14 @@
 import full_game
 
+# User-required quad representation: physical calculations (core pp.9/12)
+# must not admit fractional model/path coordinates during this migration.
+fun test_geometry_preserves_whole_inch_quad_positions() -> Bool:
+    let unit = make_infernus_squad()
+    let point = geometry_point(5 * MICROMETRES_PER_INCH, 7 * MICROMETRES_PER_INCH, 2 * MICROMETRES_PER_INCH)
+    unit[0].set_geometry_position(point)
+    let fractional = geometry_point(5 * MICROMETRES_PER_INCH + 1, 7 * MICROMETRES_PER_INCH, 2 * MICROMETRES_PER_INCH)
+    return unit[0].position.x.value == 5 and unit[0].position.y.value == 7 and unit[0].geometry.elevation.value == 2 and geometry_point_on_grid(unit[0].geometry_position()) and !geometry_point_on_grid(fractional)
+
 fun attack_fixture() -> Board:
     let board : Board
     board.units.append(make_infernus_squad())
@@ -76,7 +85,7 @@ fun test_01_01_army_ownership_is_stable() -> Bool:
 fun test_09_05_move_budget_legality() -> Bool:
     let board : Board
     board.units.append(make_infernus_squad())
-    board[0].move_to(make_board_position(5, 10))
+    board[0].try_arrange_at(make_board_position(5, 10))
     let id = unit_id(0)
     let movement = move(board, id, 0)
     return (can movement.move_to(board, id, make_board_position(11, 10))) and !(can movement.move_to(board, id, make_board_position(12, 10)))
@@ -130,7 +139,7 @@ fun test_08_02_core_cp_gain_not_truncated() -> Bool:
 fun test_09_06_advance_increment_not_truncated() -> Bool:
     let board : Board
     board.units.append(make_infernus_squad())
-    board[0].move_to(make_board_position(2, 10))
+    board[0].try_arrange_at(make_board_position(2, 10))
     let id = unit_id(0)
     let movement = move(board, id, 5)
     return can movement.move_to(board, id, make_board_position(13, 10))

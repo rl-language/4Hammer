@@ -5,9 +5,9 @@ func _initialize():
 
 func check_bindings():
 	var rules = root.get_node("GlobalRules")
-	assert(rules.library.get_state_schema_version() == 3)
+	assert(rules.library.get_state_schema_version() == 4)
 	assert(rules.library.get_action_schema_version() == 2)
-	assert(rules.library.get_observation_schema_version() == 3)
+	assert(rules.library.get_observation_schema_version() == 4)
 	assert(rules.valid_actions.size() == 6)
 	var choose = RLCGamePickInsidiousInfiltrators.make()
 	rules.apply_action(choose)

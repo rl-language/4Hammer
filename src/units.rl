@@ -4,6 +4,7 @@ import vector2d
 import machine_learning
 import range
 import state_types
+import geometry
 
 using Wounds = LinearlyDistributedInt<0, MAX_WOUNDS>
 const MAX_WEAPONS = 8
@@ -21,6 +22,7 @@ enum ModelState:
 
 cls Model:
     BoardPosition position # required
+    ModelGeometry geometry
     Profile profile
     Wounds suffered_wounds
     WeaponsVector weapons
@@ -74,8 +76,50 @@ cls Model:
     fun is_character() -> Bool:
         return self.has_keyword(Keyword::character)
 
+    # Convert existing whole-inch quad coordinates to physical calculation units.
+    # Bases affect measurement without allowing off-grid model positions (p.9).
+    fun geometry_position() -> GeometryPoint:
+        return geometry_point(self.position.x.value * MICROMETRES_PER_INCH, self.position.y.value * MICROMETRES_PER_INCH, self.geometry.elevation.value * MICROMETRES_PER_INCH)
+
+    # Preserve whole-inch quad positions and elevation; the user's later task
+    # owns any finer spatial representation. Reject invalid positions (p.12).
+    fun set_geometry_position(GeometryPoint point):
+        assert(point.x.value < BOARD_WIDTH * MICROMETRES_PER_INCH and point.y.value < BOARD_HEIGHT * MICROMETRES_PER_INCH, "model centre outside editor board")
+        assert(geometry_point_on_grid(point), "model positions must remain on quad grid")
+        self.position.x = point.x.value / MICROMETRES_PER_INCH
+        self.position.y = point.y.value / MICROMETRES_PER_INCH
+        self.geometry.elevation = point.z.value / MICROMETRES_PER_INCH
+
+    # Existing profile diameters are millimetres; retain their circular fixture
+    # interpretation explicitly. Hull/oval data needs a supplied footprint (p.9/62).
+    fun base_radius_micrometres() -> Float:
+        return self.profile.base_size() * 500.0
+
+    # Nearest points of circular bases, clamped to zero for intersecting bases
+    # (p.9). Unsupported footprints must not acquire fabricated round geometry.
+    fun horizontal_distance_micrometres(Model model) -> Float:
+        if self.geometry.unsupported_footprint or model.geometry.unsupported_footprint:
+            return 1000000000.0
+        let result = horizontal_length(self.geometry_position(), model.geometry_position()) - self.base_radius_micrometres() - model.base_radius_micrometres()
+        if result < 0.0:
+            return 0.0
+        return result
+
+    # Engagement/coherency measure horizontal and vertical separation separately
+    # (pp.14–15), so height cannot be folded into the horizontal radius.
+    fun vertical_distance_micrometres(Model model) -> Int:
+        return abs(self.geometry.elevation.value - model.geometry.elevation.value) * MICROMETRES_PER_INCH
+
+    # Inclusive two-inch horizontal/five-inch vertical engagement (pp.14–15).
+    fun is_engaged_with(Model model) -> Bool:
+        return self.horizontal_distance_micrometres(model) <= float(2 * MICROMETRES_PER_INCH) and self.vertical_distance_micrometres(model) <= 5 * MICROMETRES_PER_INCH
+
+    # Ordinary nearest-base range is straight-line distance; engagement uses
+    # its separately prescribed horizontal/vertical limits (pp.9/14).
     fun distance(Model model) -> Float:
-        return (model.position.as_vector() - self.position.as_vector()).length() - ((model.base_size_in_inches() + self.base_size_in_inches()) /2.0)
+        let horizontal = self.horizontal_distance_micrometres(model)
+        let vertical = float(self.vertical_distance_micrometres(model))
+        return sqrt(horizontal * horizontal + vertical * vertical) / float(MICROMETRES_PER_INCH)
 
     fun wounds_left() -> Int:
         return self.profile.wounds() - self.suffered_wounds.value
@@ -332,26 +376,78 @@ cls Unit:
         let v = new_position.as_vector() - self.models[0].position.as_vector()
         self.translate(v)
 
-    # Record actual model displacement for later movement/eligibility checks
-    # (pp.32–33). Individual paths and exact geometry remain task 4.
-    fun translate(Vector2D v):
+    # Translate a candidate as a rigid formation without bounded-coordinate
+    # clamping. Failure preserves all models/history (battlefield edge p.12).
+    fun try_translate(Vector2D v) -> Bool:
+        let candidate = self
         let i = 0
-        while i != self.models.size():
-            ref model = self.models[i]
-            let before = model.position
-            model.position = model.position + v
-            model.history.distance_moved_this_turn = model.history.distance_moved_this_turn.value + (model.position.as_vector() - before.as_vector()).length()
+        while i < candidate.models.size():
+            ref model = candidate[i]
+            let old = model.geometry_position()
+            let x = old.x.value + v.x * MICROMETRES_PER_INCH
+            let y = old.y.value + v.y * MICROMETRES_PER_INCH
+            let radius = model.base_radius_micrometres()
+            if model.geometry.unsupported_footprint or float(x) < radius or float(y) < radius or float(x) + radius > float(BOARD_WIDTH * MICROMETRES_PER_INCH) or float(y) + radius > float(BOARD_HEIGHT * MICROMETRES_PER_INCH):
+                return false
+            model.set_geometry_position(geometry_point(x, y, old.z.value))
+            model.history.distance_moved_this_turn = model.history.distance_moved_this_turn.value + v.length()
             i = i + 1
+        self = candidate
+        return true
+
+    # Legacy fixture/charge relocation delegates to the checked translation;
+    # ordinary movement uses board-aware path validation (p.12; charge task 13).
+    fun translate(Vector2D v):
+        self.try_translate(v)
 
     fun distance(BoardPosition position) -> Float:
         return self.distance(position.as_vector()) 
 
+    # Unit range uses the closest pair, including models beyond target index
+    # zero (p.9; user's clarified Within/Closest definitions).
     fun distance(Unit unit) -> Float:
-        if unit.models.size() == 0:
-            return 100.0
-        if self.models.size() == 0:
-            return 100.0
-        return self.distance(unit.models[0]) 
+        let shortest = 100.0
+        let i = 0
+        while i < unit.models.size():
+            if !self.models.empty():
+                let distance = self.distance(unit.models[i])
+                if distance < shortest:
+                    shortest = distance
+            i = i + 1
+        return shortest
+
+    # Any engaged model pair engages both units (pp.14–15).
+    fun is_engaged_with(Unit other) -> Bool:
+        let i = 0
+        while i < self.models.size():
+            let j = 0
+            while j < other.models.size():
+                if self.models[i].is_engaged_with(other.models[j]):
+                    return true
+                j = j + 1
+            i = i + 1
+        return false
+
+    # Every member needs a neighbour within 2/5 inches and must be within 9/5
+    # of every other member. A connected chain alone is insufficient (p.14).
+    fun is_coherent() -> Bool:
+        let i = 0
+        while i < self.models.size():
+            let has_neighbour = self.models.size() == 1
+            let j = 0
+            while j < self.models.size():
+                if i != j:
+                    let horizontal = self.models[i].horizontal_distance_micrometres(self.models[j])
+                    let vertical = self.models[i].vertical_distance_micrometres(self.models[j])
+                    if horizontal > float(9 * MICROMETRES_PER_INCH) or vertical > 5 * MICROMETRES_PER_INCH:
+                        return false
+                    if horizontal <= float(2 * MICROMETRES_PER_INCH):
+                        has_neighbour = true
+                j = j + 1
+            if !has_neighbour:
+                return false
+            i = i + 1
+        return true
 
     fun distance(Model model) -> Float:
         assert(self.models.size() != 0, "calculanting distance to empty unit")
@@ -367,7 +463,8 @@ cls Unit:
         let their_nearest_model = 0
         let our_nearest_model = 0
         let shortest_lenght = 100.0
-        let i = 1
+        assert(!self.models.empty() and !other.models.empty(), "closest vector requires populated units")
+        let i = 0
         while i != self.models.size():
             let j = 0
             while j != other.models.size():
@@ -409,15 +506,63 @@ cls Unit:
     fun get(ModelID model_id) -> ref Model:
         return self.models[model_id.get()]
 
-    fun arrange():
-        if self.models.size() == 1:
-            return
-        let i = 1
-        while i != self.models.size():
-            ref model = self.models[i]
-            model.position = self.models[i-1].position
-            model.position.x = model.position.x + int(1.0 + model.base_size_in_inches())
+    # Try a quad-grid formation with whole-cell spacing large enough for every
+    # base. Diagonal staggering is allowed only when bases fit (pp.12/14).
+    # This preset is fixture/UI convenience, not a required tabletop formation.
+    fun try_arrange_columns(BoardPosition anchor, Int columns) -> Bool:
+        let candidate = self
+        let radius = 0.0
+        let i = 0
+        while i < candidate.models.size():
+            if candidate[i].geometry.unsupported_footprint:
+                return false
+            if candidate[i].base_radius_micrometres() > radius:
+                radius = candidate[i].base_radius_micrometres()
             i = i + 1
+        let spacing = 1
+        while float(spacing * MICROMETRES_PER_INCH) < radius * 2.0:
+            spacing = spacing + 1
+        let stagger = spacing == 2 and radius * 2.0 <= sqrt(2.0) * float(MICROMETRES_PER_INCH)
+        i = 0
+        while i < candidate.models.size():
+            let row = i / columns
+            let x = anchor.x.value + (i % columns) * spacing
+            let y = anchor.y.value + row * spacing
+            if stagger:
+                x = x + row % 2
+                y = anchor.y.value + row
+            if float(x * MICROMETRES_PER_INCH) < candidate[i].base_radius_micrometres() or float(y * MICROMETRES_PER_INCH) < candidate[i].base_radius_micrometres() or float(x * MICROMETRES_PER_INCH) + candidate[i].base_radius_micrometres() > float(BOARD_WIDTH * MICROMETRES_PER_INCH) or float(y * MICROMETRES_PER_INCH) + candidate[i].base_radius_micrometres() > float(BOARD_HEIGHT * MICROMETRES_PER_INCH):
+                return false
+            candidate[i].set_geometry_position(geometry_point(x * MICROMETRES_PER_INCH, y * MICROMETRES_PER_INCH, 0))
+            i = i + 1
+        if !candidate.is_coherent():
+            return false
+        self = candidate
+        return true
+
+    # Search compact whole-quad presets without clamping or partially moving
+    # models. Failure preserves the original unit (setup/move rollback pp.12/14).
+    fun try_arrange_at(BoardPosition anchor) -> Bool:
+        if self.empty():
+            return false
+        let middle = int(sqrt(float(self.models.size())))
+        let i = 0
+        while i < self.models.size() * 2:
+            let columns = middle
+            if i % 2 == 1:
+                columns = middle + (i + 1) / 2
+            else:
+                columns = middle - i / 2
+            if columns > 0 and columns <= self.models.size() and self.try_arrange_columns(anchor, columns):
+                return true
+            i = i + 1
+        return false
+
+    # Existing fixture callers retain the coarse anchor; failure leaves the
+    # formation unchanged rather than silently overlapping/clamping (pp.12/14).
+    fun arrange():
+        if !self.empty():
+            self.try_arrange_at(self[0].position)
 
     # Remove/archive the allocated model when wounds reach its characteristic;
     # excess normal damage does not spill (damage sequence p.19; reference 05.04).
