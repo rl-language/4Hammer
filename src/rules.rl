@@ -234,8 +234,9 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
 act on_model_destroyed(ctx Board board, 
                        ctx Unit source, 
                        ctx Model destroyed) -> OnModelDestroyed:
-    if is_character and source.has_ability(AbilityKind::feeder_tendrils):
+    if destroyed.is_character() and source.has_ability(AbilityKind::feeder_tendrils):
         board.add_extra_cp(int(source.owned_by_player1))
+
 
     if destroyed.has_keyword(Keyword::master_of_possession) and board.can_use_strat(!source.owned_by_player1, Stratagem::violent_unbidding):
         actions:
