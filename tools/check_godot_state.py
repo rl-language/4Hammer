@@ -19,6 +19,8 @@ def main():
         for filename in ('librules.so', 'librlcrules.so'):
             shutil.copy2(args.build_path / filename, project / filename)
         shutil.copy2(root / 'scripts/Rules.gd', project / 'Rules.gd')
+        shutil.copy2(root / 'scripts/MultipleChoises.gd', project / 'MultipleChoises.gd')
+        shutil.copy2(root / 'scripts/InteractionManager.gd', project / 'InteractionManager.gd')
         shutil.copy2(root / 'tests/godot_state.gd', project / 'validate.gd')
         (project / 'project.godot').write_text(
             'config_version=5\n[application]\nconfig/name="State regression"\n'

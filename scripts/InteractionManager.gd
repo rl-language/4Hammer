@@ -12,6 +12,10 @@ func on_state_change():
 	current_select_model_action = GlobalRules.get_current_select_model_action()
 	current_target_unit_action = GlobalRules.get_current_target_action()
 	current_select_unit_action = GlobalRules.get_current_select_unit_action()
+	# Deployment selects reserves through the choice panel. Battlefield model
+	# indices address a different collection and must not select reserve units.
+	if current_select_unit_action is RLCGameSelectUnit:
+		current_select_unit_action = null
 	mark_possible_targets()
 		
 

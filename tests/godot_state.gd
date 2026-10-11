@@ -3,8 +3,26 @@ extends SceneTree
 func _initialize():
 	call_deferred("check_bindings")
 
+func deployment_buttons(panel):
+	var buttons = []
+	for child in panel.get_node("ChoiseList").get_children():
+		if not child.is_queued_for_deletion() and child.text.begins_with("deploy "):
+			buttons.append(child)
+	return buttons
+
 func check_bindings():
 	var rules = root.get_node("GlobalRules")
+	var choices = VBoxContainer.new()
+	choices.set_script(load("res://MultipleChoises.gd"))
+	var list = VBoxContainer.new()
+	list.name = "ChoiseList"
+	choices.add_child(list)
+	root.add_child(choices)
+	var interaction = Sprite2D.new()
+	interaction.set_script(load("res://InteractionManager.gd"))
+	interaction.models = Node.new()
+	interaction.add_child(interaction.models)
+	root.add_child(interaction)
 	assert(rules.library.get_state_schema_version() == 5)
 	assert(rules.library.get_action_schema_version() == 3)
 	assert(rules.library.get_observation_schema_version() == 5)
@@ -27,9 +45,9 @@ func check_bindings():
 	rules.apply_action(RLCGameDoneAttaching.make())
 	var select = rules.get_current_select_unit_action()
 	assert(select != null and select.get_member(0) is RLCUnitID)
-	select.get_member(0).get_id().set_value(0)
-	assert(rules.can_apply(select))
-	rules.apply_action(select)
+	var first_buttons = deployment_buttons(choices)
+	assert(first_buttons.size() == 5)
+	first_buttons[0].button_down.emit()
 	var location = rules.get_location_saction()
 	assert(location != null and location.get_member(0) is RLCBoardPosition)
 	var before_placement = rules.as_indented_str(rules.state)
@@ -42,6 +60,25 @@ func check_bindings():
 	assert(rules.can_apply(location))
 	rules.apply_action(location)
 	assert(rules.library.size(rules.state.get_board().get_units()) == 1)
+	assert(not rules.library.get(rules.state.get_board().get_units(), 0).get_owned_by_player1())
+	interaction.on_state_change()
+	assert(interaction.current_select_unit_action == null)
+	var opposing_buttons = deployment_buttons(choices)
+	assert(opposing_buttons.size() == 4)
+	# The first legal opponent reserve ID is 4, not battlefield model ID 0.
+	var wrong = RLCGameSelectUnit.make()
+	wrong.get_member(0).get_id().set_value(0)
+	assert(not rules.can_apply(wrong))
+	opposing_buttons[0].button_down.emit()
+	location = rules.get_location_saction()
+	assert(location != null)
+	location.get_member(0).get_x().set_value(2)
+	location.get_member(0).get_y().set_value(2)
+	assert(rules.can_apply(location))
+	rules.apply_action(location)
+	assert(rules.library.size(rules.state.get_board().get_units()) == 2)
+	assert(rules.library.get(rules.state.get_board().get_units(), 1).get_owned_by_player1())
+	assert(deployment_buttons(choices).size() == 4)
 	var timing_choice = RLCGameChooseTimingRule.make()
 	assert(timing_choice.members_count() == 1)
 	assert(rules.library.is_enum(timing_choice.get_member(0)))
@@ -51,7 +88,7 @@ func check_bindings():
 	assert(coherency_model.members_count() == 1 and coherency_model.get_member(0) is RLCModelID)
 	var neural = RLCGameSelectNeuralDisruptionTarget.make()
 	assert(neural.members_count() == 2 and neural.get_member(0) is RLCUnitID and neural.get_member(1) is RLCUnitID)
-	print("PASS: Godot schema exports, army choices, target/unit/location selectors, rejected edge placement and save replacement")
+	print("PASS: Godot schema exports, army choices, target/unit/location selectors, rejected edge placement, both armies through deployment buttons and save replacement")
 	# Clean up the test-owned library; production ownership changes are out of scope.
 	rules.library.free()
 	call_deferred("quit", 0)
