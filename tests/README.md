@@ -17,7 +17,7 @@ cmake -S . -B build-tests -DBUILD_GAME=OFF
 ctest --test-dir build-tests --output-on-failure -j 4
 ```
 
-For another virtual environment, activate it first; if CMake cached a different interpreter, configure with `-DPython3_EXECUTABLE=/path/to/venv/bin/python`. CMake 3.12+ and the compatible Rulebook/Python environment are required.
+For another virtual environment, activate it first; if CMake cached a different interpreter, configure with `-DPython3_EXECUTABLE=/path/to/venv/bin/python`. The commands shown use CMake/CTest 3.20+ (`--test-dir`); project configuration supports CMake 3.12+. The compatible Rulebook/Python environment is required.
 
 `ctest -N --test-dir build-tests` lists the tests. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` runs a selected case. Labels `baseline`, `discrepancies` and `expected-failure` allow filtering with `-L`. CTest automatically includes the matching compilation fixture even for a single selected test. Each suite compiles once per invocation with precondition/bounds checks; each assertion runs in its own process. A failed compilation blocks its cases rather than using an old library.
 
