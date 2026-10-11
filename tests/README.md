@@ -114,3 +114,7 @@ The current runner passes 74 tests, with 8 XFAIL and 0 XPASS. State/observation 
 Fresh matching Godot libraries are in `/workspace/4hammer-validation/task4-godot`. Run `python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task4-godot` after rebuilding the Rulebook library, generated header and C++ extension together. The headless harness also checks rejected edge placement without state mutation.
 
 The current instrumented executable is `/workspace/4hammer-validation/task4-rules-fuzzer`. Replay `tests/fuzz-regressions/geometry-placement-leak.bin -runs=1` with that executable before the mutation campaign; keep leak detection enabled. Its [README](fuzz-regressions/README.md) describes the original failure. Seeded replay results are in `/workspace/4hammer-validation/task4-replays`. The gameplay runner now preserves the action ranks, trace and state before raising on a nonterminal state with no legal actions.
+
+## Timing foundations (task 5)
+
+The current suite has **97 PASS, 8 XFAIL, 0 XPASS**. Read [the timing report](../doc/timing-foundations.md) and ROADMAP.md for scope and final evidence. State/observation schemas are **5**, action schema **3**; matching new native libraries and headers are required. Full-game enumeration has **9,950** candidates and the gym observation has **163,673** values. Earlier section counts are historical. The Godot harness also checks timing-enum, coherency UnitID/ModelID and source-first Neural Disruption payload shapes; interactive input/rendering remains unrun.

@@ -1,7 +1,7 @@
 locator	source_page	referenced_entry	availability	gate
 P05-05	5	Example App Reference	illustrative reference label	none
 P09-19	9	Player’s Rules	app definition not supplied	D04
-P09-20	9	Rules Sequencing	app definition not supplied	D04
+P09-20	9	Rules Sequencing	user supplied current-player-then-opponent sequencing (task 5)	D04
 P09-22	9	Closest Model/Unit	user-supplied definition; see geometry-foundations.md	D05
 P09-23	9	Table Quarter	app definition not supplied	D05
 P09-24	9	Within/Wholly Within	user-supplied definition; see geometry-foundations.md	D05
@@ -36,12 +36,12 @@ P33-34	33	Modifying Dice Rolls	app definition not supplied	D03
 P37-13	37	Target No Longer Eligible or Viable	app definition not supplied	D11
 P53-02	53	Objectives Not Within a Terrain Area	definition supplied in core reference	none
 P55-03	55	Modifying CP Cost	app definition not supplied	D03
-P55-03	55	Rules Sequencing	app definition not supplied	D04
+P55-03	55	Rules Sequencing	user supplied current-player-then-opponent sequencing (task 5)	D04
 P65-21	65	Not on the Battlefield	app definition not supplied	D10
 P65-24	65	Persisting Rules Effects	app definition not supplied	D10
 P69-14	69	Not on the Battlefield	app definition not supplied	D10
 P69-15	69	Persisting Rules Effects	app definition not supplied	D10
 P69-16	69	Setting Up Large Models	app definition not supplied	D05
-P71-03	71	Rules Sequencing	app definition not supplied	D04
+P71-03	71	Rules Sequencing	user supplied current-player-then-opponent sequencing (task 5)	D04
 P87-10	87	Regaining Lost Wounds	app definition not supplied	D10
 P87-11	87	Revived	definition supplied in core reference	none
