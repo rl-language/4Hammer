@@ -110,6 +110,13 @@ Evidence: **97 PASS, 8 XFAIL, 0 XPASS** (23 new task-5 tests). The first two foc
 
 Task-5 completion establishes timing foundations, not complete core effects. The eight known failures remain mandatory fixes in tasks 7/8/9. Task 7 must finish shock recovery/thresholds/Leadership; task 8 must replace legacy OC/scoring and supply visibility; task 9 must fix fixed characteristics and support declared/batched dice and their rerolls. Tasks 10/12/14 own destruction, shooting/snap-shooting and fighting. Task 11 must replace anchor-only ingress/setup constraints. Tasks 13/15 must fix unsuccessful-charge flags, implement post-roll targets and both Heroic Intervention modes, exact Snap Shooting/action restrictions, Smokescreen, Counteroffensive and all other core effects. Task 17 must source faction/mission definitions and complete editor integration. D03/D09/D10/D12 remain unresolved, including the legacy extra-CP cap; record and fix these when their sources are supplied. **Next pending task: 6, attachments and unit characteristics.**
 
+#### Follow-up — deployment editor reserve selection
+
+- [x] Fix the collection mismatch in deployment selection: reserve UnitIDs cannot be selected using battlefield-model IDs. Add named legal reserve-unit buttons to `MultipleChoises.gd` and suppress battlefield selection for `RLCGameSelectUnit` in `InteractionManager.gd`.
+- [x] Extend the headless Godot regression to press both armies’ deployment buttons, verify opposite ownership/regions, reject the incorrect battlefield ID and check the click-handler guard. The previous choice panel fails the new assertion; the corrected scripts pass. Direct engine checks also find legal opposing placements for all six faction fixtures.
+
+`Rules.gd`, `TraceManager.gd`, Rulebook source, schemas and quad coordinates are unchanged. This fixes one editor workflow; it does not complete task 11’s full deployment rules or task 17’s complete integration. Their outstanding issues remain required fixes.
+
 Tasks 1–5 establish the foundations. Attachments and geometry should precede combat; the attack and damage pipelines should precede shooting, fighting and combat stratagems. Godot checks belong in every task that changes actions, followed by a complete integration pass in task 17.
 
 Follow these dependencies when splitting work into implementation increments. A task may need smaller increments, but its complete scope must remain tracked. Record source uncertainties, external data dependencies and unsupported behavior rather than silently dropping requirements or calling partial coverage full-edition support.
