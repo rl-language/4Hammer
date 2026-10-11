@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 8
-const ACTION_SCHEMA_VERSION = 4
-const OBSERVATION_SCHEMA_VERSION = 8
+const STATE_SCHEMA_VERSION = 9
+const ACTION_SCHEMA_VERSION = 5
+const OBSERVATION_SCHEMA_VERSION = 9
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -243,3 +243,17 @@ cls TimingState:
     TimingStage stage
     Bool open
     Bool controller
+
+
+# Stable model membership survives compaction while later saves use the next
+# group (pp.19/22–23). Storage capacity mirrors the supported 32-model unit.
+cls AllocationGroup:
+    CheckedVector<EntityIdentity, 32> members
+    FixedStat wounds
+    FixedStat save
+    FixedStat invulnerable
+    Bool character
+    Bool wounded
+    Bool precision_visible
+
+using AllocationGroups = CheckedVector<AllocationGroup, 32>

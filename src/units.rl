@@ -16,6 +16,7 @@ using Keywords = CheckedVector<Keyword, 32>
 enum ModelState:
     normal
     fight_on_death
+    pending_destruction
 
     fun equal(ModelState other) -> Bool:
         return self.value == other.value
@@ -31,8 +32,21 @@ cls Model:
     ModelState state
     EntityIdentity identity
     EntityIdentity original_unit
+    # Explicit core ability data for fixtures/future supplied datasheets (p.80).
+    Bool has_deadly_demise
+    Stat deadly_demise
+    # Trigger timing is lifecycle infrastructure for destruction p.87.
+    Bool destruction_pending
+    Bool destroyed_by_attack
+    Bool destroying_unit_known
+    UnitID destroying_unit
+    Dice destruction_fight_roll
     ModelHistory history
     Bool[MAX_WEAPONS] used_once_per_battle_weapon
+
+    # A retained corpse is physically present but not a live recipient (p.87).
+    fun is_alive() -> Bool:
+        return self.state == ModelState::normal and self.wounds_left() > 0
 
     fun base_size_in_inches() -> Float:
         return self.profile.base_size() / 25.4
@@ -40,9 +54,10 @@ cls Model:
     fun is_below_half_wounds() -> Bool:
         return self.suffered_wounds * 2 > self.profile.wounds()
 
+    # Read per-model keywords without copying owning storage (pp.67/87).
     fun has_keyword(Keyword keyword) -> Bool:
         let i = 0
-        let rules = self.keywords
+        ref rules = self.keywords
         while i != rules.size():
             if rules[i] == keyword: 
                 return true 
@@ -57,9 +72,11 @@ cls Model:
             i = i + 1
         return false
 
+    # Properties stay readable to explicit death hooks; active use is gated
+    # by Unit.has_ability/is_alive (p.87). Avoid an owning temporary here.
     fun has_ability(AbilityKind kind) -> Bool:
         let i = 0
-        let rules = self.abilities
+        ref rules = self.abilities
         while i != rules.size():
             if rules[i] == kind: 
                 return true 
@@ -317,7 +334,7 @@ cls Unit:
     # Objective aggregation, marker geometry and securing remain task 8.
     fun model_objective_control(Int model) -> Int:
         assert(model >= 0 and model < self.models.size(), "invalid control model")
-        if self.battle_socked:
+        if self.battle_socked or !self.models[model].is_alive():
             return 0
         return self.models[model].profile.control()
 
@@ -370,13 +387,16 @@ cls Unit:
     fun max_weapon_parameter(Weapon w, WeaponRuleKind kind) -> Int:
         return max(w.get_rule_parameter(kind), self.get_temporary_weapon_parameter(kind)) 
 
+    # Destroyed retained models cannot supply active abilities; an all-dead
+    # unit cannot satisfy an ability requirement vacuously (p.87).
     fun all_have_ability(AbilityKind kind) -> Bool:
-        let i = 0
-        while i != self.models.size():
-            if !self.models[i].has_ability(kind):
-                return false
-            i = i + 1
-        return true
+        let alive = false
+        let all_have = true
+        for i in range(self.models.size()):
+            if self.models[i].is_alive():
+                alive = true
+                all_have = all_have and self.models[i].has_ability(kind)
+        return alive and all_have
 
     fun all_have_keyword(Keyword kind) -> Bool:
         let i = 0
@@ -394,10 +414,12 @@ cls Unit:
             i = i + 1
         return false
 
+    # Exclude retained destroyed models from active unit abilities (p.87);
+    # attached-unit ability lifetime remains deferred with task 6.
     fun has_ability(AbilityKind kind) -> Bool:
         let i = 0
         while i != self.models.size():
-            if self.models[i].has_ability(kind):
+            if self.models[i].is_alive() and self.models[i].has_ability(kind):
                 return true 
             i = i + 1
         return false
@@ -665,7 +687,12 @@ cls Unit:
     fun damage(ModelID target_model_id) -> Bool:
         return self.damage(target_model_id.get(), 1)
 
+    # Legacy raw storage helper for simple no-prevention fixtures. Production
+    # rules use resolve_mortal_wounds for choices/FNP/triggers (pp.24/81/87).
     fun deal_mortal_wound_damage(Int wounds):
+        assert(wounds >= 0, "negative mortal damage")
+        if self.empty():
+            return
         for i in range(wounds):
             self.damage(0, 1)
             if self.models.size() == 0:

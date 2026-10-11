@@ -2284,3 +2284,50 @@ fun test_damage_all_weapon_ap_signs_are_consistent() -> Bool:
             return false
     return Weapon::relic_weapon.penetration() == -2 and Weapon::smite_witchfire.penetration() == -1
 
+
+# Mixed models are explicit core allocation fixtures, not attachment grants.
+fun damage_test_fixture() -> Board:
+    let board = attack_declaration_fixture()
+    board[1].models.append(board[1][0])
+    board[1][1].identity = -1
+    board.identify_units()
+    return board
+
+# p.87: retained destroyed models contribute no OC and cannot supply active
+# unit abilities; explicit on-destruction properties remain readable to hooks.
+fun test_damage_pending_model_oc_and_active_ability_exclusion() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].abilities.append(AbilityKind::feeder_tendrils)
+    board[1][0].state = ModelState::pending_destruction
+    board[1][0].suffered_wounds = 2
+    return board[1].model_objective_control(0) == 0 and !board[1].has_ability(AbilityKind::feeder_tendrils) and !board[1][0].is_alive()
+
+# p.87: deferred trigger state, random demise and source identity survive saves;
+# malformed provenance is rejected atomically rather than stranded forever.
+fun test_damage_pending_death_save_round_trip_and_source_guard() -> Bool:
+    let state = play()
+    state.board = damage_test_fixture()
+    state.board[1][0].state = ModelState::pending_destruction
+    state.board[1][0].suffered_wounds = 2
+    state.board[1][0].destruction_pending = true
+    state.board[1][0].destroyed_by_attack = true
+    state.board[1][0].destroying_unit_known = true
+    state.board[1][0].destroying_unit = 0
+    state.board[1][0].has_deadly_demise = true
+    state.board[1][0].deadly_demise = dice_stat(3)
+    let restored = play()
+    if !set_state(restored, to_string(state)):
+        return false
+    let demise = restored.board[1][0].deadly_demise
+    if demise is Dice:
+        if demise.value != 3 or !restored.board[1][0].destruction_pending:
+            return false
+    else:
+        return false
+    let before = to_string(restored)
+    state.board[1][0].destroying_unit = 31
+    if set_state(restored, to_string(state)) or to_string(restored) != before:
+        return false
+    state.board[1][0].destroying_unit = 0
+    state.board[1][0].destroying_unit_known = false
+    return !set_state(restored, to_string(state)) and to_string(restored) == before

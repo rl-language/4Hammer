@@ -18,6 +18,7 @@ cls DeclaredWeapon:
     Bool[MAX_UNIT_COUNT] targeted
     Bool[MAX_UNIT_COUNT] resolved
     AttackShare[MAX_UNIT_COUNT] shares
+    LinearlyDistributedInt<0, MAX_STAT_MODIFIER>[MAX_UNIT_COUNT] melta_bonus
 
 using DeclaredWeapons = CheckedVector<DeclaredWeapon, MAX_SELECTED_WEAPONS>
 

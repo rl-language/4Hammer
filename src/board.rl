@@ -12,6 +12,10 @@ enum CurrentStateDescription:
     save_roll
     damage_roll
     select_weapon
+    allocation_order
+    feel_no_pain_roll
+    mortal_wound
+    destruction_roll
     select_oath_of_moment_target
     use_duty_and_honour 
     overwatch 
@@ -20,6 +24,9 @@ cls AttackSequenceInfo:
     UnitID source_unit_id # required
     UnitID target_unit_id # required
     Bool penetration_bonus
+    LinearlyDistributedInt<0, MAX_STAT_MODIFIER> melta_damage_bonus
+    Bool precision_visibility_known
+    Bool[32] precision_visible_targets
     Bool hit_roll_bonus
     # Cover changes BS, separate from the clamped hit modifier (p.50).
     Bool target_has_cover
@@ -141,6 +148,9 @@ cls Board:
     Bool[2] has_used_shadow_in_the_warp
 
     AttackSequenceInfo attack_info
+    # Active group labels/target are editor infrastructure for p.19 decisions.
+    AllocationGroups active_allocation_groups
+    UnitID active_allocation_target
     Bool[2] obtained_extra_cp_this_round
     CommandPoints[2] command_points
     LinearlyDistributedInt<0, MAX_ROUNDS> current_round
@@ -684,6 +694,16 @@ fun valid_state_foundations(Board board) -> Bool:
         else:
             for area_index in range(board.terrain_areas.size()):
                 if point_in_terrain_area(board.objective_position(index), board.terrain_areas[area_index]):
+                    return false
+    for unit in range(board.units.size()):
+        # Pending death provenance must identify the attack to which its
+        # delayed trigger belongs; reject a save that could strand it (p.87).
+        for model in range(board.units[unit].models.size()):
+            ref casualty = board.units[unit][model]
+            if casualty.destruction_pending:
+                if casualty.is_alive() or casualty.state == ModelState::normal or (casualty.destroyed_by_attack and !casualty.destroying_unit_known):
+                    return false
+                if casualty.destroying_unit_known and casualty.destroying_unit.get() >= board.units.size():
                     return false
     let seen : Vector<Int>
     let i = 0
