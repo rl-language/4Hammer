@@ -1,0 +1,47 @@
+locator	source_page	referenced_entry	availability	gate
+P05-05	5	Example App Reference	illustrative reference label	none
+P09-19	9	Player’s Rules	app definition not supplied	D04
+P09-20	9	Rules Sequencing	app definition not supplied	D04
+P09-22	9	Closest Model/Unit	app definition not supplied	D05
+P09-23	9	Table Quarter	app definition not supplied	D05
+P09-24	9	Within/Wholly Within	app definition not supplied	D05
+P09-26	9	Automatically Successful	app definition not supplied	D03
+P09-27	9	Modifying Dice Rolls	app definition not supplied	D03
+P09-28	9	Re‑rolls	app definition not supplied	D03
+P09-29	9	Roll Off	app definition not supplied	D03
+P09-32	9	Multiple Battle-shock Rolls	app definition not supplied	D03
+P11-05	11	Characteristic Modifiers	app definition not supplied	D03
+P11-05	11	Destroyed	definition supplied in core reference	none
+P11-05	11	Random Characteristics	app definition not supplied	D03
+P11-05	11	Aura Abilities 22.01	definition supplied in core reference	none
+P11-05	11	Faction Abilities 22.02	definition supplied in core reference	none
+P11-05	11	Psychic Abilities 22.03	definition supplied in core reference	none
+P11-05	11	Wargear Abilities 22.04	definition supplied in core reference	none
+P11-05	11	Mixed Keywords in Units	definition supplied in core reference	none
+P13-05	13	Random Movement	app definition not supplied	D03
+P17-11	17	Multiple Weapon Profiles	app definition not supplied	D11
+P17-16	17	Random Characteristics	app definition not supplied	D03
+P17-17	17	Target No Longer Eligible or Viable	app definition not supplied	D11
+P19-14	19	Destroyed	definition supplied in core reference	none
+P19-14	19	Modified Characteristics	app definition not supplied	D03
+P19-14	19	Modifying Damage	app definition not supplied	D03
+P19-14	19	Modifying Dice Rolls	app definition not supplied	D03
+P19-14	19	Random Characteristics	app definition not supplied	D03
+P31-04	31	Modified Characteristics	app definition not supplied	D03
+P31-05	31	Multiple Battle-shock Rolls	app definition not supplied	D03
+P31-06	31	Not on the Battlefield	app definition not supplied	D10
+P31-07	31	Starting Strength and Half-strength	definition supplied in core reference	none
+P33-32	33	Different Move Characteristics	definition supplied in core reference	none
+P33-34	33	Modifying Dice Rolls	app definition not supplied	D03
+P37-13	37	Target No Longer Eligible or Viable	app definition not supplied	D11
+P53-02	53	Objectives Not Within a Terrain Area	definition supplied in core reference	none
+P55-03	55	Modifying CP Cost	app definition not supplied	D03
+P55-03	55	Rules Sequencing	app definition not supplied	D04
+P65-21	65	Not on the Battlefield	app definition not supplied	D10
+P65-24	65	Persisting Rules Effects	app definition not supplied	D10
+P69-14	69	Not on the Battlefield	app definition not supplied	D10
+P69-15	69	Persisting Rules Effects	app definition not supplied	D10
+P69-16	69	Setting Up Large Models	app definition not supplied	D05
+P71-03	71	Rules Sequencing	app definition not supplied	D04
+P87-10	87	Regaining Lost Wounds	app definition not supplied	D10
+P87-11	87	Revived	definition supplied in core reference	none

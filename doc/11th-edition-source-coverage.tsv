@@ -1,0 +1,1115 @@
+locator	source_page	coverage_entries	roadmap_tasks	kind	retained_source_text
+P04-01	4	U01	17	supporting/source text	Welcome to the Warhammer 40,000 Core Rules. The following pages contain everything you need to know in order to wage battle across the war-torn galaxy of the 41st millennium.
+P04-02	4	U01	17	supporting/source text	Warhammer 40,000 is a tabletop battle game in which each player commands an army of Citadel miniatures representing the forces of the Imperium or one of its many enemies. The game unfolds in a series of battle rounds, during which each player will take a turn made up of five phases. Across these phases, the players will move their forces around the battlefield and make attacks to destroy their foes with deadly shooting and bloody hand-to-hand fighting. [The original text crossed a column boundary; P04-03 is incorporated here.]
+P04-04	4	U01	17	supporting/source text	A battle usually lasts for five battle rounds, at the end of which, through a combination of skill, tactics and a little luck, one of the players will be crowned the victor.
+P05-01	5	U01	17	supporting/source text	WARHAMMER 40,000: THE APP
+P05-02	5	U01	17	supporting/source text	The Warhammer 40,000 app is the best companion to your games of Warhammer 40,000! As well as including enhanced Core Rules with expanded reference features, the app allows you to easily create an army roster and access your faction’s rules.
+P05-03	5	U01	17	supporting/source text	The Warhammer 40,000 app is also the best place to get the very latest updates for your faction, from additional background to brand new rules.
+P05-04	5	U01	17	supporting/source text	On the following pages, references to additional app content are highlighted in green, as shown below:
+P05-05	5	U01	17	cross-reference	► Example App Reference
+P05-06	5	U01	17	supporting/source text	Each Warhammer 40,000 game is played using a mission, which you must generate before you begin. You can do so by using a Warhammer 40,000 mission deck. Each mission will tell you how to prepare for the battle and deploy your forces, as well as any additional rules that will be in effect. Crucially, it will also state what the players need to do to win!
+P05-07	5	U01	17	supporting/source text	Missions will instruct players to muster an army from their collection of Citadel miniatures, and will state the total size those armies should be. A simple guide to mustering an army can be found in the Warhammer 40,000 app. Doing so is a rewarding hobby in itself, with near limitless narrative themes and unit combinations to explore for over two-dozen factions.
+P05-08	5	U01	17	supporting/source text	For whichever faction you want to collect and game with, a Codex is an invaluable guide. Each Codex is the ultimate source book for that faction, filled with inspirational background, art and photography, as well as the rules representing that faction’s models and the unique fighting styles they can use on the tabletop.
+P05-09	5	U01	17	supporting/source text	Finally, before playing a game of Warhammer 40,000, you will need to create a battlefield with some terrain. You can use any surface you can place your models and terrain upon; a table is ideal. Your mission will tell you the size of battlefield you should use, and guide you on the volume and placement of terrain. In doing so, players can recreate many of the 41st millennium’s nightmarish war zones, from carnivorous death worlds to war-ravaged cityscapes.
+P05-10	5	U01	17	supporting/source text	The following pages contain the Core Rules that every Warhammer 40,000 player will need to know. This book is your indispensable guide to playing exciting war games that bring the grim and desperate conflicts of the 41st millennium to life. So grab your dice and tape measure, steel your resolve, and may your victories go down in legend!
+P05-11	5	U01	17	supporting/source text	Scan the code below to get started with the Warhammer 40,000 app.
+P08-01	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	Before you learn how to move your warriors across the battlefield and attack the enemy in deadly firefights and bloody close combat, this section introduces some core concepts that underpin every Warhammer 40,000 battle.
+P08-02	8	01.01	3,17	heading	ARMIES 01.01
+P08-03	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	Each player in a game of Warhammer 40,000 commands an army made up of units of models. You control all of the models in your army. If a rule refers to the ‘controlling player’, it is referring to the player who controls the models being affected by that rule.
+P08-04	8	01.02	3,4,6	heading	UNITS AND MODELS 01.02
+P08-05	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	A unit can contain one or more models. These models move and fight together as a single group. Most models have a base, which is also part of that model for all rules purposes.
+P08-06	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	Rules sometimes affect ‘friendly’ or ‘enemy’ models or units, which are defined as follows:
+P08-07	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	▪ Friendly units and models are those in your army.
+P08-08	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	▪ Enemy units and models are those in your opponent’s army.
+P08-09	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	If a rule affects units or models without specifying that they are friendly or enemy, that rule affects any unit or model, regardless of whose army they are in. When an effect or ability applies to a unit, it applies to every model in that unit.
+P08-10	8	01.03	5	heading	ACTIVE PLAYER AND OPPOSING PLAYER 01.03
+P08-11	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	At any given time, one player is the ‘active player’ and their opponent is the ‘opposing player’. Which player is which changes throughout the battle, but both players are always one or the other; whenever a player becomes the active player, their opponent becomes the opposing player, and vice versa.
+P08-12	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	While it is neither player’s turn (e.g. at the start or end of the battle round), the player who takes the first turn in each battle round is the active player.
+P08-13	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	While it is a player’s turn, that player is the active player, with the following exceptions:
+P08-14	8	01.01,01.02,01.03	3,4,5,6,17	supporting/source text	▪ Each time a unit is selected to move, that unit’s controlling player is the active player until that move ends. ▪ Each time a unit is selected to shoot or selected to fight, that unit’s controlling player is the active player until those attacks are resolved.
+P09-01	9	01.04,U30	1,4,5,9,10,11,17	heading	MEASURING DISTANCES 01.04
+P09-02	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	"Distances in Warhammer 40,000 are measured in inches (""). You can measure distances whenever you want to."
+P09-03	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	When a rule refers to a model’s position in relation to anything else on the battlefield, unless otherwise stated, measure to or from the closest part of that model’s base.
+P09-04	9	01.05,U30	1,2,4,5,9,10,11,17	heading	DICE 01.05
+P09-05	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	You will require some six‑sided dice (often abbreviated to D6). There are many ways dice rolls are referred to, including:
+P09-06	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	▪ 2+, 3+, and so on: 2+ means a result of 2 or more, 3+ means a result of 3 or more, and so on. ▪ 1‑3, 4‑6, and so on: Any result within the specified range will interact with the rule stated. ▪ 2D6, 3D6, and so on: Roll the stated number of D6 and add the individual values together (e.g. to roll 2D6, roll two D6 and add the values together). ▪ D3: Roll one D6 and halve the result (rounding up).
+P09-07	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	▪ D6+1, 2D6+3, and so on: Roll the stated number of dice and add the stated value to the result.
+P09-08	9	01.06,U30	1,4,5,7,9,10,11,17	heading	LEADERSHIP ROLLS 01.06
+P09-09	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	To make a leadership roll for a unit, its controlling player rolls 2D6: if the result is equal to or greater than one or more of the Ld characteristics in that unit, that roll succeeds. Otherwise, that roll fails. The rule that instructed you to make that leadership roll will describe the effects of that roll succeeding or failing.
+P09-10	9	01.07,U30	1,4,5,7,8,9,10,11,15,17	heading	BATTLE-SHOCK ROLLS 01.07
+P09-11	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	To make a battle-shock roll for a unit, its controlling player makes a leadership roll for it (see above).
+P09-12	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	▪ If that roll succeeds, that unit does not become battle-shocked. ▪ If that roll fails, that unit, and each model in it, is battle-shocked.
+P09-13	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	While a unit is battle-shocked:
+P09-14	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	▪ The Objective Control (OC) characteristic of all of its models is modified to ‘-’ (02.02). ▪ Its controlling player cannot target that unit with stratagems (15). ▪ It is not eligible to start an action (16), and any action it has started cannot be completed.
+P09-15	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	SEE ALSO
+P09-16	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	UNITS AND MODELS
+P09-17	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	▪ Frame 17.02
+P09-18	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	ACTIVE PLAYER AND OPPOSING PLAYER
+P09-19	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Player’s Rules
+P09-20	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Rules Sequencing
+P09-21	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	MEASURING DISTANCES
+P09-22	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Closest Model/Unit
+P09-23	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Table Quarter
+P09-24	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Within/Wholly Within
+P09-25	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	DICE
+P09-26	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Automatically Successful
+P09-27	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Modifying Dice Rolls
+P09-28	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Re‑rolls
+P09-29	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Roll Off
+P09-30	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	BATTLE-SHOCK ROLLS
+P09-31	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	▪ Command Phase 08.00
+P09-32	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	cross-reference	► Multiple Battle-shock Rolls
+P09-33	9	01.04,01.05,01.06,01.07,U30	1,2,4,5,7,8,9,10,11,15,17	supporting/source text	BATTLEFIELD MORALE The morale and organisation of troops can waver and break during battle. This is checked using battle-shock rolls, most commonly in the Command phase. Failing such a roll represents the unit’s courage faltering due to taking casualties or through other disruption, reducing its battlefield effectiveness. Similarly, some rules will require you to check a unit’s readiness by making a leadership roll.
+P10-01	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Each unit has a datasheet that explains how it functions in battle. Here you will learn how to use datasheets when preparing your army and playing games.
+P10-02	10	02.01	17	heading	1. DATASHEET NAME 02.01
+P10-03	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Here you will find the name of the unit.
+P10-04	10	02.02	3,9,17	heading	2. PROFILES 02.02
+P10-05	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	These contain the following characteristics that tell you how mighty the models in the unit are:
+P10-06	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Move (M): The speed at which a model traverses the battlefield. If a model has an M characteristic of ‘-’, it can be set up on the battlefield but otherwise cannot be moved.
+P10-07	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Toughness (T): The model’s resilience against harm.
+P10-08	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Save (Sv): Presented as a dice result (e.g. 4+), this indicates the protection a model’s armour gives it.
+P10-09	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Invulnerable Save (InSv): Presented as a dice result (e.g. 4+). Some models are protected by esoteric means in addition to physical armour, such as force fields or preternatural reflexes. Not all models have an InSv characteristic, but if they do, it will be listed here.
+P10-10	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Wounds (W): Wounds represent how much damage a model can sustain before it is destroyed. If a model’s wounds are reduced to 0 or fewer, that model is destroyed.
+P10-11	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Leadership (Ld): Presented as a dice result (e.g. 7+), this reveals how courageous, determined or self‑controlled a model is.
+P10-12	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Objective Control (OC): How effectively a model can control an objective on the battlefield. If a model has an OC characteristic of ‘-’ it is unable to control objectives at all.
+P10-13	10	02.03	6,12,17	heading	3. ABILITIES 02.03
+P10-14	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Many units have abilities that may apply during the game. These will be described here.
+P10-15	10	02.04	9,12,17	heading	4. WEAPONS 02.04
+P10-16	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Weapons have the following characteristics:
+P10-17	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Range (R): How far ranged weapons can shoot. Weapons with an R characteristic of ‘Melee’ are melee weapons.
+P10-18	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Attacks (A): How many attack dice are used each time that weapon is used.
+P10-19	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Ballistic Skill (BS): Presented as a dice result (e.g. 4+), this shows how accurate the bearer is when shooting with the relevant ranged weapon.
+P10-20	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Weapon Skill (WS): Presented as a dice result (e.g. 4+), this reflects the bearer’s skill in wielding the relevant melee weapon.
+P10-21	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Strength (S): The higher a weapon’s S characteristic, the more likely it is to wound a foe.
+P10-22	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Armour Penetration (AP): Presented as a modifier to a dice roll (e.g. -1). The larger the modifier, the better the weapon is at cutting through the target’s defences.
+P10-23	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Damage (D): The amount of damage inflicted by an attack.
+P10-24	10	02.05	6,12	heading	5. KEYWORDS 02.05
+P10-25	10	02.01,02.02,02.03,02.04,02.05	3,6,9,12,17	supporting/source text	Datasheets have a list of keywords, separated into faction keywords and other keywords. The former are used when deciding which models to include in your army, but otherwise both are functionally the same. Keywords appear in full capitals, in KEYWORD BOLD. 02
+P11-01	11	02.06,02.07,U02,U30	1,3,4,5,6,9,10,11,17	supporting/source text	Some rules are linked to one or more keywords. For example, a rule might say that it applies to INFANTRY units. This means it only applies to units that have the INFANTRY keyword. Singular and plural instances of the same keyword function in the same way.
+P11-02	11	02.06,U02,U30	1,3,4,5,6,9,10,11,17	heading	6. UNIT COMPOSITION AND OTHER RULES 02.06 This section details the number and types of models in the unit. Each of those models will have one set of default wargear, which will be listed here. It may also list other rules, such as which units a leader unit can join or which units can embark within a TRANSPORT.
+P11-03	11	02.07,U02,U30	1,4,5,9,10,11,17	heading	7. WARGEAR OPTIONS 02.07 Some datasheets have a list of wargear options. When you include such a unit in your army, you can use these options to alter the weapons and other wargear its models have.
+P11-04	11	02.06,02.07,U02,U30	1,3,4,5,6,9,10,11,17	supporting/source text	ILLUSTRATIVE DATASHEET — BOYZ (example from the book, not a complete faction rules source): Profile columns: M; T; Sv; W; Ld; OC. Boyz: 6 inches; 5; 5+; 1; 7+; 2. Boss Nob: 6 inches; 5; 5+; 2; 7+; 2. Ranged weapon columns: Range; A; BS; S; AP; D. Kustom shoota [RAPID FIRE 2]: 18 inches; 4; 5+; 4; 0; 1. Kombi-rokkit: 24 inches; 1; 5+; 10; -2; 3. Kombi-shoota: 24 inches; 2; 5+; 4; 0; 1. Shoota [RAPID FIRE 1]: 18 inches; 2; 5+; 4; 0; 1. Slugga [CLOSE-QUARTERS]: 12 inches; 1; 5+; 4; 0; 1. Melee weapon columns: Range; A; WS; S; AP; D. Big choppa: Melee; 3; 3+; 7; -1; 2. Choppa: Melee; 3; 3+; 4; -1; 1. Abilities: FACTION: Waaagh! Get da Good Bitz: At the end of your Command phase, if this unit controls an objective, that objective is secured by your army. Unit composition: 1 Boss Nob; 9 Boyz. The Boss Nob is equipped with: 1 slugga; 1 kustom shoota; 1 big choppa. Every Boy is equipped with: 1 slugga; 1 shoota; 1 choppa. Wargear options: The Boss Nob can have its 1 kustom shoota replaced with 1 kombi-shoota and 1 kombi-rokkit. Keywords: INFANTRY; BATTLELINE; MOB; EXPLOSIVES; BOYZ. Faction keywords: ORKS.
+P11-05	11	02.06,02.07,U02,U30	1,3,4,5,6,9,10,11,17	supporting/source text	External/supporting cross-references printed on this page: Characteristic Modifiers; Destroyed; Random Characteristics; Aura Abilities 22.01; Faction Abilities 22.02; Psychic Abilities 22.03; Wargear Abilities 22.04; Mixed Keywords in Units.
+P12-01	12	03.01	4,11	supporting/source text	During a battle, you will move your models by picking them up and changing their position on the battlefield. The principles of movement are explained here.
+P12-02	12	03.01	4,11	heading	MOVING UNITS 03.01
+P12-03	12	03.01	4,11	supporting/source text	There are several types of move a unit can make. Each one defines which units are eligible to make it, what its maximum distance or set-up distance is, and any conditions that must be met.
+P12-04	12	03.01	4,11	supporting/source text	Each time you move a unit, you can move one or more of its models, one at a time, by moving it in a straight line and/or rotating it, as many times as you want to.
+P12-05	12	03.01	4,11	supporting/source text	Each time you move a model, unless otherwise stated:
+P12-06	12	03.01	4,11	supporting/source text	▪ It can be moved through friendly models.
+P12-07	12	03.01	4,11	supporting/source text	▪ It can be moved through any space its base can fit through.
+P12-08	12	03.01	4,11	supporting/source text	▪ Its base cannot be moved through enemy models.
+P12-09	12	03.01	4,11	supporting/source text	▪ Its base cannot cross the edge of the battlefield.
+P12-10	12	03.01	4,11	supporting/source text	▪ All stated ‘While Moving’ conditions must be met.
+P12-11	12	03.01	4,11	supporting/source text	MOVING A MODEL IN A STRAIGHT LINE
+P12-12	12	03.01	4,11	supporting/source text	Each time you move a model in a straight line, move it horizontally across the battlefield. Measure from the same point on its base at the start and end of that move, and add that distance to any other distance it has moved since its unit began that move. The distance moved cannot be greater than the maximum distance of that move type.
+P12-13	12	03.01	4,11	supporting/source text	ROTATING A MODEL
+P12-14	12	03.01	4,11	supporting/source text	Each time you rotate a model, turn it any amount around the centre of its base, while keeping it upright. Note that rotating a model does not count towards the distance it has moved.
+P12-15	12	03.01	4,11	supporting/source text	ENDING A MOVE
+P12-16	12	03.01	4,11	supporting/source text	After you have finished setting up all of the models in a unit and/or moving all of the models in a unit that you want to move, check that all of the following apply:
+P12-17	12	03.01	4,11	supporting/source text	▪ If that unit is on the battlefield, it is in coherency (03.03).
+P12-18	12	03.01	4,11	supporting/source text	▪ No models in that unit are on another model or partway through a surface of a terrain feature (e.g. a wall or ceiling). ▪ All stated ‘After Moving’ conditions are met.
+P12-19	12	03.01	4,11	supporting/source text	If one or more of the above conditions are not met, that unit cannot make that move and its models are returned to their positions at the start of that move. Otherwise, after resolving any additional rules stated in the ‘After Moving’ section of that move type, that move ends. 03
+P13-01	13	U03	4,11	cross-reference	SEE ALSO
+P13-02	13	U03	4,11	supporting/source text	▪ Frame 17.02
+P13-03	13	U03	4,11	supporting/source text	▪ Monsters and Vehicles 17.00
+P13-04	13	U03	4,11	supporting/source text	▪ Moving Vertically 13.06
+P13-05	13	U03	4,11	cross-reference	► Random Movement
+P13-06	13	U03	4,11	supporting/source text	▪ Strategic Reserves 20.00
+P13-07	13	U03	4,11	supporting/source text	▪ Terrain 13.00
+P13-08	13	U03	4,11	supporting/source text	▪ Transports 18.00
+P13-09	13	U03	4,11	supporting/source text	MOVE TYPES
+P13-10	13	U03	4,11	supporting/source text	▪ Advance Move 09.06
+P13-11	13	U03	4,11	supporting/source text	▪ Charge Move 11.04
+P13-12	13	U03	4,11	supporting/source text	▪ Consolidation Move 12.08
+P13-13	13	U03	4,11	supporting/source text	▪ Disembark Move 18.04
+P13-14	13	U03	4,11	supporting/source text	▪ Emergency Disembark Move 18.05
+P13-15	13	U03	4,11	supporting/source text	▪ Fall-back Move 09.07
+P13-16	13	U03	4,11	supporting/source text	▪ Ingress Move 20.04
+P13-17	13	U03	4,11	supporting/source text	▪ Normal Move 09.05
+P13-18	13	U03	4,11	supporting/source text	▪ Pile-in Move 12.03
+P13-19	13	U03	4,11	supporting/source text	▪ Scout Move 24.32
+P13-20	13	U03	4,11	supporting/source text	▪ Surge Move 21.02
+P13-21	13	U03	4,11	supporting/source text	MOVING IN A STRAIGHT LINE
+P13-22	13	U03	4,11	supporting/source text	ROTATING
+P13-23	13	U03	4,11	supporting/source text	"Both models shown here can move a maximum distance of 6"". They both move 3"" in a straight line, then 3"" in another straight line, for a total movement of 6""."
+P13-24	13	U03	4,11	supporting/source text	"This model can move a maximum distance of 12"". It moves in a series of straight lines and rotations, as follows:"
+P13-25	13	U03	4,11	supporting/source text	"A) Moves 6"" in a straight line"
+P13-26	13	U03	4,11	supporting/source text	B) Rotates
+P13-27	13	U03	4,11	supporting/source text	"C) Moves 6"" in a straight line"
+P13-28	13	U03	4,11	supporting/source text	D) Rotates
+P13-29	13	U03	4,11	supporting/source text	"This model has moved a total of 12""."
+P13-30	13	U03	4,11	supporting/source text	Models without a base are rotated around their central axis (see Frame, 17.02).
+P14-01	14	03.02	4,11	heading	SET UP 03.02
+P14-02	14	03.02,03.03,03.04	4,5,11	supporting/source text	Before your units can move and make attacks, they will first need to be set up on the battlefield. This most commonly happens when deploying your army for battle, but can happen for other reasons as well.
+P14-03	14	03.02,03.03,03.04	4,5,11	supporting/source text	Whenever a rule instructs you to set up a unit, place its models on the battlefield so that:
+P14-04	14	03.02,03.03,03.04	4,5,11	supporting/source text	▪ That unit is in coherency (see below).
+P14-05	14	03.02,03.03,03.04	4,5,11	supporting/source text	▪ That unit is unengaged (see below).
+P14-06	14	03.02,03.03,03.04	4,5,11	supporting/source text	▪ All other requirements and restrictions are met.
+P14-07	14	03.02,03.03,03.04	4,5,11	supporting/source text	If you cannot set up all of the models in a unit, remove that unit from the battlefield and return it to its original position (e.g. in strategic reserves or embarked within a TRANSPORT).
+P14-08	14	03.03	4,5	heading	COHERENCY 03.03
+P14-09	14	03.02,03.03,03.04	4,5,11	supporting/source text	A unit that contains more than one model must be set up and end any kind of move in coherency. A unit is in coherency while both of the following apply to every model in that unit:
+P14-10	14	03.02,03.03,03.04	4,5,11	supporting/source text	"▪ Within 2"" horizontally and 5"" vertically of at least one other model in that unit. ▪ Within 9"" horizontally and 5"" vertically of every other model in that unit."
+P14-11	14	03.02,03.03,03.04	4,5,11	supporting/source text	REGAINING COHERENCY
+P14-12	14	03.02,03.03,03.04	4,5,11	supporting/source text	In the End of Turn step of each player’s turn, if one or more units on the battlefield are not in coherency, those units’ controlling players must remove models from them, one at a time, until they are in coherency again. Models removed in this way are destroyed, but they do not trigger rules that apply when a model is destroyed.
+P14-13	14	03.04	4	heading	ENGAGEMENT 03.04
+P14-14	14	03.02,03.03,03.04	4,5,11	supporting/source text	"A model’s engagement range is the area of the battlefield within 2"" horizontally and 5"" vertically of it."
+P14-15	14	03.02,03.03,03.04	4,5,11	supporting/source text	▪ While a friendly model is within engagement range of one or more enemy models, those models – and the units they belong to – are engaged with each other. ▪ While a unit contains no engaged models, that unit is unengaged.
+P14-16	14	03.02,03.03,03.04	4,5,11	supporting/source text	WHAT IS COHERENCY? Coherency prevents models in the same unit from becoming too separated from each other while on the battlefield, ensuring they are set up and end every kind of move as a single group.
+P14-17	14	03.02,03.03,03.04	4,5,11	supporting/source text	WHAT IS ENGAGEMENT? While opposing models are within each other’s engagement range, they are able to fight in vicious melee, so unless they are seeking to make melee attacks, models should keep out of their foes’ reach.
+P14-18	14	03.02,03.03,03.04	4,5,11	supporting/source text	IF YOU CANNOT SET UP A UNIT This section explains how to set up your units on the battlefield. While doing so as the result of a move type, if you have to return a unit’s models to their previous positions because it is not possible to set them all up, that unit has not been selected to make that move. This means it can be selected to make a move later, so could either attempt another set up or remain stationary (09.04).
+P15-01	15	U03	4,11	supporting/source text	COHERENCY
+P15-02	15	U03	4,11	supporting/source text	ENGAGEMENT
+P15-03	15	U03	4,11	supporting/source text	"Every model in this unit is within 2"" of at least one other model in its unit, and every model is within 9"" of every other model in its unit. This unit is therefore in coherency."
+P15-04	15	U03	4,11	supporting/source text	"These two units have at least one model within 2"" of the opposing unit, and are therefore engaged with each other."
+P16-01	16	04.01,04.02	9,12	supporting/source text	MODELS WITHOUT RANGED/MELEE WEAPONS A model that does not have any ranged weapons cannot make ranged attacks, and a model that does not have any melee weapons cannot make melee attacks.
+P16-02	16	04.01,04.02	9,12	supporting/source text	SELECTING TARGETS When shooting or fighting, you can select different targets for each weapon. If you cannot select a target for a weapon, or if you choose not to select a target for a ranged weapon, the model with that weapon will not make attacks with it.
+P16-03	16	04.01,04.02	9,12	supporting/source text	SIDEARMS Some models are equipped with [CLOSE-QUARTERS] weapons in addition to other firearms. Such models can be an exception to the rules in this section, as you may not be able to select all of their weapons to make attacks with.
+P16-04	16	04.01	9,12	heading	1. SELECT WEAPONS 04.01
+P16-05	16	04.01,04.02	9,12	supporting/source text	For each model in the attacking unit, select which weapons that model will make attacks with. Models make ranged attacks with ranged weapons, and make melee attacks with melee weapons.
+P16-06	16	04.01,04.02	9,12	supporting/source text	WHILE SHOOTING
+P16-07	16	04.01,04.02	9,12	supporting/source text	You can select one or more ranged weapons that model has.
+P16-08	16	04.01,04.02	9,12	supporting/source text	WHILE FIGHTING
+P16-09	16	04.01,04.02	9,12	supporting/source text	You must select one melee weapon that model has.
+P16-10	16	04.02	9	heading	2. SELECT TARGETS 04.02
+P16-11	16	04.01,04.02	9,12	supporting/source text	For each weapon selected:
+P16-12	16	04.01,04.02	9,12	supporting/source text	WHILE SHOOTING
+P16-13	16	04.01,04.02	9,12	supporting/source text	Select one enemy unit to be the target of that weapon. Unless otherwise stated, each target must be:
+P16-14	16	04.01,04.02	9,12	supporting/source text	▪ Visible to the model that has that weapon (06.01).
+P16-15	16	04.01,04.02	9,12	supporting/source text	▪ Within range of that weapon.
+P16-16	16	04.01,04.02	9,12	supporting/source text	▪ Unengaged.
+P16-17	16	04.01,04.02	9,12	supporting/source text	WHILE FIGHTING
+P16-18	16	04.01,04.02	9,12	supporting/source text	Select one or more enemy units to be the targets of that weapon:
+P16-19	16	04.01,04.02	9,12	supporting/source text	▪ Each target must be engaged with the model that has that weapon. ▪ You cannot select more targets than that weapon’s A characteristic. 04
+P16-20	16	04.01,04.02	9,12	supporting/source text	Each time a unit shoots or fights, the active player follows these steps:
+P16-21	16	04.01,04.02	9,12	supporting/source text	1. SELECT WEAPONS 2. SELECT TARGETS 3. RESOLVE ATTACKS
+P16-22	16	04.01,04.02	9,12	supporting/source text	During the battle, your units will shoot at and fight the enemy, making attacks with their weapons each time they do so. This section explains how to make attacks with your models.
+P17-01	17	04.03,U30	1,4,5,9,10,11,17	heading	3. RESOLVE ATTACKS 04.03
+P17-02	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	Resolve attacks using the following sequence:
+P17-03	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	1. Select Enemy Unit: Select one of the enemy units targeted by one or more weapons. 2. Gather Attack Dice: Select one weapon targeting that unit that has not yet been used to make attacks against it, and gather a number of D6 equal to that weapon’s A characteristic. These are attack dice – each one represents one attack being made by an attacking model with that weapon. If one or more other weapons targeting that unit make identical attacks to the selected weapon (see below) and those weapons have not yet been used to make attacks against that target, they do so now and you gather those weapons’ attack dice as well (e.g. for three weapons making identical attacks, each with an A characteristic of 2, gather a total of six D6). 3. Resolve Attack Dice: Resolve the attack sequence (05) for all of the attack dice you just gathered. 4. Other Attacks: Follow the first of the instructions below that applies:
+P17-04	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	-> If there are any weapons targeting the same unit that have not yet been used to make attacks, return to the Gather Attack Dice step.
+P17-05	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	-> Otherwise, if there are any weapons with unresolved attacks targeting a different unit, return to the Select Enemy Unit step.
+P17-06	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	-> Otherwise, if all weapons have been used to make all of their attacks, this sequence ends and the attacking unit’s attacks have been resolved.
+P17-07	17	04.03,U30	1,4,5,9,10,11,17	cross-reference	SEE ALSO
+P17-08	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	SELECT WEAPONS
+P17-09	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	▪ [CLOSE‑QUARTERS] 24.07
+P17-10	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	▪ [EXTRA ATTACKS] 24.11
+P17-11	17	04.03,U30	1,4,5,9,10,11,17	cross-reference	► Multiple Weapon Profiles
+P17-12	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	SELECT TARGETS
+P17-13	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	▪ Frame 17.02
+P17-14	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	▪ Shooting at Engaged Monsters and Vehicles 17.03
+P17-15	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	RESOLVE ATTACKS
+P17-16	17	04.03,U30	1,4,5,9,10,11,17	cross-reference	► Random Characteristics
+P17-17	17	04.03,U30	1,4,5,9,10,11,17	cross-reference	► Target No Longer Eligible or Viable
+P17-18	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	IDENTICAL ATTACKS
+P17-19	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	Identical attacks are those that have the same BS/WS, S, AP and D characteristics, and which are affected by the same applicable abilities and rules.
+P17-20	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	SPLITTING MELEE ATTACKS
+P17-21	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	While selecting targets, if you select more than one unit as the target of a melee weapon, you must split that weapon’s attacks between those target units. To do so, declare how many of that weapon’s attacks will be made against each unit (you must declare at least one attack per unit targeted).
+P17-22	17	04.03,U30	1,4,5,9,10,11,17	supporting/source text	In the Gather Attack Dice step, for each weapon that is splitting its attacks, only gather a number of attack dice for that weapon equal to the number of attacks you declared would be made against that target with that weapon.
+P18-01	18	05.01,05.02,U04	9	supporting/source text	Whenever models make attacks, you will follow the sequence detailed in this section to find out if they inflict damage.
+P18-02	18	05.01,05.02,U04	9	supporting/source text	Each time the active player is instructed to resolve the attack sequence, they follow the steps below. In each step, if there is more than one dice to roll, make all of those rolls simultaneously.
+P18-03	18	05.01,05.02,U04	9	supporting/source text	1. HIT ROLLS 2. WOUND ROLLS 3. SAVE ROLLS 4. INFLICT DAMAGE
+P18-04	18	05.01,05.02,U04	9	supporting/source text	WHEN DOES THIS SEQUENCE END? If an attack fails or inflicts damage, this sequence ends for that attack. When all attacks have either failed or inflicted damage, this sequence ends and those attacks have been resolved.
+P18-05	18	05.01,05.02,U04	9	supporting/source text	CRITICAL HITS AND CRITICAL WOUNDS Critical hits are still hits, and critical wounds are still wounds. In addition, other rules can be triggered by a critical hit or a critical wound, such as [LETHAL HITS] and [DEVASTATING WOUNDS] (24).
+P18-06	18	05.01,U04	9	heading	1. HIT ROLLS 05.01
+P18-07	18	05.01,05.02,U04	9	supporting/source text	Make one hit roll for each attack dice by rolling one D6. For each result, check if it fails or is a hit by matching the first condition below that applies:
+P18-08	18	05.01,05.02,U04	9	supporting/source text	Hit-roll conditions, in the printed order (dice icons expanded to numbers): Unmodified 1 -> FAILS Unmodified 6 -> CRITICAL HIT Equal to or greater than that attack’s BS/WS characteristic -> HIT Any other result -> FAILS
+P18-09	18	05.02,U04	9	heading	2. WOUND ROLLS 05.02
+P18-10	18	05.01,05.02,U04	9	supporting/source text	Make one wound roll for each hit by rolling one D6. For each result, check if it fails or is a wound by matching the first condition below that applies:
+P18-11	18	05.01,05.02,U04	9	supporting/source text	Wound-roll conditions, in the printed order (dice icons expanded to numbers): Unmodified 1 -> FAILS Unmodified 6 -> CRITICAL WOUND Equal to or greater than the required result below -> WOUND Attack’s Strength vs target’s Toughness -> Required result: Strength is TWICE (or more than twice) the Toughness -> 2+ Strength is GREATER than the Toughness -> 3+ Strength is EQUAL to the Toughness -> 4+ Strength is LESS than the Toughness -> 5+ Strength is HALF (or less than half) the Toughness -> 6+ Any other result -> FAILS
+P19-01	19	05.03,U30	1,4,5,9,10,11,17	heading	3. SAVE ROLLS 05.03
+P19-02	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	The opposing player resolves the following sequence:
+P19-03	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	1. Create Groups: Divide all models in the target unit into the following groups, as many times as required:
+P19-04	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	▫ One group for each CHARACTER model.
+P19-05	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	▫ One group for all other models with the same W, Sv and InSv characteristics. 2. Allocation Order: Declare the order in which those groups will have attacks allocated to them, applying all of the following:
+P19-06	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	▫ If a non-CHARACTER group contains a model that has lost one or more wounds, that group must be first in the allocation order. ▫ No CHARACTER group can be earlier in the allocation order than a non-CHARACTER group. ▫ CHARACTER groups containing a model that has lost one or more wounds must be earlier in the allocation order than CHARACTER groups containing no wounded models. 3. Make Save Rolls: The opposing player makes one save roll for each attack that wounded the target by rolling one D6.
+P19-07	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	CURRENT ALLOCATION GROUP The first group in the allocation order begins as the current group. Once all models in an allocation group are destroyed, the next group in the allocation order becomes the current one.
+P19-08	19	05.04,U30	1,4,5,9,10,11,17	heading	4. INFLICT DAMAGE 05.04
+P19-09	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	The opposing player resolves the following sequence for each save roll, working from lowest result(s) to highest result(s), until all attacks are resolved or all models in the target unit are destroyed – in the latter case, any excess attacks are lost.
+P19-10	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	1. Select Model: Select one model in the current allocation group (see right); this must be a model that has lost one or more wounds if possible. 2. Check Save Roll: For each result, check if that attack inflicts damage or fails by matching the first condition below that applies:
+P19-11	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	Save-result conditions, in the printed order (dice icon expanded to a number): Unmodified 1 -> INFLICTS DAMAGE Invulnerable Save: The models in the current allocation group have an InSv characteristic, and the result is equal to or greater than that characteristic. -> FAILS Save and AP: After modifying the result by the attacking weapon’s AP characteristic, it is equal to or greater than the Sv characteristic of models in the current allocation group. -> FAILS Any other result -> INFLICTS DAMAGE
+P19-12	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	Example: An AP characteristic of -1 would modify a save roll of 3 to a 2. For models with a Sv characteristic of 2+ or better, that attack would fail.
+P19-13	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	3. Resolve Damage: If that attack inflicts damage, the selected model loses a number of wounds equal to that attack’s D characteristic. If this reduces that model’s remaining wounds to 0 or fewer, it is destroyed.
+P19-14	19	05.03,05.04,U30	1,4,5,9,10,11,17	supporting/source text	External/supporting cross-references printed on this page: Destroyed; Modified Characteristics; Modifying Damage; Modifying Dice Rolls; Random Characteristics.
+P20-01	20	U05	9,10	supporting/source text	1. SELECT WEAPONS The RED unit is attacking. The following weapons are selected to make attacks with:
+P20-02	20	U05	9,10	supporting/source text	▪ 2 boltguns (B)
+P20-03	20	U05	9,10	supporting/source text	▪ 2 bolt pistols (BP)
+P20-04	20	U05	9,10	supporting/source text	▪ 1 heavy bolter (HB)
+P20-05	20	U05	9,10	supporting/source text	2. SELECT TARGETS The BLUE unit is selected as the target. The unit is visible to all models in the attacking unit. All of the selected weapons are in range, with the exception of one bolt pistol. As a result, that weapon will not make any attacks.
+P20-06	20	U05	9,10	supporting/source text	3. RESOLVE ATTACKS There is only one enemy unit being targeted, so the controlling player now gathers attack dice:
+P20-07	20	U05	9,10	supporting/source text	▪ Five attack dice are gathered for the boltguns and bolt pistol, which have A characteristics of 2 and 1 respectively and all make identical attacks.
+P20-08	20	U05	9,10	supporting/source text	▪ Three attack dice are gathered for the heavy bolter, which has an A characteristic of 3 but does not make identical attacks. 05
+P21-01	21	U05	9,10	supporting/source text	1. HIT ROLLS The controlling player chooses to make the five hit rolls for the boltguns and bolt pistol first. The BS characteristic of the weapons is 3+. Four of the attacks hit the target.
+P21-02	21	U05	9,10	supporting/source text	2. WOUND ROLLS The controlling player makes four wound rolls. The weapons have an S characteristic of 4 and the target unit has a T characteristic of 3, so rolls of 3+ are required to wound. Three of the attacks wound the target.
+P21-03	21	U05	9,10	supporting/source text	3. SAVE ROLLS The target unit’s controlling player makes three save rolls.
+P21-04	21	U05	9,10	supporting/source text	4. INFLICT DAMAGE
+P21-05	21	U05	9,10	supporting/source text	▪ The lowest result is less than both the InSv and Sv characteristics of the target, so that attack inflicts damage. This reduces the model to which that attack was allocated to 0 wounds, which destroys it.
+P21-06	21	U05	9,10	supporting/source text	▪ The next lowest result is less than the target’s InSv characteristic, but greater than its Sv characteristic of 3+; that attack fails.
+P21-07	21	U05	9,10	supporting/source text	▪ The other result is greater than the target’s InSv characteristic of 5+; that attack also fails.
+P21-08	21	U05	9,10	supporting/source text	1. HIT ROLLS The controlling player then makes three hit rolls for the heavy bolter. The BS characteristic of the weapon is 4+. Two of the attacks hit the target.
+P21-09	21	U05	9,10	supporting/source text	2. WOUND ROLLS The controlling player makes two wound rolls. The weapon has an S characteristic of 5, so rolls of 3+ are required to wound. Both attacks wound the target.
+P21-10	21	U05	9,10	supporting/source text	3. SAVE ROLLS The target unit’s controlling player makes two save rolls.
+P21-11	21	U05	9,10	supporting/source text	4. INFLICT DAMAGE
+P21-12	21	U05	9,10	supporting/source text	▪ The lowest result, when modified by the attacking weapon’s AP characteristic of -1, is less than the target’s Sv characteristic of 3+, so that attack inflicts damage. This reduces the model to which that attack was allocated to 0 wounds, which destroys it.
+P21-13	21	U05	9,10	supporting/source text	▪ The other result is equal to the target’s InSv characteristic of 5+; that attack fails.
+P21-14	21	U05	9,10	supporting/source text	-1 to Save Roll
+P21-15	21	U05	9,10	supporting/source text	RESOLVING ATTACK DICE RESOLVING OTHER ATTACKS
+P21-16	21	U05	9,10	supporting/source text	Diagram data transcribed from graphical dice, for the left-hand example: Hit dice: 2, 4, 6, 4, 3. At BS 3+, four hit. Wound dice: 6, 3, 5, 1. At the required 3+, three wound. Save dice: 6, 4, 2. Process as 2, 4, 6, giving one damaging attack and two failed attacks under the caption's Sv 3+ / InSv 5+ checks.
+P21-17	21	U05	9,10	supporting/source text	Diagram data transcribed from graphical dice, for the right-hand heavy-bolter example: Hit dice: 4, 4, 2. At BS 4+, two hit. Wound dice: 3, 6. At the required 3+, both wound. Save dice: 5, 3. Process as 3 then 5. AP -1 changes the armour check for 3 to 2, causing damage against Sv 3+; 5 satisfies InSv 5+ and the attack fails.
+P22-01	22	U05	9,10	supporting/source text	1. SELECT WEAPONS The RED unit is attacking. The following weapons are selected to make attacks with:
+P22-02	22	U05	9,10	supporting/source text	▪ 7 boltguns (B)
+P22-03	22	U05	9,10	supporting/source text	▪ 1 plasma pistol (PP)
+P22-04	22	U05	9,10	supporting/source text	▪ 2 heavy bolters (HB)
+P22-05	22	U05	9,10	supporting/source text	2. SELECT TARGETS The BLUE unit is selected as the target. It is an attached unit (19) formed from a Seraphim unit and Saint Celestine (with her two Geminae Superia). The unit is visible to all models in the attacking unit, and all of the selected weapons are in range.
+P22-06	22	U05	9,10	supporting/source text	3. RESOLVE ATTACKS There is only one enemy unit being targeted, so the controlling player now gathers attack dice. They decide to resolve the heavy bolter attacks first, which each have an A characteristic of 3, so six attack dice are gathered.
+P22-07	22	U05	9,10	supporting/source text	The attack dice for the remaining weapons will be gathered once the heavy bolter attacks are resolved (see opposite), as follows:
+P22-08	22	U05	9,10	supporting/source text	▪ 14 attack dice for the boltguns, which each have an A characteristic of 2.
+P22-09	22	U05	9,10	supporting/source text	▪ One attack dice for the plasma pistol, which has an A characteristic of 1.
+P22-10	22	U05	9,10	supporting/source text	ATTACKING ATTACHED UNITS
+P23-01	23	U05	9,10	supporting/source text	1. CREATE GROUPS AND DECLARE ORDER The target unit’s controlling player divides it into groups: one containing Saint Celestine, one containing the Geminae Superia, and one containing the Seraphim. They then declare the allocation order, choosing the Geminae Superia first (1), hoping their better Sv and InSv characteristics will weather the attacks. The Seraphim must be chosen second (2), as Saint Celestine is a CHARACTER model so must be last in the order (3).
+P23-02	23	U05	9,10	supporting/source text	2. RESOLVE ATTACK DICE The heavy bolters’ attacks wound the target five times, so the target unit’s controlling player makes five save rolls.
+P23-03	23	U05	9,10	supporting/source text	The attacks are resolved one at a time, from lowest save rolls to highest:
+P23-04	23	U05	9,10	supporting/source text	▪ The two results of 1 are allocated first, to the current allocation group (the Geminae Superia). They both inflict damage, and both Geminae Superia are destroyed.
+P23-05	23	U05	9,10	supporting/source text	▪ The result of 3 is now allocated to the Seraphim, who have become the current allocation group. When modified by the attacking weapon’s AP characteristic of -1, this also inflicts damage, destroying one Seraphim model.
+P23-06	23	U05	9,10	supporting/source text	▪ The remaining attacks fail, so no further damage is inflicted.
+P23-07	23	U05	9,10	supporting/source text	3. SELECT NEXT GROUP OF ATTACK DICE AND REPEAT
+P23-08	23	U05	9,10	supporting/source text	ALLOCATION GROUPS
+P23-09	23	U05	9,10	supporting/source text	Save Rolls
+P23-10	23	U05	9,10	supporting/source text	Diagram data transcribed from graphical dice: the five save results are 1, 1, 3, 4, 5. Allocation labels identify the Geminae as group 1, the Seraphim as group 2 and Saint Celestine as group 3. Process the dice in ascending order, moving to the next allocation group as the current one is destroyed.
+P24-01	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	This section contains some additional rules concepts that are most frequently used while making attacks.
+P24-02	24	06.01	4,8,9	heading	VISIBILITY 06.01
+P24-03	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	Line of sight is used to determine visibility between models. For an observing model to have line of sight, it must be possible to draw an imaginary straight line, 1 mm wide, from any part of that model to any part of the model being observed. This line is the line of sight. While doing so, other models in the observing model’s unit and in the observed model’s unit are ignored.
+P24-04	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	Other models and units can be either visible or fully visible to the observing model, as shown opposite. Note that terrain applies additional rules to visibility (13.07).
+P24-05	24	06.02	10	heading	MORTAL WOUNDS 06.02
+P24-06	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	Some attacks or rules inflict mortal wounds on units. Each time a unit suffers one or more mortal wounds, its controlling player must resolve the following sequence for each of those mortal wounds, until either all of them have been inflicted or that unit is destroyed:
+P24-07	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	1. Select Model: Select one model in that unit by following the first instruction below that applies:
+P24-08	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	-> If a non‑CHARACTER model in that unit has lost one or more wounds, you must select that model.
+P24-09	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	-> Otherwise, if that unit contains one or more non‑CHARACTER models, you must select one of those models.
+P24-10	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	-> Otherwise, if one or more CHARACTER models in that unit have lost one or more wounds, you must select one of those models.
+P24-11	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	-> Otherwise, you must select one CHARACTER model in that unit.
+P24-12	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	2. Resolve Damage: The selected model loses 1 wound. If this reduces that model’s remaining wounds to 0, it is destroyed.
+P24-13	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	MORTAL WOUNDS AND NORMAL DAMAGE
+P24-14	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	When resolving attack dice, if those attacks inflict a mixture of both mortal wounds and normal damage, resolve all of the normal damage first, then resolve all of the mortal wounds.
+P24-15	24	06.03	7,10	heading	HAZARD ROLLS 06.03
+P24-16	24	06.01,06.02,06.03	4,7,8,9,10	supporting/source text	To make a hazard roll for a unit, roll one D6: on a 1-2, that roll fails and that unit suffers 1 mortal wound (see above), or 3 mortal wounds instead if each model in that unit is a MONSTER/VEHICLE model. If more than one hazard roll is required for a unit, make all of those rolls simultaneously.
+P25-01	25	U31	4,8,9	supporting/source text	MODEL VISIBLE
+P25-02	25	U31	4,8,9	supporting/source text	MODEL FULLY VISIBLE
+P25-03	25	U31	4,8,9	supporting/source text	UNIT FULLY VISIBLE
+P25-04	25	U31	4,8,9	supporting/source text	UNIT VISIBLE
+P25-05	25	U31	4,8,9	supporting/source text	If any part of another model is visible to the observing model, that model is visible.
+P25-06	25	U31	4,8,9	supporting/source text	If every part of another model that is facing the observing model is visible to the observing model (so the only thing blocking visibility to any part of that other model is that model itself), that model is fully visible.
+P25-07	25	U31	4,8,9	supporting/source text	If every model in a unit is fully visible to the observing model, that unit is fully visible. When determining this, the observing model can see through other models in that unit.
+P25-08	25	U31	4,8,9	supporting/source text	If one or more models in a unit are visible to the observing model, that unit is visible.
+P28-01	28	07.01,U06	5,7,17	heading	1. START OF BATTLE ROUND 07.01
+P28-02	28	07.01,07.02,07.03,U06	5,7,11,17	supporting/source text	At the start of the battle round, players resolve rules that are triggered at the start of the battle round, before progressing to player turns.
+P28-03	28	07.01,07.02,07.03,U06	5,7,11,17	supporting/source text	Each battle round is resolved by following these steps:
+P28-04	28	07.01,07.02,07.03,U06	5,7,11,17	supporting/source text	1. START OF BATTLE ROUND 2. PLAYER TURNS 3. END OF BATTLE ROUND
+P28-05	28	07.01,07.02,07.03,U06	5,7,11,17	supporting/source text	Games of Warhammer 40,000 are played in a series of battle rounds. This section describes the structure of the battle round, defining the order in which players take turns to move their units and make attacks with them.
+P28-06	28	07.02,U06	5,7,17	heading	2. PLAYER TURNS 07.02
+P28-07	28	07.01,07.02,07.03,U06	5,7,11,17	supporting/source text	Both players now take one turn each. The same player always takes the first turn in each battle round – the mission you are playing will tell you which player this is. Once that player’s turn has ended, their opponent takes their turn.
+P28-08	28	07.01,07.02,07.03,U06	5,7,11,17	supporting/source text	Each turn consists of seven parts: first the Start of Turn step, then a series of five phases resolved in the order shown opposite, then the End of Turn step.
+P28-09	28	07.03,U06	5,7,11,17	heading	3. END OF BATTLE ROUND 07.03
+P28-10	28	07.01,07.02,07.03,U06	5,7,11,17	supporting/source text	Rules that are triggered at the end of the battle round are resolved now, in the following order:
+P28-11	28	07.01,07.02,07.03,U06	5,7,11,17	supporting/source text	1. First resolve rules triggered at this point other than mission rules. 2. Both players then consult their mission; if one or both players have achieved any aspects of their mission that are triggered at this point, resolve them now.
+P28-12	28	07.01,07.02,07.03,U06	5,7,11,17	supporting/source text	The battle round then ends and, unless the battle ends, the next battle round starts. The mission you are playing will tell you how many battle rounds to resolve before the battle ends.
+P29-01	29	U06	5,7,17	supporting/source text	START OF TURN STEP Rules that are triggered at the start of a turn are resolved now.
+P29-02	29	U06	5,7,17	supporting/source text	COMMAND PHASE You marshal strategic resources and check your units’ morale.
+P29-03	29	U06	5,7,17	supporting/source text	MOVEMENT PHASE Your units move across the battlefield and strategic reserves arrive.
+P29-04	29	U06	5,7,17	supporting/source text	CHARGE PHASE Your units make charge moves to engage the enemy.
+P29-05	29	U06	5,7,17	supporting/source text	FIGHT PHASE Both players’ units make attacks with their melee weapons.
+P29-06	29	U06	5,7,17	supporting/source text	END OF TURN STEP Rules that are triggered at the end of a turn are resolved now, in the following order:
+P29-07	29	U06	5,7,17	supporting/source text	1. First resolve rules triggered at this point other than mission rules. 2. Both players then consult their mission; if one or both players have achieved any aspects of their mission that are triggered at this point, resolve them now.
+P29-08	29	U06	5,7,17	supporting/source text	SHOOTING PHASE Your units make attacks with their ranged weapons.
+P30-01	30	08.01	5,7	heading	1. START OF COMMAND PHASE 08.01
+P30-02	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	Rules that are triggered at the start of the Command phase are resolved now.
+P30-03	30	08.02	3,5	heading	2. GAIN CORE CP 08.02
+P30-04	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	Both players gain 1 Command Point (CP).
+P30-05	30	08.03	7	heading	3. BATTLE-SHOCK 08.03
+P30-06	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	The active player must now make one battle-shock roll (01.07) for each unit in their army that fulfils one or both of the following conditions:
+P30-07	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	▪ That unit is currently battle-shocked.
+P30-08	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	▪ That unit is at, or below, half‑strength.
+P30-09	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	If a unit was battle-shocked at the start of this step and its battle-shock roll during this step succeeds, it is no longer battle-shocked.
+P30-10	30	08.04	5,7,17	heading	4. COMMAND ABILITIES 08.04
+P30-11	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	Rules that are triggered in the Command phase (excluding those that are triggered at the start or end of this phase, when gaining Core CP, or by battle-shock rolls) are resolved now.
+P30-12	30	08.05	5,8,17	heading	5. END OF COMMAND PHASE 08.05
+P30-13	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	Rules that are triggered at the end of the Command phase are resolved now, in the following order:
+P30-14	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	1. First resolve rules triggered at this point other than mission rules. 2. Both players then consult their mission; if one or both players have achieved any aspects of their mission that are triggered at this point, resolve them now.
+P30-15	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	The Command phase is resolved by following these steps:
+P30-16	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	1. START OF COMMAND PHASE 2. GAIN CORE CP 3. BATTLE-SHOCK 4. COMMAND ABILITIES 5. END OF COMMAND PHASE
+P30-17	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	In the Command phase, both players gain Core CP, then you check the combat readiness of your forces and use any strategic-level abilities you may have.
+P30-18	30	08.01,08.02,08.03,08.04,08.05	3,5,7,8,17	supporting/source text	COMMAND POINTS Command Points are a valuable resource you can spend to use stratagems (15). The Gain Core CP step ensures that both players gain 1CP each turn. While these are termed Core CP here, they are Command Points like any other. Other rules sometimes mention ‘Core CP’ when referring to these Command Points.
+P31-01	31	U06,U30	1,4,5,7,9,10,11,17	cross-reference	SEE ALSO
+P31-02	31	U06,U30	1,4,5,7,9,10,11,17	supporting/source text	BATTLE-SHOCK
+P31-03	31	U06,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Battle-shock Rolls 01.07
+P31-04	31	U06,U30	1,4,5,7,9,10,11,17	cross-reference	► Modified Characteristics
+P31-05	31	U06,U30	1,4,5,7,9,10,11,17	cross-reference	► Multiple Battle-shock Rolls
+P31-06	31	U06,U30	1,4,5,7,9,10,11,17	cross-reference	► Not on the Battlefield
+P31-07	31	U06,U30	1,4,5,7,9,10,11,17	cross-reference	► Starting Strength and Half-strength
+P31-08	31	U06,U30	1,4,5,7,9,10,11,17	supporting/source text	This VEHICLE has a starting strength of 1 and a W characteristic of 11. It has 3 wounds remaining, so it is below half-strength and a battle-shock roll must be made for it.
+P31-09	31	U06,U30	1,4,5,7,9,10,11,17	supporting/source text	This unit has a starting strength of 5. It has two models remaining, so it is below half-strength and a battle-shock roll must be made for it.
+P31-10	31	U06,U30	1,4,5,7,9,10,11,17	supporting/source text	This unit has a starting strength of 10. It has five models remaining, so it is at half-strength and a battle-shock roll must be made for it.
+P31-11	31	U06,U30	1,4,5,7,9,10,11,17	supporting/source text	This unit has a starting strength of 3 so is not at or below half-strength, but it is currently battle-shocked, so a battle-shock roll must be made for it. If that roll succeeds, the unit will no longer be battle-shocked.
+P31-12	31	U06,U30	1,4,5,7,9,10,11,17	supporting/source text	BATTLE-SHOCK EXAMPLES
+P32-01	32	09.01	5,11	heading	1. START OF MOVEMENT PHASE 09.01
+P32-02	32	09.01,09.02,09.03	5,11,15	supporting/source text	Rules that are triggered at the start of the Movement phase are resolved now.
+P32-03	32	09.02	11	heading	2. MOVE UNITS 09.02
+P32-04	32	09.01,09.02,09.03	5,11,15	supporting/source text	The active player moves their units one at a time, using the sequence below, until all of their units have been selected to move and those moves have ended.
+P32-05	32	09.01,09.02,09.03	5,11,15	supporting/source text	1. Select Unit: Select one friendly unit that has not been selected to move this phase. You can select a unit on the battlefield, in strategic reserves, or embarked within a TRANSPORT. That unit is selected to move. 2. Select Move Type: Select one move type that unit is eligible to make, and resolve it with that unit. This can be one listed below, or one presented elsewhere:
+P32-06	32	09.01,09.02,09.03	5,11,15	supporting/source text	▫ Remain stationary (see opposite)
+P32-07	32	09.01,09.02,09.03	5,11,15	supporting/source text	▫ Normal move (see opposite)
+P32-08	32	09.01,09.02,09.03	5,11,15	supporting/source text	▫ Advance move (see opposite)
+P32-09	32	09.01,09.02,09.03	5,11,15	supporting/source text	▫ Fall-back move (see opposite)
+P32-10	32	09.01,09.02,09.03	5,11,15	supporting/source text	▫ Disembark move (18.04)
+P32-11	32	09.01,09.02,09.03	5,11,15	supporting/source text	▫ Ingress move (20.04)
+P32-12	32	09.03	5,11,15	heading	3. END OF MOVEMENT PHASE 09.03
+P32-13	32	09.01,09.02,09.03	5,11,15	supporting/source text	Rules that are triggered at the end of the Movement phase are resolved now.
+P32-14	32	09.01,09.02,09.03	5,11,15	supporting/source text	The Movement phase is resolved by following these steps:
+P32-15	32	09.01,09.02,09.03	5,11,15	supporting/source text	1. START OF MOVEMENT PHASE 2. MOVE UNITS 3. END OF MOVEMENT PHASE
+P32-16	32	09.01,09.02,09.03	5,11,15	supporting/source text	SELECTING UNITS TO MOVE When the Move Units step ends, the active player must have selected all of their units to make a move with, including those in strategic reserves. This means that before the phase ends, every unit in their army will have been selected to make a move, even if it is to remain stationary.
+P32-17	32	09.01,09.02,09.03	5,11,15	supporting/source text	Move types are marked with this icon.
+P32-18	32	09.01,09.02,09.03	5,11,15	supporting/source text	In the Movement phase, you will be able to move each of your units across the battlefield. Reinforcements can also arrive in this phase to bolster your forces.
+P33-01	33	09.04,U30	1,4,5,9,10,11,17	heading	REMAIN STATIONARY 09.04
+P33-02	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	MAXIMUM DISTANCE: ‘–’
+P33-03	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	ELIGIBLE IF: Any unit.
+P33-04	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	EFFECT: No models are moved (either in straight lines or rotated). Units that remain stationary do not trigger any rules that are triggered when a unit starts or ends a move.
+P33-05	33	09.05,U30	1,4,5,9,10,11,17	heading	NORMAL MOVE 09.05
+P33-06	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	MAXIMUM DISTANCE: Your unit’s M characteristic.
+P33-07	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	ELIGIBLE IF: Your unit is on the battlefield and unengaged.
+P33-08	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	EFFECT: Your unit moves as described in Moving (03).
+P33-09	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	AFTER MOVING: Your unit must be unengaged.
+P33-10	33	09.06,U30	1,4,5,9,10,11,17	heading	ADVANCE MOVE 09.06
+P33-11	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	MAXIMUM DISTANCE: Advance roll + your unit’s M characteristic.
+P33-12	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	ELIGIBLE IF: Your unit is on the battlefield and unengaged.
+P33-13	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	EFFECT: Your unit moves as described in Moving (03).
+P33-14	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	BEFORE MOVING: Make an advance roll by rolling one D6.
+P33-15	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	AFTER MOVING:
+P33-16	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Your unit must be unengaged.
+P33-17	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Until the end of the turn, unless otherwise stated, your unit is not eligible to declare a charge or start an action.
+P33-18	33	09.07,U30	1,4,5,7,9,10,11,17	heading	FALL-BACK MOVE 09.07
+P33-19	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	MAXIMUM DISTANCE: Your unit’s M characteristic.
+P33-20	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	ELIGIBLE IF: Your unit is engaged.
+P33-21	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	EFFECT: Your unit moves as described in Moving (03).
+P33-22	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	BEFORE MOVING: Select fall-back mode: -> Ordered Retreat: If your unit is not battle-shocked, you can select this mode. -> Desperate Escape: Otherwise, you must select this mode. Make a hazard roll for each model in your unit (06.03).
+P33-23	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	WHILE MOVING:
+P33-24	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Desperate Escape: Each model that is moved can be moved through enemy models.
+P33-25	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	AFTER MOVING:
+P33-26	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Your unit must be unengaged.
+P33-27	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Until the end of the turn, unless otherwise stated, your unit is not eligible to shoot, declare a charge or start an action. ▪ Desperate Escape: If your unit is not battle-shocked, you must make a battle-shock roll for your unit (01.07).
+P33-28	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	cross-reference	SEE ALSO
+P33-29	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	MOVE UNITS
+P33-30	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Actions 16.00
+P33-31	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Aircraft 23.00
+P33-32	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	cross-reference	► Different Move Characteristics
+P33-33	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Flying Models 21.03
+P33-34	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	cross-reference	► Modifying Dice Rolls
+P33-35	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Monsters and Vehicles 17.00
+P33-36	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Strategic Reserves 20.00
+P33-37	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	▪ Transports 18.00
+P33-38	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	SELECTING MODES
+P33-39	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	Some rules instruct you to select a mode, such as fall-back moves (see left). Modes are mutually exclusive, and you must assess each one in the order presented. When making a move, if your unit does not meet the conditions of any of the modes, it cannot make that move.
+P33-40	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	Sometimes a mode will be mandatory if applicable (e.g. consolidation modes, 12.08), but in the case of fall-back moves, ordered retreat is not mandatory, so you could select desperate escape instead.
+P33-41	33	09.04,09.05,09.06,09.07,U30	1,4,5,7,9,10,11,17	supporting/source text	Many move types state conditions you must meet while/after moving. Those that are labelled with a mode name only apply if you selected that mode; those not labelled with a mode name always apply.
+P34-01	34	10.01	5,12,15	heading	1. START OF SHOOTING PHASE 10.01
+P34-02	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	Rules that are triggered at the start of the Shooting phase are resolved now.
+P34-03	34	10.02	9,12	heading	2. SHOOT 10.02
+P34-04	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	The active player shoots with their eligible units one at a time, using the sequence below, until all the units they choose to shoot with have been selected to shoot and their attacks have been resolved.
+P34-05	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	A unit is eligible to shoot if it is on the battlefield and has not already been selected to shoot this phase.
+P34-06	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	1. Select Unit: Select one friendly unit that is eligible to shoot; that unit is selected to shoot. 2. Select Shooting Type: Select one shooting type that unit is eligible to make, and resolve it with that unit. This can be one listed below, or one presented elsewhere:
+P34-07	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	▫ Normal shooting (see below)
+P34-08	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	▫ Assault shooting (see opposite)
+P34-09	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	▫ Close‑quarters shooting (see opposite)
+P34-10	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	▫ Indirect shooting (see opposite)
+P34-11	34	10.03	5,12	heading	3. END OF SHOOTING PHASE 10.03
+P34-12	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	Rules that are triggered at the end of the Shooting phase are resolved now.
+P34-13	34	10.04	12	heading	NORMAL SHOOTING 10.04
+P34-14	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	ELIGIBLE IF: Your unit is unengaged and did not make an advance move this turn.
+P34-15	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	EFFECT: Your unit shoots as described in Making Attacks (04).
+P34-16	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	AFTER SHOOTING: Until the end of the phase, your unit is not eligible to start an action.
+P34-17	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	The Shooting phase is resolved by following these steps:
+P34-18	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	1. START OF SHOOTING PHASE 2. SHOOT 3. END OF SHOOTING PHASE
+P34-19	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	In the Shooting phase, your units will take aim and use their ranged weapons to fire at their chosen targets.
+P34-20	34	10.01,10.02,10.03,10.04	5,9,12,15	supporting/source text	Shooting types are marked with this icon.
+P35-01	35	10.05,10.06,10.07	8,12	cross-reference	SEE ALSO
+P35-02	35	10.05,10.06,10.07	8,12	supporting/source text	SHOOT
+P35-03	35	10.05,10.06,10.07	8,12	supporting/source text	▪ Actions 16.00
+P35-04	35	10.05,10.06,10.07	8,12	supporting/source text	▪ Shooting at Engaged Monsters and Vehicles 17.03 ▪ Terrain and Visibility 13.07
+P35-05	35	10.05	12	heading	ASSAULT SHOOTING 10.05
+P35-06	35	10.05,10.06,10.07	8,12	supporting/source text	ELIGIBLE IF: All of the following apply to your unit:
+P35-07	35	10.05,10.06,10.07	8,12	supporting/source text	▪ Unengaged and made an advance move this turn.
+P35-08	35	10.05,10.06,10.07	8,12	supporting/source text	▪ Has one or more [ASSAULT] weapons.
+P35-09	35	10.05,10.06,10.07	8,12	supporting/source text	EFFECT: Your unit shoots as described in Making Attacks (04).
+P35-10	35	10.05,10.06,10.07	8,12	supporting/source text	WHILE SHOOTING: You can only select [ASSAULT] weapons to make attacks with.
+P35-11	35	10.05,10.06,10.07	8,12	supporting/source text	AFTER SHOOTING: Until the end of the phase, your unit is not eligible to start an action.
+P35-12	35	10.06	12	heading	CLOSE‑QUARTERS SHOOTING 10.06
+P35-13	35	10.05,10.06,10.07	8,12	supporting/source text	ELIGIBLE IF: All of the following apply to your unit:
+P35-14	35	10.05,10.06,10.07	8,12	supporting/source text	▪ Engaged and did not make an advance move this turn.
+P35-15	35	10.05,10.06,10.07	8,12	supporting/source text	▪ Has one or more [CLOSE‑QUARTERS] weapons or is a MONSTER/VEHICLE unit.
+P35-16	35	10.05,10.06,10.07	8,12	supporting/source text	EFFECT: Your unit shoots as described in Making Attacks (04).
+P35-17	35	10.05,10.06,10.07	8,12	supporting/source text	WHILE SHOOTING: Models in your unit can target enemy units your unit is engaged with.
+P35-18	35	10.05,10.06,10.07	8,12	supporting/source text	▪ MONSTER/VEHICLE Models: Each time a MONSTER/VEHICLE model in your unit makes an attack:
+P35-19	35	10.05,10.06,10.07	8,12	supporting/source text	▫ Unless that attack is made with a [CLOSE‑QUARTERS] weapon and targets a unit your unit is engaged with, subtract 1 from the hit roll. ▫ If that attack is made with a [BLAST] weapon, it still cannot target a unit your unit is engaged with. ▪ Non‑MONSTER/Non‑VEHICLE Models: You can only select [CLOSE‑QUARTERS] weapons to make attacks with and you can only select enemy units that are engaged with your unit as targets.
+P35-20	35	10.05,10.06,10.07	8,12	supporting/source text	AFTER SHOOTING: Until the end of the phase, your unit is not eligible to start an action.
+P35-21	35	10.07	8,12	heading	INDIRECT SHOOTING 10.07
+P35-22	35	10.05,10.06,10.07	8,12	supporting/source text	ELIGIBLE IF: All of the following apply to your unit:
+P35-23	35	10.05,10.06,10.07	8,12	supporting/source text	▪ Unengaged and did not make an advance move this turn.
+P35-24	35	10.05,10.06,10.07	8,12	supporting/source text	▪ Has one or more [INDIRECT FIRE] weapons.
+P35-25	35	10.05,10.06,10.07	8,12	supporting/source text	EFFECT: Your unit shoots as described in Making Attacks (04).
+P35-26	35	10.05,10.06,10.07	8,12	supporting/source text	WHILE SHOOTING:
+P35-27	35	10.05,10.06,10.07	8,12	supporting/source text	▪ [INDIRECT FIRE] weapons in your unit can target units that are not visible to the attacking model. ▪ Each time an [INDIRECT FIRE] weapon makes an attack:
+P35-28	35	10.05,10.06,10.07	8,12	supporting/source text	▫ The target has the benefit of cover against that attack (13.08). ▫ You cannot re‑roll hit rolls.
+P35-29	35	10.05,10.06,10.07	8,12	supporting/source text	▫ An unmodified hit roll of 1‑5 fails, unless your unit remained stationary this turn and the target is visible to one or more friendly units, in which case an unmodified hit roll of 1‑3 fails instead.
+P35-30	35	10.05,10.06,10.07	8,12	supporting/source text	AFTER SHOOTING: Until the end of the phase, your unit is not eligible to start an action.
+P35-31	35	10.05,10.06,10.07	8,12	supporting/source text	INDIRECT FIRE When you select indirect shooting for a unit, its [INDIRECT FIRE] weapons can launch punishing barrages on targets that are not visible, but don’t forget that its other weapons can still target other visible targets.
+P36-01	36	11.01	5,13	heading	1. START OF CHARGE PHASE 11.01
+P36-02	36	11.01,11.02,11.03	5,13,15	supporting/source text	Rules that are triggered at the start of the Charge phase are resolved now.
+P36-03	36	11.02	13	heading	2. CHARGE 11.02
+P36-04	36	11.01,11.02,11.03	5,13,15	supporting/source text	The active player resolves charges with their eligible units one at a time, using the sequence below, until all of their units they choose to charge with have declared a charge and those charges have been resolved.
+P36-05	36	11.01,11.02,11.03	5,13,15	supporting/source text	1. Declare Charge: Select one friendly unit that has not declared a charge this phase and is eligible to declare a charge (see below). That unit declares a charge. A unit is eligible to declare a charge if it is on the battlefield, unless otherwise stated. Here are some rules that prevent a unit from being eligible to declare a charge:
+P36-06	36	11.01,11.02,11.03	5,13,15	supporting/source text	"▫ It is not within 12"" of one or more enemy units."
+P36-07	36	11.01,11.02,11.03	5,13,15	supporting/source text	▫ It is engaged.
+P36-08	36	11.01,11.02,11.03	5,13,15	supporting/source text	▫ It made an advance or fall-back move this turn.
+P36-09	36	11.01,11.02,11.03	5,13,15	supporting/source text	2. Make Charge Roll: Make a charge roll by rolling 2D6: the result is the maximum distance for the charge move. 3. Attempt Charge: If it is possible to make a charge move, and if you still want to, make a charge move with that unit (see opposite). Otherwise, your unit does not make a charge move. In either case, the charge is then resolved.
+P36-10	36	11.03	5,13,15	heading	3. END OF CHARGE PHASE 11.03
+P36-11	36	11.01,11.02,11.03	5,13,15	supporting/source text	Rules that are triggered at the end of the Charge phase are resolved now.
+P36-12	36	11.01,11.02,11.03	5,13,15	supporting/source text	The Charge phase is resolved by following these steps:
+P36-13	36	11.01,11.02,11.03	5,13,15	supporting/source text	1. START OF CHARGE PHASE 2. CHARGE 3. END OF CHARGE PHASE
+P36-14	36	11.01,11.02,11.03	5,13,15	supporting/source text	"FAILED CHARGES Note that, in the absence of modifiers to the charge roll, a result of 2 (a double 1) is never sufficient for a unit to complete a charge move, as a unit cannot be within engagement range (2"") when it attempts a charge. Such a roll would therefore result in a failed charge, and the unit would not move."
+P36-15	36	11.01,11.02,11.03	5,13,15	supporting/source text	In the Charge phase, you will be able to make charge moves with your units. This represents your forces closing the distance with their foes in order to engage them in bloody close combat.
+P37-01	37	11.04,U30	1,4,5,9,10,11,13,17	heading	CHARGE MOVE 11.04
+P37-02	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	MAXIMUM DISTANCE: Charge roll.
+P37-03	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	ELIGIBLE IF: Your unit declared a charge this phase.
+P37-04	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	EFFECT: Your unit moves as described in Moving (03).
+P37-05	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	"BEFORE MOVING: Select one or more enemy units that are within 12"" of your unit and within the maximum distance of your unit; until the end of this move, each of those enemy units is a charge target."
+P37-06	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	WHILE MOVING:
+P37-07	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	"▪ Each model must end its move closer to one or more charge targets. ▪ Each model that can end its move within 1"" of one or more charge targets must do so. ▪ Each model that can end its move engaged with one or more charge targets must do so."
+P37-08	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	AFTER MOVING:
+P37-09	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	▪ Your unit must be engaged with all of the charge targets.
+P37-10	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	▪ Your unit cannot be engaged with one or more enemy units that are not charge targets. ▪ Until the end of the turn, each model in your unit has the Fights First ability (24.13).
+P37-11	37	11.04,U30	1,4,5,9,10,11,13,17	cross-reference	SEE ALSO
+P37-12	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	DECLARE CHARGE
+P37-13	37	11.04,U30	1,4,5,9,10,11,13,17	cross-reference	► Target No Longer Eligible or Viable
+P37-14	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	MAKING A CHARGE MOVE
+P37-15	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	"This unit is more than 7"" from the charging unit, so it cannot be selected as a charge target, even though the charging unit could end its charge move within 2"" of this unit."
+P37-16	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	"The BLUE unit declares a charge and the charge roll generates a maximum distance of 7"". Unit A is within this distance, so can be selected as a charge target, but the BLUE unit would not be able to end its charge move engaged with this unit after moving around the intervening terrain features."
+P37-17	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	"These units are both within 7"", so can be selected as charge targets. The charging unit can end its charge move engaged with all of its charge targets, so this move can be made."
+P37-18	37	11.04,U30	1,4,5,9,10,11,13,17	supporting/source text	Charge Roll
+P38-01	38	12.01	5,14	heading	1. START OF FIGHT PHASE 12.01
+P38-02	38	12.01,12.02,12.03	4,5,14	supporting/source text	Rules that are triggered at the start of the Fight phase are resolved now.
+P38-03	38	12.02	14	heading	2. PILE IN 12.02
+P38-04	38	12.01,12.02,12.03	4,5,14	supporting/source text	Both players make pile-in moves (see below) with all of their eligible units they choose to move. The ‘Eligible If’ section describes which units are eligible to make such moves. The player whose turn it is resolves all of their moves first, followed by their opponent. Each unit cannot make more than one pile-in move during this step.
+P38-05	38	12.03	4,14	heading	PILE-IN MOVE 12.03
+P38-06	38	12.01,12.02,12.03	4,5,14	supporting/source text	"MAXIMUM DISTANCE: 3"""
+P38-07	38	12.01,12.02,12.03	4,5,14	supporting/source text	ELIGIBLE IF: It is the Fight phase and one or more of the following apply to your unit:
+P38-08	38	12.01,12.02,12.03	4,5,14	supporting/source text	▪ It is engaged.
+P38-09	38	12.01,12.02,12.03	4,5,14	supporting/source text	▪ It made a charge move this turn.
+P38-10	38	12.01,12.02,12.03	4,5,14	supporting/source text	▪ It was selected to make an overrun fight this phase (12.06).
+P38-11	38	12.01,12.02,12.03	4,5,14	supporting/source text	EFFECT: Your unit moves as described in Moving (03).
+P38-12	38	12.01,12.02,12.03	4,5,14	supporting/source text	"BEFORE MOVING: Select pile-in targets: -> If your unit is engaged, select every enemy unit it is engaged with. -> Otherwise, select one or more enemy units within 5"" of your unit."
+P38-13	38	12.01,12.02,12.03	4,5,14	supporting/source text	WHILE MOVING:
+P38-14	38	12.01,12.02,12.03	4,5,14	supporting/source text	▪ Models in base‑contact with one or more enemy models cannot be moved. ▪ Each model that is moved must end its move closer to the closest pile-in target, and engaged with it if possible.
+P38-15	38	12.01,12.02,12.03	4,5,14	supporting/source text	AFTER MOVING:
+P38-16	38	12.01,12.02,12.03	4,5,14	supporting/source text	▪ Your unit must be engaged.
+P38-17	38	12.01,12.02,12.03	4,5,14	supporting/source text	▪ Each model that started this move engaged with an enemy unit must still be engaged with that enemy unit.
+P38-18	38	12.01,12.02,12.03	4,5,14	supporting/source text	The Fight phase is resolved by following these steps:
+P38-19	38	12.01,12.02,12.03	4,5,14	supporting/source text	1. START OF FIGHT PHASE 2. PILE IN 3. FIGHT 4. CONSOLIDATE 5. END OF FIGHT PHASE
+P38-20	38	12.01,12.02,12.03	4,5,14	supporting/source text	DO UNITS HAVE TO FIGHT? Yes, you have to fight with all units that can, but you don’t have to pile in or consolidate with a unit if you don’t want to.
+P38-21	38	12.01,12.02,12.03	4,5,14	supporting/source text	In the Fight phase, both players get to act. First, units will pile in to maximise the number of models that are engaged, then all the combatants will make melee attacks, before units consolidate their position.
+P39-01	39	U07	13,14	supporting/source text	PILE-IN MOVES
+P39-02	39	U07	13,14	supporting/source text	START OF FIGHT PHASE
+P39-03	39	U07	13,14	supporting/source text	Because both RED units made charge moves this turn, they are both Fights First units this phase and are both eligible to make pile-in moves, even though the MONSTER is unengaged as it destroyed its charge target in the Charge phase using the Crushing Impact stratagem (15.06).
+P39-04	39	U07	13,14	supporting/source text	1. The RED player makes pile-in moves first.
+P39-05	39	U07	13,14	supporting/source text	2. The BLUE player makes pile-in moves next, but as their model is in base-contact with enemy models, it is not moved.
+P39-06	39	U07	13,14	supporting/source text	"Each model moves up to 3""."
+P39-07	39	U07	13,14	supporting/source text	Fights First unit
+P39-08	39	U07	13,14	supporting/source text	Fights First unit
+P39-09	39	U07	13,14	supporting/source text	Terrain Objective
+P39-10	39	U07	13,14	supporting/source text	Terrain Objective
+P40-01	40	12.04,12.05,12.06	9,14	supporting/source text	OVERRUN FIGHTS When a unit makes an overrun fight, its models can be moved such that enemy units that were unengaged become engaged. Such enemy units become eligible to fight this phase (and may even be able to fight next if they are Fights First units).
+P40-02	40	12.04	14	heading	3. FIGHT 12.04
+P40-03	40	12.04,12.05,12.06	9,14	supporting/source text	A unit is eligible to fight if it has not already been selected to fight this phase and one or more of the following apply to it:
+P40-04	40	12.04,12.05,12.06	9,14	supporting/source text	▪ It is engaged, or it was engaged at the start of this step.
+P40-05	40	12.04,12.05,12.06	9,14	supporting/source text	▪ It made a charge move this turn.
+P40-06	40	12.04,12.05,12.06	9,14	supporting/source text	Players resolve the following sequence until all eligible units have been selected to fight and their attacks have been resolved:
+P40-07	40	12.04,12.05,12.06	9,14	supporting/source text	1. Resolve Fights First Combats: Starting with the player whose turn it is, players alternate selecting one friendly Fights First unit that is eligible to fight; that unit is selected to fight (see below). If this is not possible: -> If there are no Fights First units that are eligible to fight, move to the Resolve Remaining Combats step where this player will select their next unit. -> Otherwise, the other player selects their next unit.
+P40-08	40	12.04,12.05,12.06	9,14	supporting/source text	2. Resolve Remaining Combats: Starting with the player who just moved this sequence onto this step, players alternate selecting one friendly unit that is eligible to fight; that unit is selected to fight. If this is not possible: -> If there are no units that are eligible to fight, the Fight step ends. -> Otherwise, the other player selects their next unit.
+P40-09	40	12.04,12.05,12.06	9,14	supporting/source text	After resolving a fight in the Resolve Remaining Combats step, if there are one or more Fights First units that are now eligible to fight, return to the Resolve Fights First Combats step.
+P40-10	40	12.04,12.05,12.06	9,14	supporting/source text	WHEN A UNIT IS SELECTED TO FIGHT
+P40-11	40	12.04,12.05,12.06	9,14	supporting/source text	Each time a unit is selected to fight, select one fight type that unit is eligible to make, and resolve it with that unit. This can be one listed below, or one presented elsewhere:
+P40-12	40	12.05	9,14	heading	NORMAL FIGHT 12.05
+P40-13	40	12.04,12.05,12.06	9,14	supporting/source text	ELIGIBLE IF: Your unit is engaged.
+P40-14	40	12.04,12.05,12.06	9,14	supporting/source text	EFFECT: Your unit fights as described in Making Attacks (04).
+P40-15	40	12.06	14	heading	OVERRUN FIGHT 12.06
+P40-16	40	12.04,12.05,12.06	9,14	supporting/source text	ELIGIBLE IF: Your unit is unengaged, or was unengaged at the start of the Fight step but became engaged during the Fight phase.
+P40-17	40	12.04,12.05,12.06	9,14	supporting/source text	EFFECT: Your unit can make one additional pile-in move, then fights as described in Making Attacks (04).
+P40-18	40	12.04,12.05,12.06	9,14	supporting/source text	Fight types are marked with this icon.
+P41-01	41	U07	13,14	supporting/source text	OVERRUN FIGHT
+P41-02	41	U07	13,14	supporting/source text	NORMAL FIGHT
+P41-03	41	U07	13,14	supporting/source text	Players alternate selecting units to fight. Fights First units must be selected before any other eligible units.
+P41-04	41	U07	13,14	supporting/source text	3. The BLUE player has no Fights First units, so the RED player selects their next unit.
+P41-05	41	U07	13,14	supporting/source text	1. The RED player selects their MONSTER to fight. It makes a normal fight, destroying the TRANSPORT.
+P41-06	41	U07	13,14	supporting/source text	4. The RED player selects another Fights First unit. This unit is unengaged, but was engaged with the TRANSPORT at the start of the Fight step, so can make an overrun fight. It first makes a pile-in move to engage the unit that disembarked, then fights, destroying two enemy models.
+P41-07	41	U07	13,14	supporting/source text	2. The embarked unit makes an emergency disembark move. After doing so, it is unengaged.
+P41-08	41	U07	13,14	supporting/source text	Fights First unit
+P41-09	41	U07	13,14	supporting/source text	Fights First unit
+P41-10	41	U07	13,14	supporting/source text	5. The BLUE player’s unit fights back, but inflicts no damage.
+P41-11	41	U07	13,14	supporting/source text	Terrain Objective
+P41-12	41	U07	13,14	supporting/source text	Terrain Objective
+P42-01	42	12.07	14	heading	4. CONSOLIDATE 12.07
+P42-02	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	Both players make consolidation moves (see below) with all of their eligible units they choose to move. The ‘Eligible If’ section describes which units are eligible to make such moves. The player whose turn it is resolves all of their moves first, followed by their opponent. Each unit cannot make more than one consolidation move during this step.
+P42-03	42	12.08	4,8,14	heading	CONSOLIDATION MOVE 12.08
+P42-04	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	"MAXIMUM DISTANCE: 3"""
+P42-05	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	ELIGIBLE IF: It is the Fight phase and your unit was eligible to fight this phase.
+P42-06	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	EFFECT: Your unit moves as described in Moving (03).
+P42-07	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	"BEFORE MOVING: Select consolidation mode: -> Ongoing Consolidation: If your unit is engaged, you must select this mode and select every enemy unit it is engaged with. -> Engaging Consolidation: Otherwise, if your unit is within 3"" of one or more enemy units, you must select this mode and select one or more of those enemy units. -> Objective Consolidation: Otherwise, if your unit is within 3"" of one or more objectives, you must select this mode and select one of those objectives."
+P42-08	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	WHILE MOVING:
+P42-09	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	▪ Ongoing Consolidation: Models in base‑contact with one or more enemy models cannot be moved. Each model that is moved must end its move closer to the closest selected enemy unit, and engaged with it if possible. ▪ Engaging Consolidation: Each model that is moved must end its move closer to the closest selected enemy unit, and engaged with it if possible. ▪ Objective Consolidation: Each model that is moved must end its move within range of the selected objective if possible, or closer to it if not.
+P42-10	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	AFTER MOVING:
+P42-11	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	▪ Ongoing Consolidation: Each model that started this move engaged with an enemy unit must still be engaged with that enemy unit. ▪ Engaging Consolidation: Your unit must be engaged with all of the selected enemy units. If one or more enemy units engaged with your unit have not been selected to fight this phase, your opponent must select each of those units, one at a time; when each is selected, it becomes eligible to fight and is selected to fight (12.04). ▪ Objective Consolidation: Your unit must be within range of the selected objective.
+P42-12	42	12.09	5,14	heading	5. END OF FIGHT PHASE 12.09
+P42-13	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	Rules that are triggered at the end of the Fight phase are resolved now.
+P42-14	42	12.07,12.08,12.09	4,5,8,14	supporting/source text	NEW FOES TO FACE While using the engaging consolidation mode, your unit can end its consolidation move engaged with enemy units that have not yet fought this phase. If so, each of those enemy units will have an opportunity to fight your unit, so think carefully about how aggressively you want to move your unit using this mode.
+P43-01	43	U07	13,14	supporting/source text	The RED player makes consolidation moves first. All engaged units and all units that were eligible to fight this phase can make a consolidation move.
+P43-02	43	U07	13,14	supporting/source text	"Each model moves up to 3"". Models in base-contact with enemy models cannot be moved."
+P43-03	43	U07	13,14	supporting/source text	"No enemy units are within 3"" of this MONSTER unit, but an objective is within 3"", so it moves within range of that objective."
+P43-04	43	U07	13,14	supporting/source text	ONGOING CONSOLIDATION
+P43-05	43	U07	13,14	supporting/source text	Terrain Objective
+P43-06	43	U07	13,14	supporting/source text	Terrain Objective
+P43-07	43	U07	13,14	supporting/source text	OBJECTIVE CONSOLIDATION
+P46-01	46	13.01	4,8,17	heading	PLACING TERRAIN 13.01
+P46-02	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	Before the battle, place a selection of terrain features on the battlefield using one or more of the following methods:
+P46-03	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	▪ Place a well‑defined boundary (such as a base or mat) in each location you want to furnish with terrain, then place one or more terrain features wholly within that boundary. ▪ Place one terrain feature directly on the battlefield.
+P46-04	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	▪ Place two or more terrain features directly on the battlefield in such a way that together they define the boundary of an area.
+P46-05	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	In each case, the area of the battlefield occupied by that boundary or terrain feature is known as a terrain area. A mission’s deployment map may define the location and dimensions of each terrain area. Otherwise, players must agree on this before the battle.
+P46-06	46	13.02	8	heading	TERRAIN CATEGORIES 13.02
+P46-07	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	Each terrain feature belongs to a terrain category, which can affect the movement and visibility of models. Below are some examples of which types of terrain features fall under each category.
+P46-08	46	13.03	8	heading	EXPOSED 13.03
+P46-09	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	Exposed terrain offers only scant protection to the most desperate troops, and can be traversed without hindrance. Examples: Craters, razorwire, scattered debris.
+P46-10	46	13.04	8	heading	LIGHT 13.04
+P46-11	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	Light terrain can provide cover from incoming attacks, but will not slow an enemy’s advance or offer lasting defence. Examples: Barricades, low walls, statuary.
+P46-12	46	13.05	8	heading	DENSE 13.05
+P46-13	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	Dense terrain is an obstacle to even the largest war machines, and can shelter entire squads from enemy sight. Examples: Buildings, ruins, armoured containers, woods.
+P46-14	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	A mission’s deployment map may define which terrain categories should be present within each terrain area. Meeting these requirements will create the best gaming experience. Note that terrain features sharing the same terrain area can belong to different terrain categories.
+P46-15	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	This section provides rules for using terrain to transform your gaming table into an interactive, thematic battlefield. These rules help to bring your battlefield to life and introduce a vital tactical dimension to your games.
+P46-16	46	13.01,13.02,13.03,13.04,13.05	4,8,17	supporting/source text	CREATING YOUR OWN BATTLEFIELD Don’t worry if your battlefield doesn’t match a mission’s terrain category requirements; just do the best with the terrain features you have. If a mission does not provide you with guidance, it will be up to the players to decide how to create their battlefield. When doing so, keep in mind that dense terrain features have the greatest impact on visibility and movement. Battlefields with too few dense terrain features can advantage armies that rely on shooting, or disadvantage armies that rely on melee. Also remember to leave sufficient room around dense terrain features for larger models such as MONSTERS/VEHICLES to manoeuvre, especially near the edges of the battlefield.
+P47-01	47	U08	4,8	supporting/source text	TERRAIN PLACED ON A MAT
+P47-02	47	U08	4,8	supporting/source text	TERRAIN PLACED ON THE BATTLEFIELD
+P47-03	47	U08	4,8	supporting/source text	Two terrain features have been placed on a mat. The edges of this mat define the boundary of this terrain area. Both terrain features are ruins, so use the rules for dense terrain features.
+P47-04	47	U08	4,8	supporting/source text	Three terrain features have been placed directly on the battlefield. The players have agreed on the boundary of the terrain area defined by these features (the shaded rectangle). The BLUE features are dense terrain features and the RED feature is a light terrain feature.
+P47-05	47	U08	4,8	supporting/source text	Dense Terrain Dense Terrain
+P47-06	47	U08	4,8	supporting/source text	Dense Terrain Dense Terrain
+P47-07	47	U08	4,8	supporting/source text	Light Terrain
+P47-08	47	U08	4,8	supporting/source text	Terrain Area
+P47-09	47	U08	4,8	supporting/source text	Terrain Area
+P48-01	48	13.06	4,8,11	heading	TERRAIN AND MOVEMENT 13.06
+P48-02	48	13.06	4,8,11	supporting/source text	Models can move through different categories of terrain feature as follows:
+P48-03	48	13.06	4,8,11	supporting/source text	▪ Exposed/Light: All models can move horizontally and vertically through exposed and light terrain features. ▪ Dense:
+P48-04	48	13.06	4,8,11	supporting/source text	"▫ INFANTRY/BEASTS/SWARM/MOBILE models can move horizontally through dense terrain features. ▫ INFANTRY/BEASTS/SWARM models can move vertically through dense terrain features. ▫ Other models can move horizontally through dense terrain features provided that all sections of that terrain feature that the moving model’s base would move through are 2"" or less in height. Otherwise, the moving model must move vertically to ascend or descend such sections. They cannot move through ceilings and floors while doing so, and they cannot end that move on any surface of that terrain feature that is not on ground level (see below)."
+P48-05	48	13.06	4,8,11	supporting/source text	MOVING VERTICALLY
+P48-06	48	13.06	4,8,11	supporting/source text	Models can move vertically to ascend or descend terrain features. While doing so:
+P48-07	48	13.06	4,8,11	supporting/source text	"▪ That model must remain within ½"" horizontally of that terrain feature. ▪ Add the distance moved vertically up, and the distance moved vertically down, to any other distance that model has moved since its unit began that move."
+P48-08	48	13.06	4,8,11	supporting/source text	SETTING UP OR ENDING A MOVE
+P48-09	48	13.06	4,8,11	supporting/source text	Models can be set up or end a move on the ground level of terrain features. Models can also be set up or end a move on any surface of a terrain feature that is not on ground level, if all of the following apply:
+P48-10	48	13.06	4,8,11	supporting/source text	▪ That model has one or more of the following keywords: INFANTRY/BEASTS/SWARM/FLY/MONSTER. ▪ After ending that move, that model is stable and no part of its base overhangs the outer edge of that surface.
+P48-11	48	13.06	4,8,11	supporting/source text	PLUNGING FIRE As well as gaining superior lines of sight, models that ascend tall terrain features can benefit from the Plunging Fire rule (22.05).
+P48-12	48	13.06	4,8,11	supporting/source text	"SOLID TERRAIN If a terrain feature has the Solid rule (13.11), as dense terrain features do, a model cannot end a move such that any part of it is through any enclosed part of that terrain feature that is 3"" or less from ground level – not even through small openings such as doors and windows. This ensures that protruding elements of models cannot be used to circumvent the visibility restrictions of the Solid rule."
+P49-01	49	U08	4,8	supporting/source text	TERRAIN AND MOVEMENT
+P49-02	49	U08	4,8	supporting/source text	Dense Terrain
+P49-03	49	U08	4,8	supporting/source text	Dense Terrain
+P49-04	49	U08	4,8	supporting/source text	Dense Terrain
+P49-05	49	U08	4,8	supporting/source text	Dense Terrain
+P49-06	49	U08	4,8	supporting/source text	Dense Terrain
+P49-07	49	U08	4,8	supporting/source text	"All sections of this dense terrain feature are more than 2"" in height, so this MONSTER model cannot move through it and must move around it instead."
+P49-08	49	U08	4,8	supporting/source text	This INFANTRY model can move vertically and end its move on the top surface of this terrain feature, as it is stable and no part of its base overhangs the outer edge of that surface.
+P49-09	49	U08	4,8	supporting/source text	"This VEHICLE model cannot move through this dense terrain feature, but It can move vertically to ascend and descend sections that are more than 2"" in height (provided it does not end that move on top of such sections)."
+P49-10	49	U08	4,8	supporting/source text	This INFANTRY model is not being moved over or through any terrain features. Its move through the terrain area shown is therefore unimpeded.
+P49-11	49	U08	4,8	supporting/source text	These INFANTRY models can move through dense terrain features, such as the walls of this ruin.
+P50-01	50	13.07	8	heading	TERRAIN AND VISIBILITY 13.07
+P50-02	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	Terrain can affect visibility, depending on whether the Benefit of Cover, Hidden, Obscuring or Solid rules apply.
+P50-03	50	13.08	8,12	heading	BENEFIT OF COVER 13.08
+P50-04	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	Each time a ranged attack targets a unit, if every model in that unit meets one or more of the following conditions, that unit has the benefit of cover against that attack:
+P50-05	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	▪ That model has the INFANTRY/BEASTS/SWARM keyword and is within a terrain area. ▪ That model is not fully visible to the attacking model due to one or more intervening terrain features and/or one or more intervening obscuring terrain areas (see below).
+P50-06	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	Each time a ranged attack targets a unit that has the benefit of cover against it, worsen the BS characteristic of that attack by 1.
+P50-07	50	13.09	5,8,12	heading	HIDDEN 13.09
+P50-08	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	A model is hidden while all of the following apply to it:
+P50-09	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	▪ That model has the INFANTRY/BEASTS/SWARM keyword and is within a terrain area that contains one or more dense terrain features. ▪ That model’s unit did not make one or more ranged attacks during this turn or during the previous turn.
+P50-10	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	"While a model is hidden, it can only be visible to enemy models that are within its detection range. Unless otherwise stated, a model’s detection range is 15""."
+P50-11	50	13.10	8	heading	OBSCURING 13.10
+P50-12	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	Terrain areas containing one or more light or dense terrain features are obscuring terrain areas. If every line of sight drawn between two models crosses one or more obscuring terrain areas (excluding obscuring terrain areas that one or both of those models are within), those two models are not visible to each other.
+P50-13	50	13.11	8	heading	SOLID 13.11
+P50-14	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	"Dense terrain features have the Solid rule. Line of sight cannot be drawn across any enclosed gap in the surface of such a terrain feature that is 3"" or less from ground level."
+P50-15	50	13.07,13.08,13.09,13.10,13.11	5,8,12	supporting/source text	"Designer’s Note: This rule ensures that models are not visible while sheltering in ground-level terrain, irrespective of small openings such as doors, windows or bullet holes, or because of small gaps between adjacent terrain features. 3"" is the height of the first floor of many terrain features, but some missions may adjust the height at which this rule takes effect."
+P51-01	51	U08	4,8	supporting/source text	HIDDEN AND OBSCURING BENEFIT OF COVER
+P51-02	51	U08	4,8	supporting/source text	▪ There is an obscuring terrain area between all models in units A and D, so none of them are visible to each other.
+P51-03	51	U08	4,8	supporting/source text	"▪ All models in units B and C are within the terrain area and are INFANTRY, so are hidden. However, unit D’s models are within the 15"" detection range of unit B’s models (but not unit C’s), so unit B’s models are visible to unit D’s. Unit D’s models are also visible to the models in units B and C, since they are not within a terrain area."
+P51-04	51	U08	4,8	supporting/source text	"Units A and B are not visible to each other, because even though there is a window in this dense terrain feature, it has the Solid rule, so line of sight cannot be drawn through such enclosed gaps that are 3"" or less from ground level."
+P51-05	51	U08	4,8	supporting/source text	"Units A and C are visible to each other, because even though this dense terrain feature has the Solid rule, line of sight can be drawn normally through enclosed gaps that are more than 3"" from ground level."
+P51-06	51	U08	4,8	supporting/source text	When Unit E makes ranged attacks:
+P51-07	51	U08	4,8	supporting/source text	▪ Unit A is fully visible to every model in Unit E, so does not have the benefit of cover.
+P51-08	51	U08	4,8	supporting/source text	▪ Not all of the models in unit B are within a terrain area, so unit B does not have the benefit of cover.
+P51-09	51	U08	4,8	supporting/source text	▪ All of the models in unit C are within a terrain area, so unit C has the benefit of cover.
+P51-10	51	U08	4,8	supporting/source text	▪ Unit D is not fully visible to unit E due to an intervening obscuring terrain area, so unit D has the benefit of cover.
+P51-11	51	U08	4,8	supporting/source text	-1 BS -1 BS
+P51-12	51	U08	4,8	supporting/source text	SOLID C
+P52-01	52	14.01	8	heading	TERRAIN OBJECTIVES 14.01
+P52-02	52	14.01,14.02,14.03	8	supporting/source text	If a mission uses objectives, it will state where they are located on the battlefield. Typically, your mission will have a deployment map showing several points where objectives should be placed. The location of each point should coincide with a terrain area (13.01); that terrain area is the objective, and is called a terrain objective.
+P52-03	52	14.01,14.02,14.03	8	supporting/source text	When measuring distances to and from an objective, measure to and from the closest part of it.
+P52-04	52	14.02	8	heading	LEVEL OF CONTROL 14.02
+P52-05	52	14.01,14.02,14.03	8	supporting/source text	At the start of the battle, no objective on the battlefield is controlled by either player. To gain control of an objective, a player will need one or more models with an OC characteristic of 1 or more within range of it. A model is within range of a terrain objective while it is within that terrain area.
+P52-06	52	14.01,14.02,14.03	8	supporting/source text	At the end of each phase and turn, to determine a player’s level of control over an objective, add together the OC characteristics of all the models in that player’s army that are within range of that objective:
+P52-07	52	14.01,14.02,14.03	8	supporting/source text	▪ The player who has the highest level of control over that objective controls that objective. ▪ If both players have the same level of control over that objective, unless that objective is secured (see below), that objective is not controlled by either player.
+P52-08	52	14.01,14.02,14.03	8	supporting/source text	While one or more units from a player’s army are within range of an objective that player controls, for each of those units that contains one or more models with an OC characteristic of 1 or more, that unit is said to be controlling that objective.
+P52-09	52	14.03	8	heading	SECURED OBJECTIVES 14.03
+P52-10	52	14.01,14.02,14.03	8	supporting/source text	Some rules allow an objective to be secured by a player’s army. When an objective is secured by a player’s army, that objective remains under their control – even once they no longer have any units within range of it – until their opponent’s level of control over that objective is greater than theirs at the end of a phase.
+P52-11	52	14.01,14.02,14.03	8	supporting/source text	HOLD AT ALL COSTS Some units have abilities that are triggered when they control an objective, or when they secure an objective for your army.
+P52-12	52	14.01,14.02,14.03	8	supporting/source text	Objectives represent critical locations that both sides are attempting to secure, and many missions require your forces to take control of them to achieve victory. This section describes how to do so with your models.
+P53-01	53	U09	8	cross-reference	SEE ALSO
+P53-02	53	U09	8	cross-reference	► Objectives Not Within a Terrain Area
+P53-03	53	U09	8	supporting/source text	CONTROLLING A TERRAIN OBJECTIVE
+P53-04	53	U09	8	supporting/source text	This unit is currently battle-shocked, so the OC characteristic of all of its models is ‘-’.
+P53-05	53	U09	8	supporting/source text	The models in this unit each have an OC characteristic of 1. Six of its models are within the terrain area.
+P53-06	53	U09	8	supporting/source text	This VEHICLE has an OC characteristic of 3, and it is within the terrain area.
+P53-07	53	U09	8	supporting/source text	This VEHICLE has an OC characteristic of 2, and it is wholly within the terrain area.
+P53-08	53	U09	8	supporting/source text	Both players add together the OC characteristics of all their models that are within the terrain area. The BLUE player’s level of control is 5, and the RED player’s level of control is 6. The RED player therefore controls the objective.
+P54-01	54	15.01,U30	1,3,4,5,9,10,11,15,17	heading	USING STRATAGEMS 15.01
+P54-02	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	During the battle, both players can use stratagems. Each stratagem states:
+P54-03	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	▪ How many CP it costs to use.
+P54-04	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	▪ WHEN: When it can be used.
+P54-05	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	▪ TARGET: Which units it can target.
+P54-06	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	▪ EFFECT: What the effects of using that stratagem are.
+P54-07	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	▪ RESTRICTIONS: Any additional restrictions that apply.
+P54-08	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	Each player can use the same stratagem multiple times during the battle, but the following restrictions apply:
+P54-09	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	▪ Each player cannot use the same stratagem more than once in the same phase. ▪ Unless otherwise stated, each player cannot target the same unit with more than one stratagem in the same phase.
+P54-10	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	Each time you use a stratagem, resolve the following sequence:
+P54-11	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	1. Select targets as described in that stratagem. 2. Reduce your CP total by the CP cost listed in that stratagem. If that stratagem contains a section that carries an additional CP cost (e.g. +1CP), you can only use that additional section if you increase the CP cost of that stratagem by the amount shown. If you do not have enough CP remaining, you cannot use that stratagem. 3. Resolve the effects of that stratagem.
+P54-12	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	CORE STRATAGEMS
+P54-13	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	All players can use core stratagems (see overleaf). Additional stratagems can be found in Codexes and other publications.
+P54-14	54	15.01,U30	1,3,4,5,9,10,11,15,17	supporting/source text	Stratagems can be used by spending Command Points, to create epic moments of tactical brilliance or peerless martial might. They are used when a player deems that a critical point in the battle is reached, where extra combat prowess or fleeting but powerful effects are required to tip the balance in their favour.
+P55-01	55	U10,U30	1,4,5,9,10,11,15,17	supporting/source text	Stratagems are presented as shown above. Some feature optional conditions that carry an additional CP cost. This can depend on the effect you select (like in the example above) or other variables such as the keywords of the unit being targeted.
+P55-02	55	U10,U30	1,4,5,9,10,11,15,17	supporting/source text	Graphical key converted to text: a stratagem timing category can be Either player’s turn, Your turn, or Opponent’s turn. The exact WHEN clauses are retained with each stratagem.
+P55-03	55	U10,U30	1,4,5,9,10,11,15,17	supporting/source text	External/supporting cross-references printed on this page: Modifying CP Cost; Rules Sequencing.
+P55-04	55	U10,U30	1,4,5,9,10,11,15,17	supporting/source text	Editorial navigation: the tilted illustrative card repeats HEROIC INTERVENTION and COUNTEROFFENSIVE. Their complete, upright rule wording is retained on source p. 57, including the Into the Fray +1CP cost. No separate rule is defined by the tilted card.
+P56-01	56	15.02	5,9,15	heading	COMMAND RE-ROLL 15.02 1CP
+P56-02	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	CORE STRATAGEM
+P56-03	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	A great commander can bend even the vagaries of fate and fortune to their will, the better to ensure victory.
+P56-04	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	WHEN: Any phase, just after you make one of the following rolls for a friendly unit or model:
+P56-05	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	▪ Advance roll
+P56-06	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	▪ Charge roll
+P56-07	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	▪ Damage roll
+P56-08	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	▪ Hazard roll
+P56-09	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	▪ Hit roll
+P56-10	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	▪ Save roll
+P56-11	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	▪ Wound roll
+P56-12	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	▪ A roll to determine the number of attacks generated with a weapon.
+P56-13	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	TARGET: That unit or model.
+P56-14	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	EFFECT: You re‑roll that roll. If you are rolling more than one dice together, select one of those dice to re‑roll (excluding charge rolls, which you must re-roll in full).
+P56-15	56	15.03	10,15	heading	EPIC CHALLENGE 15.03 1CP
+P56-16	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	CORE STRATAGEM
+P56-17	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	The legends of the 41st millennium are replete with deadly duels between mighty champions.
+P56-18	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	WHEN: Fight phase, just after a friendly CHARACTER unit is selected to fight.
+P56-19	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	TARGET: That CHARACTER unit.
+P56-20	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	EFFECT: Select one CHARACTER model in your unit. Until the end of the phase, that model’s melee weapons have the [PRECISION] ability.
+P56-21	56	15.04	7,15	heading	INSANE BRAVERY 15.04 1CP
+P56-22	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	CORE STRATAGEM
+P56-23	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	Indifferent to their own survival, these warriors hold their ground against seemingly impossible odds.
+P56-24	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	WHEN: Battle‑shock step of your Command phase, just before you make a battle-shock roll for a friendly unit.
+P56-25	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	TARGET: That unit.
+P56-26	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	EFFECT: That battle-shock roll is automatically successful.
+P56-27	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	RESTRICTIONS: You cannot use this stratagem more than once per battle.
+P56-28	56	15.05	10,15	heading	EXPLOSIVES 15.05 1CP
+P56-29	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	CORE STRATAGEM
+P56-30	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	Priming grenades or other explosives, these warriors draw back and hurl death into the enemy’s midst.
+P56-31	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	WHEN: Your Shooting phase.
+P56-32	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	TARGET: One friendly unengaged EXPLOSIVES/GRENADES unit that is eligible to shoot and did not make an advance move this turn.
+P56-33	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	EFFECT: Resolve the following sequence:
+P56-34	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	1. Select one EXPLOSIVES/GRENADES model in your unit.
+P56-35	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	"2. Select one unengaged enemy unit within 8"" of and visible to that model."
+P56-36	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	3. Roll six D6: for each 4+, that enemy unit suffers 1 mortal wound (06.02).
+P56-37	56	15.06	10,13,15	heading	CRUSHING IMPACT 15.06 1CP
+P56-38	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	CORE STRATAGEM
+P56-39	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	In extremis, armoured vehicles and rampaging monsters can use their sheer size as a weapon, ramming and crushing enemies beneath their colossal bulk, though doing so risks sustaining damage in return.
+P56-40	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	WHEN: Your Charge phase, just after a friendly MONSTER/VEHICLE unit ends a charge move.
+P56-41	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	TARGET: That MONSTER/VEHICLE unit.
+P56-42	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	EFFECT: Resolve the following sequence:
+P56-43	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	1. Select one enemy unit engaged with your unit.
+P56-44	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	2. Select one model in your unit engaged with that enemy unit.
+P56-45	56	15.02,15.03,15.04,15.05,15.06	5,7,9,10,13,15	supporting/source text	3. Roll a number of D6 equal to the T characteristic of that model: for each 1, your unit suffers 1 mortal wound; for each 5+, that enemy unit suffers 1 mortal wound (to a maximum of 6 mortal wounds per unit).
+P57-01	57	15.07	11,15	heading	RAPID INGRESS 15.07 1CP
+P57-02	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	CORE STRATAGEM
+P57-03	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	Be it cunning strategy, potent technology or supernatural ritual, there are many means by which a commander may hasten their warriors’ onset.
+P57-04	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	WHEN: End of your opponent’s Movement phase.
+P57-05	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	TARGET: One friendly unit that is in strategic reserves (excluding AIRCRAFT).
+P57-06	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	EFFECT: Your unit makes an ingress move (20.04).
+P57-07	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	RESTRICTIONS: You cannot use this stratagem during the first battle round.
+P57-08	57	15.08	12,15	heading	FIRE OVERWATCH 15.08 1CP
+P57-09	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	CORE STRATAGEM
+P57-10	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	A hail of fire can drive back advancing foes.
+P57-11	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	WHEN: End of your opponent’s Movement phase.
+P57-12	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	TARGET: One friendly unengaged unit (excluding TITANIC units).
+P57-13	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	EFFECT: Your unit shoots using snap shooting (see below).
+P57-14	57	15.09	9,12,15	heading	SNAP SHOOTING 15.09
+P57-15	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	ELIGIBLE IF: As stated in the rule allowing this shooting type.
+P57-16	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	EFFECT: Your unit shoots as described in Making Attacks (04).
+P57-17	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	WHILE SHOOTING:
+P57-18	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	"▪ You can only target one visible enemy unit within 24"" of your unit (and only if it is an eligible target). ▪ Each attack only hits on an unmodified hit roll of 6 (irrespective of the attacking weapon’s BS characteristic or any modifiers). ▪ You cannot re‑roll hit rolls."
+P57-19	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	AFTER SHOOTING: Until the end of the phase, your unit is not eligible to start an action.
+P57-20	57	15.10	8,12,15	heading	SMOKESCREEN 15.10 1CP
+P57-21	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	CORE STRATAGEM
+P57-22	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	Even the most skilled marksmen struggle to hit targets veiled by billowing screens of smoke.
+P57-23	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	WHEN: Start of your opponent’s Shooting phase.
+P57-24	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	TARGET: One friendly SMOKE unit.
+P57-25	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	EFFECT: Until the end of the phase, each time an attack targets either your SMOKE unit, or a unit that is not fully visible to the attacking model because of one or more models in your SMOKE unit, the target has the benefit of cover against that attack (13.08).
+P57-26	57	15.11	13,14,15	heading	HEROIC INTERVENTION 15.11 1CP
+P57-27	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	CORE STRATAGEM
+P57-28	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	Voices raised in furious war cries, your warriors surge forth to meet the enemy’s onslaught head‑on.
+P57-29	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	WHEN: End of your opponent’s Charge phase.
+P57-30	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	"TARGET: One friendly unengaged unit within 12"" of one or more enemy units. You can only select a VEHICLE unit if it is a CHARACTER/WALKER unit."
+P57-31	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	EFFECT: Resolve a charge with your unit (11.02). While doing so, before making the charge roll, you must select one of the following modes:
+P57-32	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	▪ Leap to Defend: When selecting charge targets, you can only select enemy units that made a charge move this phase and are within the maximum distance.
+P57-33	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	▪ Into the Fray:
+P57-34	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	"▫ When making the charge roll, if the result is greater than 6 (after modifiers), change it to 6. ▫ When selecting charge targets, you can select any enemy units that are within 6"" of your unit and within the maximum distance."
+P57-35	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	+1CP Layout annotation: this extra cost applies to the Into the Fray mode of HEROIC INTERVENTION, not Leap to Defend or COUNTEROFFENSIVE.
+P57-36	57	15.12	14,15	heading	COUNTEROFFENSIVE 15.12 2CP
+P57-37	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	CORE STRATAGEM
+P57-38	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	In close‑quarters combat, the slightest hesitation can leave an opening for a swift foe to exploit.
+P57-39	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	WHEN: Fight step of your opponent’s Fight phase, just after an enemy unit has resolved its attacks.
+P57-40	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	TARGET: One friendly unit that is eligible to fight.
+P57-41	57	15.07,15.08,15.09,15.10,15.11,15.12	8,9,11,12,13,14,15	supporting/source text	EFFECT: Until the end of the phase, your unit has the Fights First ability and it must be the next unit you select to fight (12.04).
+P58-01	58	16.01,U11	5,15,17	heading	PERFORMING ACTIONS 16.01
+P58-02	58	16.01,U11	5,15,17	supporting/source text	Some rules allow units to perform actions. Each action states:
+P58-03	58	16.01,U11	5,15,17	supporting/source text	▪ STARTS: When it is started.
+P58-04	58	16.01,U11	5,15,17	supporting/source text	▪ UNITS: Which friendly units can perform it.
+P58-05	58	16.01,U11	5,15,17	supporting/source text	▪ USE LIMIT: How many times friendly units can start it.
+P58-06	58	16.01,U11	5,15,17	supporting/source text	▪ COMPLETES: When it completes.
+P58-07	58	16.01,U11	5,15,17	supporting/source text	▪ EFFECT: What the effects of completing it are.
+P58-08	58	16.01,U11	5,15,17	supporting/source text	▪ Any additional restrictions that may apply.
+P58-09	58	16.01,U11	5,15,17	supporting/source text	STARTING AN ACTION
+P58-10	58	16.01,U11	5,15,17	supporting/source text	A unit is eligible to start an action unless one or more of the following apply to that unit:
+P58-11	58	16.01,U11	5,15,17	supporting/source text	▪ It is not on the battlefield.
+P58-12	58	16.01,U11	5,15,17	supporting/source text	▪ It is an AIRCRAFT/FORTIFICATION unit.
+P58-13	58	16.01,U11	5,15,17	supporting/source text	▪ It is battle-shocked.
+P58-14	58	16.01,U11	5,15,17	supporting/source text	▪ It has an OC characteristic of 0 or ‘-’.
+P58-15	58	16.01,U11	5,15,17	supporting/source text	▪ It is engaged (unless it is a TITANIC unit).
+P58-16	58	16.01,U11	5,15,17	supporting/source text	▪ It made an advance or fall-back move this turn.
+P58-17	58	16.01,U11	5,15,17	supporting/source text	▪ It started another action this turn.
+P58-18	58	16.01,U11	5,15,17	supporting/source text	If a unit starts an action, until the end of the turn:
+P58-19	58	16.01,U11	5,15,17	supporting/source text	▪ It is not eligible to shoot (excluding TITANIC units).
+P58-20	58	16.01,U11	5,15,17	supporting/source text	▪ It is not eligible to declare a charge.
+P58-21	58	16.01,U11	5,15,17	supporting/source text	COMPLETING AN ACTION
+P58-22	58	16.01,U11	5,15,17	supporting/source text	If a unit performing an action makes a move (excluding pile-in and consolidation moves) or leaves the battlefield, that unit does not complete that action. Otherwise, when an action is completed, its ‘Effect’ section is triggered.
+P58-23	58	16.01,U11	5,15,17	supporting/source text	Example action for illustrative purposes only.
+P58-24	58	16.01,U11	5,15,17	supporting/source text	WHERE TO FIND ACTIONS The actions players can use can be found in other publications such as mission packs. All players can use core actions, while other actions may have restrictions such as army faction.
+P58-25	58	16.01,U11	5,15,17	supporting/source text	DEPLOY DEVICE
+P58-26	58	16.01,U11	5,15,17	supporting/source text	EXAMPLE ACTION (CANNOT BE USED)
+P58-27	58	16.01,U11	5,15,17	supporting/source text	Though it won’t turn the tide of battle, deployment of this device will be instrumental to the war effort.
+P58-28	58	16.01,U11	5,15,17	supporting/source text	STARTS: Your Shooting phase.
+P58-29	58	16.01,U11	5,15,17	supporting/source text	UNITS: One INFANTRY unit that is within a terrain area that is not within your deployment zone.
+P58-30	58	16.01,U11	5,15,17	supporting/source text	USE LIMIT: Once per turn.
+P58-31	58	16.01,U11	5,15,17	supporting/source text	COMPLETES: End of the turn.
+P58-32	58	16.01,U11	5,15,17	supporting/source text	"EFFECT: Set up one marker within 1"" of your unit and within that terrain area."
+P58-33	58	16.01,U11	5,15,17	supporting/source text	Actions represent vital battlefield tasks your forces must carry out, from searching for missing archeotech to completing a blasphemous ritual.
+P58-34	58	16.01,U11	5,15,17	supporting/source text	Editorial classification: DEPLOY DEVICE is labelled EXAMPLE ACTION (CANNOT BE USED) in the source. Its text on this page is retained for interpreting action structure, not as a playable core action.
+P62-01	62	17.01,U30	1,4,5,9,10,11,17	heading	MOVING MONSTERS AND VEHICLES 17.01
+P62-02	62	17.01,17.02,17.03,U30	1,4,5,8,9,10,11,12,17	supporting/source text	Each time you make a normal or advance move with a unit, MONSTER/VEHICLE models in that unit can be moved through friendly and enemy models (excluding other MONSTER/VEHICLE models).
+P62-03	62	17.02,U30	1,4,5,9,10,11,17	heading	FRAME 17.02
+P62-04	62	17.01,17.02,17.03,U30	1,4,5,8,9,10,11,12,17	supporting/source text	Some models do not have a base; many of these are MONSTER/VEHICLE models. Such models have the FRAME keyword, as do some other large models. Whenever a rule refers to a model’s position in relation to anything else on the battlefield (e.g. when measuring distances), if that model has the FRAME keyword, unless otherwise stated, measure to and from the closest point on that model (so not necessarily from its base, if it has one).
+P62-05	62	17.01,17.02,17.03,U30	1,4,5,8,9,10,11,12,17	supporting/source text	When rotating a FRAME model as part of a move, if that model does not have a base, turn it any amount around its central axis, while keeping it upright.
+P62-06	62	17.03,U30	1,4,5,8,9,10,11,12,17	heading	SHOOTING AT ENGAGED MONSTERS AND VEHICLES 17.03
+P62-07	62	17.01,17.02,17.03,U30	1,4,5,8,9,10,11,12,17	supporting/source text	In your Shooting phase, enemy MONSTER/VEHICLE units that are engaged can be selected as targets of ranged attacks.
+P62-08	62	17.01,17.02,17.03,U30	1,4,5,8,9,10,11,12,17	supporting/source text	Each time a model makes a ranged attack that targets such a unit, subtract 1 from the hit roll (excluding attacks made with [CLOSE‑QUARTERS] weapons by models in a unit engaged with the target).
+P62-09	62	17.01,17.02,17.03,U30	1,4,5,8,9,10,11,12,17	supporting/source text	SHOOTING WHILE ENGAGED WITH MONSTERS/VEHICLES A unit that is engaged with an enemy MONSTER/VEHICLE unit is still not eligible to shoot, and so cannot make ranged attacks against that MONSTER/VEHICLE unit, unless that unit is eligible to shoot while engaged (e.g. because it is using close‑quarters shooting).
+P62-10	62	17.01,17.02,17.03,U30	1,4,5,8,9,10,11,12,17	supporting/source text	Due to their imposing bulk and implacable nature, Monsters and Vehicles function differently on the battlefield. This section details the additional rules required to use these units in your games.
+P63-01	63	U12	12	supporting/source text	ENGAGED MONSTERS/VEHICLES – SHOOTING
+P63-02	63	U12	12	supporting/source text	The VEHICLE can shoot at this INFANTRY unit using close-quarters shooting. While resolving those attacks, subtract 1 from hit rolls (excluding attacks made with [CLOSE‑QUARTERS] weapons).
+P63-03	63	U12	12	supporting/source text	This INFANTRY unit can shoot at the VEHICLE using normal shooting. While resolving those attacks, subtract 1 from hit rolls. As the VEHICLE is engaged, [BLAST] weapons cannot target it, but can target other unengaged units.
+P63-04	63	U12	12	supporting/source text	The VEHICLE can shoot at this INFANTRY unit using close-quarters shooting. While resolving those attacks, subtract 1 from hit rolls. As the INFANTRY unit is engaged, [BLAST] weapons cannot target it, but can target other unengaged units.
+P63-05	63	U12	12	supporting/source text	This INFANTRY unit is engaged, but can shoot at the VEHICLE using close-quarters shooting. While doing so, it can only make attacks with its [CLOSE-QUARTERS] weapons and can only target the VEHICLE it is engaged with.
+P63-06	63	U12	12	supporting/source text	-1 TO HIT ROLL
+P63-07	63	U12	12	supporting/source text	-1 TO HIT ROLL
+P64-01	64	18.01	3,16,17	heading	TRANSPORT CAPACITY 18.01
+P64-02	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	TRANSPORT models have a transport capacity listed on their datasheet. This determines the type and maximum number of friendly models that are eligible to embark within them. More than one unit can be embarked within the same TRANSPORT model at the same time, provided it has sufficient transport capacity.
+P64-03	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	Before the battle, in the Declare Battle Formations step, your units can start embarked within any friendly TRANSPORT model that has sufficient transport capacity remaining for the whole unit.
+P64-04	64	18.02	11,16	heading	EMBARKING 18.02
+P64-05	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	Once the first battle round has started, a friendly unit can embark within a friendly TRANSPORT model after making a normal, advance or fall-back move, if all of the following conditions apply:
+P64-06	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	"▪ Each model in that unit is within 3"" of that TRANSPORT."
+P64-07	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	▪ That unit was not set up on the battlefield this turn.
+P64-08	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	▪ That unit is eligible to embark within that TRANSPORT, as described on that TRANSPORT’s datasheet. ▪ That TRANSPORT has sufficient remaining transport capacity for each model in that unit.
+P64-09	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	When a unit embarks, the active player removes that unit from the battlefield and places it to one side – it is now embarked within that TRANSPORT and is not on the battlefield.
+P64-10	64	18.03	11,16	heading	DISEMBARKING 18.03
+P64-11	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	In the active player’s Movement phase, each friendly unit embarked within a TRANSPORT model can disembark from it by making a disembark move (see opposite).
+P64-12	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	If a TRANSPORT model is destroyed, before removing it from the battlefield, the active player must make an emergency disembark move (see opposite) with each unit embarked within it.
+P64-13	64	18.01,18.02,18.03	3,11,16,17	supporting/source text	TRANSPORT models can carry passengers across the battlefield. This section explains how to use such models in your battles, and how units can embark within and disembark from them.
+P65-01	65	18.04,U30	1,4,5,9,10,11,16,17	heading	DISEMBARK MOVE 18.04
+P65-02	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	"SET-UP DISTANCE: - Rapid/Tactical Disembark: 3"" - Combat Disembark: 6"""
+P65-03	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	ELIGIBLE IF: All of the following apply to your unit:
+P65-04	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	▪ Embarked within a TRANSPORT model that is on the battlefield. ▪ Did not embark within that TRANSPORT this phase.
+P65-05	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	▪ That TRANSPORT has not made an advance or fall-back move this phase.
+P65-06	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	EFFECT: Your unit is set up as described in Set Up (03.02).
+P65-07	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	BEFORE MOVING: Select disembark mode: -> Rapid Disembark: If that TRANSPORT made a normal or ingress move this phase, you must select this mode. -> Tactical Disembark: Otherwise, If that TRANSPORT remained stationary or has not yet been selected to move this phase, and if you can set up your unit as described below, you must select this mode. -> Combat Disembark: Otherwise, you must select this mode. Make a hazard roll for each model in your unit.
+P65-08	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	WHILE MOVING: Set up each model in your unit wholly within the set-up distance of that TRANSPORT.
+P65-09	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	▪ Rapid Disembark: If that TRANSPORT made an ingress move this turn, each model must follow the same rules that TRANSPORT had to follow while resolving that move. ▪ Combat Disembark: Each model can be set up engaged with one or more enemy units that TRANSPORT is engaged with.
+P65-10	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	AFTER MOVING:
+P65-11	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	▪ Rapid Disembark: Until the end of the turn, your unit is not eligible to declare a charge. ▪ Tactical Disembark: Select your unit to make a normal or advance move. ▪ Combat Disembark: Your unit is battle-shocked and, until the end of the turn, it is not eligible to declare a charge.
+P65-12	65	18.05,U30	1,4,5,9,10,11,16,17	heading	EMERGENCY DISEMBARK MOVE 18.05
+P65-13	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	"SET-UP DISTANCE: 6"""
+P65-14	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	ELIGIBLE IF: Your unit is embarked within a TRANSPORT model that was just destroyed.
+P65-15	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	EFFECT: Your unit is set up as described in Set Up (03.02).
+P65-16	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	BEFORE MOVING: Make a hazard roll for each model in your unit (06.03).
+P65-17	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	WHILE MOVING: Set up each model in your unit wholly within the set-up distance of that TRANSPORT, and as close as possible to that TRANSPORT. Each model that cannot be set up in this way is destroyed.
+P65-18	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	AFTER MOVING: Your unit is battle-shocked and, until the end of the turn, it is not eligible to declare a charge.
+P65-19	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	cross-reference	SEE ALSO
+P65-20	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	EMBARKING
+P65-21	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	cross-reference	► Not on the Battlefield
+P65-22	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	DISEMBARKING
+P65-23	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	▪ Hazard Rolls 06.03
+P65-24	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	cross-reference	► Persisting Rules Effects
+P65-25	65	18.04,18.05,U30	1,4,5,9,10,11,16,17	supporting/source text	"RAPID DISEMBARK When a unit uses the rapid disembark mode after its TRANSPORT makes an ingress move, the models must follow the same rules and restrictions as that TRANSPORT did. For example, if that TRANSPORT had to be set up more than 8"" from all enemy units and not within your opponent’s deployment zone, the same applies to the disembarking unit."
+P66-01	66	19.01	3,6,17	heading	FORMING ATTACHED UNITS 19.01
+P66-02	66	19.01,19.02	3,6,9,10,17	supporting/source text	Some units have the Leader or Support ability listed on their datasheet (see below). Such units are known as leader units and support units respectively. Both of these abilities allow such units to lead other friendly units (known as bodyguard units) to form attached units. An attached unit is a single unit for all rules purposes. Leader and support units can only lead specific bodyguard units, as listed in the Warhammer 40,000 app.
+P66-03	66	19.01,19.02	3,6,9,10,17	supporting/source text	LEADER 24.22 / SUPPORT 24.34 Mighty heroes fight at the forefront of battle.
+P66-04	66	19.01,19.02	3,6,9,10,17	supporting/source text	Before the battle, in the Muster Armies step, for each leader and support unit in your army, you can select one friendly bodyguard unit that unit can lead. That unit will then lead that bodyguard unit for the battle and form an attached unit with it.
+P66-05	66	19.01,19.02	3,6,9,10,17	supporting/source text	Unless otherwise stated, each bodyguard unit can only have one leader unit and one support unit attached to it.
+P66-06	66	19.02	6,9,10	heading	ATTACKING ATTACHED UNITS 19.02
+P66-07	66	19.01,19.02	3,6,9,10,17	supporting/source text	Each time an attack targets an attached unit, if that unit contains one or more bodyguard models, use the highest T characteristic of the bodyguard models in that unit while resolving that attack, even if a leader/support unit in that attached unit has a different T characteristic. If that unit only contains leader/support models, use the highest T characteristic of those models while resolving that attack instead.
+P66-08	66	19.01,19.02	3,6,9,10,17	supporting/source text	Rules that are triggered when a unit is destroyed are only triggered when the last model that started the battle in an attached unit is destroyed.
+P66-09	66	19.01,19.02	3,6,9,10,17	supporting/source text	The heroes of your army rarely fight alone. Instead, they typically lead bands of warriors, forming an attached unit that acts as a single entity. This section explains how to form attached units and how they function on the battlefield.
+P67-01	67	19.03,U13	6,10	heading	KEYWORDS IN ATTACHED UNITS 19.03
+P67-02	67	19.03,19.04,U13	3,6,10	supporting/source text	An attached unit has all of the keywords of all of its component units. As such, an attached unit is affected by any rule that applies to units with any of those keywords. Note that models in an attached unit do not gain the keywords of other models in that unit that they do not already have. Remember that attacks target units, not models.
+P67-03	67	19.03,19.04,U13	3,6,10	supporting/source text	Example: An attached unit contains a leader model with the PSYKER keyword. While that model is part of that unit, that unit has the PSYKER keyword, even if the bodyguard models do not have that keyword. If that unit is attacked by a weapon with the [ANTI‑PSYKER 4+] ability, any unmodified wound roll of 4+ made against that unit is a critical wound, even if the attack itself is not allocated to that leader model.
+P67-04	67	19.04,U13	3,6,10	heading	ABILITIES IN ATTACHED UNITS 19.04
+P67-05	67	19.03,19.04,U13	3,6,10	supporting/source text	Abilities/rules that affect a single specified model (e.g. from an enhancement or an item of wargear) only ever apply to that model, even while part of an attached unit.
+P67-06	67	19.03,19.04,U13	3,6,10	supporting/source text	Otherwise, abilities/rules that affect a unit (or models in it) apply to every model in an attached unit, until the source of that ability/rule is destroyed, as shown below.
+P67-07	67	19.03,19.04,U13	3,6,10	supporting/source text	ABILITIES IN ATTACHED UNITS — table converted to labelled rows: Source of ability/rule: Leader/support unit. Applies to the attached unit until: The last model in that leader/support unit is destroyed.* Source of ability/rule: Bodyguard unit (e.g. from a datasheet ability). Applies to the attached unit until: The last model in that bodyguard unit is destroyed. Source of ability/rule: A specific model (e.g. the bearer of an enhancement or an item of wargear). Applies to the attached unit until: That model is destroyed.
+P67-08	67	19.03,19.04,U13	3,6,10	supporting/source text	* This means leader/support units continue to benefit from their own ‘while this model is leading a unit’ abilities even after their bodyguard unit is destroyed, provided they started the battle in an attached unit.
+P67-09	67	19.03,19.04,U13	3,6,10	supporting/source text	In all of the above cases, if that last model was destroyed as the result of an attack, the ability it was conferring upon the attached unit applies until the attacking unit has resolved all of its attacks.
+P67-10	67	19.03,19.04,U13	3,6,10	supporting/source text	ONLY IN DEATH DOES DUTY END Leader and support units often have abilities that make the models they are leading more powerful. In the same way, some bodyguard units’ abilities can enhance the power of those leading them. The rules on the left mean that once the models conferring such effects are destroyed, that attached unit does not continue to benefit from them. Should those models later be revived, however, those abilities will once more apply to their attached unit.
+P67-11	67	19.03,19.04,U13	3,6,10	supporting/source text	External/supporting cross-reference printed on this page: Revived.
+P68-01	68	20.01	3,11,17	heading	PLACING UNITS IN STRATEGIC RESERVES 20.01
+P68-02	68	20.01,20.02	3,5,11,17	supporting/source text	Before the battle, in the Declare Battle Formations step, you can select one or more friendly units (excluding FORTIFICATIONS) to place in strategic reserves. Instead of setting up these units on the battlefield during deployment, place them to one side; they are strategic reserves units, and will arrive later in the battle.
+P68-03	68	20.01,20.02	3,5,11,17	supporting/source text	Unless otherwise stated, the combined points value of all of your strategic reserves units (including those embarked within TRANSPORTS that are themselves placed in strategic reserves) cannot exceed 50% of your points limit for your battle size.
+P68-04	68	20.02	5,11	heading	REPOSITIONED UNITS 20.02
+P68-05	68	20.01,20.02	3,5,11,17	supporting/source text	Some rules allow units to be removed from the battlefield and placed in strategic reserves during the battle. Units that use such rules are known as repositioned units. In addition to any other rules that apply to such units (such as where they can or cannot arrive), all of the following rules apply to them:
+P68-06	68	20.01,20.02	3,5,11,17	supporting/source text	▪ If used in the Movement phase, such rules can be used on units that have already moved that phase. ▪ A repositioned unit that is set up in the same turn in which it made an advance, fall-back or disembark move has still made an advance, fall-back or disembark move that turn. ▪ When they are removed from the battlefield, any rules that are affecting such units for a specified duration or under specified circumstances continue to affect them while that duration and/or those circumstances apply.
+P68-07	68	20.01,20.02	3,5,11,17	supporting/source text	Example: A unit that was within range of an aura ability when removed from the battlefield would no longer be affected by that aura ability if it is no longer within range of it when it makes an ingress move, but a unit that was battle-shocked when removed from the battlefield would still be battle-shocked if it makes an ingress move in the same turn.
+P68-08	68	20.01,20.02	3,5,11,17	supporting/source text	Strategic reserves are units that arrive on the battlefield at different times, either because they were held back during deployment, or because they are using special abilities to reposition themselves.
+P69-01	69	20.03,U30	1,4,5,9,10,11,17	heading	ARRIVING FROM STRATEGIC RESERVES 20.03
+P69-02	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	To arrive on the battlefield, each strategic reserves unit must make an ingress move (see below). Unless otherwise stated, they can only do so from the second battle round onwards.
+P69-03	69	20.04,U30	1,4,5,9,10,11,17	heading	INGRESS MOVE 20.04
+P69-04	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	"SET-UP DISTANCE: 6"""
+P69-05	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	ELIGIBLE IF: Your unit is in strategic reserves (excluding units that are embarked within TRANSPORTS that are themselves in strategic reserves).
+P69-06	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	EFFECT: Your unit is set up as described in Set Up (03.02).
+P69-07	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	"WHILE MOVING: Set up your unit wholly within the set-up distance of one or more battlefield edges and more than 8"" horizontally from all enemy units."
+P69-08	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	▪ Before the Third Battle Round: While doing so, no models can be set up within your opponent’s deployment zone.
+P69-09	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	AFTER MOVING: Unless otherwise stated, until the start of the next Charge phase, your unit is not eligible to make any other type of move.
+P69-10	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	At the end of the third battle round, unless otherwise stated, all strategic reserves units that have not made one or more ingress moves are destroyed, with the following exceptions:
+P69-11	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	▪ Units embarked within TRANSPORTS that have made an ingress move during the battle. ▪ Repositioned units (see opposite).
+P69-12	69	20.03,20.04,U30	1,4,5,9,10,11,17	cross-reference	SEE ALSO
+P69-13	69	20.03,20.04,U30	1,4,5,9,10,11,17	supporting/source text	ARRIVING FROM STRATEGIC RESERVES
+P69-14	69	20.03,20.04,U30	1,4,5,9,10,11,17	cross-reference	► Not on the Battlefield
+P69-15	69	20.03,20.04,U30	1,4,5,9,10,11,17	cross-reference	► Persisting Rules Effects
+P69-16	69	20.03,20.04,U30	1,4,5,9,10,11,17	cross-reference	► Setting Up Large Models
+P70-01	70	21.01,U14,U30	1,4,5,9,10,11,17	heading	SURGE MOVES 21.01
+P70-02	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	Some rules allow a unit to make a surge move, as described below.
+P70-03	70	21.02,U14,U30	1,4,5,9,10,11,17	heading	SURGE MOVE 21.02
+P70-04	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	MAXIMUM DISTANCE: As stated in the rule allowing this move type.
+P70-05	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	ELIGIBLE IF: All of the following apply:
+P70-06	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	▪ The rule allowing this move type has been triggered.
+P70-07	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	▪ Your unit is not battle-shocked.
+P70-08	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	▪ Your unit is unengaged.
+P70-09	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	▪ Your unit has not moved this phase.
+P70-10	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	EFFECT: Your unit moves as described in Moving (03).
+P70-11	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	BEFORE MOVING: Select the closest enemy unit to be the surge target.
+P70-12	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	WHILE MOVING:
+P70-13	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	▪ Each model must end its move engaged with the surge target if possible. ▪ Each model that cannot end its move engaged with the surge target must end its move as close as possible to the surge target.
+P70-14	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	AFTER MOVING:
+P70-15	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	▪ Your unit cannot be engaged with one or more enemy units that were not the surge target. ▪ Your unit cannot move again this phase.
+P70-16	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	This section supplements the basic rules for moving models, explaining how some units can fly over obstacles or surge closer to the enemy.
+P70-17	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	MAKING A SURGE MOVE
+P70-18	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	▪ Unit A shoots, and destroys two models from unit B.
+P70-19	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	"▪ Unit B has an ability that allows it to make a surge move of D6"" after an enemy unit has shot, if one or more of its models were destroyed by those attacks. The active player rolls one D6, resulting in a 4."
+P70-20	70	21.01,21.02,U14,U30	1,4,5,9,10,11,17	supporting/source text	"▪ Unit B makes a surge move, each of its surviving models moving up to 4"" towards the closest enemy unit (unit C). It ends this move engaged with that unit."
+P71-01	71	21.03,U30	1,4,5,9,10,11,17	cross-reference	SEE ALSO
+P71-02	71	21.03,U30	1,4,5,9,10,11,17	supporting/source text	SURGE MOVES
+P71-03	71	21.03,U30	1,4,5,9,10,11,17	cross-reference	► Rules Sequencing
+P71-04	71	21.03,U30	1,4,5,9,10,11,17	heading	FLYING MODELS 21.03
+P71-05	71	21.03,U30	1,4,5,9,10,11,17	supporting/source text	Models with the FLY keyword, and units such models are part of, are said to be able to FLY. Some rules also refer to such models/units as FLYING models/FLYING units.
+P71-06	71	21.03,U30	1,4,5,9,10,11,17	supporting/source text	Each time a FLYING unit is selected to make a normal, advance, fall-back or charge move, before moving any models in that unit, the active player can declare that it will take to the skies. If it does, while resolving that move:
+P71-07	71	21.03,U30	1,4,5,9,10,11,17	supporting/source text	"▪ Subtract 2"" from the maximum distance."
+P71-08	71	21.03,U30	1,4,5,9,10,11,17	supporting/source text	▪ Each time a FLYING model moves:
+P71-09	71	21.03,U30	1,4,5,9,10,11,17	supporting/source text	▫ Ignore all vertical distance for the purposes of how far it has moved. ▫ It can move through all types of model (including enemy models and MONSTER/VEHICLE models). ▫ It can move horizontally and vertically through all categories of terrain feature.
+P71-10	71	21.03,U30	1,4,5,9,10,11,17	supporting/source text	TAKING TO THE SKIES
+P71-11	71	21.03,U30	1,4,5,9,10,11,17	supporting/source text	"▪ This Riptide Battlesuit can FLY. It makes an advance move with a maximum distance of 16""."
+P71-12	71	21.03,U30	1,4,5,9,10,11,17	supporting/source text	"▪ Before moving the unit, the active player declares that it will take to the skies. That move’s maximum distance is reduced to 14"", but while making that move, the Riptide Battlesuit can move through all enemy units (including VEHICLES) and all terrain features, ignoring any vertical distance that would normally be counted to ascend and descend terrain features."
+P72-01	72	22.01	6,17	heading	AURA ABILITIES 22.01
+P72-02	72	22.01,22.02,22.03,22.04	6,12,17	supporting/source text	Abilities that affect models or units within a stated range are aura abilities, and are tagged with the word ‘Aura’.
+P72-03	72	22.01,22.02,22.03,22.04	6,12,17	supporting/source text	While a model with an aura ability is on the battlefield, it is always within range of its own aura ability.
+P72-04	72	22.01,22.02,22.03,22.04	6,12,17	supporting/source text	A unit can be affected by more than one aura ability at a time, but if a unit is within range of the same aura ability more than once, that aura ability only applies to that unit once.
+P72-05	72	22.02	6,17	heading	FACTION ABILITIES 22.02
+P72-06	72	22.01,22.02,22.03,22.04	6,12,17	supporting/source text	Some abilities are common to each unit that belongs to a particular faction – these are faction abilities (also known as army rules), and are listed in the Faction Abilities section of a datasheet.
+P72-07	72	22.01,22.02,22.03,22.04	6,12,17	supporting/source text	Unless otherwise stated, a unit’s faction abilities only apply if the army faction you selected while mustering your army matches a faction keyword listed on that unit’s datasheet.
+P72-08	72	22.03	6,12,17	heading	PSYCHIC ABILITIES 22.03
+P72-09	72	22.01,22.02,22.03,22.04	6,12,17	supporting/source text	Abilities tagged with the word ‘Psychic’ are psychic abilities. If a psychic ability causes a model to lose one or more wounds, each of those wounds is said to be inflicted by a psychic attack (this can be important for the triggering of other rules).
+P72-10	72	22.04	6,17	heading	WARGEAR ABILITIES 22.04
+P72-11	72	22.01,22.02,22.03,22.04	6,12,17	supporting/source text	Abilities that are gained when a unit (or one of its models) has a particular item of wargear are wargear abilities, and are listed in the Wargear Abilities section of a datasheet.
+P72-12	72	22.01,22.02,22.03,22.04	6,12,17	supporting/source text	If a unit has an item of wargear that has a wargear ability, that ability applies to that unit. If a model within a unit has an item of wargear that has a wargear ability, that model is the ‘bearer’ of that item of wargear and that ability applies until that model is destroyed.
+P72-13	72	22.01,22.02,22.03,22.04	6,12,17	supporting/source text	In addition to the core abilities presented elsewhere, many units have access to other rules and types of abilities that function as described below.
+P73-01	73	22.05,U15	4,8,12	heading	PLUNGING FIRE 22.05
+P73-02	73	22.05,U15	4,8,12	supporting/source text	Each time a model makes a ranged attack that targets a visible unit containing one or more models on ground level, if one or more of the following conditions apply, improve the BS characteristic of that attack by 1:
+P73-03	73	22.05,U15	4,8,12	supporting/source text	"▪ The attacking model is on a section of a terrain feature that is 3"" or more in height. ▪ The attacking model has the TOWERING keyword and the target unit is within 12""."
+P73-04	73	22.05,U15	4,8,12	supporting/source text	PLUNGING FIRE
+P73-05	73	22.05,U15	4,8,12	supporting/source text	"This attacking model is on ground level, but has the TOWERING keyword. The target unit is within 12"" and contains models on ground level, so Plunging Fire improves the BS characteristic of those attacks by 1."
+P73-06	73	22.05,U15	4,8,12	supporting/source text	"All of these attacking models are on a section of terrain feature that is 3"" or more in height, and the target unit contains models on ground level, so Plunging Fire improves the BS characteristic of those attacks by 1."
+P73-07	73	22.05,U15	4,8,12	supporting/source text	+1 BS
+P73-08	73	22.05,U15	4,8,12	supporting/source text	+1 BS
+P74-01	74	23.01	11,16	heading	DEPLOYMENT 23.01
+P74-02	74	23.01,23.02,23.03,23.04	4,5,8,11,12,13,14,16	supporting/source text	▪ In the Declare Battle Formations step, all AIRCRAFT units must be placed in strategic reserves (20.01).
+P74-03	74	23.02	4,5,11,16	heading	MOVEMENT 23.02
+P74-04	74	23.01,23.02,23.03,23.04	4,5,8,11,12,13,14,16	supporting/source text	▪ AIRCRAFT units are only eligible to make an ingress move (20.04); they are not eligible to make any other type of move. ▪ At the end of your opponent’s turn, all AIRCRAFT units in your army that are on the battlefield must be placed in strategic reserves. ▪ Each time a unit makes any type of move, its models can be moved through AIRCRAFT models. ▪ Each time a unit makes a pile-in, consolidation or surge move, unless that unit can FLY, while making that move, ignore AIRCRAFT units for the purposes of selecting enemy units and determining the closest enemy unit. ▪ Being engaged solely with one or more AIRCRAFT units does not prevent a unit from being eligible to make a normal or advance move.
+P74-05	74	23.03	8,12,16	heading	SHOOTING 23.03
+P74-06	74	23.01,23.02,23.03,23.04	4,5,8,11,12,13,14,16	supporting/source text	▪ The Plunging Fire rule (22.05) has no effect on attacks made by, or targeting, AIRCRAFT units.
+P74-07	74	23.04	13,14,16	heading	CHARGING AND FIGHTING 23.04
+P74-08	74	23.01,23.02,23.03,23.04	4,5,8,11,12,13,14,16	supporting/source text	▪ AIRCRAFT units are not eligible to declare a charge, and can only make melee attacks that target FLYING units. ▪ Only FLYING units can select AIRCRAFT units as a charge target, and only FLYING models can make melee attacks that target AIRCRAFT units.
+P74-09	74	23.01,23.02,23.03,23.04	4,5,8,11,12,13,14,16	supporting/source text	AIRCRAFT fulfil a unique but limited role on Warhammer 40,000 battlefields. Hurtling through the skies while they duel one another, strafe ground forces or perform bombing runs, they are constantly on the move.
+P78-01	78	24.01,U16,U30	1,3,4,5,6,9,10,11,12,16,17	heading	ABILITIES 24.01
+P78-02	78	24.01,24.02,U16,U30	1,3,4,5,6,9,10,11,12,16,17	supporting/source text	Many units have core abilities listed on their datasheets, and weapon abilities listed in their weapon profiles.
+P78-03	78	24.01,24.02,U16,U30	1,3,4,5,6,9,10,11,12,16,17	supporting/source text	Weapon abilities are presented in square brackets with bold formatting, e.g. [BLAST]. Weapons are often described using a particular ability they have, e.g. [BLAST] weapons are those with the [BLAST] ability.
+P78-04	78	24.01,24.02,U16,U30	1,3,4,5,6,9,10,11,12,16,17	supporting/source text	If a weapon ability is followed by one or more keywords, when making attacks with that weapon, that ability only applies if the target unit has one or more of those keywords.
+P78-05	78	24.01,24.02,U16,U30	1,3,4,5,6,9,10,11,12,16,17	supporting/source text	Example: The [LETHAL HITS: VEHICLE] ability only applies to attacks that target a VEHICLE unit. The [SUSTAINED HITS 1: INFANTRY/BEASTS] ability only applies to attacks that target an INFANTRY/BEASTS unit.
+P78-06	78	24.01,24.02,U16,U30	1,3,4,5,6,9,10,11,12,16,17	supporting/source text	This section presents the most common abilities used in Warhammer 40,000. When these appear in other places, they are usually only referenced by name.
+P78-07	78	24.02,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	DUPLICATED ABILITIES 24.02
+P78-08	78	24.01,24.02,U16,U30	1,3,4,5,6,9,10,11,12,16,17	supporting/source text	Multiple instances of the same core ability or weapon ability are not cumulative, regardless of any numbers or keywords included in them. In such cases, the controlling player must select which instance will apply at any one time. In the case of duplicated weapon abilities, this selection must be made each time that unit makes attacks, in the Select Weapons step.
+P78-09	78	24.01,24.02,U16,U30	1,3,4,5,6,9,10,11,12,16,17	supporting/source text	"▪ Multiple instances of core abilities that include a number are duplicated even if that number varies. However, in the case of Scouts, you must select the lowest number not shared by every model in that unit (e.g. if every model in a unit has both Scouts 6"" and Scouts 8"", you could select Scouts 8"" as it is shared by every model, but if a unit contains one model with Scouts 6"" and five with Scouts 8"", you must select Scouts 6""). ▪ Multiple instances of weapon abilities that include a number (e.g. [SUSTAINED HITS 1]) are duplicated even if that number varies (e.g. the controlling player would have to select between [SUSTAINED HITS 1] and [SUSTAINED HITS 2]). ▪ Multiple instances of weapon abilities that include a keyword are duplicated even if that keyword varies (e.g. the controlling player would have to select between [ANTI‑VEHICLE 4+] and [ANTI‑INFANTRY 2+])."
+P79-01	79	24.03,U16	6,9,10,11,12,16	heading	[ANTI] 24.03 Certain weapons are the bane of particular foes.
+P79-02	79	24.03,24.04,24.05,24.06,U16	6,9,10,11,12,16	supporting/source text	This ability always takes the form [ANTI‑X Y+]. Each time an attack is made with an [ANTI] weapon, if the target unit has the keyword denoted by X, an unmodified wound roll of Y+ is a critical wound.
+P79-03	79	24.03,24.04,24.05,24.06,U16	6,9,10,11,12,16	supporting/source text	Example: An attack made with an [ANTI‑VEHICLE 4+] weapon against a VEHICLE unit will result in a critical wound on an unmodified wound roll of 4+, while an attack made with an [ANTI‑PSYKER 2+] weapon against a PSYKER unit will result in a critical wound on an unmodified wound roll of 2+.
+P79-04	79	24.04,U16	6,9,10,11,12,16	heading	[ASSAULT] 24.04 Folding stocks, shortened barrels or lightweight construction enable some weapons to be easily fired on the move.
+P79-05	79	24.03,24.04,24.05,24.06,U16	6,9,10,11,12,16	supporting/source text	Units containing one or more models with an [ASSAULT] weapon can shoot using assault shooting (10.05).
+P79-06	79	24.05,U16	6,9,10,11,12,16	heading	[BLAST] 24.05 High‑explosive rounds can fell several warriors in a single blast, but firing them too close to comrades is unwise.
+P79-07	79	24.03,24.04,24.05,24.06,U16	6,9,10,11,12,16	supporting/source text	Each time you gather attack dice for a [BLAST] weapon, add one additional attack dice for every five models that were in the target unit in the Select Targets step (rounding down).
+P79-08	79	24.03,24.04,24.05,24.06,U16	6,9,10,11,12,16	supporting/source text	If this ability takes the form [BLAST X], each time you gather attack dice for such a weapon, add X additional attack dice for every five models that were in the target unit in the Select Targets step (rounding down) instead.
+P79-09	79	24.03,24.04,24.05,24.06,U16	6,9,10,11,12,16	supporting/source text	Example: If a [BLAST 2] weapon with an A characteristic of 3 targets a unit containing 12 models, you would gather four additional attack dice for that weapon (for a total of seven for that weapon).
+P79-10	79	24.06,U16	6,9,10,11,12,16	heading	[CLEAVE] 24.06 With sufficient might or skill, warriors may sweep blades or talons through their foes in long lethal arcs.
+P79-11	79	24.03,24.04,24.05,24.06,U16	6,9,10,11,12,16	supporting/source text	This ability always takes the form [CLEAVE X]. Each time you gather attack dice for a [CLEAVE] weapon, if you only selected one target for all of that weapon’s attacks, add X additional attack dice for every five models that were in the target unit in the Select Targets step (rounding down).
+P79-12	79	24.03,24.04,24.05,24.06,U16	6,9,10,11,12,16	supporting/source text	Example: If a [CLEAVE 1] weapon with an A characteristic of 3 targets one unit containing 16 models, you would gather three additional attack dice for that weapon (for a total of six for that weapon).
+P80-01	80	24.07,U16	6,9,10,11,12,16	heading	[CLOSE‑QUARTERS] 24.07 Weapons designed for close‑quarters fighting can be wielded effectively even in the press of melee combat.
+P80-02	80	24.07,24.08,24.09,24.10,U16	4,5,6,9,10,11,12,16	supporting/source text	Units containing one or more models with a [CLOSE‑QUARTERS] weapon can shoot using close‑quarters shooting (10.06).
+P80-03	80	24.07,24.08,24.09,24.10,U16	4,5,6,9,10,11,12,16	supporting/source text	When using another shooting type, for each model in that unit (excluding MONSTER/VEHICLE models), you can only select one of the following to make attacks with:
+P80-04	80	24.07,24.08,24.09,24.10,U16	4,5,6,9,10,11,12,16	supporting/source text	▪ One or more of its [CLOSE‑QUARTERS] weapons. ▪ One or more of its other ranged weapons.
+P80-05	80	24.08,U16	5,6,9,10,11,12,16	heading	DEADLY DEMISE 24.08 From detonating ammo stores to corrosive innards or frenzied death throes, some targets are deadly even in defeat.
+P80-06	80	24.07,24.08,24.09,24.10,U16	4,5,6,9,10,11,12,16	supporting/source text	"This ability always takes the form Deadly Demise X. Each time a model in this unit is destroyed, after the units embarked within it (if any) have made their emergency disembark moves, roll one D6. On a 6, that model suffers a deadly demise; each unit within 6"" of that model suffers a number of mortal wounds denoted by X (if this is a random number, roll separately for each unit within 6"")."
+P80-07	80	24.07,24.08,24.09,24.10,U16	4,5,6,9,10,11,12,16	supporting/source text	Example: An Impulsor with a unit of Intercessors embarked within it is destroyed by ranged attacks. First, any unresolved attacks made by the attacking unit are resolved. Then the Intercessors make an emergency disembark move. Then the roll is made for the Deadly Demise ability, and on a 6, that ability is resolved. Finally, the Impulsor is removed from the battlefield.
+P80-08	80	24.09,U16	4,6,9,10,11,12,16	heading	DEEP STRIKE 24.09 There are many ways by which to deploy troops to the field of battle including tunnels, teleportation devices and other esoteric means of transportation.
+P80-09	80	24.07,24.08,24.09,24.10,U16	4,5,6,9,10,11,12,16	supporting/source text	"Each time this unit makes an ingress move (20.04), if every model in this unit has this ability, it can be set up anywhere on the battlefield that is more than 8"" horizontally from all enemy units, even if that is within your opponent’s deployment zone."
+P80-10	80	24.10,U16	6,9,10,11,12,16	heading	[DEVASTATING WOUNDS] 24.10 The most potent weapons strike with such power that they make a mockery of armour and can cleave through several foes.
+P80-11	80	24.07,24.08,24.09,24.10,U16	4,5,6,9,10,11,12,16	supporting/source text	Each time an attack made with a [DEVASTATING WOUNDS] weapon results in a critical wound, the attack sequence for that attack ends and the target unit suffers a number of mortal wounds equal to the D characteristic of that weapon. These are inflicted after resolving any normal damage inflicted by those attacks.
+P80-12	80	24.07,24.08,24.09,24.10,U16	4,5,6,9,10,11,12,16	supporting/source text	Mortal wounds inflicted by [DEVASTATING WOUNDS] weapons can damage a maximum of one model for each critical wound; any remaining mortal wounds inflicted by that attack are lost.
+P80-13	80	24.07,24.08,24.09,24.10,U16	4,5,6,9,10,11,12,16	supporting/source text	Example: An attack made with a [DEVASTATING WOUNDS] weapon with a D characteristic of 3 results in a critical wound against an Intercessor Squad, so inflicts 3 mortal wounds. The first 2 mortal wounds are sufficient to destroy 1 Intercessor model, so the remaining mortal wound is lost.
+P81-01	81	24.11,U16	6,9,10,11,12,14,16	heading	[EXTRA ATTACKS] 24.11 Some warriors ride to battle atop trusty mounts that gore and trample nearby foes. Others wield combat weapons that deliver a frenzy of additional blows.
+P81-02	81	24.11,24.12,24.13,24.14,24.15,U16	6,9,10,11,12,13,14,16	supporting/source text	Each time a unit containing one or more models with an [EXTRA ATTACKS] weapon fights, those models will make attacks with those weapons in addition to any others. In the Select Weapons step (04.01), for each of those models, you must select:
+P81-03	81	24.11,24.12,24.13,24.14,24.15,U16	6,9,10,11,12,13,14,16	supporting/source text	▪ All of that model’s [EXTRA ATTACKS] weapons. ▪ One of that model’s other melee weapons, if possible.
+P81-04	81	24.12,U16	6,9,10,11,12,16	heading	FEEL NO PAIN 24.12 The hardiest warriors refuse to be laid low, even by wounds that should by all rights prove lethal.
+P81-05	81	24.11,24.12,24.13,24.14,24.15,U16	6,9,10,11,12,13,14,16	supporting/source text	This ability always takes the form Feel No Pain X+. Each time a model with this ability would lose a wound, roll one D6: on an X+, that wound is not lost.
+P81-06	81	24.13,U16	6,9,10,11,12,13,14,16	heading	FIGHTS FIRST 24.13 Those possessed of lightning‑fast reactions may strike before the opponent can react.
+P81-07	81	24.11,24.12,24.13,24.14,24.15,U16	6,9,10,11,12,13,14,16	supporting/source text	While every model in a unit has this ability, that unit is a Fights First unit.
+P81-08	81	24.11,24.12,24.13,24.14,24.15,U16	6,9,10,11,12,13,14,16	supporting/source text	See the Resolve Fights First Combats step in the Fight phase (12.04).
+P81-09	81	24.14,U16	6,9,10,11,12,16	heading	FIRING DECK 24.14 Some transports have dedicated platforms or firing ports from which embarked passengers can lay down a withering hail of munitions.
+P81-10	81	24.11,24.12,24.13,24.14,24.15,U16	6,9,10,11,12,13,14,16	supporting/source text	This ability always takes the form Firing Deck X. In your Shooting phase, each time this TRANSPORT is selected to shoot, if one or more units are embarked within it, resolve the following sequence:
+P81-11	81	24.11,24.12,24.13,24.14,24.15,U16	6,9,10,11,12,13,14,16	supporting/source text	1. Select up to X models embarked within this TRANSPORT (excluding models whose units have already been selected to shoot this phase). 2. For each selected model, select one of its ranged weapons (excluding [ONE SHOT] weapons). 3. Until this TRANSPORT has resolved all of its attacks, it has all of those selected weapons in addition to its other weapons. 4. Until the end of the turn, units embarked within this TRANSPORT are not eligible to shoot.
+P81-12	81	24.15,U16	6,9,10,11,12,16	heading	[HAZARDOUS] 24.15 Weapons powered by unstable and dangerous energy sources pose a substantial risk to the wielder and those that stand beside them.
+P81-13	81	24.11,24.12,24.13,24.14,24.15,U16	6,9,10,11,12,13,14,16	supporting/source text	Each time a unit is selected to shoot or selected to fight, after that unit has resolved all of its attacks, make a number of hazard rolls (06.03) for that unit equal to the number of [HAZARDOUS] weapons you selected in the Select Weapons step.
+P82-01	82	24.16,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	[HEAVY] 24.16 Heavy weapons are amongst the biggest guns on the battlefield, but require bracing to fire at full effect.
+P82-02	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	In your Shooting phase, each time an attack is made with a [HEAVY] weapon, add 1 to the hit roll if all of the following apply to the attacking unit:
+P82-03	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	▪ That unit is unengaged.
+P82-04	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	"▪ That unit was not set up on the battlefield this turn. ▪ No model in that unit has moved more than 3"" this turn."
+P82-05	82	24.17,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	HOVER 24.17 Some airborne vehicles can use vectored thrusters or anti-gravity technology to hover and skim over the battlefield, the better to hunt their prey or deploy embarked troops.
+P82-06	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	"Each time this unit takes to the skies (21.03), do not subtract 2"" from the maximum distance."
+P82-07	82	24.18,U16,U30	1,4,5,6,8,9,10,11,12,16,17	heading	[IGNORES COVER] 24.18 Some weapons are designed to root enemy formations out of entrenched positions.
+P82-08	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	Each time an attack is made with an [IGNORES COVER] weapon, the target cannot have the benefit of cover against that attack (13.08), including from rules that give a model or unit the benefit of cover (e.g. Stealth).
+P82-09	82	24.19,U16,U30	1,4,5,6,8,9,10,11,12,16,17	heading	[INDIRECT FIRE] 24.19 Indirect fire weapons launch munitions over or around intervening obstacles – nowhere is safe from their fury.
+P82-10	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	Units containing one or more models with an [INDIRECT FIRE] weapon can shoot using indirect shooting (10.07).
+P82-11	82	24.20,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	INFILTRATORS 24.20 Many armies employ reconnaissance units who can sit concealed, waiting for the right moment to strike.
+P82-12	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	"During deployment, if every model in a unit has this ability, it can be set up anywhere on the battlefield that is more than 8"" horizontally from your opponent’s deployment zone and all enemy units."
+P82-13	82	24.21,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	[LANCE] 24.21 With the momentum of a warrior at full‑tilt, lance weapons are deadly on the charge.
+P82-14	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	Each time an attack is made with a [LANCE] weapon, if the attacking model’s unit made a charge move this turn, add 1 to the wound roll.
+P82-15	82	24.22,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	LEADER 24.22 Mighty heroes fight at the forefront of battle.
+P82-16	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	See Attached Units (19).
+P82-17	82	24.23,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	[LETHAL HITS] 24.23 Many deadly weapons can inflict fatal injuries on any foe, no matter their resilience.
+P82-18	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	Each time an attack made with a [LETHAL HITS] weapon results in a critical hit, you can choose for that attack to automatically wound the target.
+P82-19	82	24.16,24.17,24.18,24.19,24.20,24.21,24.22,24.23,U16,U30	1,4,5,6,8,9,10,11,12,16,17	supporting/source text	Designer’s Note: Choosing to automatically wound the target means that no wound roll is made for that attack. You may decide against this, as it means that attack cannot result in a critical wound and so cannot trigger other abilities such as [DEVASTATING WOUNDS].
+P83-01	83	24.24,U16	6,8,9,10,11,12,16	heading	LONE OPERATIVE 24.24 Assassins and other covert agents are difficult to pinpoint in the storm of battle.
+P83-02	83	24.24,24.25,24.26,24.27,U16	3,6,8,9,10,11,12,16	supporting/source text	"Unless part of an attached unit, this unit is not visible to enemy models unless they are within 12"" of this unit, and it cannot be targeted by [INDIRECT FIRE] weapons unless the attacking model is within 12"" of this unit."
+P83-03	83	24.24,24.25,24.26,24.27,U16	3,6,8,9,10,11,12,16	supporting/source text	"If this ability takes the form Lone Operative X"", unless part of an attached unit, this unit is not visible to enemy models unless they are within X"" of this unit, and it cannot be targeted by [INDIRECT FIRE] weapons unless the attacking model is within X"" of this unit."
+P83-04	83	24.25,U16	6,9,10,11,12,16	heading	[MELTA] 24.25 Melta weapons are powerful heat rays whose fury is magnified at close range.
+P83-05	83	24.24,24.25,24.26,24.27,U16	3,6,8,9,10,11,12,16	supporting/source text	This ability always takes the form [MELTA X]. Each time a model makes an attack with a [MELTA] weapon, if the target unit was within half range of that weapon in the Select Targets step, until the attacking unit’s attacks have been resolved, add X to that weapon’s D characteristic.
+P83-06	83	24.24,24.25,24.26,24.27,U16	3,6,8,9,10,11,12,16	supporting/source text	Example: A model targets a unit that is within half range of a [MELTA 2] weapon with a D characteristic of D6. While resolving those attacks, that weapon has a D characteristic of D6+2.
+P83-07	83	24.26,U16	3,6,9,10,11,12,16	heading	[ONE SHOT] 24.26 Some weapons are so rare, or so complex and slow to reload, that they can only be used once.
+P83-08	83	24.24,24.25,24.26,24.27,U16	3,6,8,9,10,11,12,16	supporting/source text	Each weapon with this ability can only be selected to make attacks with once per battle.
+P83-09	83	24.24,24.25,24.26,24.27,U16	3,6,8,9,10,11,12,16	supporting/source text	If a destroyed model is returned to a unit, all of its [ONE SHOT] weapons that have already been selected to make attacks with during the battle cannot be selected to make attacks with again.
+P83-10	83	24.24,24.25,24.26,24.27,U16	3,6,8,9,10,11,12,16	supporting/source text	If a new unit is added to an army, all [ONE SHOT] weapons in that unit can be selected to make attacks with once per battle.
+P83-11	83	24.27,U16	6,9,10,11,12,16	heading	[PISTOL] 24.27 Pistols can be wielded even at point‑blank range.
+P83-12	83	24.24,24.25,24.26,24.27,U16	3,6,8,9,10,11,12,16	supporting/source text	[PISTOL] and [CLOSE‑QUARTERS] are identical for all rules purposes. See [CLOSE‑QUARTERS].
+P83-13	83	24.24,24.25,24.26,24.27,U16	3,6,8,9,10,11,12,16	supporting/source text	Designer’s Note: [PISTOL] is a pre-existing ability that will be superseded by [CLOSE-QUARTERS] as this edition of Warhammer 40,000 progresses. Both are functionally the same, but the latter is a more suitable term for weapons that function in this way.
+P84-01	84	24.28,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	[PRECISION] 24.28 Precision attacks can pick high‑value targets out in a crowd.
+P84-02	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	While resolving attacks made with one or more [PRECISION] weapons, at the start of the Allocation Order step (05.03), if the target unit contains one or more CHARACTER models visible to one or more of the attacking models, the active player can select one allocation group that contains one of those visible CHARACTER models. If they do, until those attacks are resolved, or until that CHARACTER group is destroyed (whichever happens first), that CHARACTER group is the current allocation group.
+P84-03	84	24.29,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	[PSYCHIC] 24.29 Some weapons can channel the bearer’s psychic might to empower their blows.
+P84-04	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	Each time an attack is made with a [PSYCHIC] weapon, you can ignore any or all modifiers to that attack’s BS or WS characteristic and any or all modifiers to the hit roll. Attacks made with [PSYCHIC] weapons are known as psychic attacks (this can be important for the triggering of other rules).
+P84-05	84	24.30,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	[RAPID FIRE] 24.30 Rapid fire weapons are capable of long‑ranged precision shots or controlled bursts at nearby targets.
+P84-06	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	This ability always takes the form [RAPID FIRE X]. Each time you gather attack dice for a [RAPID FIRE] weapon, add X additional attack dice if the target unit was within half range of that weapon in the Select Targets step.
+P84-07	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	Example: If a [RAPID FIRE 1] weapon with an A characteristic of 1 targets a unit that is within half range, you would gather one additional attack dice for that weapon (for a total of two for that weapon).
+P84-08	84	24.31,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	SCOUTS 24.31 Scouts form the vanguard of many armies. Unnoticed by the enemy, they range ahead of the main force.
+P84-09	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	"This ability always takes the form Scouts X"". In the Resolve Pre‑battle Abilities step, if every model in a unit has this ability, you can do one of the following:"
+P84-10	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	▪ If that unit is in strategic reserves, you can set up that unit anywhere that is wholly within your deployment zone. ▪ If that unit is wholly within your deployment zone, it can make a scout move (see below). ▪ If that unit is embarked within a DEDICATED TRANSPORT that is wholly within your deployment zone, and if every model embarked within that DEDICATED TRANSPORT has the Scouts ability, that DEDICATED TRANSPORT can make a scout move.
+P84-11	84	24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	SCOUT MOVE 24.32
+P84-12	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	"MAXIMUM DISTANCE: The X"" in Scouts X""."
+P84-13	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	ELIGIBLE IF: It is the Resolve Pre-battle Abilities step, and your unit is wholly within your deployment zone.
+P84-14	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	EFFECT: Your unit moves as described in Moving (03).
+P84-15	84	24.28,24.29,24.30,24.31,24.32,U16,U30	1,4,5,6,9,10,11,12,16,17	supporting/source text	"AFTER MOVING: Your unit must be more than 8"" horizontally from all enemy units."
+P85-01	85	24.33,U16,U30	1,4,5,6,8,9,10,11,12,16,17	heading	STEALTH 24.33 The stealthiest warriors can evade the attentions, and the bullets, of their foes.
+P85-02	85	24.33,24.34,24.35,24.36,24.37,24.38,U16,U30	1,4,5,6,7,8,9,10,11,12,16,17	supporting/source text	If every model in a unit has this ability, each time a ranged attack targets that unit, that unit has the benefit of cover against that attack (13.08).
+P85-03	85	24.34,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	SUPPORT 24.34 Specialist combatants may be assigned to front-line squads to bolster their fighting effectiveness.
+P85-04	85	24.33,24.34,24.35,24.36,24.37,24.38,U16,U30	1,4,5,6,7,8,9,10,11,12,16,17	supporting/source text	See Attached Units (19).
+P85-05	85	24.35,U16,U30	1,4,5,6,7,9,10,11,12,16,17	heading	SUPER-HEAVY WALKER 24.35 Monstrous creatures and gigantic engines of war loom over the battlefield like gods given form, striding over combatants and smashing through almost any obstacle that bars their passage.
+P85-06	85	24.33,24.34,24.35,24.36,24.37,24.38,U16,U30	1,4,5,6,7,8,9,10,11,12,16,17	supporting/source text	Each time a unit with this ability makes a normal, advance or fall-back move:
+P85-07	85	24.33,24.34,24.35,24.36,24.37,24.38,U16,U30	1,4,5,6,7,8,9,10,11,12,16,17	supporting/source text	"▪ Models in that unit can move through models (including MONSTER/VEHICLE models, but excluding TITANIC models) and can move horizontally through sections of terrain features that are 4"" or less in height. ▪ Before moving that unit, you can select for all models in that unit to have the MOBILE keyword until that move ends. If you do, when that move ends, roll one D6: on a 1, that unit is battle-shocked."
+P85-08	85	24.33,24.34,24.35,24.36,24.37,24.38,U16,U30	1,4,5,6,7,8,9,10,11,12,16,17	supporting/source text	Designer’s Note: Gaining the MOBILE keyword for the duration of a move will enable models in that unit to move horizontally through dense terrain features (13.06).
+P85-09	85	24.36,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	[SUSTAINED HITS] 24.36 Some weapons possess a punishing rate of fire, or can land devastating flurries of blows, tearing the foe apart with relentless ferocity.
+P85-10	85	24.33,24.34,24.35,24.36,24.37,24.38,U16,U30	1,4,5,6,7,8,9,10,11,12,16,17	supporting/source text	This ability always takes the form [SUSTAINED HITS X]. Each time an attack made with a [SUSTAINED HITS] weapon results in a critical hit, that attack results in a number of additional hits on the target as denoted by X.
+P85-11	85	24.33,24.34,24.35,24.36,24.37,24.38,U16,U30	1,4,5,6,7,8,9,10,11,12,16,17	supporting/source text	Example: An attack made with a [SUSTAINED HITS 2] weapon results in a critical hit. That attack therefore hits the target three times (once from the critical hit, and twice more from the [SUSTAINED HITS 2] ability).
+P85-12	85	24.37,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	[TORRENT] 24.37 Torrent weapons project clouds of fire, gas or other lethal substances that few foes can hope to evade.
+P85-13	85	24.33,24.34,24.35,24.36,24.37,24.38,U16,U30	1,4,5,6,7,8,9,10,11,12,16,17	supporting/source text	Each time an attack is made with a [TORRENT] weapon, that attack automatically hits the target.
+P85-14	85	24.38,U16,U30	1,4,5,6,9,10,11,12,16,17	heading	[TWIN‑LINKED] 24.38 Dual weapons are often grafted to the same targeting system for greater lethality.
+P85-15	85	24.33,24.34,24.35,24.36,24.37,24.38,U16,U30	1,4,5,6,7,8,9,10,11,12,16,17	supporting/source text	Each time an attack is made with a [TWIN‑LINKED] weapon, you can re‑roll the wound roll.
+P86-01	86	U17,U30	1,3,4,5,6,7,9,10,11,17	supporting/source text	DIGITAL SUPPORT The Warhammer 40,000 app contains an expanded range of definitions, rare rules interactions and frequently asked questions (FAQs).
+P86-02	86	U17,U30	1,3,4,5,6,7,9,10,11,17	supporting/source text	These digital resources are designed to clarify any uncertainty and keep your battles as streamlined as possible. As such, they are reviewed and updated regularly in response to player feedback. The following pages present a selection of these supporting materials.
+P86-03	86	U17,U30	1,3,4,5,6,7,9,10,11,17	supporting/source text	STARTING STRENGTH AND HALF‑STRENGTH The number of models a unit contains at the start of the first battle round is its starting strength. The starting strength of an attached unit is the number of models that unit contains at the start of the first battle round.
+P86-04	86	U17,U30	1,3,4,5,6,7,9,10,11,17	supporting/source text	Some rules refer to units being below starting strength, or at – or below – half‑strength. The meaning of these terms varies depending on a unit’s starting strength, as shown below.
+P86-05	86	U17,U30	1,3,4,5,6,7,9,10,11,17	supporting/source text	UNIT STRENGTH — table converted to labelled rows: BELOW STARTING STRENGTH: Starting strength of 1: Model’s remaining wounds are less than its W characteristic. Starting strength of 2 or more: Number of remaining models in the unit is less than its starting strength. AT HALF-STRENGTH: Starting strength of 1: Model’s remaining wounds are half of its W characteristic. Starting strength of 2 or more: Number of remaining models in the unit is half of its starting strength. BELOW HALF-STRENGTH: Starting strength of 1: Model’s remaining wounds are less than half of its W characteristic. Starting strength of 2 or more: Number of remaining models in the unit is less than half of its starting strength.
+P86-06	86	U17,U30	1,3,4,5,6,7,9,10,11,17	supporting/source text	SOME UNITS CANNOT BE AT HALF-STRENGTH If a model’s W characteristic or a unit’s starting strength cannot be evenly divided in half, that model or unit cannot be at half‑strength (but can be below half‑strength as described on the right).
+P86-07	86	U17,U30	1,3,4,5,6,7,9,10,11,17	supporting/source text	Example: A Captain (1 model) is attached to a unit of Intercessors (5 models). This attached unit has a starting strength of 6. If three Intercessors were destroyed, the unit would be at half‑strength. If four Intercessors were destroyed, the unit would be below half‑strength. If all of the Intercessors were destroyed, the remaining Captain would be below half‑strength, despite having his full wounds remaining.
+P87-01	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	supporting/source text	ADDING A NEW UNIT TO YOUR ARMY Some rules add a new unit to your army during a battle. That unit’s starting strength is determined when it is added to your army, but is otherwise determined in the same way as for other units.
+P87-02	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	supporting/source text	DESTROYED Throughout a battle, models will suffer damage, lose wounds and be destroyed. When every model in a unit has been destroyed, that unit is destroyed.
+P87-03	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	supporting/source text	When a model is destroyed, first resolve any rules that are triggered when it is destroyed, then it is removed from the battlefield. If any such rules apply, and if the model was destroyed as the result of an attack, unless otherwise stated, those rules are only resolved and that model is only removed after the attacking unit’s attacks have been resolved. Unless otherwise stated, destroyed models and units cannot use abilities or be selected or targeted by rules.
+P87-04	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	supporting/source text	"DIFFERENT MOVE CHARACTERISTICS When making a normal or advance move, if different models in the moving unit have different M characteristics, the maximum distance for that move will be different for those models. For example, if a unit makes a normal move and all models in that unit have an M characteristic of 6"" except for one model with an M characteristic of 9"", that model’s maximum distance for that move is 9"", while the other models’ maximum distance is 6"". While that unit is making that move, all other restrictions must be met."
+P87-05	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	supporting/source text	"ELIGIBLE TO FIGHT, BUT UNABLE TO FIGHT During the Fight sequence, when the sequence returns to a player to select a unit to fight, if all of that player’s units that are eligible to fight are more than 5"" from all enemy units, that player can instead choose to pass and return the sequence to their opponent to select a unit. If both players pass in succession, or if one player passes when their opponent has no remaining units that are eligible to fight, the Fight step ends."
+P87-06	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	supporting/source text	Designer’s Note: Occasionally, all of a unit’s targets will be destroyed before they have had a chance to fight, with no other targets close enough to engage with a pile-in move. In such cases, a player can choose to pass and wait to see if another enemy unit ends a pile-in move close enough to be attacked later in the phase.
+P87-07	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	supporting/source text	MIXED KEYWORDS IN UNITS Some units can contain models that have different keywords, either because they are an attached unit or as a result of separations listed on their datasheet and/or items of wargear they have. While this is the case, such a unit has all of the keywords of all of its models, but its models do not gain the keywords of other models in that unit that they do not already have. Remember that attacks target units, not models.
+P87-08	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	cross-reference	SEE ALSO
+P87-09	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	supporting/source text	STARTING STRENGTH AND HALF-STRENGTH
+P87-10	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	cross-reference	► Regaining Lost Wounds
+P87-11	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	cross-reference	► Revived
+P87-12	87	U18,U19,U20,U21,U22,U30	1,3,4,5,6,9,10,11,12,14,17	supporting/source text	Scan the code below to get started with the Warhammer 40,000 app.
+P88-01	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	OBJECTIVES NOT WITHIN A TERRAIN AREA If the location point of an objective does not coincide with a terrain area, you must denote the location of that objective with a flat, circular marker, 40 mm in diameter, centred on that point – this is called an objective marker. Models can move through objective markers and they can end a move on top of objective markers.
+P88-02	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	"A model is within range of an objective marker while it is within 3"" horizontally and 5"" vertically of that objective marker. When measuring distances to and from an objective marker, measure to and from the closest part of it."
+P88-03	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	REVIVED When a rule revives, resurrects or returns models to a unit, the specified number of destroyed models are added to the unit. This cannot expand a unit beyond its starting strength. Such models are added with all wargear and enhancements they started the battle with and, unless otherwise stated, they are returned with their full wounds remaining.
+P88-04	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	Models returned to a unit on the battlefield must be set up as follows:
+P88-05	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	▪ In coherency with models in that unit that started that phase on the battlefield (i.e. models that were already on the battlefield when that rule was used). ▪ They can be engaged with one or more enemy units, but only if those enemy units are already engaged with the unit those models are being returned to.
+P88-06	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	If a leader or support model in an attached unit is destroyed and subsequently revived, it is still part of that attached unit and must be returned to it if possible.
+P88-07	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	FAQS
+P88-08	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	Q: Is a unit with no ranged weapons eligible to shoot in its controlling player’s Shooting phase?
+P88-09	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	A: Yes. Even though the unit cannot make ranged attacks, it is still eligible to shoot, which can affect its eligibility for other rules, e.g. starting an action.
+P88-10	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	Q: When my unit shoots using close‑quarters shooting, can MONSTER/ VEHICLE models in my unit target an engaged unit with [BLAST] weapons?
+P88-11	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	A: No.
+P88-12	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	Q: When my unit shoots at an engaged MONSTER/VEHICLE unit, can models in my unit target that unit with [BLAST] weapons?
+P88-13	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	A: No.
+P88-14	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	Q: Can a unit that is eligible to make an overrun fight be selected to do so if it is not also eligible to fight?
+P88-15	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	A: No. Sometimes a unit can become engaged after the start of the Fight step, but then become unengaged later in that step. If this happens, and it is no longer eligible to fight, it cannot make an overrun fight.
+P88-16	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	Q: Can a unit embark within a TRANSPORT after making a scout move?
+P88-17	88	U23,U24,U25,U26,U27,U28,U29	3,4,6,8,10,11,12,14,15,16	supporting/source text	A: No. Scout moves happen in the Resolve Pre-battle Abilities step of the battle, which comes after the Declare Battle Formations step and before the Begin the Battle step.
