@@ -121,6 +121,17 @@ Since it is a adversarial setup, players can always reduce the opponent score by
 
 ---
 
+### Running rule tests
+
+Activate the compatible Python environment, then configure and run individual tests through CTest:
+
+```bash
+cmake -S . -B build-tests -DBUILD_GAME=OFF
+ctest --test-dir build-tests --output-on-failure -j 4
+```
+
+This configuration needs no Godot or web build. See [tests/README.md](tests/README.md) for selecting tests and how expected failures are reported.
+
 ### Running Graphical Mode
 
 ```bash

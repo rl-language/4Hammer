@@ -118,6 +118,8 @@ The all-actions panel offers an enumeration-based fallback, but does not establi
 
 ## Validation after rule changes
 
+Prefer the individual CMake/CTest rule checks: activate the compatible environment, configure `cmake -S . -B build-tests -DBUILD_GAME=OFF`, then run `ctest --test-dir build-tests --output-on-failure -j 4`. CTest discovers each zero-argument Bool assertion, compiles each suite once using fixtures and runs each case in isolation. Known discrepancy false results are Skipped/XFAIL, not passes; unexpected passes and crashes fail. Reconfigure after test/manifest changes. See [tests/README.md](tests/README.md); keep the existing Python runner functional.
+
 Add focused deterministic regression tests for changed mechanics, including legal/illegal actions and relevant boundaries or state transitions. The deterministic entrypoint is `tests/baseline.rl`, with desired-rule discrepancy assertions in `tests/known_discrepancies.rl` and their explicit manifest. `rlc-test` discovers zero-argument `test_*` functions returning Bool. Run `python tools/run_rule_tests.py`, or run `rlc-test tests/baseline.rl -i src` and the separate discrepancy check. Verify actual RUN/OK counts: a zero-test success is not validation. Use Python checks where appropriate for bindings or action enumeration.
 
 Run these existing headless smoke checks from the repository root:

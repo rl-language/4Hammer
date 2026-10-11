@@ -7,6 +7,24 @@ source /workspace/4hammer-venv/bin/activate
 python tools/run_rule_tests.py
 ```
 
+## CMake / CTest
+
+Use CMake's CTest runner to see each rule test individually. A tests-only configuration avoids Godot, SDK downloads and web builds:
+
+```bash
+source /workspace/4hammer-venv/bin/activate
+cmake -S . -B build-tests -DBUILD_GAME=OFF
+ctest --test-dir build-tests --output-on-failure -j 4
+```
+
+For another virtual environment, activate it first; if CMake cached a different interpreter, configure with `-DPython3_EXECUTABLE=/path/to/venv/bin/python`. CMake 3.12+ and the compatible Rulebook/Python environment are required.
+
+`ctest -N --test-dir build-tests` lists the tests. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` runs a selected case. Labels `baseline`, `discrepancies` and `expected-failure` allow filtering with `-L`. CTest automatically includes the matching compilation fixture even for a single selected test. Each suite compiles once per invocation with precondition/bounds checks; each assertion runs in its own process. A failed compilation blocks its cases rather than using an old library.
+
+The current discovery lists **107 entries**: 97 supported assertions, 8 recorded discrepancies and 2 compilation fixtures. Recorded false discrepancy assertions return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes; use `ctest -V` to see their source citations. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
+
+CTest is also available in a normal game configuration (`BUILD_GAME=ON`, the default), and Make/Ninja support `cmake --build build-tests --target test`. CMake itself has no `--test` command. Reconfigure after changing test declarations or the manifest; CMake also tracks these files for regeneration during a build. Generated libraries stay in the chosen build directory. The original Python runner below remains available.
+
 The runner executes `rlc-test tests/baseline.rl -i src`, checks actual RUN/OK names and counts, then runs the known-discrepancy assertions in a separate process. It rejects a zero-test success, missing tests, crashes and unexpected passes. Separate processes avoid RLC 0.3.3's generated-module cache reusing a previous `sim` module.
 
 `baseline.rl` tests supported behavior, legality and state transitions. `known_discrepancies.rl` asserts desired behavior that currently fails; its manifest links each failure to a source rule, category and roadmap owner. These failures are reported as XFAIL, never as semantic passes. When fixing one, move its assertion into the passing suite and remove its manifest entry. Do not change the assertion to approve incorrect behavior or broadly skip a failing subsystem.
@@ -118,3 +136,5 @@ The current instrumented executable is `/workspace/4hammer-validation/task4-rule
 ## Timing foundations (task 5)
 
 The current suite has **97 PASS, 8 XFAIL, 0 XPASS**. Read [the timing report](../doc/timing-foundations.md) and ROADMAP.md for scope and final evidence. State/observation schemas are **5**, action schema **3**; matching new native libraries and headers are required. Full-game enumeration has **9,950** candidates and the gym observation has **163,673** values. Earlier section counts are historical. The Godot harness also checks timing-enum, coherency UnitID/ModelID and source-first Neural Disruption payload shapes; interactive input/rendering remains unrun.
+
+CTest integration validation: the tests-only configuration discovered 107 entries; the full `ctest --output-on-failure -j 4` run finished in 44.54 seconds with **97 supported assertions passing, 8 XFAIL skips, and 2 compilation fixtures passing**. Checked pass/fail and XFAIL/XPASS exit contracts, compiler-failure/stale-output rejection and selected-test fixture inclusion. No game rules or migration task status changed.
