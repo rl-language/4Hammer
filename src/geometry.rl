@@ -34,6 +34,11 @@ cls TerrainGeometry:
 
 using TerrainGeometryVector = CheckedVector<TerrainGeometry, 16>
 
+# Inclusive, separate horizontal/vertical limits for engagement/coherency
+# (pp.14–15). Calculation precision does not change the quad coordinate domain.
+fun within_geometry_limits(Float horizontal, Int vertical, Int horizontal_inches, Int vertical_inches) -> Bool:
+    return horizontal <= float(horizontal_inches * MICROMETRES_PER_INCH) and vertical <= vertical_inches * MICROMETRES_PER_INCH
+
 # Construct a checked physical point rather than silently clamp unsupported
 # geometry; the base may not cross the battlefield edge (p.12).
 fun geometry_point(Int x, Int y, Int z) -> GeometryPoint:

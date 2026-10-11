@@ -439,3 +439,103 @@ fun test_feeder_tendrils_requires_character_casualty_and_ability() -> Bool:
     destroyed.keywords.append(Keyword::character)
     let second = on_model_destroyed(board, source, destroyed)
     return second.is_done() and board.command_points[0] == 0 and board.command_points[1] == 0
+
+# Task-4 fixtures use whole-inch cells; no fractional movement choices.
+fun board_position(Int x, Int y) -> BoardPosition:
+    let result : BoardPosition
+    result.x = x
+    result.y = y
+    return result
+
+fun geometry_fixture() -> Board:
+    let board : Board
+    let unit = make_infernus_squad()
+    while unit.models.size() > 1:
+        unit.models.erase(unit.models.size() - 1)
+    unit[0].position = board_position(5, 5)
+    board.units.append(unit)
+    return board
+
+fun geometry_path(Int model, Int x, Int y, Int z) -> ModelPath:
+    let path : ModelPath
+    path.model = model
+    path.points.append(geometry_point(x * MICROMETRES_PER_INCH, y * MICROMETRES_PER_INCH, z * MICROMETRES_PER_INCH))
+    return path
+
+fun geometry_box(Int x1, Int y1, Int z1, Int x2, Int y2, Int z2) -> TerrainGeometry:
+    let box : TerrainGeometry
+    box.lower = geometry_point(x1 * MICROMETRES_PER_INCH, y1 * MICROMETRES_PER_INCH, z1 * MICROMETRES_PER_INCH)
+    box.upper = geometry_point(x2 * MICROMETRES_PER_INCH, y2 * MICROMETRES_PER_INCH, z2 * MICROMETRES_PER_INCH)
+    box.blocks_movement = true
+    return box
+
+# pp.14–15: exact thresholds are inclusive; one micrometre beyond is outside.
+fun test_geometry_inclusive_horizontal_vertical_boundaries() -> Bool:
+    return within_geometry_limits(50800.0, 127000, 2, 5) and !within_geometry_limits(50801.0, 127000, 2, 5) and !within_geometry_limits(50800.0, 127001, 2, 5) and within_geometry_limits(228600.0, 127000, 9, 5) and !within_geometry_limits(228601.0, 127000, 9, 5)
+
+# p.9: millimetre base dimensions, rather than centres, determine engagement.
+fun test_geometry_base_edges_and_height_engagement() -> Bool:
+    let board = geometry_fixture()
+    let other = board[0][0]
+    other.position = board_position(8, 5)
+    other.geometry.elevation = 5
+    if !board[0][0].is_engaged_with(other):
+        return false
+    other.geometry.elevation = 6
+    if board[0][0].is_engaged_with(other):
+        return false
+    other.geometry.elevation = 0
+    other.position.x = 9
+    return !board[0][0].is_engaged_with(other)
+
+# p.9 and supplied Closest definition: include model zero and every target model.
+fun test_geometry_closest_pair_is_not_first_target_only() -> Bool:
+    let board = geometry_fixture()
+    let other = board[0]
+    other[0].position = board_position(30, 5)
+    let close = other[0]
+    close.position = board_position(8, 5)
+    other.models.append(close)
+    let direction = board[0].get_shortest_vector_to(other)
+    return board[0].distance(other) < 2.0 and direction.x == 3 and direction.y == 0
+
+# p.9 / supplied Within definitions: one base may be within while not all are wholly within.
+fun test_geometry_within_wholly_within_quantifiers() -> Bool:
+    let board = geometry_fixture()
+    let point = geometry_point(3 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0)
+    if !unit_within_point(board[0], point, 2, false) or unit_within_point(board[0], point, 2, true):
+        return false
+    if !unit_within_point(board[0], point, 3, true):
+        return false
+    let far = board[0][0]
+    far.position = board_position(20, 5)
+    board[0].models.append(far)
+    return unit_within_point(board[0], point, 3, false) and !unit_within_point(board[0], point, 3, true)
+
+# p.9: a point's range reaches a base before reaching its centre.
+fun test_geometry_point_distance_uses_base_and_height() -> Bool:
+    let board = geometry_fixture()
+    let point = board_position(2, 5)
+    if board[0].distance(point) >= 3.0:
+        return false
+    board[0][0].geometry.elevation = 4
+    return board[0].distance(point) > 4.0 and board[0].distance(point) < 5.0
+
+# p.14: nearby neighbours do not excuse a chain wider than nine inches.
+fun test_geometry_coherency_requires_neighbour_and_all_pairs() -> Bool:
+    let board = geometry_fixture()
+    let unit = board[0]
+    let i = 1
+    while i < 5:
+        let model = unit[0]
+        model.position.x = 5 + i * 3
+        unit.models.append(model)
+        i = i + 1
+    if unit.is_coherent():
+        return false
+    unit.models.erase(unit.models.size() - 1)
+    if !unit.is_coherent():
+        return false
+    unit[3].position.x = 16
+    return !unit.is_coherent()
+

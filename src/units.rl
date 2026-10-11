@@ -112,7 +112,7 @@ cls Model:
 
     # Inclusive two-inch horizontal/five-inch vertical engagement (pp.14–15).
     fun is_engaged_with(Model model) -> Bool:
-        return self.horizontal_distance_micrometres(model) <= float(2 * MICROMETRES_PER_INCH) and self.vertical_distance_micrometres(model) <= 5 * MICROMETRES_PER_INCH
+        return within_geometry_limits(self.horizontal_distance_micrometres(model), self.vertical_distance_micrometres(model), 2, 5)
 
     # Ordinary nearest-base range is straight-line distance; engagement uses
     # its separately prescribed horizontal/vertical limits (pp.9/14).
@@ -439,9 +439,9 @@ cls Unit:
                 if i != j:
                     let horizontal = self.models[i].horizontal_distance_micrometres(self.models[j])
                     let vertical = self.models[i].vertical_distance_micrometres(self.models[j])
-                    if horizontal > float(9 * MICROMETRES_PER_INCH) or vertical > 5 * MICROMETRES_PER_INCH:
+                    if !within_geometry_limits(horizontal, vertical, 9, 5):
                         return false
-                    if horizontal <= float(2 * MICROMETRES_PER_INCH):
+                    if within_geometry_limits(horizontal, vertical, 2, 5):
                         has_neighbour = true
                 j = j + 1
             if !has_neighbour:
@@ -459,6 +459,8 @@ cls Unit:
             i = i + 1
         return shortest 
 
+    # Choose the closest base pair, including either first model (p.9 and
+    # user's Closest definition); keep the legacy quad direction for callers.
     fun get_shortest_vector_to(Unit other) -> Vector2D:
         let their_nearest_model = 0
         let our_nearest_model = 0
@@ -490,15 +492,23 @@ cls Unit:
             i = i + 1
         return nearest_model
 
+    # Point ranges measure the nearest base, rather than its centre (p.9 and
+    # user's Within definition). Point elevation is the battlefield ground.
     fun distance(Vector2D position) -> Float:
         assert(self.models.size() != 0, "calculanting distance to empty unit")
-        let nearest = self.models[0].position.as_vector()
-        let i = 1
-        while i != self.models.size():
-            if (nearest - position).length() > (self.models[i].position.as_vector() - position).length():
-                nearest = self.models[i].position.as_vector()
+        let nearest = 1000000000.0
+        let i = 0
+        while i < self.models.size():
+            if !self.models[i].geometry.unsupported_footprint:
+                let horizontal = (self.models[i].position.as_vector() - position).length() - self.models[i].base_size_in_inches() / 2.0
+                if horizontal < 0.0:
+                    horizontal = 0.0
+                let vertical = float(self.models[i].geometry.elevation.value)
+                let distance = sqrt(horizontal * horizontal + vertical * vertical)
+                if distance < nearest:
+                    nearest = distance
             i = i + 1
-        return (nearest - position).length() 
+        return nearest
 
     fun get(Int model_id) -> ref Model:
         return self.models[model_id]
