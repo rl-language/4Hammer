@@ -5,9 +5,9 @@ func _initialize():
 
 func check_bindings():
 	var rules = root.get_node("GlobalRules")
-	assert(rules.library.get_state_schema_version() == 4)
-	assert(rules.library.get_action_schema_version() == 2)
-	assert(rules.library.get_observation_schema_version() == 4)
+	assert(rules.library.get_state_schema_version() == 5)
+	assert(rules.library.get_action_schema_version() == 3)
+	assert(rules.library.get_observation_schema_version() == 5)
 	assert(rules.valid_actions.size() == 6)
 	var choose = RLCGamePickInsidiousInfiltrators.make()
 	rules.apply_action(choose)
@@ -42,6 +42,15 @@ func check_bindings():
 	assert(rules.can_apply(location))
 	rules.apply_action(location)
 	assert(rules.library.size(rules.state.get_board().get_units()) == 1)
+	var timing_choice = RLCGameChooseTimingRule.make()
+	assert(timing_choice.members_count() == 1)
+	assert(rules.library.is_enum(timing_choice.get_member(0)))
+	var coherency_unit = RLCGameSelectIncoherentUnit.make()
+	assert(coherency_unit.members_count() == 1 and coherency_unit.get_member(0) is RLCUnitID)
+	var coherency_model = RLCGameRemoveIncoherentModel.make()
+	assert(coherency_model.members_count() == 1 and coherency_model.get_member(0) is RLCModelID)
+	var neural = RLCGameSelectNeuralDisruptionTarget.make()
+	assert(neural.members_count() == 2 and neural.get_member(0) is RLCUnitID and neural.get_member(1) is RLCUnitID)
 	print("PASS: Godot schema exports, army choices, target/unit/location selectors, rejected edge placement and save replacement")
 	# Clean up the test-owned library; production ownership changes are out of scope.
 	rules.library.free()

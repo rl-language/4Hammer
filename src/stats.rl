@@ -377,7 +377,7 @@ enum Stratagem:
     duty_and_honour:
         Int cost = 1 
     heroic_intervention:
-        Int cost = 2
+        Int cost = 1
     swift_kill:
         Int cost = 1
     pheromone_trace:

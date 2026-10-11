@@ -829,7 +829,7 @@ fun test_geometry_coherency_vertical_limit() -> Bool:
     board[0][1].geometry.elevation = 6
     return !board[0].is_coherent()
 
-# Task 5: phase/target bookkeeping (core pp.9/28–30/54).
+# Task-5 fixture: distinct whole-inch bases, owners and stable identities.
 fun timing_fixture() -> Board:
     let board = geometry_fixture()
     let other = board[0]
@@ -894,8 +894,6 @@ fun test_timing_turn_flags_reset_only_active_army() -> Bool:
     return !board[0].has_moved and board[1].has_moved
 
 # pp.9/54/56: accept CP reroll -> spend -> chance; restore caller afterward.
-
-# Task 5: active/decision roles and rerolls (core pp.8–9/54/56).
 fun test_timing_pair_reroll_owner_spend_and_restore() -> Bool:
     let board = timing_fixture()
     board.current_decision_maker = false
@@ -934,6 +932,122 @@ fun test_timing_targetless_roll_cannot_spend_cp() -> Bool:
     return dice_roll.is_done() and board.command_points[0] == 3
 
 # p.30 and user's sequencing definition: current group first, then opponent.
+fun test_timing_current_player_then_opponent_effects() -> Bool:
+    let board = timing_fixture()
+    board.players_faction[0] = Faction::insidious_infiltrators
+    board.players_faction[1] = Faction::insidious_infiltrators
+    let window = resolve_timing_window(board, TimingWindow::command_abilities)
+    if !(board.timing.stage == TimingStage::current_player_rules) or board.current_decision_maker:
+        return false
+    window.choose_timing_rule(board, TimingRule::shadow_in_the_warp)
+    window.use_shadow_in_the_warp(board, false)
+    if !board.current_decision_maker or !(board.timing.stage == TimingStage::opposing_player_rules):
+        return false
+    window.choose_timing_rule(board, TimingRule::shadow_in_the_warp)
+    window.use_shadow_in_the_warp(board, false)
+    return window.is_done() and !board.timing.open and board.timing.stage == TimingStage::closed and !board.current_decision_maker
+
+# p.30 and user's sequencing definition: choose either available kind first.
+fun test_timing_owner_can_choose_effect_order() -> Bool:
+    let board = timing_fixture()
+    board.players_faction[0] = Faction::strike_force_octavius
+    let window = resolve_timing_window(board, TimingWindow::command_abilities)
+    if !(can window.choose_timing_rule(board, TimingRule::oath_of_moment)) or !(can window.choose_timing_rule(board, TimingRule::objective_stratagem)):
+        return false
+    window.choose_timing_rule(board, TimingRule::objective_stratagem)
+    window.skip(board)
+    if can window.choose_timing_rule(board, TimingRule::objective_stratagem):
+        return false
+    if !(can window.choose_timing_rule(board, TimingRule::oath_of_moment)):
+        return false
+    window.choose_timing_rule(board, TimingRule::oath_of_moment)
+    window.skip(board)
+    return window.is_done()
+
+# p.57: Overwatch and Rapid Ingress are only offered to opponent at Move end.
+fun test_timing_overwatch_window_and_decline() -> Bool:
+    let board = timing_fixture()
+    if timing_rule_available(board, TimingWindow::movement_start, true, TimingRule::fire_overwatch) or timing_rule_available(board, TimingWindow::movement_end, false, TimingRule::fire_overwatch):
+        return false
+    let before = board.command_points[1]
+    let window = resolve_timing_window(board, TimingWindow::movement_end)
+    if !board.current_decision_maker or !(can window.choose_timing_rule(board, TimingRule::fire_overwatch)):
+        return false
+    window.finish_timing_rules(board)
+    return window.is_done() and board.command_points[1] == before and !board.has_used_strat(Stratagem::overwatch, 1) and !board.current_decision_maker
+
+# p.57: engaged, shocked and TITANIC Overwatch sources are excluded.
+fun test_timing_overwatch_source_exclusions() -> Bool:
+    let board = timing_fixture()
+    let source = unit_id(1)
+    if !overwatch_source_valid(board, true, source):
+        return false
+    board[1].battle_socked = true
+    if overwatch_source_valid(board, true, source):
+        return false
+    board[1].battle_socked = false
+    board[1][0].position = board_position(6, 5)
+    return !overwatch_source_valid(board, true, source)
+
+# p.57: first-round Rapid Ingress is prohibited; later reserve is eligible.
+fun test_timing_rapid_ingress_round_gate_and_payment() -> Bool:
+    let board = timing_fixture()
+    board.reserve_units.append(board[1])
+    if rapid_ingress_target_valid(board, true, unit_id(0)):
+        return false
+    board.current_round = 1
+    let ingress = timing_rapid_ingress(board, true)
+    ingress.select_ingress_unit(board, unit_id(0))
+    if board.command_points[1] != 2 or !board.reserve_units[0].history.stratagem_targeted_by_player[1]:
+        return false
+    ingress.skip(board)
+    return ingress.is_done() and board.reserve_units.size() == 1 and board.has_used_strat(Stratagem::rapid_ingress, 1)
+
+# p.14: both armies remove incoherent models one at a time without death hooks.
+fun test_timing_end_turn_coherency_mandatory_and_archived() -> Bool:
+    let board = timing_fixture()
+    let far = board[0][0]
+    far.identity = -1
+    far.position = board_position(40, 5)
+    board[0].models.append(far)
+    board.identify_unit(board[0])
+    let removed_identity = board[0][1].identity
+    let previous_target = unit_id(1)
+    board.attack.target = previous_target
+    let window = resolve_timing_window(board, TimingWindow::turn_end)
+    if can window.finish_timing_rules(board):
+        return false
+    window.choose_timing_rule(board, TimingRule::regain_coherency)
+    window.select_incoherent_unit(board, unit_id(0))
+    if board.attack.target.get() != 0:
+        return false
+    let model : ModelID
+    model = 1
+    window.remove_incoherent_model(board, model)
+    return window.is_done() and board[0].is_coherent() and board[0].destroyed_models.value.size() == 1 and board[0].destroyed_models.value[0].identity == removed_identity and board.attack.target.get() == 1 and board.command_points[0] == 3
+
+# pp.28–30: empty windows complete without dummy decisions.
+fun test_timing_empty_start_end_windows_close() -> Bool:
+    let board = timing_fixture()
+    let start = resolve_timing_window(board, TimingWindow::round_start)
+    let finish = resolve_timing_window(board, TimingWindow::round_end)
+    return start.is_done() and finish.is_done() and !board.timing.open and !board.current_decision_maker
+
+# p.30: core CP and shock precede Command abilities; decline restores owner.
+fun test_timing_command_phase_cp_before_ability() -> Bool:
+    let board = timing_fixture()
+    board.players_faction[0] = Faction::strike_force_octavius
+    let command = command_phase(board)
+    return board.command_points[0] == 4 and board.command_points[1] == 4 and board.timing.window == TimingWindow::command_abilities and (can command.choose_timing_rule(board, TimingRule::oath_of_moment))
+
+# p.57: Heroic Intervention is at opponent Charge end, not individual charges.
+fun test_timing_heroic_intervention_boundary() -> Bool:
+    let board = timing_fixture()
+    board[0][0].position = board_position(10, 5)
+    board[0].has_charged = true
+    return timing_rule_available(board, TimingWindow::charge_end, true, TimingRule::heroic_intervention) and !timing_rule_available(board, TimingWindow::charge_start, true, TimingRule::heroic_intervention) and !timing_rule_available(board, TimingWindow::charge_end, false, TimingRule::heroic_intervention) and Stratagem::heroic_intervention.cost() == 1
+
+# p.8: an opposing unit's move changes the active role, then restores it.
 fun test_timing_opponent_move_restores_roles() -> Bool:
     let board = timing_fixture()
     let source = unit_id(1)
@@ -958,3 +1072,54 @@ fun test_timing_opponent_attack_restores_roles() -> Bool:
 
 # p.14 and supplied sequencing: opposing coherency is also mandatory,
 # after the current player's removals have finished.
+fun test_timing_both_armies_regain_coherency_in_order() -> Bool:
+    let board = timing_fixture()
+    let far = board[0][0]
+    far.identity = -1
+    far.position = board_position(40, 5)
+    board[0].models.append(far)
+    board[1].models.append(far)
+    board.identify_unit(board[0])
+    board.identify_unit(board[1])
+    let window = resolve_timing_window(board, TimingWindow::turn_end)
+    window.choose_timing_rule(board, TimingRule::regain_coherency)
+    window.select_incoherent_unit(board, unit_id(0))
+    let model : ModelID
+    model = 1
+    window.remove_incoherent_model(board, model)
+    if !board.current_decision_maker or can window.finish_timing_rules(board):
+        return false
+    window.choose_timing_rule(board, TimingRule::regain_coherency)
+    window.select_incoherent_unit(board, unit_id(1))
+    window.remove_incoherent_model(board, model)
+    return window.is_done() and board[0].is_coherent() and board[1].is_coherent() and !board.current_decision_maker
+
+# Existing faction fixture, not a core ability: its chosen target owns the
+# shock decision and receives the shock result (generic roles pp.8–9/30).
+fun test_timing_neural_disruption_uses_chosen_target_context() -> Bool:
+    let board = timing_fixture()
+    board[0][0].abilities.append(AbilityKind::neural_disruption)
+    board[1][0].position = board_position(10, 5)
+    board.players_faction[0] = Faction::insidious_infiltrators
+    board.command_points[1] = 0
+    let sequence = neural_disruption(board)
+    sequence.select_neural_disruption_target(board, unit_id(0), unit_id(1))
+    let one : Dice
+    one = 1
+    sequence.roll_pair(board, one, one)
+    if !board[1].battle_socked or board[0].battle_socked or board.current_decision_maker:
+        return false
+    sequence.skip(board)
+    return sequence.is_done()
+
+# p.8: an opposing charger owns its scoped role through dice/reroll input.
+fun test_timing_opponent_charge_restores_roles() -> Bool:
+    let board = timing_fixture()
+    let sequence = charge(board, unit_id(1), unit_id(0), false)
+    if !board.timing.active_player or !board.current_decision_maker:
+        return false
+    let one : Dice
+    one = 1
+    sequence.roll_pair(board, one, one)
+    sequence.keep_it(board, true)
+    return sequence.is_done() and !board.timing.active_player and !board.current_decision_maker

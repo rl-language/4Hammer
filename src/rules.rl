@@ -488,6 +488,8 @@ act use_attack_stratagems(ctx Board board,
 # dangerous weapons, fight on death, and so on.
 # Retain unit/model attack iteration and Hazardous-use storage across actions
 # (attacks pp.16–23; Hazardous p.81). Group declarations remain task 9.
+# Selected shooting/fighting units temporarily own the active role (p.8);
+# restore the calling roles after attacks and the legacy fight-on-death path.
 act attack(ctx Board board, 
            frm UnitID source, 
            frm UnitID target, 
@@ -578,6 +580,269 @@ enum ProfileToUse:
 
 
 
+
+# End-turn coherency applies to both armies, including the opposing army
+# (p.14). Empty/retired slots have no models to remove.
+fun has_incoherent_units(Board board, Bool player) -> Bool:
+    let i = 0
+    while i < board.units.size():
+        if board[i].owned_by_player1 == player and !board[i].empty() and !board[i].is_coherent():
+            return true
+        i = i + 1
+    return false
+
+# Snap shooting has a friendly unengaged, non-TITANIC source and one enemy
+# in 24-inch range (p.57). Actual visibility/weapon target rules are tasks 8/12.
+fun overwatch_target_valid(Board board, UnitID source, UnitID target) -> Bool:
+    return source.get() < board.units.size() and target.get() < board.units.size() and !board[source].empty() and !board[target].empty() and board[source].owned_by_player1 != board[target].owned_by_player1 and board[source].distance(board[target]) <= 24.0 and (!board[target].is_lone_operative() or board[source].distance(board[target]) <= 12.0)
+
+# Check a source before offering the timing rule: accepting an option with
+# no eligible target would otherwise stall the phase (p.57).
+fun overwatch_source_valid(Board board, Bool player, UnitID source) -> Bool:
+    if source.get() >= board.units.size() or board[source].owned_by_player1 != player or !board.can_target_strat(player, Stratagem::overwatch, board[source]) or board.is_in_melee(board[source]) or board[source].has_keyword(Keyword::titanic):
+        return false
+    let i = 0
+    while i < board.units.size():
+        let target : UnitID
+        target = i
+        if overwatch_target_valid(board, source, target):
+            return true
+        i = i + 1
+    return false
+
+# Rapid Ingress's target is the reserve unit, not the moving enemy unit;
+# its printed first-round/AIRCRAFT exclusions apply (p.57).
+fun rapid_ingress_target_valid(Board board, Bool player, UnitID reserve) -> Bool:
+    return board.current_round >= 1 and reserve.get() < board.reserve_units.size() and board.reserve_units[reserve.get()].owned_by_player1 == player and !board.reserve_units[reserve.get()].has_keyword(Keyword::aircraft) and board.can_target_strat(player, Stratagem::rapid_ingress, board.reserve_units[reserve.get()])
+
+# Existing Heroic Intervention resolves at end of the opponent's Charge
+# phase, targeting a friendly unengaged unit; VEHICLE targets must be CHARACTER/WALKER (p.57).
+# Leap to Defend enemy eligibility is known here; the full post-roll charge
+# workflow and Into the Fray mode remain tasks 13/15.
+fun heroic_source_valid(Board board, Bool player, UnitID source) -> Bool:
+    if source.get() >= board.units.size() or board[source].owned_by_player1 != player or board.is_in_melee(board[source]) or (board[source].has_keyword(Keyword::vehicle) and !board[source].has_keyword(Keyword::character) and !board[source].has_keyword(Keyword::walker)) or !board.can_target_strat_with_cost(player, Stratagem::heroic_intervention, board[source], heroic_intervention_cost(board[source])):
+        return false
+    let i = 0
+    while i < board.units.size():
+        if !board[i].empty() and board[i].owned_by_player1 != player and board[i].has_charged and board[source].distance(board[i]) <= 12.0:
+            return true
+        i = i + 1
+    return false
+
+# Offer only effects actually available in this window. Owners choose their
+# ordering; the active player's group precedes the opposing group (user's
+# Rules Sequencing definition; printed boundaries pp.28–30/32/57).
+fun timing_rule_available(Board board, TimingWindow window, Bool player, TimingRule rule) -> Bool:
+    if window == TimingWindow::turn_end and rule == TimingRule::regain_coherency:
+        return has_incoherent_units(board, player)
+    if window == TimingWindow::movement_end and player != board.current_player:
+        let i = 0
+        if rule == TimingRule::rapid_ingress:
+            while i < board.reserve_units.size():
+                let slot : UnitID
+                slot = i
+                if rapid_ingress_target_valid(board, player, slot):
+                    return true
+                i = i + 1
+        if rule == TimingRule::fire_overwatch:
+            while i < board.units.size():
+                let slot : UnitID
+                slot = i
+                if overwatch_source_valid(board, player, slot):
+                    return true
+                i = i + 1
+    if window == TimingWindow::charge_end and player != board.current_player and rule == TimingRule::heroic_intervention:
+        let i = 0
+        while i < board.units.size():
+            let slot : UnitID
+            slot = i
+            if heroic_source_valid(board, player, slot):
+                return true
+            i = i + 1
+    if window == TimingWindow::command_abilities:
+        if rule == TimingRule::shadow_in_the_warp:
+            return board.players_faction[int(player)] == Faction::insidious_infiltrators and !board.has_used_shadow_in_the_warp[int(player)]
+        if player != board.current_player:
+            return false
+        if rule == TimingRule::neural_disruption:
+            let i = 0
+            while i < board.units.size():
+                if board[i].owned_by_player1 == player and !board[i].empty() and board[i].has_ability(AbilityKind::neural_disruption):
+                    return true
+                i = i + 1
+        if rule == TimingRule::oath_of_moment or rule == TimingRule::objective_stratagem:
+            return board.players_faction[int(player)] == Faction::strike_force_octavius or board.players_faction[int(player)] == Faction::vengeful_brethren
+    return false
+
+# Determine whether another choice is needed without adding empty-window
+# buttons. Resolved/declined optional rules are not offered twice (pp.28–30).
+fun timing_rules_remaining(Board board, TimingWindow window, Bool player, Bool[8] resolved) -> Bool:
+    let i = 0
+    while i < 8:
+        let rule : TimingRule
+        rule.value = i
+        if !resolved[i] and timing_rule_available(board, window, player, rule):
+            return true
+        i = i + 1
+    return false
+
+# Owners choose both unit order and removals until every unit is coherent.
+# These casualties are archived but deliberately bypass destruction callbacks
+# (p.14). Reuse the existing target-unit model selector, then restore it.
+act regain_coherency(ctx Board board, frm Bool player) -> RegainCoherency:
+    frm previous_target = board.attack.target
+    board.current_decision_maker = player
+    while has_incoherent_units(board, player):
+        act select_incoherent_unit(frm UnitID unit) {
+            unit.get() < board.units.size(),
+            !board[unit].empty(),
+            board[unit].owned_by_player1 == player,
+            !board[unit].is_coherent()
+        }
+        board.attack.target = unit
+        while !board[unit].is_coherent():
+            act remove_incoherent_model(ModelID model) {model.get() < board[unit].models.size()}
+            board[unit].remove_model(model.get())
+    board.attack.target = previous_target
+
+# Spend on the selected reserve unit before its ingress effect (pp.54/57).
+# Failed/cancelled setup returns it to reserves (p.14); task 11 owns all ingress
+# distances/placement conditions beyond the existing geometry validation.
+act timing_rapid_ingress(ctx Board board, frm Bool player) -> TimingRapidIngress:
+    board.current_decision_maker = player
+    act select_ingress_unit(frm UnitID reserve) {rapid_ingress_target_valid(board, player, reserve)}
+    board.commit_stratagem(player, Stratagem::rapid_ingress, board.reserve_units[reserve.get()])
+    actions:
+        act skip()
+        act ingress_at(BoardPosition position) {
+            board.least_distance_from_player_units(position, !player) > 9.0,
+            board.is_position_valid_for_reserve(position, board.reserve_units[reserve.get()]),
+            setup_candidate_valid(board, board.reserve_units[reserve.get()], position)
+        }
+            board.units.append(board.reserve_units[reserve.get()])
+            board.units.back().mark_set_up()
+            board.units.back().try_arrange_at(position)
+            board.units.back().has_moved = true
+            board.reserve_units.erase(reserve.get())
+
+# Fire Overwatch is a choice at the end of the opponent's Movement phase,
+# rather than after every individual move/charge (p.57). Full snap-shooting
+# declaration/visibility/attack semantics remain with tasks 8/9/12/15.
+act timing_overwatch(ctx Board board, frm Bool player) -> TimingOverwatch:
+    board.current_decision_maker = player
+    act overwatch(frm UnitID source) {overwatch_source_valid(board, player, source)}
+    board.commit_stratagem(player, Stratagem::overwatch, board[source])
+    act overwatch_target(frm UnitID target) {overwatch_target_valid(board, source, target)}
+    board.attack = attack(board, source, target, false, true)
+    subaction*(board) board.attack
+    board.current_decision_maker = player
+
+# The old per-charge interception prompt is replaced by an end-phase
+# timing choice (p.57). This uses the existing charge engine until task 13.
+act timing_heroic_intervention(ctx Board board, frm Bool player) -> TimingHeroicIntervention:
+    board.current_decision_maker = player
+    act select_intervening_unit(frm UnitID source) {heroic_source_valid(board, player, source)}
+    board.commit_stratagem_with_cost(player, Stratagem::heroic_intervention, board[source], heroic_intervention_cost(board[source]))
+    act intervention_target(frm UnitID target) {
+        target.get() < board.units.size(),
+        !board[target].empty(),
+        board[target].owned_by_player1 != player,
+        board[target].has_charged,
+        board[source].distance(board[target]) <= 12.0
+    }
+    subaction*(board) charge = charge(board, source, target, false)
+    board.current_decision_maker = player
+
+# These are existing faction effects, not invented new-edition datasheets.
+# Move their input into an individually ordered Command ability (p.30); their
+# actual faction definitions still require supplied data in task 17.
+act timing_oath_of_moment(ctx Board board) -> TimingOathOfMoment:
+    board.current_state = CurrentStateDescription::select_oath_of_moment_target
+    actions:
+        act select_oath_of_moment_target(frm UnitID unit) {
+            unit.get() < board.units.size(),
+            !board[unit].empty(),
+            board[unit].owned_by_player1 != board.current_player
+        }
+            board.oath_of_moment_target = unit
+        act skip()
+    board.current_state = CurrentStateDescription::none
+
+# Correct expenditure/decline bookkeeping for these existing faction options
+# (p.54); target semantics require their unsupplied faction rules, task 17.
+act timing_objective_stratagem(ctx Board board) -> TimingObjectiveStratagem:
+    board.current_state = CurrentStateDescription::use_duty_and_honour
+    actions:
+        act use_duty_and_honour(frm BInt<0, 4> objective) {
+            board.players_faction[int(board.current_player)] == Faction::strike_force_octavius,
+            board.get_objective_controller(objective.value) == int(board.current_player),
+            board.can_use_strat(board.current_player, Stratagem::duty_and_honour)
+        }
+            board.commit_stratagem(board.current_player, Stratagem::duty_and_honour)
+            board.pinned_objectives[int(board.current_player)][objective.value] = true
+        act use_pheromone_trail(frm BInt<0, 4> phero_objective) {
+            board.players_faction[int(board.current_player)] == Faction::insidious_infiltrators,
+            board.get_objective_controller(phero_objective.value) == int(board.current_player),
+            board.can_use_strat(board.current_player, Stratagem::pheromone_trace)
+        }
+            board.commit_stratagem(board.current_player, Stratagem::pheromone_trace)
+            board.pinned_objectives[int(board.current_player)][phero_objective.value] = true
+        act skip()
+    board.current_state = CurrentStateDescription::none
+
+# Resolve simultaneous non-mission effects in the user's supplied sequence.
+# Each controller chooses among available rule kinds in any order; mission
+# effects follow both groups at printed end windows (pp.28–30/32–38/54/57).
+# No mission rules or unspecified faction effects are synthesized.
+act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWindowResolution:
+    board.open_timing_window(window)
+    frm player = board.timing.active_player
+    # Exactly two controller groups; bounded frame storage supports ML inference.
+    frm count : BInt<0, 3>
+    frm resolved : Bool[8]
+    while count < 2:
+        let i = 0
+        while i < 8:
+            resolved[i] = false
+            i = i + 1
+        board.current_decision_maker = player
+        board.timing.controller = player
+        if count == 1:
+            board.timing.stage = TimingStage::opposing_player_rules
+        while timing_rules_remaining(board, window, player, resolved):
+            actions:
+                act finish_timing_rules() {!(window == TimingWindow::turn_end) or !has_incoherent_units(board, player)}
+                    break
+                act choose_timing_rule(frm TimingRule rule) {
+                    !resolved[int(rule.value)],
+                    timing_rule_available(board, window, player, rule)
+                }
+                    resolved[int(rule.value)] = true
+                    if rule == TimingRule::regain_coherency:
+                        subaction*(board) cleanup = regain_coherency(board, player)
+                    if rule == TimingRule::rapid_ingress:
+                        subaction*(board) ingress = timing_rapid_ingress(board, player)
+                    if rule == TimingRule::fire_overwatch:
+                        subaction*(board) overwatch = timing_overwatch(board, player)
+                    if rule == TimingRule::shadow_in_the_warp:
+                        subaction*(board) shadow = shadow_in_the_warp(board, player)
+                    if rule == TimingRule::neural_disruption:
+                        subaction*(board) neural = neural_disruption(board)
+                    if rule == TimingRule::oath_of_moment:
+                        subaction*(board) oath = timing_oath_of_moment(board)
+                    if rule == TimingRule::heroic_intervention:
+                        subaction*(board) intervention = timing_heroic_intervention(board, player)
+                    if rule == TimingRule::objective_stratagem:
+                        subaction*(board) objective = timing_objective_stratagem(board)
+                    board.current_decision_maker = player
+        player = !player
+        count = count + 1
+    # Existing mission fixture scoring follows all non-mission effects;
+    # replacing its objective/scoring formula remains tasks 8/17 (p.30).
+    board.timing.stage = TimingStage::mission_rules
+    if window == TimingWindow::command_end:
+        board.score()
+    board.close_timing_window()
 
 enum Player:
     player_1
@@ -679,56 +944,16 @@ act neural_disruption(ctx Board board) -> NeuralDisruption:
 
 # core rule command phase 
 # Store core CP gains without the former cap of three and exclude retired
-# target slots (CP p.30; destroyed units p.19). Phase order is still task 7.
+# target slots (CP p.30; destroyed units p.19). Shock recovery remains task 7.
 act command_phase(ctx Board board) -> CommandPhase:
     for i in range(2):
         board.command_points[i] = board.command_points[i] + 1
-        board.obtained_extra_cp_this_round[i] = false
-
-    # offer to play shadow in the warp to both players
-    subaction*(board) shadow1 = shadow_in_the_warp(board, board.current_player)
-    subaction*(board) shadow2 = shadow_in_the_warp(board, !board.current_player)
-
-    board.current_decision_maker = board.current_player 
-    subaction*(board) neural_disruption = neural_disruption(board)
-
-    let faction = board.players_faction[int(board.current_player)]
-    if  faction == Faction::strike_force_octavius or faction == Faction::vengeful_brethren:
-        board.current_state = CurrentStateDescription::select_oath_of_moment_target
-        actions:
-            act select_oath_of_moment_target(frm UnitID unit) {
-                unit.get() < board.units.size(),
-                !board[unit].empty(),
-                board[unit].owned_by_player1 != board.current_player
-            }
-            board.oath_of_moment_target = unit
-            act skip()
-        board.current_state = CurrentStateDescription::use_duty_and_honour
-        actions:
-            act use_duty_and_honour(frm BInt<0, 4> objective) {
-                board.players_faction[int(board.current_player)] == Faction::strike_force_octavius,
-                board.get_objective_controller(objective.value) == int(board.current_player),
-                !board.can_use_strat(board.current_player, Stratagem::duty_and_honour)
-            }
-            board.mark_strat_used(Stratagem::duty_and_honour, int(board.current_player))
-            board.pinned_objectives[int(board.current_player)][objective.value] = true
-            act use_pheromone_trail(frm BInt<0, 4> phero_objective) {
-                board.players_faction[int(board.current_player)] == Faction::insidious_infiltrators,
-                board.get_objective_controller(phero_objective.value) == int(board.current_player),
-                !board.can_use_strat(board.current_player, Stratagem::pheromone_trace)
-            }
-            board.mark_strat_used(Stratagem::pheromone_trace, int(board.current_player))
-            board.pinned_objectives[int(board.current_player)][phero_objective.value] = true
-            act skip()
-        board.current_state = CurrentStateDescription::none
-
+    # Battle-shock precedes Command abilities (p.30); recovery/strength details
+    # remain task 7, while this task establishes the correct timing sequence.
     subaction*(board) shock_step = battle_shock_step(board)
+    subaction*(board) abilities = resolve_timing_window(board, TimingWindow::command_abilities)
+    board.current_decision_maker = board.current_player
 
-
-    board.score()
-
-
-    
 # core rules overwatch sequence
 # Only spend/record Overwatch when an affordable opponent accepts it
 # (cost/player p.54; Overwatch p.55). New timing/targets remain task 15.
@@ -760,6 +985,7 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
 # Keep the full Advance increment and record the movement phase
 # (Normal/Advance pp.32–33). Validate each model/path and final coherency (p.12);
 # independent-model selection and full movement-mode timing remain task 11.
+# A selected mover owns the active role until its move ends (p.8).
 act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement) -> Move:
     if board[unit.get()].models.size() == 0:
         return
@@ -776,8 +1002,6 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
             can_translate_unit(board, unit, position, additional_movement.value)
         }
             try_translate_unit(board, unit, position, additional_movement.value)
-            board.overwatch = overwatch(board, unit)
-            subaction*(board) board.overwatch
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
 
@@ -845,25 +1069,27 @@ act fight_phase(ctx Board board) -> FightPhase:
     subaction*(board) fight_first_step = fight_step(board, true)
     subaction*(board) fight_step = fight_step(board, false)
 
-# charge sequence 
+# Charge attempts keep the selected unit’s active/decision roles and restore
+# the caller afterward (p.8); the complete charge procedure remains task 13.
 act charge(ctx Board board, frm UnitID source, frm UnitID target, Bool can_be_overwatched) -> Charge:
-    if can_be_overwatched:
-        board.overwatch = overwatch(board, source)
-        subaction*(board) board.overwatch
-        board[source.get()].has_charged = true
+    board[source.get()].has_charged = true
 
     if board[source.get()].models.size() == 0 or board[target.get()].models.size() == 0:
         return 
-    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source.get()].can_reroll_charge(), false, true, board.current_player)
+    frm previous_owner = board.current_decision_maker
+    frm previous_active = board.timing.active_player
+    board.current_decision_maker = board[source].owned_by_player1
+    board.timing.active_player = board[source].owned_by_player1
+    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source.get()].can_reroll_charge(), false, true, board[source].owned_by_player1, source)
     subaction*(board) board.current_pair_roll
     let vector = board[source.get()].get_shortest_vector_to(board[target.get()])
     if vector.length() < float(board.current_pair_roll.result.value + board.current_pair_roll.result2.value):
         board[source.get()].translate(vector * 0.9)
-    
+    board.timing.active_player = previous_active
+    board.current_decision_maker = previous_owner
 
-# core rules charge step
-# Exclude destroyed slots from charging/interception choices
-# (destroyed units p.19; charges pp.36–37). Revised sequence is task 13.
+# Existing Pouncing Leap fixture supplies a free-use discount; its replacement
+# faction source is task 17. Core Heroic Intervention's base cost is p.57.
 fun heroic_intervention_cost(Unit unit) -> Int:
     if unit.has_ability(AbilityKind::pouncing_leap):
         return 0
@@ -896,35 +1122,19 @@ act charge_phase(ctx Board board) -> ChargePhase:
                 charge_act = charge(board, source, target, true)
                 frm charge_reduction : Bool
                 # before charge stratagems
+                board.current_decision_maker = !board.current_player
                 actions:
                     act skip()
                     act use_overawing_magnificence() {
                         board.faction_of_unit(target) == Faction::tristraen_gilded_blade,
-                        board.can_use_strat(!board.current_player, Stratagem::overawing_magnificence) 
+                        board.can_target_strat(!board.current_player, Stratagem::overawing_magnificence, board[target])
                     }
                         charge_reduction = true
-                        board.pay_strat(!board.current_player, Stratagem::overawing_magnificence) 
-                        board.mark_strat_used(Stratagem::overawing_magnificence, int(!board.current_player)) 
+                        board.commit_stratagem(!board.current_player, Stratagem::overawing_magnificence, board[target])
+                board.current_decision_maker = board.current_player
                 subaction*(board) charge_act
 
-                # after charge stratagem
-                actions:
-                    act skip()
-                    act use_heroic_intervention(frm UnitID interceptor) {
-                        interceptor.get() < board.units.size(),
-                        !board[interceptor].empty(),
-                        !board[interceptor].empty(),
-                        !board[source].empty(),
-                        board[interceptor.get()].get_shortest_vector_to(board[source.get()]).length() < 12.0,
-                        board[interceptor].owned_by_player1 != board[source].owned_by_player1,
-                        board.can_use_strat(!board.current_player, Stratagem::heroic_intervention) or board[interceptor].has_ability(AbilityKind::pouncing_leap)
-                    }
-                        if !board[interceptor].has_ability(AbilityKind::pouncing_leap):
-                            board.pay_strat(!board.current_player, Stratagem::heroic_intervention)
-                        board.mark_strat_used(Stratagem::heroic_intervention, int(!board.current_player))
-                        charge_act = charge(board, interceptor, source, false)
-                        subaction*(board) charge_act
-                
+                board.current_decision_maker = board.current_player
 
 # core rules reserve deployment 
 # Preserve setup history when a reserve unit transfers to the battlefield
@@ -1019,11 +1229,11 @@ act movement_phase(ctx Board board) -> MovementPhase:
 
                 # stratagems
                 frm use_gilded_spear : Bool
-                if board.get_current_player_faction() == Faction::tristraen_gilded_blade and board.can_use_strat(board.current_player, Stratagem::the_gilded_spear):
+                if board.get_current_player_faction() == Faction::tristraen_gilded_blade and board.can_target_strat(board.current_player, Stratagem::the_gilded_spear, board[id]):
                     act use_gilded_spear(Bool do_it)
                     use_gilded_spear = do_it
-                    board.pay_strat(board.current_player, Stratagem::the_gilded_spear)
-                    board.mark_strat_used(Stratagem::the_gilded_spear, int(board.current_player))
+                    if do_it:
+                        board.commit_stratagem(board.current_player, Stratagem::the_gilded_spear, board[id])
        
                 # move
                 subaction*(board) move = movement(board, id, use_gilded_spear)
@@ -1035,13 +1245,7 @@ act movement_phase(ctx Board board) -> MovementPhase:
         if reserve_deployment.done_deploying:
             break
 
-    let can_rapid_ingress = board.can_use_strat(!board.current_player, Stratagem::rapid_ingress)
-    if can_rapid_ingress:
-        board.current_decision_maker = !board.current_player 
-        subaction*(board) rapid_ingress = reserve_deployment(board, !board.current_player)
-        board.command_points[int(!board.current_player)] = board.command_points[int(!board.current_player)] - 1
-        board.mark_strat_used(Stratagem::rapid_ingress, int(!board.current_player))
-        
+    board.current_decision_maker = board.current_player
 
 # core rules shooting phase
 # Exclude destroyed source/target slots and retain last-attack turn history
@@ -1074,24 +1278,50 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
 # (turn/phase sequence pp.28–30). Explicit start/end windows remain task 5.
 act turn(ctx Board board, frm Bool player_id) -> Turn:
     board.current_player = player_id
+    board.timing.active_player = player_id
+    board.current_decision_maker = player_id
     board.start_turn_history()
+    subaction*(board) start = resolve_timing_window(board, TimingWindow::turn_start)
+    board.begin_phase(BattlePhase::command)
+    subaction*(board) command_start = resolve_timing_window(board, TimingWindow::command_start)
     subaction*(board) command_phase = command_phase(board)
-    board.clear_phase_modifiers()
+    subaction*(board) command_end = resolve_timing_window(board, TimingWindow::command_end)
+    board.begin_phase(BattlePhase::movement)
+    subaction*(board) movement_start = resolve_timing_window(board, TimingWindow::movement_start)
     subaction*(board) movement_phase = movement_phase(board)
-    board.clear_phase_modifiers()
+    subaction*(board) movement_end = resolve_timing_window(board, TimingWindow::movement_end)
+    board.begin_phase(BattlePhase::shooting)
+    subaction*(board) shooting_start = resolve_timing_window(board, TimingWindow::shooting_start)
     subaction*(board) shooting_phase = shooting_phase(board)
-    board.clear_phase_modifiers() 
+    subaction*(board) shooting_end = resolve_timing_window(board, TimingWindow::shooting_end)
+    board.begin_phase(BattlePhase::charge)
+    subaction*(board) charge_start = resolve_timing_window(board, TimingWindow::charge_start)
     subaction*(board) charge_phase = charge_phase(board)
-    board.clear_phase_modifiers() 
+    subaction*(board) charge_end = resolve_timing_window(board, TimingWindow::charge_end)
+    board.begin_phase(BattlePhase::fight)
+    subaction*(board) fight_start = resolve_timing_window(board, TimingWindow::fight_start)
     subaction*(board) fight_phase = fight_phase(board)
-    board.clear_phase_modifiers() 
+    subaction*(board) fight_end = resolve_timing_window(board, TimingWindow::fight_end)
+    board.clear_phase_modifiers()
+    board.timing.phase = BattlePhase::none
+    subaction*(board) end = resolve_timing_window(board, TimingWindow::turn_end)
+    board.current_decision_maker = board.current_player
 
-# a turn of both players
+# Round start precedes both turns; round end follows both (p.28). The current
+# player resolves their group first per the user's sequencing definition.
 act round(ctx Board board) -> Round:
+    board.current_player = board.starting_player
+    board.timing.active_player = board.starting_player
+    board.obtained_extra_cp_this_round[0] = false
+    board.obtained_extra_cp_this_round[1] = false
+    subaction*(board) start = resolve_timing_window(board, TimingWindow::round_start)
     frm player_turn = turn(board, board.starting_player)
     subaction*(board) player_turn
     player_turn = turn(board, !board.starting_player)
     subaction*(board) player_turn
+    board.current_player = board.starting_player
+    board.timing.active_player = board.starting_player
+    subaction*(board) end = resolve_timing_window(board, TimingWindow::round_end)
 
 # the game sequence before the battle start where players
 # can elect to attach leaders to units
