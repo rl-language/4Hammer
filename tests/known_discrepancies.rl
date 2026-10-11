@@ -85,31 +85,6 @@ fun test_08_03_opponent_shock_persists() -> Bool:
     board.units.append(unit)
     let step = battle_shock_step(board)
     return board[0].battle_socked
-
-
-# Task 3 capacity regression; pp.30/33.
-fun test_08_02_core_cp_gain_not_truncated() -> Bool:
-    let board : Board
-    board.command_points[0] = 3
-    let phase = command_phase(board)
-    return board.command_points[0] == 4
-
-
-
-
-
-# Task 3 capacity regression; pp.30/33.
-fun test_09_06_advance_increment_not_truncated() -> Bool:
-    let board : Board
-    board.units.append(make_infernus_squad())
-    board[0].move_to(make_board_position(2, 10))
-    let id = unit_id(0)
-    let movement = move(board, id, 5)
-    return can movement.move_to(board, id, make_board_position(13, 10))
-
-
-
-
 # Task 3 prerequisite: safe CP expenditure; p.54.
 fun test_15_01_actual_stratagem_cost() -> Bool:
     let board : Board

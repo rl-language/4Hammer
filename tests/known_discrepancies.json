@@ -39,16 +39,6 @@
     "task": 7,
     "category": "shock lifecycle requires migration"
   },
-  "test_08_02_core_cp_gain_not_truncated": {
-    "source": "08.02, p.30",
-    "task": 3,
-    "category": "insufficient CP storage capacity"
-  },
-  "test_09_06_advance_increment_not_truncated": {
-    "source": "09.06, p.33",
-    "task": 3,
-    "category": "insufficient Advance modifier storage capacity"
-  },
   "test_15_01_actual_stratagem_cost": {
     "source": "15.01, p.54",
     "task": 5,

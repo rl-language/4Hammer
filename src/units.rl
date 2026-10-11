@@ -3,12 +3,13 @@ import stats
 import vector2d
 import machine_learning
 import range
+import state_types
 
-using Wounds = LinearlyDistributedInt<0, 10>
-const MAX_WEAPONS = 4
-using WeaponsVector = BoundedVector<Weapon, MAX_WEAPONS>
-using Abilities = BoundedVector<AbilityKind, 4>
-using Keywords = BoundedVector<Keyword, 7>
+using Wounds = LinearlyDistributedInt<0, MAX_WOUNDS>
+const MAX_WEAPONS = 8
+using WeaponsVector = CheckedVector<Weapon, MAX_WEAPONS>
+using Abilities = CheckedVector<AbilityKind, 16>
+using Keywords = CheckedVector<Keyword, 32>
 
 # some rules specify that models are not to be removed after being destroyed until some other event happens, for example fight on death. We keep track of this special statuses with this enum
 enum ModelState:
@@ -75,9 +76,9 @@ cls Model:
     fun wounds_left() -> Int:
         return self.profile.wounds() - self.suffered_wounds.value
 
-const MAX_UNIT_MODELS = 12
-const MAX_UNIT_MODELS_PLUS1 = 13
-using ModelVector = BoundedVector<Model, MAX_UNIT_MODELS>
+const MAX_UNIT_MODELS = 32
+const MAX_UNIT_MODELS_PLUS1 = 33
+using ModelVector = CheckedVector<Model, MAX_UNIT_MODELS>
 
 cls ModelID: # required
     BInt<0, MAX_UNIT_MODELS> id
@@ -90,8 +91,8 @@ cls ModelID: # required
 
 using ModelIterator = LinearlyDistributedInt<0, MAX_UNIT_MODELS_PLUS1>
 
-const MAX_UNIT_COUNT = 10
-const MAX_UNIT_COUNT_PLUS1 = 11
+const MAX_UNIT_COUNT = 32
+const MAX_UNIT_COUNT_PLUS1 = 33
 cls UnitID: # required
     BInt<0, MAX_UNIT_COUNT> id
 
@@ -123,7 +124,7 @@ cls Unit:
     Bool has_charged
     Bool can_shoot
     Bool can_charge
-    ModelID starting_strenght
+    StartingStrength starting_strenght
     PhaseModifiers phase_modifiers
 
     fun has_greater_strenght_wound_protection() -> Bool:
@@ -190,10 +191,10 @@ cls Unit:
         return false
 
     fun is_below_half_strenght() -> Bool:
-        if self.starting_strenght.get() == 1:
+        if self.starting_strenght.value == 1:
             return self.models[0].is_below_half_wounds()
         
-        return self.starting_strenght.get() / 2 > self.models.size()
+        return self.starting_strenght.value / 2 > self.models.size()
 
     fun get_temporary_weapon_parameter(WeaponRuleKind rule) -> Int: 
         let temp_rules = self.get_temporary_weapon_rules()
@@ -375,7 +376,7 @@ cls Unit:
         
 
 
-using UnitVector = BoundedVector<Unit, MAX_UNIT_COUNT>
+using UnitVector = CheckedVector<Unit, MAX_UNIT_COUNT>
 
 
 fun make_tantus() -> Unit:

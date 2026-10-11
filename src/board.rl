@@ -22,11 +22,11 @@ cls AttackSequenceInfo:
     Bool penetration_bonus
     Bool hit_roll_bonus
     Bool hit_roll_malus
-    BoundedVector<Profile, 3> profile_hit_roll_bonus 
-    BoundedVector<WeaponRule, 3> temporary_weapon_abilities
+    CheckedVector<Profile, 8> profile_hit_roll_bonus
+    CheckedVector<WeaponRule, 8> temporary_weapon_abilities
     Bool wound_roll_malus
     Bool wound_roll_bonus
-    BoundedVector<Profile, 3> profile_wound_roll_bonus 
+    CheckedVector<Profile, 8> profile_wound_roll_bonus
     Bool reroll_hits
     Bool reroll1_hits
     Bool only_hits_on_6
@@ -35,7 +35,7 @@ cls AttackSequenceInfo:
     Bool greater_strenght_wound_protection
     Bool fight_on_death
     Dice fight_on_death_roll
-    LinearlyDistributedInt<0, 20> target_toughness
+    Toughness target_toughness
     Weapon source
     Profile source_profile
     BInt<0, MAX_ROUNDS> current_round
@@ -82,10 +82,9 @@ cls AttackSequenceInfo:
         return result
 
 
-const MAX_CP = 4
 const MAX_ROUNDS = 6
 
-using AlreadyUsedStratagems = BoundedVector<Stratagem, 5>
+using AlreadyUsedStratagems = CheckedVector<Stratagem, 32>
 
 cls PhaseInfo:
     AlreadyUsedStratagems[2] already_used_stratagems
@@ -99,13 +98,13 @@ cls Board:
 
     AttackSequenceInfo attack_info
     Bool[2] obtained_extra_cp_this_round
-    LinearlyDistributedInt<0, MAX_CP>[2] command_points
+    CommandPoints[2] command_points
     LinearlyDistributedInt<0, MAX_ROUNDS> current_round
     Bool current_player
     Bool starting_player
     Bool current_decision_maker
     Faction[2] players_faction
-    LinearlyDistributedInt<0, 50>[2] score
+    VictoryPoints[2] score
     Bool[4][2] pinned_objectives
 
     PhaseInfo phase_info
@@ -290,4 +289,3 @@ fun append_to_string(UnitID to_add, String output):
 
 fun parse_string(UnitID result, String buffer, Int index) -> Bool:
     return parse_string(result.id, buffer, index)
-

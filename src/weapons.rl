@@ -1,11 +1,12 @@
 import bounded_arg
 import vector2d
+import state_types
 
 using Dice = BInt<1, 7>
-using Stat = LinearlyDistributedInt<0, 20> | Dice 
+using Stat = FixedStat | Dice
 
 fun raw_stat(Int value) ->  Stat:
-    let to_set : LinearlyDistributedInt<0, 20>
+    let to_set : FixedStat
     to_set = value
     let stat : Stat 
     stat = to_set
@@ -691,4 +692,3 @@ fun write_in_observation_tensor(Weapon obj, Int observer_id, Vector<Float> outpu
 
 fun size_as_observation_tensor(Weapon kind) -> Int:
     return 1
-

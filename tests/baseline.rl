@@ -117,3 +117,45 @@ fun test_unit_serialization_round_trip() -> Bool:
     if !from_string(restored, text):
         return false
     return restored.models.size() == 5 and restored[0].suffered_wounds == 1 and restored[0].position.x == 10 and restored[0].position.y == 10
+
+# Task 3 capacity regression; pp.30/33.
+fun test_08_02_core_cp_gain_not_truncated() -> Bool:
+    let board : Board
+    board.command_points[0] = 3
+    let phase = command_phase(board)
+    return board.command_points[0] == 4
+
+
+# Task 3 capacity regression; pp.30/33.
+fun test_09_06_advance_increment_not_truncated() -> Bool:
+    let board : Board
+    board.units.append(make_infernus_squad())
+    board[0].move_to(make_board_position(2, 10))
+    let id = unit_id(0)
+    let movement = move(board, id, 5)
+    return can movement.move_to(board, id, make_board_position(13, 10))
+fun test_collection_overflow_is_explicit() -> Bool:
+    let collection : CheckedVector<Int, 2>
+    collection.append(1)
+    collection.append(2)
+    return !collection.has_capacity() and !collection.try_append(3) and collection.size() == 2 and collection[1] == 2
+fun test_oversized_collection_decode_is_rejected() -> Bool:
+    let unchecked : BoundedVector<Int, 2>
+    unchecked._data.append(1)
+    unchecked._data.append(2)
+    unchecked._data.append(3)
+    let checked : CheckedVector<Int, 2>
+    checked.append(42)
+    return !from_string(checked, to_string(unchecked)) and checked.size() == 1 and checked[0] == 42
+# Bounds are reflected directly in standard enumeration/ML layout.
+fun test_bounded_cp_layout_and_domain() -> Bool:
+    let value : CommandPoints
+    let domain = enumerate(value)
+    return domain.size() == MAX_CP and domain[0] == 0 and domain[MAX_CP - 1] == MAX_CP - 1 and size_as_observation_tensor(value) == 1
+# p.33: preserve a complete D6 Advance and storage beyond the old result cap.
+fun test_bounded_random_result_and_modifier_capacity() -> Bool:
+    let sequence = evaluate_random_stat(dice_stat(6), 6)
+    let six : Dice
+    six = 6
+    sequence.quantity(six)
+    return sequence.is_done() and sequence.result == 12 and size_as_observation_tensor(sequence.result) == 1

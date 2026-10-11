@@ -43,8 +43,8 @@ fun required_wound_roll(Board board, AttackSequenceInfo info) -> Int:
     return 0
 
 
-using StatModifier = LinearlyDistributedInt<0, 4>
-using RandomStatResult = LinearlyDistributedInt<0, 10>
+using StatModifier = LinearlyDistributedInt<0, MAX_STAT_MODIFIER>
+using RandomStatResult = LinearlyDistributedInt<0, MAX_RANDOM_STAT_RESULT>
 # Rappresents the evaluation of stats such as the damage stat
 # of weapons, which sometime is written as 1D6 + 3
 act evaluate_random_stat(frm Stat stat, frm  StatModifier fixed_extra) -> RollStat:
@@ -143,9 +143,9 @@ fun get_hit_roll_bonus(Board board) -> Int:
 # If the target is destroyed, this action triggers eventual on death
 # mechanics.
 act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> SingleAttack:
-    frm generated_hits : LinearlyDistributedInt<0, 5>
-    frm generated_wounds : LinearlyDistributedInt<0, 10>
-    frm generated_effective_wounds : LinearlyDistributedInt<0, 10>
+    frm generated_hits : CombatCounter
+    frm generated_wounds : CombatCounter
+    frm generated_effective_wounds : CombatCounter
 
     # autohit attacks
     if board.attack_info.source.skill() == 0:
@@ -321,7 +321,7 @@ act resolve_model_attack(ctx Board board,
     board.current_state = CurrentStateDescription::select_weapon
 
     ref model = board[source][current_model]
-    frm hazardous_uses : LinearlyDistributedInt<0, 10>
+    frm hazardous_uses : HazardousUses
 
     # cache the distance for performance, mark it hidden so it does
     # not get delivered to the gpu, since it is implied
@@ -490,7 +490,7 @@ act attack(ctx Board board,
     subaction*(board) strats = use_attack_stratagems(board, source, target, melee)
 
     frm model : ModelIterator
-    frm hazardous_uses : LinearlyDistributedInt<0, 10>
+    frm hazardous_uses : HazardousUses
     board.current_decision_maker = board[source].owned_by_player1
     while model != board[source].models.size() and !board[target].models.empty():
         let id : ModelID
@@ -1115,5 +1115,3 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
 
         act pick_vengeful_brethren()
         board.players_faction[int(current_player)] = make_vengeful_brethren(board.reserve_units, current_player)
-
-
