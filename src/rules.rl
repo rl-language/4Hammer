@@ -234,12 +234,13 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         subaction*(board, source_unit, target_model) on_model_destroyed = on_model_destroyed(board, source_unit, target_model)
     board.current_state = CurrentStateDescription::none
 
-# game sequence where stratagems that trigger on death
-# can be used
+# Dispatch existing on-destruction abilities/stratagems after a casualty (core p.19).
+# Feeder Tendrils checks the destroyed model, not the attacker; its faction
+# definition is not in the supplied core book and still requires faction-source review.
 act on_model_destroyed(ctx Board board, 
                        ctx Unit source, 
                        ctx Model destroyed) -> OnModelDestroyed:
-    if is_character and source.has_ability(AbilityKind::feeder_tendrils):
+    if destroyed.is_character() and source.has_ability(AbilityKind::feeder_tendrils):
         board.add_extra_cp(int(source.owned_by_player1))
 
     if destroyed.has_keyword(Keyword::master_of_possession) and board.can_use_strat(!source.owned_by_player1, Stratagem::violent_unbidding):

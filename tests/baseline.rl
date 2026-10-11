@@ -403,3 +403,30 @@ fun test_indented_game_save_with_bounded_storage() -> Bool:
     state.pick_strike_force_octavious()
     let restored = play()
     return set_state(restored, to_string(state).to_indented_lines()) and to_string(restored) == to_string(state)
+
+# Existing faction-trigger regression: the character predicate must be invoked
+# on the destroyed model (destruction hook: core p.19; faction definition external).
+fun test_destroyed_character_triggers_feeder_tendrils() -> Bool:
+    let board : Board
+    let source = make_infernus_squad()
+    source[0].abilities.append(AbilityKind::feeder_tendrils)
+    let destroyed = source[0]
+    destroyed.keywords.append(Keyword::character)
+    let event = on_model_destroyed(board, source, destroyed)
+    return event.is_done() and board.command_points[0] == 1 and board.command_points[1] == 0
+
+# An attacking character does not make a non-character casualty eligible;
+# a character casualty also requires the attacker's existing faction ability.
+fun test_feeder_tendrils_requires_character_casualty_and_ability() -> Bool:
+    let board : Board
+    let source = make_infernus_squad()
+    let destroyed = source[0]
+    source[0].keywords.append(Keyword::character)
+    source[0].abilities.append(AbilityKind::feeder_tendrils)
+    let first = on_model_destroyed(board, source, destroyed)
+    if !first.is_done() or board.command_points[0] != 0:
+        return false
+    source[0].abilities.clear()
+    destroyed.keywords.append(Keyword::character)
+    let second = on_model_destroyed(board, source, destroyed)
+    return second.is_done() and board.command_points[0] == 0 and board.command_points[1] == 0
