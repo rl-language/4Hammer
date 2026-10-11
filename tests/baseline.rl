@@ -1406,3 +1406,16 @@ fun test_leadership_consumer_uses_complete_pair_total() -> Bool:
     three = 3
     strats.roll_pair(board, three, three)
     return (can strats.select_ability(board, true)) and board[0][0].suffered_wounds == 0
+
+# Save infrastructure must preserve battle-long Bravery usage (p.56) and reject
+# pre-task-7 schemas; the book does not prescribe serialization/version numbers.
+fun test_bravery_battle_limit_save_round_trip() -> Bool:
+    let state = play()
+    state.board.has_used_insane_bravery[0] = true
+    let restored = play()
+    if !set_state(restored, to_string(state)):
+        return false
+    if !restored.board.has_used_insane_bravery[0] or restored.board.has_used_insane_bravery[1]:
+        return false
+    state.board.schema_version.value = 5
+    return !set_state(restored, to_string(state)) and restored.board.has_used_insane_bravery[0]

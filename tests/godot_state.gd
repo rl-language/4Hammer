@@ -149,6 +149,15 @@ func check_bindings():
 			break
 	assert(rules.library.get_current_player(rules.state) == -1)
 	assert(unit.get_battle_socked())
+	# Save/reload while waiting for recovery dice: preserve the start-step
+	# shock snapshot, nested frame and chance ownership in schema 6.
+	var recovery_snapshot = rules.as_indented_str(rules.state)
+	var recovery_restored = rules.library.play()
+	assert(rules.library.set_state(recovery_restored, RLCLib.godot_string_to_rlc_string(recovery_snapshot)))
+	rules.set_state(recovery_restored)
+	unit = rules.library.get(rules.state.get_board().get_units(), 0)
+	assert(unit.get_battle_socked())
+	assert(rules.library.get_current_player(rules.state) == -1)
 	var recovery = RLCGameRollPair.make()
 	recovery.get_member(0).set_value(3)
 	recovery.get_member(1).set_value(3)
