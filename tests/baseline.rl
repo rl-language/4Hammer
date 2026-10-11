@@ -207,6 +207,35 @@ fun test_fight_on_death_removes_index_zero() -> Bool:
         return false
     unit.remove_figth_on_death_models()
     return unit.empty() and unit.destroyed_models.value.size() == 1
+
+# p.30 CP and p.33 Advance storage; versions are implementation compatibility.
+fun test_schema_round_trip_and_legacy_rejection() -> Bool:
+    let state = play()
+    state.board.command_points[0] = 100
+    let encoded = to_string(state)
+    let restored = play()
+    if !set_state(restored, encoded) or restored.board.command_points[0] != 100:
+        return false
+    state.board.schema_version.value = 1
+    if set_state(restored, to_string(state)):
+        return false
+    return restored.board.command_points[0] == 100 and restored.board.schema_version.value == STATE_SCHEMA_VERSION
+
+fun test_invalid_save_does_not_modify_state() -> Bool:
+    let state = play()
+    state.board.command_points[0] = 42
+    let before = to_string(state)
+    if set_state(state, "invalid"s):
+        return false
+    return to_string(state) == before
+
+fun test_negative_cp_save_decode_is_rejected() -> Bool:
+    let state = play()
+    state.board.command_points[0] = 42
+    let invalid = state
+    invalid.board.command_points[0].value = -1
+    return !set_state(state, to_string(invalid)) and state.board.command_points[0] == 42
+
 fun test_history_survives_copy_and_phase_reset() -> Bool:
     let board : Board
     board.units.append(make_tantus())
@@ -216,6 +245,15 @@ fun test_history_survives_copy_and_phase_reset() -> Bool:
     let copy = board
     copy.clear_phase_modifiers()
     return copy[0].history.last_ranged_attack_turn == 7 and !copy[0].history.used_stratagem_this_phase and copy.has_used_shadow_in_the_warp[0] and board[0].history.used_stratagem_this_phase
+
+fun test_duplicate_identity_save_is_rejected() -> Bool:
+    let state = play()
+    state.pick_insidious_infiltrators()
+    let before = to_string(state)
+    let invalid = state
+    invalid.board.reserve_units[1].identity = invalid.board.reserve_units[0].identity
+    return !set_state(state, to_string(invalid)) and to_string(state) == before
+
 fun test_empty_unit_is_not_a_shooting_target() -> Bool:
     let board = attack_fixture()
     board[0].can_shoot = true
@@ -253,6 +291,14 @@ fun test_bounded_cp_layout_and_domain() -> Bool:
     let value : CommandPoints
     let domain = enumerate(value)
     return domain.size() == MAX_CP and domain[0] == 0 and domain[MAX_CP - 1] == MAX_CP - 1 and size_as_observation_tensor(value) == 1
+
+fun test_bounded_storage_rejects_out_of_range_save() -> Bool:
+    let state = play()
+    state.board.command_points[0] = 42
+    let invalid = state
+    invalid.board.command_points[0].value = MAX_CP
+    return !set_state(state, to_string(invalid)) and state.board.command_points[0] == 42
+
 # p.33: preserve a complete D6 Advance and storage beyond the old result cap.
 fun test_bounded_random_result_and_modifier_capacity() -> Bool:
     let sequence = evaluate_random_stat(dice_stat(6), 6)
@@ -260,3 +306,21 @@ fun test_bounded_random_result_and_modifier_capacity() -> Bool:
     six = 6
     sequence.quantity(six)
     return sequence.is_done() and sequence.result == 12 and size_as_observation_tensor(sequence.result) == 1
+
+# Bounded alternatives must survive pretty indentation in editor saves.
+fun test_bounded_stat_indented_round_trip() -> Bool:
+    let fixed = raw_stat(4)
+    let restored : Stat
+    if !from_string(restored, to_string(fixed).to_indented_lines()):
+        return false
+    if to_string(restored) != to_string(fixed):
+        return false
+    let dice = dice_stat(6)
+    return from_string(restored, to_string(dice).to_indented_lines()) and to_string(restored) == to_string(dice)
+
+fun test_indented_game_save_with_bounded_storage() -> Bool:
+    let state = play()
+    state.pick_insidious_infiltrators()
+    state.pick_strike_force_octavious()
+    let restored = play()
+    return set_state(restored, to_string(state).to_indented_lines()) and to_string(restored) == to_string(state)

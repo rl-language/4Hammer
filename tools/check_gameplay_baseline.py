@@ -45,6 +45,9 @@ def main():
             trace.append(f"{step}\t{owner}\t{rank}\t{action}")
             state.step(parsed)
         result = {
+            "state_schema": program.module.get_state_schema_version(),
+            "action_schema": program.module.get_action_schema_version(),
+            "observation_schema": program.module.get_observation_schema_version(),
             "source": args.source,
             "seed": args.seed,
             "actions": len(choices),

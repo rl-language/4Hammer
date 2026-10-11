@@ -5,6 +5,8 @@ import state_types
 using Dice = BInt<1, 7>
 using Stat = FixedStat | Dice
 
+# Store a fixed weapon characteristic in a bounded standard type for inferred
+# ML layout; supports attack count/damage (pp.17/19). Evaluation fix is task 9.
 fun raw_stat(Int value) ->  Stat:
     let to_set : FixedStat
     to_set = value
@@ -692,3 +694,37 @@ fun write_in_observation_tensor(Weapon obj, Int observer_id, Vector<Float> outpu
 
 fun size_as_observation_tensor(Weapon kind) -> Int:
     return 1
+
+
+# Save-format helper, not a tabletop rule: bounded characteristic type names
+# contain commas which RLC 0.3.3's indenter splits. Stable tags keep readable
+# saves round-trippable while retaining inferred bounded ML types. These stored
+# characteristics feed attack count/damage (core pp.17/19; reference 04.03/05.04).
+fun append_to_string(Stat stat, String output):
+    if stat is FixedStat:
+        output.append("fixed "s)
+        append_to_string(stat, output)
+    else if stat is Dice:
+        output.append("dice "s)
+        append_to_string(stat, output)
+
+# Decode the stable characteristic tags with the standard bound checks; a bad
+# save must not introduce an unsupported attack/damage value (pp.17/19).
+fun parse_string(Stat result, String buffer, Int index) -> Bool:
+    while index < buffer.size() and is_space(buffer[index]):
+        index = index + 1
+    if buffer.substring_matches("fixed", index):
+        index = index + 5
+        let value : FixedStat
+        if !parse_string(value, buffer, index):
+            return false
+        result = value
+        return true
+    if buffer.substring_matches("dice", index):
+        index = index + 4
+        let value : Dice
+        if !parse_string(value, buffer, index):
+            return false
+        result = value
+        return true
+    return false

@@ -90,6 +90,7 @@ cls PhaseInfo:
     AlreadyUsedStratagems[2] already_used_stratagems
     
 cls Board:
+    StateSchema schema_version
     Int next_identity
     Int phase_serial
     Int turn_serial
@@ -354,3 +355,61 @@ fun append_to_string(UnitID to_add, String output):
 
 fun parse_string(UnitID result, String buffer, Int index) -> Bool:
     return parse_string(result.id, buffer, index)
+
+
+# Validate saved identities globally, including destroyed models. An unassigned
+# fixture entity is allowed, but must never resolve as a persistent reference.
+# Save-integrity helper, not a tabletop rule: reject duplicate/out-of-range
+# identities so destruction/return references remain sound (pp.19/88).
+fun register_identity(EntityIdentity identity, Int next_identity, Vector<Int> seen) -> Bool:
+    if identity.value == -1:
+        return true
+    if identity.value < 0 or identity.value >= next_identity:
+        return false
+    let i = 0
+    while i < seen.size():
+        if seen[i] == identity.value:
+            return false
+        i = i + 1
+    seen.append(identity.value)
+    return true
+
+# Validate live, archived and attached identities together on load; supports
+# the lifecycle/provenance invariants of pp.19, 66–67 and 86–88.
+fun valid_unit_identities(Unit unit, Int next_identity, Vector<Int> seen) -> Bool:
+    if !register_identity(unit.identity, next_identity, seen):
+        return false
+    let i = 0
+    while i < unit.models.size():
+        if !register_identity(unit.models[i].identity, next_identity, seen):
+            return false
+        i = i + 1
+    i = 0
+    while i < unit.destroyed_models.value.size():
+        if !register_identity(unit.destroyed_models.value[i].identity, next_identity, seen):
+            return false
+        i = i + 1
+    i = 0
+    while i < unit.attached_units.value.size():
+        if !register_identity(unit.attached_units.value[i].identity, next_identity, seen):
+            return false
+        i = i + 1
+    return true
+
+# Compatibility/integrity gate for saved state; versioning is implementation
+# policy, while identity integrity protects the lifecycle rules (pp.19/88).
+fun valid_state_foundations(Board board) -> Bool:
+    if board.schema_version.value != STATE_SCHEMA_VERSION or board.next_identity < 0 or board.phase_serial < 0 or board.turn_serial < 0:
+        return false
+    let seen : Vector<Int>
+    let i = 0
+    while i < board.units.size():
+        if !valid_unit_identities(board.units[i], board.next_identity, seen):
+            return false
+        i = i + 1
+    i = 0
+    while i < board.reserve_units.size():
+        if !valid_unit_identities(board.reserve_units[i], board.next_identity, seen):
+            return false
+        i = i + 1
+    return true

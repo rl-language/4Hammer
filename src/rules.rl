@@ -1133,8 +1133,17 @@ act battle(ctx Board board) -> Battle:
         board.current_round = board.current_round + 1
 
 
-fun<T> set_state(T g, String s) -> Bool:
-    return from_string(g, s)
+# Load transactionally and reject incompatible/invalid identity state; this is
+# implementation compatibility, not a tabletop instruction. It protects
+# preserved model/unit lifecycle references (destruction/returns pp.19/88).
+fun set_state(Game g, String s) -> Bool:
+    let candidate = g
+    if !from_string(candidate, s):
+        return false
+    if !valid_state_foundations(candidate.board):
+        return false
+    g = candidate
+    return true
 
 fun main() -> Int:
     let state = play()
