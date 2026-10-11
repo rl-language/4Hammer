@@ -419,3 +419,20 @@ These are observed source-level defects or risks, not failures reproduced by a t
 ## Task 5 implementation overlay
 
 See [the timing report](timing-foundations.md) for implemented windows, active/decision roles, phase/unit stratagem limits, coherency cleanup and executed evidence. The original inspection rows above remain historical; phase bodies and core stratagem effects still require their later owning tasks. D04 sequencing was supplied by the user, while general Player’s Rules remains unavailable.
+
+## Task 8 implementation overlay
+
+See [the terrain/objective report](terrain-objectives.md) and ROADMAP.md for **144 PASS, 3 XFAIL, 0 XPASS**, Godot and sanitizer evidence. Original inspection rows remain historical. The user explicitly replaces physical visibility/feature rules with area-only partial obscuration; this does not establish exact printed LOS coverage.
+
+| Source rows | Current result / remaining owner |
+| --- | --- |
+| 08.05 | End-phase control recalculation and separate explicitly selected mission scoring implemented/tested. Actual mission data remains task 17. |
+| 13.01–13.05 | Bounded area configuration/category flags implemented; mixed-category areas retained. Feature placement and individual feature rules deferred by the user; actual layout data/configuration UI remains task 17. |
+| 13.06, U08 movement examples | Physical feature traversal, upper surfaces and Solid openings deferred by user instruction. Task-4 primitives retained; independent movement decisions remain task 11. |
+| 13.07–13.08, U08 cover examples | Per-model/all-target-model cover, BS change and user-approved centre-segment area obscuration implemented/tested. No save bonus or hit modifier substituted. |
+| 13.09, U08 Hidden examples | Individual keyword/Dense membership, current/previous actual-attack history, never-fired case and inclusive detection/visibility gates implemented/tested. |
+| 13.10–13.11, U31 physical visibility | Exact Obscuring/Solid/silhouette geometry deferred by the user. Physical visibility assumed; Hidden still restricts detection. Unit any-visible-member quantifier implemented. |
+| 14.01–14.03, U09, U23 | Area/marker range, both-army OC sum, ties, boundary snapshots, secured absence/ties/phase-end loss and unit eligibility implemented/tested. Two former discrepancy assertions promoted. |
+| U15 / Plunging Fire | Weapon ability remains task 12; physical upper surfaces deferred with features. |
+
+The Ignores Cover consumer now checks parameterless ability presence. Other legacy parameter-based consumers still require task-12 correction. The three manifest failures all belong to task 9; fixed characteristics remain a mandatory fix, so full-game completion does not certify attacks. Physical feature deferral is an explicit scope adjustment, not a missing-source resolution or a claim of full rules fidelity.
