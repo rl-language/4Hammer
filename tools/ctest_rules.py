@@ -13,7 +13,7 @@ SOURCES = {"baseline": "baseline.rl", "discrepancies": "known_discrepancies.rl"}
 def discover(suite):
     names = re.findall(r"^fun (test_\w+)\(\) -> Bool:",
                        (ROOT / "tests" / SOURCES[suite]).read_text(), re.M)
-    if not names or len(set(names)) != len(names):
+    if (not names and suite == "baseline") or len(set(names)) != len(names):
         raise RuntimeError(f"Empty or duplicate {suite} test declarations")
     if suite == "discrepancies":
         if set(names) != set(manifest()):
