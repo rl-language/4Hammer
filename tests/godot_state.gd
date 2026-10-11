@@ -33,9 +33,9 @@ func check_bindings():
 	interaction.models = Node.new()
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
-	assert(rules.library.get_state_schema_version() == 8)
-	assert(rules.library.get_action_schema_version() == 4)
-	assert(rules.library.get_observation_schema_version() == 8)
+	assert(rules.library.get_state_schema_version() == 9)
+	assert(rules.library.get_action_schema_version() == 5)
+	assert(rules.library.get_observation_schema_version() == 9)
 	assert(rules.valid_actions.size() == 6)
 	var choose = RLCGamePickInsidiousInfiltrators.make()
 	rules.apply_action(choose)
@@ -316,7 +316,75 @@ func check_bindings():
 	rules.apply_action(RLCGameKeepBatch.make())
 	assert(rules.can_apply(RLCGameEndShootingPhase.make()))
 	assert(rules.library.get_current_player(rules.state) == 1)
-	print("PASS: Godot schema exports, deployment, Command recovery, terrain/objective saves, weapon/target/group buttons and clicks, batch chance ownership and pending-attack save replacement")
+	# Task 10: explicit FNP fixture, with another activation to exercise actual
+	# group buttons, all saves before allocation and model clicks on the defender.
+	var attacker = rules.library.get(board.get_units(), 0)
+	attacker.set_has_shoot(false)
+	var fnp_fixture = rules.library.make_beast_snagga_boyz()
+	var fnp_profile = rules.library.get(fnp_fixture.get_models(), 1).get_profile()
+	rules.library.assign(rules.library.get(rules.library.get(board.get_units(), 1).get_models(), 0).get_profile(), fnp_profile)
+	assert(rules.can_apply(shoot))
+	rules.apply_action(shoot)
+	weapon_button = null
+	for button in choices.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text.contains("captain storm bolter"):
+			weapon_button = button
+	assert(weapon_button != null)
+	weapon_button.button_down.emit()
+	rules.apply_action(RLCGameSkip.make())
+	interaction.on_state_change()
+	interaction.select(source_node)
+	interaction.select(target_node)
+	interaction.on_state_change()
+	interaction.select(target_node)
+	rules.apply_action(RLCGameNoDefensiveStratagem.make())
+	rules.apply_action(RLCGameNoOffensiveStratagem.make())
+	group_button = null
+	for button in choices.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text.begins_with("resolve "):
+			group_button = button
+	assert(group_button != null)
+	group_button.button_down.emit()
+	hit.get_member(0).set_value(6)
+	for batch in range(2):
+		for i in range(4):
+			assert(rules.library.get_current_player(rules.state) == -1)
+			assert(rules.can_apply(hit))
+			rules.apply_action(hit)
+		if rules.can_apply(RLCGameKeepBatch.make()):
+			rules.apply_action(RLCGameKeepBatch.make())
+	assert(rules.library.get_current_player(rules.state) == 0)
+	var save_group_button = null
+	for button in choices.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text.begins_with("allocate group 1"):
+			save_group_button = button
+	assert(save_group_button != null)
+	assert(save_group_button.text.contains("sv 5"))
+	save_group_button.button_down.emit()
+	hit.get_member(0).set_value(1)
+	for i in range(4):
+		assert(rules.can_apply(hit))
+		rules.apply_action(hit)
+	if rules.can_apply(RLCGameKeepBatch.make()):
+		rules.apply_action(RLCGameKeepBatch.make())
+	assert(rules.get_current_select_model_action() is RLCGameAllocateWound)
+	var save_snapshot = rules.as_indented_str(rules.state)
+	var save_restored = rules.library.play()
+	assert(rules.library.set_state(save_restored, RLCLib.godot_string_to_rlc_string(save_snapshot)))
+	rules.set_state(save_restored)
+	board = rules.state.get_board()
+	for i in range(3):
+		interaction.on_state_change()
+		assert(target_node.marked and not source_node.marked)
+		interaction.select(target_node)
+		assert(rules.library.get_current_player(rules.state) == -1)
+		hit.get_member(0).set_value(6 if i == 0 else 1)
+		rules.apply_action(hit)
+	assert(rules.library.size(rules.library.get(board.get_units(), 1).get_models()) == 0)
+	assert(rules.library.size(rules.library.get(board.get_units(), 1).get_destroyed_models().get_value()) == 1)
+	assert(rules.can_apply(RLCGameEndShootingPhase.make()))
+	assert(rules.library.get_current_player(rules.state) == 1)
+	print("PASS: Godot schema exports, deployment, Command recovery, terrain/objective saves, weapon/target/group buttons and clicks, batch chance ownership, pending-attack/save restoration, allocation group/model controls and per-wound FNP")
 	# Clean up the test-owned library; production ownership changes are out of scope.
 	rules.library.free()
 	call_deferred("quit", 0)

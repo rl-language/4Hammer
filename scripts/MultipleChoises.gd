@@ -57,6 +57,15 @@ func on_state_change():
 		if unwrapped is RLCGameAssignAttacks:
 			make_choise("Assign " + str(unwrapped.get_member(0).get_value()) + " attacks", action)
 			added += 1
+		if unwrapped is RLCGameChooseSaveGroup or unwrapped is RLCGameChoosePrecisionGroup:
+			var group_id = unwrapped.get_member(0).get_value()
+			var prefix = "Precision group " if unwrapped is RLCGameChoosePrecisionGroup else "Allocate group "
+			var groups = GlobalRules.state.get_board().get_active_allocation_groups()
+			var group = GlobalRules.library.get(groups, group_id)
+			var characteristics = "W " + str(group.get_wounds().get_value()) + " Sv " + str(group.get_save().get_value()) + " InSv " + str(group.get_invulnerable().get_value())
+			var kind = "Character " if group.get_character() else "Non-character "
+			make_choise(prefix + str(group_id + 1) + ": " + kind + characteristics, action)
+			added += 1
 		if unwrapped is RLCGameSelectReroll:
 			make_choise("Re-roll a " + str(unwrapped.get_member(0).get_value()), action)
 			added += 1
