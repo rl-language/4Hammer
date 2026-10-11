@@ -1,5 +1,15 @@
 extends SceneTree
 
+class ModelClickFixture:
+	extends Sprite2D
+	var unit_id = 0
+	var model_id = 0
+	var marked = false
+	func show_aura():
+		marked = true
+	func hide_aura():
+		marked = false
+
 func _initialize():
 	call_deferred("check_bindings")
 
@@ -23,9 +33,9 @@ func check_bindings():
 	interaction.models = Node.new()
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
-	assert(rules.library.get_state_schema_version() == 7)
-	assert(rules.library.get_action_schema_version() == 3)
-	assert(rules.library.get_observation_schema_version() == 7)
+	assert(rules.library.get_state_schema_version() == 8)
+	assert(rules.library.get_action_schema_version() == 4)
+	assert(rules.library.get_observation_schema_version() == 8)
 	assert(rules.valid_actions.size() == 6)
 	var choose = RLCGamePickInsidiousInfiltrators.make()
 	rules.apply_action(choose)
@@ -217,7 +227,96 @@ func check_bindings():
 	shooter.get_id().set_value(0)
 	rules.library.record_ranged_attacks(board, shooter)
 	assert(not rules.library.model_is_hidden(board, unit, model))
-	print("PASS: Godot schema exports, deployment and selectors, Command recovery, area cover/Hidden, secured objective snapshots and save replacement")
+	# Task 9: add one explicit opponent fixture, finish timing/movement without
+	# moving, then declare an actual Captain weapon through the production UI.
+	var enemy = rules.library.make_infernus_squad()
+	while rules.library.size(enemy.get_models()) > 1:
+		rules.library.erase(enemy.get_models(), rules.library.size(enemy.get_models()) - 1)
+	assert(rules.library.size(enemy.get_models()) == 1)
+	enemy.set_owned_by_player1(false)
+	rules.library.append(board.get_units(), enemy)
+	rules.library.identify_unit(board, rules.library.get(board.get_units(), 1))
+	# Configure the live target after inserting the single-model fixture.
+	var live_enemy = rules.library.get(rules.library.get(board.get_units(), 1).get_models(), 0)
+	live_enemy.get_position().get_x().set_value(10)
+	live_enemy.get_position().get_y().set_value(2)
+	var shoot = RLCGameSelectTarget.make()
+	shoot.get_member(0).get_id().set_value(0)
+	shoot.get_member(1).get_id().set_value(1)
+	for step in range(20):
+		if board.get_timing().get_phase().get_value() == 3 and rules.can_apply(shoot):
+			break
+		var advance = null
+		for action in rules.valid_actions:
+			var unwrapped = action.unwrap()
+			if unwrapped is RLCGameFinishTimingRules or unwrapped is RLCGameEndMove or unwrapped is RLCGameNothingToDeploy:
+				advance = action
+				break
+		assert(advance != null)
+		rules.apply_action(advance)
+	assert(board.get_timing().get_phase().get_value() == 3 and rules.can_apply(shoot))
+	rules.apply_action(shoot)
+	var weapon_choice = RLCGameSelectWeapon.make()
+	weapon_choice.get_member(0).set_value(0)
+	assert(rules.can_apply(weapon_choice))
+	var weapon_button = null
+	for button in choices.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text.contains("captain storm bolter"):
+			weapon_button = button
+	assert(weapon_button != null)
+	weapon_button.button_down.emit()
+	rules.apply_action(RLCGameSkip.make())
+	var declaration = rules.get_current_target_action()
+	assert(declaration is RLCGameDeclareTarget)
+	assert(declaration.get_member(0) is RLCUnitID and declaration.get_member(1) is RLCUnitID)
+	var source_node = ModelClickFixture.new()
+	var target_node = ModelClickFixture.new()
+	target_node.unit_id = 1
+	interaction.models.add_child(source_node)
+	interaction.models.add_child(target_node)
+	interaction.on_state_change()
+	assert(source_node.marked)
+	interaction.select(source_node)
+	assert(target_node.marked)
+	interaction.select(target_node)
+	assert(rules.get_current_select_unit_action() is RLCGameChooseAttackTarget)
+	interaction.on_state_change()
+	interaction.select(target_node)
+	rules.apply_action(RLCGameNoDefensiveStratagem.make())
+	rules.apply_action(RLCGameNoOffensiveStratagem.make())
+	var group_button = null
+	for button in choices.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text.begins_with("resolve "):
+			group_button = button
+	assert(group_button != null)
+	group_button.button_down.emit()
+	assert(rules.library.get_current_player(rules.state) == -1)
+	var hit = RLCGameRoll.make()
+	hit.get_member(0).set_value(1)
+	for i in range(3):
+		assert(rules.can_apply(hit))
+		rules.apply_action(hit)
+		assert(rules.library.get_current_player(rules.state) == -1)
+	assert(board.get_attack().get_dice().get_hits().get_pool().get_total().get_value() == 3)
+	var attack_snapshot = rules.as_indented_str(rules.state)
+	var attack_restored = rules.library.play()
+	assert(rules.library.set_state(attack_restored, RLCLib.godot_string_to_rlc_string(attack_snapshot)))
+	rules.set_state(attack_restored)
+	board = rules.state.get_board()
+	assert(board.get_attack().get_dice().get_hits().get_pool().get_total().get_value() == 3)
+	assert(rules.library.get_current_player(rules.state) == -1)
+	rules.apply_action(hit)
+	assert(rules.library.get_current_player(rules.state) == 1)
+	var reroll_button = null
+	for button in choices.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text == rules.strip_symbols("Re-roll a 1"):
+			reroll_button = button
+	assert(reroll_button != null)
+	assert(rules.can_apply(RLCGameKeepBatch.make()))
+	rules.apply_action(RLCGameKeepBatch.make())
+	assert(rules.can_apply(RLCGameEndShootingPhase.make()))
+	assert(rules.library.get_current_player(rules.state) == 1)
+	print("PASS: Godot schema exports, deployment, Command recovery, terrain/objective saves, weapon/target/group buttons and clicks, batch chance ownership and pending-attack save replacement")
 	# Clean up the test-owned library; production ownership changes are out of scope.
 	rules.library.free()
 	call_deferred("quit", 0)

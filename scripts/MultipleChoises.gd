@@ -49,6 +49,17 @@ func on_state_change():
 		if unwrapped is RLCGameSelectWeapon:
 			make_choise(GlobalRules.action_to_pretty_string(action), action)
 			added += 1
+		# Attack groups and melee counts use finite numeric domains. Offer each
+		# legal value explicitly; board/model selectors cannot represent them.
+		if unwrapped is RLCGameChooseAttackWeapon:
+			make_choise("Resolve " + GlobalRules.action_to_pretty_string(action), action)
+			added += 1
+		if unwrapped is RLCGameAssignAttacks:
+			make_choise("Assign " + str(unwrapped.get_member(0).get_value()) + " attacks", action)
+			added += 1
+		if unwrapped is RLCGameSelectReroll:
+			make_choise("Re-roll a " + str(unwrapped.get_member(0).get_value()), action)
+			added += 1
 			
 
 	if added != 0:	
