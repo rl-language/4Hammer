@@ -754,14 +754,17 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
     if board[unit.get()].models.size() == 0:
         return
     board.current_decision_maker = board.current_player
-    act move_to(BoardPosition position) {
-        can_translate_unit(board, unit, position, additional_movement.value)
-    }
-
-    try_translate_unit(board, unit, position, additional_movement.value)
-
-    board.overwatch = overwatch(board, unit)
-    subaction*(board) board.overwatch
+    # An impossible/cancelled move leaves positions unchanged rather than
+    # trapping the game in a decision with no legal destinations (p.12).
+    # Full Fall Back/path choice permissions are still task 11.
+    actions:
+        act skip()
+        act move_to(BoardPosition position) {
+            can_translate_unit(board, unit, position, additional_movement.value)
+        }
+            try_translate_unit(board, unit, position, additional_movement.value)
+            board.overwatch = overwatch(board, unit)
+            subaction*(board) board.overwatch
 
 # Convert an internal movement increment to its bounded state domain
 # so a full D6 Advance fits (p.33); the bound also drives inferred ML layout.

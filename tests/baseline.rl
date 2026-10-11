@@ -785,6 +785,19 @@ fun test_geometry_deployment_cancel_retains_unit_and_owner() -> Bool:
     sequence.skip(board)
     return board.reserve_units.size() == 1 and board.units.size() == 0 and !board.current_decision_maker and (can sequence.select_unit(board, slot))
 
+# p.12: a trapped move can be cancelled with no position/history changes.
+# This reproduces the engaged rigid-formation move that stalled seed 40000.
+fun test_geometry_trapped_move_has_cancel_action() -> Bool:
+    let board = geometry_fixture()
+    board[0][0].geometry.unsupported_footprint = true
+    let before = to_string(board[0])
+    let slot : UnitID
+    let sequence = move(board, slot, 0)
+    if !(can sequence.skip(board, slot)):
+        return false
+    sequence.skip(board, slot)
+    return sequence.is_done() and to_string(board[0]) == before
+
 # p.12: a model's full base must fit through a gap between enemy bases.
 fun test_geometry_full_base_clearance_through_gap() -> Bool:
     let board = geometry_fixture()
