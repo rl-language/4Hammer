@@ -52,8 +52,13 @@ cls AttackSequenceInfo:
     fun max_weapon_parameter(Board board, WeaponRuleKind kind) -> Int:
         return max(board[self.source_unit_id].max_weapon_parameter(self.source, kind), self._get_weapon_rule_parameter(kind))
 
+    # Parameterless abilities such as Lethal Hits/Torrent are present even
+    # with parameter zero (pp.81–82). Parameters encode magnitude, not presence.
     fun has_weapon_rule(Board board, WeaponRuleKind kind) -> Bool:
-        return self.max_weapon_parameter(board, kind) != 0
+        let found = self.source.has_rule(kind) or board[self.source_unit_id].has_temporary_wepon_rule(kind)
+        for i in range(self.temporary_weapon_abilities.size()):
+            found = found or self.temporary_weapon_abilities[i].kind == kind
+        return found
 
     fun _get_weapon_rule_parameter(WeaponRuleKind kind) -> Int:
         let i = 0

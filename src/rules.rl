@@ -7,42 +7,19 @@ import stats
 import board
 import movement_geometry
 import terrain_rules
+import attack_dice
+import attack_declarations
 
-# Calculates the required roll to wound given a particular game state,
-# that is, the calculation includes situational condition like the usage
-# of a lance weapon, instead of only considering strenght and toughness
+# Wound thresholds use the printed equality boundaries (p.18). The user-
+# supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus
+# reduces the required unmodified result, while protection worsens the roll.
 fun required_wound_roll(Board board, AttackSequenceInfo info) -> Int:
-
-    let strenght = info.source.strenght()
-    let thoughness = info.target_toughness.value
-    let modifiers = info.total_wound_modifier() 
-    if thoughness < strenght and info.greater_strenght_wound_protection:
-        modifiers = modifiers + 1
+    let modifier = info.total_wound_modifier()
+    if info.target_toughness.value < info.source.strenght() and info.greater_strenght_wound_protection:
+        modifier = modifier - 1
     if info.has_weapon_rule(board, WeaponRuleKind::lance) and board[info.source_unit_id].has_charged:
-        modifiers = modifiers + 1
-
-    let clamped_modifier = 0
-    if modifiers > 0:
-        clamped_modifier = 1
-    if 0 > modifiers:
-        clamped_modifier = -1
- 
-    if strenght == thoughness:
-        return 4 + clamped_modifier
-
-    if strenght * 2 <= thoughness:
-        return 6 + clamped_modifier
-    
-    if strenght < thoughness:
-        return 5 + clamped_modifier
-
-    if strenght >= thoughness * 2:
-        return 2 + clamped_modifier
-    
-    if strenght > thoughness:
-        return 3 + clamped_modifier
-
-    return 0
+        modifier = modifier + 1
+    return base_wound_threshold(info.source.strenght(), info.target_toughness.value) - min(1, max(-1, modifier))
 
 
 using StatModifier = LinearlyDistributedInt<0, MAX_STAT_MODIFIER>
@@ -76,6 +53,32 @@ fun evaluate_random_stat(Stat stat, Int modifier) -> RollStat:
     let mod: StatModifier 
     mod= modifier
     return evaluate_random_stat(stat, mod) 
+
+# Random A is generated separately per weapon at gathering; random D per
+# damaging attack after allocation (supplied appendix 02.02.03). Command
+# Re-roll targets the controlling unit and spends before replacement (p.56).
+act evaluate_weapon_characteristic(ctx Board board, frm Stat stat, frm StatModifier extra, frm Bool player, frm UnitID target) -> WeaponStatRoll:
+    subaction* initial = evaluate_random_stat(stat, extra)
+    frm result = initial.result
+    if stat is Dice:
+        frm maximum = stat
+        if can_command_reroll(board, player, target, true):
+            frm previous_owner = board.current_decision_maker
+            board.current_decision_maker = player
+            act keep_it(Bool keep)
+            if !keep:
+                board.commit_stratagem(player, Stratagem::reroll, board[target])
+                act reroll(Dice replacement) {replacement.value <= maximum.value}
+                result = replacement.value + extra.value
+            board.current_decision_maker = previous_owner
+
+# Convert a supported characteristic increment to standard bounded storage,
+# rejecting unsupported values rather than silently clamping (pp.17/19).
+fun evaluate_weapon_characteristic(Board board, Stat stat, Int extra, Bool player, UnitID target) -> WeaponStatRoll:
+    assert(extra >= 0 and extra < MAX_STAT_MODIFIER, "characteristic increment capacity exceeded")
+    let bounded : StatModifier
+    bounded = extra
+    return evaluate_weapon_characteristic(board, stat, bounded, player, target)
 
 # Command Re-roll needs a friendly target and obeys phase/unit use limits
 # (pp.54/56). Unknown targets cannot bypass that eligibility gate.
@@ -138,80 +141,101 @@ fun rerollable_dice_roll(Board board, Bool reroll, Bool reroll_1s, Bool cp_rerol
 fun rerollable_dice_roll(Board board, Bool reroll, Bool reroll_1s, Bool cp_rerollable, Bool current_player, UnitID target) -> RerollableDice:
     return rerollable_dice_roll(board, reroll, reroll_1s, cp_rerollable, current_player, target, true)
 
+# Hit modifiers are cumulative before the +/-1 cap (supplied appendix
+# 02.02.01). Heavy requires Remained Stationary (p.81); the existing has_moved
+# flag represents that legacy choice until movement-mode state in task 11.
 fun get_hit_roll_bonus(Board board) -> Int:
-    let sum = board.attack_info.total_hit_modifier() 
-    if board.attack_info.has_weapon_rule(board, WeaponRuleKind::heavy) and board[board.attack_info.source_unit_id].has_moved:
+    let sum = board.attack_info.total_hit_modifier()
+    if board.attack_info.has_weapon_rule(board, WeaponRuleKind::heavy) and !board[board.attack_info.source_unit_id].has_moved:
         sum = sum + 1
-    if sum >= 1:
-        return 1
-    if sum <= -1:
-        return -1
-    return 0
+    return min(1, max(-1, sum))
 
-# Evaulates a single attack from a given model to a target unit
-# A single attack can generate multiple hits, for example because
-# of rules such as sutained_hits. 
-# If the target is destroyed, this action triggers eventual on death
-# mechanics.
-# Hold generated hit/wound/damage counters across dice decisions
-# (attack sequence pp.18–19). The new-edition pipeline remains tasks 9/10.
-act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> SingleAttack:
-    # Invoking a real ranged attack, even one that misses, breaks Hidden for
-    # this and the following turn (p.50). Merely selecting/skipping does not.
-    if board.attack_info.source.range() > 0:
-        board.record_ranged_attacks(board.attack_info.source_unit_id)
+# Offer a batch decision only when an original die is eligible. No empty
+# reroll-only boundary may stall the sequence (p.18; Command Re-roll p.56).
+fun has_batch_reroll(Board board, CombatCounter[6] eligible, Bool reroll_all, Bool reroll_ones, Bool cp_allowed, Bool player, UnitID target) -> Bool:
+    for i in range(6):
+        if eligible[i] > 0 and (reroll_all or (reroll_ones and i == 0) or (cp_allowed and can_command_reroll(board, player, target, true))):
+            return true
+    return false
+
+# Collect every original result before offering re-rolls or evaluating the
+# batch (p.18; supplied appendix modifiers apply after re-rolls). Separate
+# original eligibility counts prevent re-rolling a replacement result.
+act collect_attack_dice(ctx Board board, frm CombatCounter count, frm Bool reroll_all, frm Bool reroll_ones, frm Bool cp_allowed, frm Bool player, frm UnitID strat_target) -> AttackDiceBatch:
+    frm pool : AttackDicePool
+    frm original_owner = board.current_decision_maker
+    while pool.total < count:
+        act roll(Dice value)
+        pool.add(value)
+    frm eligible = pool.faces
+    board.current_decision_maker = player
+    while has_batch_reroll(board, eligible, reroll_all, reroll_ones, cp_allowed, player, strat_target):
+        actions:
+            act keep_batch()
+                break
+            act select_reroll(frm Dice original) {
+                eligible[original.value - 1] > 0,
+                reroll_all or (reroll_ones and original == 1) or (cp_allowed and can_command_reroll(board, player, strat_target, true))
+            }
+                if !(reroll_all or (reroll_ones and original == 1)):
+                    board.commit_stratagem(player, Stratagem::reroll, board[strat_target])
+                eligible[original.value - 1] = eligible[original.value - 1] - 1
+                act reroll(Dice replacement)
+                pool.replace(original, replacement)
+    board.current_decision_maker = original_owner
+
+# Resolve the complete group's hit batch before its wound batch (pp.17–18).
+# Critical-only Lethal Hits bypasses wound rolls; Sustained additional hits
+# require their own wound rolls and are not additional critical hits (pp.82/84).
+act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, frm CombatCounter count) -> GroupAttackDice:
     frm generated_hits : CombatCounter
     frm generated_wounds : CombatCounter
-    frm generated_effective_wounds : CombatCounter
-
-    # autohit attacks
-    if board.attack_info.source.skill() == 0:
-        generated_hits = 1
+    frm generated_critical_wounds : CombatCounter
+    if count > 0 and board.attack_info.source.range() > 0:
+        board.record_ranged_attacks(board.attack_info.source_unit_id)
+    if board.attack_info.source.skill() == 0 or board.attack_info.has_weapon_rule(board, WeaponRuleKind::torrent):
+        generated_hits = count
     else:
         board.current_state = CurrentStateDescription::hit_roll
-        board.current_roll = rerollable_dice_roll(board,
-                                                  board.attack_info.reroll_hits, 
-                                                  board.attack_info.reroll1_hits, 
-                                                  true, 
-                                                  bool(source_unit.owner_id()), board.attack_info.source_unit_id)
-        subaction*(board) board.current_roll
-        let roll_modifiers = get_hit_roll_bonus(board)
-        if !attack_hit_roll_succeeds(board.current_roll.result, roll_modifiers, effective_attack_skill(board, board.attack_info)):
-            board.current_state = CurrentStateDescription::none
-            return
-        # sixes trigger a explosive hits
-        if board.current_roll.result == 6:
-           generated_hits = generated_hits + board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit) 
-        if board.attack_info.has_weapon_rule(board, WeaponRuleKind::letal_hits):
-            generated_wounds = generated_wounds + 1
-        else:
-            generated_hits = generated_hits + 1
-
-    while generated_hits != 0:
-        generated_hits = generated_hits - 1
+        subaction*(board) hits = collect_attack_dice(board, count, board.attack_info.reroll_hits, board.attack_info.reroll1_hits, true, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+        frm hit_face : Dice
+        for i in range(6):
+            hit_face = i + 1
+            let outcome = classify_attack_hit(board, board.attack_info, hit_face, get_hit_roll_bonus(board))
+            if outcome == AttackRollResult::critical:
+                add_attack_count(generated_hits, hits.pool.faces[i].value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
+                if board.attack_info.has_weapon_rule(board, WeaponRuleKind::letal_hits):
+                    add_attack_count(generated_wounds, hits.pool.faces[i].value)
+                else:
+                    add_attack_count(generated_hits, hits.pool.faces[i].value)
+            else:
+                if outcome == AttackRollResult::success:
+                    add_attack_count(generated_hits, hits.pool.faces[i].value)
+    if generated_hits > 0:
         board.current_state = CurrentStateDescription::wound_roll
-        board.current_roll = rerollable_dice_roll(board, board.attack_info.reroll_wounds, board.attack_info.reroll1_wounds, true, bool(source_unit.owner_id()), board.attack_info.source_unit_id)
-        subaction*(board) board.current_roll
+        subaction*(board) wounds = collect_attack_dice(board, generated_hits, board.attack_info.reroll_wounds, board.attack_info.reroll1_wounds, true, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+        frm wound_result : Dice
+        frm wound_index : BInt<0, 7>
+        while wound_index.value < 6:
+            wound_index = wound_index + 1
+            wound_result = wound_index.value
+            let outcome = classify_attack_wound(board, board.attack_info, wound_result, required_wound_roll(board, board.attack_info))
+            if outcome == AttackRollResult::failed:
+                continue
+            if outcome == AttackRollResult::critical and board.attack_info.has_weapon_rule(board, WeaponRuleKind::devastating_wounds):
+                add_attack_count(generated_critical_wounds, wounds.pool.faces[wound_result.value - 1].value)
+            else:
+                add_attack_count(generated_wounds, wounds.pool.faces[wound_result.value - 1].value)
+    board.current_state = CurrentStateDescription::none
 
-        if board.current_roll.result < required_wound_roll(board, board.attack_info) or board.current_roll.result == 1:
-            continue
-
-
-        if board.current_roll.result == 6 and board.attack_info.source.has_rule(WeaponRuleKind::devastating_wounds):
-            board.current_state = CurrentStateDescription::damage_roll
-            let extra_damage = 0 
-            if board.attack_info.has_weapon_rule(board, WeaponRuleKind::melta) and source_unit.distance(target) < 12.0:
-                extra_damage = board.attack_info.max_weapon_parameter(board, WeaponRuleKind::melta)
-                
-            subaction* devastating_damage_roll = evaluate_random_stat(board.attack_info.source.damage())
-            generated_effective_wounds = generated_effective_wounds + devastating_damage_roll.result.value
-        else:
-            generated_wounds = generated_wounds + 1 
-
-    if generated_wounds == 0 and generated_effective_wounds == 0:
+# Temporary downstream bridge: task 9 supplies complete hit/wound/save batches
+# but task 10 must replace legacy allocation and damage with ordered save groups
+# (pp.19–23). This bridge is not new-edition allocation certification.
+act resolve_legacy_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit, frm CombatCounter generated_wounds, frm CombatCounter generated_critical_wounds) -> LegacyAttackDamage:
+    frm generated_effective_wounds : CombatCounter
+    if target.empty() or (generated_wounds == 0 and generated_critical_wounds == 0):
         board.current_state = CurrentStateDescription::none
         return
-
     frm previous_decision_maker = board.current_decision_maker
     if board.attack_info.source.has_rule(WeaponRuleKind::precision):
         board.current_decision_maker = !target.owned_by_player1
@@ -227,24 +251,43 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
     }
     board.current_decision_maker = previous_decision_maker
         
-    while generated_wounds != 0:
-        generated_wounds = generated_wounds - 1
-
-        board.current_roll = rerollable_dice_roll(board, false, false, true, bool(target.owner_id()), board.attack_info.target_unit_id)
-        board.current_state = CurrentStateDescription::save_roll
-        subaction*(board) board.current_roll 
+    board.current_state = CurrentStateDescription::save_roll
+    subaction*(board) saves = collect_attack_dice(board, generated_wounds, false, false, true, target.owned_by_player1, board.attack_info.target_unit_id)
+    frm save_face : BInt<1, 8>
+    save_face = 1
+    while save_face.value <= 6:
+        if saves.pool.faces[save_face.value - 1] == 0:
+            save_face = save_face + 1
+            continue
+        saves.pool.faces[save_face.value - 1] = saves.pool.faces[save_face.value - 1] - 1
         ref target_model = target.models[id.get()]
         let best_save = min(target_model.profile.save() + board.attack_info.source.penetration() + int(board.attack_info.penetration_bonus), target_model.profile.invuln_save())
-        if board.current_roll.result >= best_save:
+        if save_face.value >= best_save and save_face.value != 1:
             continue
         board.current_state = CurrentStateDescription::damage_roll
-        subaction* damage_roll = evaluate_random_stat(board.attack_info.source.damage())
+        subaction*(board) damage_roll = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), 0, source_unit.owned_by_player1, board.attack_info.source_unit_id)
         generated_effective_wounds = generated_effective_wounds + damage_roll.result.value
 
+    # Random D is determined per damaging attack after allocation (supplied
+    # appendix 02.02.03); critical wounds do not roll damage in the wound step.
+    while generated_critical_wounds > 0:
+        board.current_state = CurrentStateDescription::damage_roll
+        subaction*(board) critical_damage = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), 0, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+        generated_effective_wounds = generated_effective_wounds + critical_damage.result.value
+        generated_critical_wounds = generated_critical_wounds - 1
     frm target_model = target[id]
     if target.damage(id.get(), generated_effective_wounds.value, board.attack_info.fight_on_death):
         subaction*(board, source_unit, target_model) on_model_destroyed = on_model_destroyed(board, source_unit, target_model)
     board.current_state = CurrentStateDescription::none
+
+
+# Preserve the existing one-attack entrypoint for fixtures and legacy callers;
+# dice use the same batch pipeline as declared groups (pp.17–18).
+act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> SingleAttack:
+    let count : CombatCounter
+    count = 1
+    subaction*(board, target, source_unit) dice = resolve_attack_dice(board, target, source_unit, count)
+    subaction*(board, target, source_unit) damage = resolve_legacy_attack_damage(board, target, source_unit, dice.generated_wounds, dice.generated_critical_wounds)
 
 # Dispatch existing on-destruction abilities/stratagems after a casualty (core p.19).
 # Feeder Tendrils checks the destroyed model, not the attacker; its faction
@@ -306,9 +349,10 @@ act resolve_weapon(ctx Board board,
         current_attack = current_attack + 1
         if board[target].models.size() == 0:
             break
-    current_model = current_model.get() + 1
 
-fun _configure_attack(Board board, Int source, Int target, Bool overwatch, Bool melee):
+# Configure the selected target before its declared groups and timing effects
+# (pp.16–18). Faction consumers remain explicit legacy fixtures for task 17.
+fun configure_attack_info(Board board, Int source, Int target, Bool overwatch, Bool melee):
     let attack : AttackSequenceInfo
     attack.source_unit_id = source 
     attack.target_unit_id = target
@@ -492,43 +536,197 @@ act use_attack_stratagems(ctx Board board,
 
 
 
-# One of the most important sequences of the game,
-# it handles a full melee, ranged or overwatch attack 
-# from a given target to a given source, including
-# the activation of stratagems, the resolution of 
-# dangerous weapons, fight on death, and so on.
-# Retain unit/model attack iteration and Hazardous-use storage across actions
-# (attacks pp.16–23; Hazardous p.81). Group declarations remain task 9.
-# Selected shooting/fighting units temporarily own the active role (p.8);
-# restore the calling roles after attacks and the legacy fight-on-death path.
-act attack(ctx Board board, 
-           frm UnitID source, 
-           frm UnitID target, 
-           frm Bool melee, 
-           frm Bool overwatch) -> Attack:
-    if board[source].models.size() == 0:
-        return
-    if board[target].models.size() == 0:
-        return
+# Select weapons for this model without rolling any hit/wound dice (p.16).
+# Retain the existing SelectWeapon numeric payload and Skip button; melee must
+# select its ordinary weapon, then may select additional Extra Attacks weapons.
+act declare_model_weapons(ctx Board board, ctx DeclaredWeapons declarations, frm UnitID source, frm ModelID current_model, frm Bool melee) -> DeclareModelWeapons:
+    frm selected : Bool[MAX_WEAPONS]
+    frm main_selected = false
+    board.current_state = CurrentStateDescription::select_weapon
+    while true:
+        actions:
+            act select_weapon(BInt<0, MAX_WEAPONS> weapon_id) {
+                weapon_selection_valid(board, source, current_model.get(), weapon_id.value, melee, selected, main_selected)
+            }
+                declarations.append(make_declared_weapon(board, source, current_model.get(), weapon_id.value))
+                selected[weapon_id.value] = true
+                if !declarations.back().weapon.has_rule(WeaponRuleKind::extra_attacks):
+                    main_selected = true
+            act skip() {may_finish_weapon_selection(board, source, current_model.get(), melee, main_selected)}
+                break
 
+# Targets are declared for every selected weapon before resolution (pp.16–17).
+# Melee shares consume the fixed A budget, with at least one attack per target.
+# User-directed assumption: no random-A melee weapons exist. Assert this
+# rather than inventing a split policy conflicting with appendix 02.02.03.
+act declare_weapon_targets(ctx Board board, frm DeclaredWeapon weapon, frm UnitID source, frm Bool melee) -> DeclareWeaponTargets:
+    assert(!melee or weapon_has_fixed_attacks(weapon.weapon), "random-A melee weapons are unsupported by user assumption")
+    if !declaration_has_target(board, source, weapon, melee):
+        return
+    frm remaining : AttackShare
+    let attacks = weapon.weapon.attacks()
+    if attacks is FixedStat:
+        remaining = attacks.value
+    frm chosen : UnitID
+    while true:
+        actions:
+            act declare_target(UnitID source_id, frm UnitID target_id) {
+                source_id.get() == source.get(),
+                declaration_target_valid(board, source, weapon, target_id, melee),
+                !weapon.targeted[target_id.get()]
+            }
+                weapon.targeted[target_id.get()] = true
+                chosen = target_id
+            act skip_target() {!melee}
+                break
+        if melee:
+            act assign_attacks(AttackShareChoice count) {
+                count.value <= remaining.value,
+                count.value == remaining.value or has_another_declaration_target(board, source, weapon, melee)
+            }
+            weapon.shares[chosen.get()] = count.value
+            remaining = remaining - count.value
+            if remaining > 0:
+                continue
+        break
+
+# Supplied appendix 04.03.03 permits a new target if the original is no longer
+# eligible/viable, including a destroyed target. Preserve the unresolved share;
+# no surviving source/target means attacks are lost, not an empty selector.
+act revalidate_attack_targets(ctx Board board, ctx DeclaredWeapons declarations, frm UnitID source, frm Bool melee) -> RevalidateAttackTargets:
+    frm weapon_index : LinearlyDistributedInt<0, MAX_SELECTED_WEAPONS_PLUS1>
+    while weapon_index.value < declarations.size():
+        frm old_target : UnitIterator
+        while old_target.value < MAX_UNIT_COUNT:
+            let id : UnitID
+            id = old_target.value
+            ref weapon = declarations[weapon_index.value]
+            if weapon.targeted[old_target.value] and !weapon.resolved[old_target.value] and !declaration_target_valid(board, source, weapon, id, melee):
+                if declaration_has_target(board, source, weapon, melee):
+                    actions:
+                        act retarget_weapon(UnitID source_id, frm UnitID replacement) {
+                            source_id.get() == source.get(),
+                            declaration_target_valid(board, source, declarations[weapon_index.value], replacement, melee)
+                        }
+                            declarations[weapon_index.value].targeted[replacement.get()] = true
+                            declarations[weapon_index.value].resolved[replacement.get()] = false
+                            declarations[weapon_index.value].shares[replacement.get()] = declarations[weapon_index.value].shares[replacement.get()] + declarations[weapon_index.value].shares[old_target.value].value
+                        act discard_attacks()
+                declarations[weapon_index.value].resolved[old_target.value] = true
+            old_target = old_target.value + 1
+        weapon_index = weapon_index + 1
+
+# Snapshot the applicable profile/cover for grouping from a selected weapon
+# (p.17). Targeted effects remain the owning target's shared configuration.
+fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeapon weapon, AttackSequenceInfo target_info) -> AttackSequenceInfo:
+    let info = target_info
+    info.source = weapon.weapon
+    let model = declared_model_index(board, source, weapon)
+    assert(model >= 0, "declared source no longer exists")
+    info.source_profile = board[source][model].profile
+    info.target_has_cover = info.source.range() > 0 and unit_has_benefit_of_cover(board, board[source][model], board[target])
+    return info
+
+# Group comparisons finish in an ordinary helper before any suspension;
+# no temporary profile/rule copies cross a dice action boundary (p.17).
+fun declared_weapon_matches(Board board, UnitID source, UnitID target, DeclaredWeapon declaration, AttackSequenceInfo info, AttackSequenceInfo target_info) -> Bool:
+    let candidate = declared_attack_info(board, source, target, declaration, target_info)
+    return attacks_are_identical(board, info, candidate)
+
+# Determine whether a declaration uses its already split fixed-A shares,
+# without retaining a narrowed temporary union across an action (p.17).
+fun weapon_has_fixed_attacks(Weapon weapon) -> Bool:
+    let attacks = weapon.attacks()
+    return attacks is FixedStat
+
+# Gather-time additions belong to individual weapons (p.17; Rapid Fire/Blast
+# pp.79/83), so different ranges may change A without changing group identity.
+fun gathering_extra_attacks(Board board, UnitID source, UnitID target, DeclaredWeapon declaration) -> Int:
+    let extra = 0
+    if declaration.weapon.range() > 0 and board[target].distance(board[source][declared_model_index(board, source, declaration)]) <= float(declaration.weapon.range()) / 2.0:
+        extra = declaration.weapon.get_rule_parameter(WeaponRuleKind::rapid_fire)
+    if declaration.weapon.has_rule(WeaponRuleKind::blast):
+        extra = extra + board[target].models.size() / 5
+    return extra
+
+# Retain a selected weapon value, not a local reference into an iteration,
+# while collecting its random A (supplied appendix 02.02.03). Split fixed-A
+# melee weapons contribute exactly their previously declared target share.
+act gather_weapon_count(ctx Board board, frm UnitID source, frm UnitID target, frm DeclaredWeapon declaration, frm Bool melee) -> WeaponAttackCount:
+    frm result : RandomStatResult
+    if melee and weapon_has_fixed_attacks(declaration.weapon):
+        result = declaration.shares[target.get()].value
+    else:
+        board.current_state = CurrentStateDescription::quantity_roll
+        subaction*(board) generated = evaluate_weapon_characteristic(board, declaration.weapon.attacks(), gathering_extra_attacks(board, source, target, declaration), board[source].owned_by_player1, source)
+        result = generated.result
+
+# Gather every identical unresolved weapon; roll random A independently and
+# combine afterward (p.17; supplied appendix 02.02.03). Keep the loop's source
+# contexts stable and retain only bounded counters/weapon snapshots across dice.
+act gather_attack_group(ctx Board board, ctx DeclaredWeapons declarations, frm UnitID source, frm UnitID target, frm AttackWeaponID chosen, frm Bool melee, frm AttackSequenceInfo target_info) -> GatherAttackGroup:
+    frm info = declared_attack_info(board, source, target, declarations[chosen.value], target_info)
+    frm count : CombatCounter
+    frm index : LinearlyDistributedInt<0, MAX_SELECTED_WEAPONS_PLUS1>
+    while index.value < declarations.size():
+        if declarations[index.value].targeted[target.get()] and !declarations[index.value].resolved[target.get()] and declared_weapon_matches(board, source, target, declarations[index.value], info, target_info):
+            declarations[index.value].resolved[target.get()] = true
+            subaction*(board) generated = gather_weapon_count(board, source, target, declarations[index.value], melee)
+            add_attack_count(count, generated.result.value)
+            declarations[index.value].made_attacks = declarations[index.value].made_attacks or generated.result.value > 0
+        index = index + 1
+    board.attack_info = info
+
+# Full activation: select all weapons, declare all targets, choose target then
+# weapon group and complete that target before another (pp.16–18). Existing
+# Hazardous/fight-on-death effects are a legacy bridge owned by tasks 10/14.
+act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee, frm Bool overwatch) -> Attack:
+    if board[source].empty():
+        return
+    board.identify_unit(board[source])
     frm previous_owner = board.current_decision_maker
     frm previous_active = board.timing.active_player
     board.timing.active_player = board[source].owned_by_player1
-    _configure_attack(board, source.get(), target.get(), overwatch, melee)
-
-    subaction*(board) strats = use_attack_stratagems(board, source, target, melee)
-
+    board.current_decision_maker = board[source].owned_by_player1
+    frm declarations : DeclaredWeapons
     frm model : ModelIterator
     frm hazardous_uses : HazardousUses
-    board.current_decision_maker = board[source].owned_by_player1
-    while model != board[source].models.size() and !board[target].models.empty():
+    while model.value < board[source].models.size():
         let id : ModelID
         id = model.value
-        subaction*(board) model_attack = resolve_model_attack(board, source, target, id, melee)
-        hazardous_uses = hazardous_uses + model_attack.hazardous_uses
+        subaction*(board, declarations) selection = declare_model_weapons(board, declarations, source, id, melee)
         model = model + 1
-
-
+    frm declaration_index : LinearlyDistributedInt<0, MAX_SELECTED_WEAPONS_PLUS1>
+    while declaration_index.value < declarations.size():
+        subaction*(board) targets = declare_weapon_targets(board, declarations[declaration_index.value], source, melee)
+        declarations.set(declaration_index.value, targets.weapon)
+        declaration_index = declaration_index + 1
+    while has_unresolved_attacks(declarations):
+        board.current_decision_maker = board[source].owned_by_player1
+        subaction*(board, declarations) viability = revalidate_attack_targets(board, declarations, source, melee)
+        if !has_unresolved_attacks(declarations):
+            break
+        act choose_attack_target(UnitID unit) {target_has_unresolved_weapons(declarations, unit)}
+        target = unit
+        configure_attack_info(board, source.get(), target.get(), overwatch, melee)
+        subaction*(board) strats = use_attack_stratagems(board, source, target, melee)
+        frm target_info = board.attack_info
+        board.current_decision_maker = board[source].owned_by_player1
+        while target_has_unresolved_weapons(declarations, target):
+            subaction*(board, declarations) changed = revalidate_attack_targets(board, declarations, source, melee)
+            if !target_has_unresolved_weapons(declarations, target):
+                break
+            act choose_attack_weapon(frm AttackWeaponID weapon) {
+                weapon.value < declarations.size(),
+                declarations[weapon.value].targeted[target.get()],
+                !declarations[weapon.value].resolved[target.get()]
+            }
+            subaction*(board, declarations) gathering = gather_attack_group(board, declarations, source, target, weapon, melee, target_info)
+            subaction*(board, board[target], board[source]) dice = resolve_attack_dice(board, board[target], board[source], gathering.count)
+            subaction*(board, board[target], board[source]) damage = resolve_legacy_attack_damage(board, board[target], board[source], dice.generated_wounds, dice.generated_critical_wounds)
+    for i in range(declarations.size()):
+        if declarations[i].made_attacks and declarations[i].weapon.has_rule(WeaponRuleKind::hazardous):
+            hazardous_uses = hazardous_uses + 1
     ### Dangerous weapons
     board.attack_info.target_unit_id = source
     board.current_decision_maker = board[source].owned_by_player1
@@ -547,27 +745,30 @@ act attack(ctx Board board,
         # ToDo: handle non character version
         board[source].damage(model.get(), 3)
     board.current_state = CurrentStateDescription::none
-    
-    ### fight on death
-    _configure_attack(board, target.get(), source.get(), overwatch, melee)
-    board.current_decision_maker = board[target].owned_by_player1
-    board.timing.active_player = board[target].owned_by_player1
-    model = 0
-    while model != board[target].models.size() and !board[source].models.empty():
-        if board[target][model.value].state == ModelState::fight_on_death:
-            if board.attack_info.fight_on_death_roll != 2:
-                # 2+ fight on death dice roll
-                act roll(Dice result)
-                if result < board.attack_info.fight_on_death_roll:
-                   continue 
-            let id : ModelID
-            id = model.value
-            subaction*(board) fight_on_death_attack = resolve_model_attack(board, target, source, id, melee)
-        model = model + 1
-    board[target].remove_figth_on_death_models()
+
+    # Legacy destruction retention remains task 10; do not attempt a reciprocal
+    # attack when either army has no surviving battlefield models.
+    if !board[source].empty() and !board[target].empty():
+        frm death_roll = board.attack_info.fight_on_death_roll
+        configure_attack_info(board, target.get(), source.get(), overwatch, melee)
+        board.current_decision_maker = board[target].owned_by_player1
+        board.timing.active_player = board[target].owned_by_player1
+        model = 0
+        while model.value < board[target].models.size() and !board[source].empty():
+            if board[target][model.value].state == ModelState::fight_on_death:
+                if death_roll != 2:
+                    act roll(Dice result)
+                    if result < death_roll:
+                        model = model + 1
+                        continue
+                let id : ModelID
+                id = model.value
+                subaction*(board) fight_on_death_attack = resolve_model_attack(board, target, source, id, melee)
+            model = model + 1
+        board[target].remove_figth_on_death_models()
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
-        
+    board.current_state = CurrentStateDescription::none
 
 
 enum ProfileToUse:
@@ -1458,6 +1659,9 @@ fun<T> pretty_string(Board b, T obj) -> String:
         if !(b.get_current_attacking_model().weapons.size() > obj.weapon_id.value):
             return to_string(obj)
         return to_string(b.get_current_attacking_model().weapons[obj.weapon_id.value])
+    if obj is GameChooseAttackWeapon:
+        if obj.weapon.value < b.attack.declarations.size():
+            return to_string(b.attack.declarations[obj.weapon.value].weapon)
     return to_string(obj)
 
 

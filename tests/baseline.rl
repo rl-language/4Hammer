@@ -1062,14 +1062,31 @@ fun test_timing_opponent_move_restores_roles() -> Bool:
 # p.8: shooting active role follows attacker even while defender decides.
 fun test_timing_opponent_attack_restores_roles() -> Bool:
     let board = timing_fixture()
+    board[1][0].position.x = 15
     let sequence = attack(board, unit_id(1), unit_id(0), false, true)
-    if !board.timing.active_player or board.current_decision_maker:
+    if !board.timing.active_player or !board.current_decision_maker:
+        return false
+    let slot : BInt<0, MAX_WEAPONS>
+    slot = 1
+    sequence.select_weapon(board, slot)
+    sequence.skip(board)
+    sequence.declare_target(board, unit_id(1), unit_id(0))
+    sequence.choose_attack_target(board, unit_id(0))
+    if board.current_decision_maker:
         return false
     sequence.no_defensive_stratagem(board)
     if !board.current_decision_maker or !board.timing.active_player:
         return false
     sequence.no_offensive_stratagem(board)
-    sequence.skip(board)
+    let weapon : AttackWeaponID
+    weapon = 0
+    sequence.choose_attack_weapon(board, weapon)
+    let one : Dice
+    one = 1
+    sequence.quantity(board, one)
+    sequence.keep_it(board, true)
+    sequence.roll(board, one)
+    sequence.keep_batch(board)
     return sequence.is_done() and !board.timing.active_player and !board.current_decision_maker and !board.current_player
 
 # p.14 and supplied sequencing: opposing coherency is also mandatory,
@@ -1805,8 +1822,6 @@ fun test_skipped_shooting_does_not_record_ranged_attacks() -> Bool:
     board[0].can_shoot = true
     let shooting = shooting_phase(board)
     shooting.select_target(board, unit_id(0), unit_id(1))
-    shooting.no_defensive_stratagem(board)
-    shooting.no_offensive_stratagem(board)
     shooting.skip(board)
     return board[0].has_shoot and board[0].history.last_ranged_attack_turn == -1 and (can shooting.end_shooting_phase(board))
 
@@ -1848,6 +1863,305 @@ fun test_05_02_exact_half_strength() -> Bool:
     info.target_toughness = info.source.strenght() * 2
     return required_wound_roll(board, info) == 6
 
+# Test-only explicit characteristic/slot constructors retain finite domains.
+fun attack_test_die(Int value) -> Dice:
+    let result : Dice
+    result = value
+    return result
+
+fun attack_test_count(Int value) -> CombatCounter:
+    let result : CombatCounter
+    result = value
+    return result
+
+fun attack_test_slot(Int value) -> BInt<0, MAX_WEAPONS>:
+    let result : BInt<0, MAX_WEAPONS>
+    result = value
+    return result
+
+fun attack_test_weapon(Int value) -> AttackWeaponID:
+    let result : AttackWeaponID
+    result = value
+    return result
+
+fun attack_test_share(Int value) -> AttackShareChoice:
+    let result : AttackShareChoice
+    result = value
+    return result
+
+# Explicit generic fixture, not a supplied army datasheet: one bolter bearer
+# and two enemy units for declaration/grouping boundary tests (pp.16–18).
+fun attack_declaration_fixture() -> Board:
+    let board = attack_fixture()
+    board[0].models.resize(1)
+    board[1].models.resize(1)
+    board[0][0].position = board_position(5, 5)
+    board[1][0].position = board_position(10, 5)
+    board[0][0].weapons.clear()
+    board[0][0].weapons.append(Weapon::captain_storm_bolter)
+    let other = board[1]
+    other[0].identity = -1
+    other.identity = -1
+    other[0].position = board_position(10, 8)
+    board.units.append(other)
+    board.identify_units()
+    return board
+
+# p.16: all weapons and targets are declared before the first hit roll.
+fun test_attack_declarations_precede_rolls_and_allow_different_targets() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    let sequence = attack(board, unit_id(0), unit_id(1), false, false)
+    sequence.select_weapon(board, attack_test_slot(0))
+    sequence.select_weapon(board, attack_test_slot(1))
+    if can sequence.roll(board, attack_test_die(6)):
+        return false
+    sequence.skip(board)
+    if (can sequence.declare_target(board, unit_id(1), unit_id(2))) or (can sequence.declare_target(board, unit_id(0), unit_id(0))):
+        return false
+    sequence.declare_target(board, unit_id(0), unit_id(1))
+    if can sequence.choose_attack_target(board, unit_id(1)):
+        return false
+    sequence.declare_target(board, unit_id(0), unit_id(2))
+    return sequence.declarations.size() == 2 and sequence.declarations[0].targeted[1] and sequence.declarations[1].targeted[2] and (can sequence.choose_attack_target(board, unit_id(1))) and (can sequence.choose_attack_target(board, unit_id(2))) and !(can sequence.roll(board, attack_test_die(6)))
+
+# pp.16–17: range/visibility belong to each bearer, not another nearby member.
+fun test_attack_declaration_per_model_range_and_engaged_target() -> Bool:
+    let board = attack_declaration_fixture()
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    if !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    board[1][0].position = board_position(40, 5)
+    if declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    board[1][0].position = board_position(8, 5)
+    return !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false) and declaration_target_valid(board, unit_id(0), weapon, unit_id(1), true)
+
+# p.16: no mixing ranged/melee selections, duplicate slots or two main melee
+# weapons; ending before the required melee selection is illegal.
+fun test_attack_weapon_selection_modes_duplicates_and_required_melee() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::relic_weapon)
+    board[0][0].weapons.append(Weapon::force_weapon)
+    let selected : Bool[MAX_WEAPONS]
+    if weapon_selection_valid(board, unit_id(0), 0, 0, true, selected, false) or weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false):
+        return false
+    if may_finish_weapon_selection(board, unit_id(0), 0, true, false):
+        return false
+    selected[0] = true
+    return !weapon_selection_valid(board, unit_id(0), 0, 0, false, selected, false) and !weapon_selection_valid(board, unit_id(0), 0, 2, true, selected, true) and may_finish_weapon_selection(board, unit_id(0), 0, true, true)
+
+# p.17: split shares add to A and allocate at least one per selected target.
+fun test_attack_melee_split_budget_and_target_uniqueness() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::relic_weapon
+    board[1][0].position = board_position(8, 5)
+    board[2][0].position = board_position(5, 8)
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    let targets = declare_weapon_targets(board, weapon, unit_id(0), true)
+    targets.declare_target(board, unit_id(0), unit_id(1))
+    if can targets.assign_attacks(board, attack_test_share(7)):
+        return false
+    targets.assign_attacks(board, attack_test_share(2))
+    if can targets.declare_target(board, unit_id(0), unit_id(1)):
+        return false
+    targets.declare_target(board, unit_id(0), unit_id(2))
+    if can targets.assign_attacks(board, attack_test_share(3)):
+        return false
+    targets.assign_attacks(board, attack_test_share(4))
+    return targets.is_done() and targets.weapon.shares[1] == 2 and targets.weapon.shares[2] == 4
+
+# p.17: a sole eligible target must receive all remaining melee attacks,
+# preventing a partial allocation from creating a selector with no choices.
+fun test_attack_melee_single_target_cannot_leave_unallocatable_share() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::relic_weapon
+    board[1][0].position = board_position(8, 5)
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    let targets = declare_weapon_targets(board, weapon, unit_id(0), true)
+    targets.declare_target(board, unit_id(0), unit_id(1))
+    return !(can targets.assign_attacks(board, attack_test_share(5))) and (can targets.assign_attacks(board, attack_test_share(6)))
+
+# p.17: mandatory coalescing gathers three A2 weapons, not one model at a time.
+# Disable Rapid Fire distance in this fixture to demonstrate exactly six dice.
+fun test_attack_identical_weapons_gather_as_one_group() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1][0].position.x = 22
+    let declarations : DeclaredWeapons
+    for i in range(3):
+        let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+        weapon.targeted[1] = true
+        declarations.append(weapon)
+    configure_attack_info(board, 0, 1, false, false)
+    let group = gather_attack_group(board, declarations, unit_id(0), unit_id(1), attack_test_weapon(1), false, board.attack_info)
+    return group.is_done() and group.count == 6 and declarations[0].resolved[1] and declarations[1].resolved[1] and declarations[2].resolved[1]
+
+# p.17: differing cover/BS, D kinds, abilities and roll rules cannot coalesce.
+fun test_attack_group_identity_includes_characteristics_and_applicable_rules() -> Bool:
+    let board = attack_declaration_fixture()
+    let left = board.attack_info
+    let right = left
+    if !attacks_are_identical(board, left, right):
+        return false
+    right.target_has_cover = true
+    if attacks_are_identical(board, left, right):
+        return false
+    right = left
+    right.add_letal_hits()
+    if attacks_are_identical(board, left, right):
+        return false
+    right = left
+    right.reroll1_hits = true
+    return !attacks_are_identical(board, left, right) and !same_damage_characteristic(raw_stat(3), dice_stat(3))
+
+# Supplied appendix 02.02.03: random A is rolled separately for each identical
+# weapon at gathering, then combined; neither weapon rolls damage or hits yet.
+fun test_attack_random_attacks_per_weapon_before_group_hits() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::smite_witchfire
+    let declarations : DeclaredWeapons
+    for i in range(2):
+        let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+        weapon.targeted[1] = true
+        declarations.append(weapon)
+    configure_attack_info(board, 0, 1, false, false)
+    let group = gather_attack_group(board, declarations, unit_id(0), unit_id(1), attack_test_weapon(0), false, board.attack_info)
+    group.quantity(board, declarations, attack_test_die(2))
+    if group.is_done() or group.count != 2:
+        return false
+    group.quantity(board, declarations, attack_test_die(5))
+    return group.is_done() and group.count == 7
+
+# Supplied appendix 04.03.03: moved-out-of-range and destroyed targets allow
+# selecting a new target; keep the originally declared melee share unchanged.
+fun test_attack_ineligible_target_can_be_redirected() -> Bool:
+    let board = attack_declaration_fixture()
+    let declarations : DeclaredWeapons
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    weapon.targeted[1] = true
+    weapon.shares[1] = 2
+    declarations.append(weapon)
+    board[1][0].position.x = 40
+    let correction = revalidate_attack_targets(board, declarations, unit_id(0), false)
+    if can correction.retarget_weapon(board, declarations, unit_id(0), unit_id(1)):
+        return false
+    correction.retarget_weapon(board, declarations, unit_id(0), unit_id(2))
+    return correction.is_done() and declarations[0].resolved[1] and declarations[0].targeted[2] and declarations[0].shares[2] == 2 and !declarations[0].resolved[2]
+
+# pp.17/19: model compaction cannot transfer a declaration to another bearer.
+fun test_attack_source_identity_survives_compaction_and_rejects_casualty() -> Bool:
+    let board = attack_declaration_fixture()
+    let other = board[0][0]
+    other.identity = -1
+    board[0].models.append(other)
+    board.identify_unit(board[0])
+    let weapon = make_declared_weapon(board, unit_id(0), 1, 0)
+    board[0].models.erase(0)
+    if declared_model_index(board, unit_id(0), weapon) != 0:
+        return false
+    board[0].models.clear()
+    return declared_model_index(board, unit_id(0), weapon) == -1 and !declaration_has_target(board, unit_id(0), weapon, false)
+
+# p.18 and supplied appendix 01.05.02: collect all original dice first; each
+# original can be rerolled once and replacement dice cannot re-enter selection.
+fun test_attack_batch_collects_before_rerolls_and_prevents_second_reroll() -> Bool:
+    let board = attack_declaration_fixture()
+    board.current_decision_maker = true
+    let batch = collect_attack_dice(board, attack_test_count(2), true, false, false, false, unit_id(0))
+    batch.roll(board, attack_test_die(1))
+    if can batch.select_reroll(board, attack_test_die(1)):
+        return false
+    batch.roll(board, attack_test_die(1))
+    if board.current_decision_maker:
+        return false
+    batch.select_reroll(board, attack_test_die(1))
+    batch.reroll(board, attack_test_die(6))
+    if can batch.select_reroll(board, attack_test_die(6)):
+        return false
+    batch.select_reroll(board, attack_test_die(1))
+    batch.reroll(board, attack_test_die(6))
+    return batch.is_done() and batch.pool.faces[5] == 2 and batch.pool.total == 2 and board.current_decision_maker
+
+# p.56: declining spends nothing; accepted batch CP reroll commits before
+# replacement dice and cannot pay again in the same phase/for the same unit.
+fun test_attack_batch_command_reroll_cost_and_keep() -> Bool:
+    let board = attack_declaration_fixture()
+    board.command_points[0] = 2
+    let batch = collect_attack_dice(board, attack_test_count(2), false, false, true, false, unit_id(0))
+    batch.roll(board, attack_test_die(2))
+    batch.roll(board, attack_test_die(3))
+    if board.command_points[0] != 2:
+        return false
+    batch.select_reroll(board, attack_test_die(2))
+    if board.command_points[0] != 1 or !board.has_used_strat(Stratagem::reroll, 0):
+        return false
+    batch.reroll(board, attack_test_die(6))
+    return batch.is_done() and batch.pool.faces[5] == 1 and batch.pool.faces[2] == 1 and !(can batch.select_reroll(board, attack_test_die(3)))
+
+# pp.18/82/84: only critical original hits trigger Lethal, and Sustained
+# generated hits roll wounds normally. No wounds resolve before all hit inputs.
+fun test_attack_critical_lethal_and_sustained_group_pipeline() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.add_letal_hits()
+    board.attack_info.add_sustained_hits(2)
+    let group = resolve_attack_dice(board, board[1], board[0], attack_test_count(2))
+    group.roll(board, board[1], board[0], attack_test_die(6))
+    if group.generated_hits != 0 or group.generated_wounds != 0:
+        return false
+    group.roll(board, board[1], board[0], attack_test_die(3))
+    if group.generated_hits != 3 or group.generated_wounds != 1:
+        return false
+    group.roll(board, board[1], board[0], attack_test_die(1))
+    group.roll(board, board[1], board[0], attack_test_die(1))
+    if group.is_done():
+        return false
+    group.roll(board, board[1], board[0], attack_test_die(1))
+    return group.is_done() and group.generated_wounds == 1
+
+# p.18: natural critical wounds succeed even if modifiers require seven;
+# ordinary hits/wounds do not become critical through positive modifiers.
+fun test_attack_natural_criticals_and_modifier_boundaries() -> Bool:
+    let board = attack_declaration_fixture()
+    let info = board.attack_info
+    if !(classify_attack_hit(board, info, attack_test_die(1), 10) == AttackRollResult::failed) or !(classify_attack_hit(board, info, attack_test_die(6), -10) == AttackRollResult::critical):
+        return false
+    if !(classify_attack_hit(board, info, attack_test_die(5), 1) == AttackRollResult::success):
+        return false
+    return classify_attack_wound(board, info, attack_test_die(6), 7) == AttackRollResult::critical and classify_attack_wound(board, info, attack_test_die(1), 1) == AttackRollResult::failed
+
+# p.57: six-only shots cannot use positive modifiers to turn a five into a hit.
+fun test_attack_snap_shooting_six_only_is_enforced() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.only_hits_on_6 = true
+    return classify_attack_hit(board, board.attack_info, attack_test_die(5), 1) == AttackRollResult::failed and classify_attack_hit(board, board.attack_info, attack_test_die(6), -1) == AttackRollResult::critical
+
+# Supplied appendix 02.02.01: bonuses lower the wound threshold, penalties
+# increase it, and cumulative modifiers cap only after they are added.
+fun test_attack_wound_modifier_direction_and_cap() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.wound_roll_bonus = true
+    board.attack_info.profile_wound_roll_bonus.append(board.attack_info.source_profile)
+    if required_wound_roll(board, board.attack_info) != 3:
+        return false
+    board.attack_info.wound_roll_malus = true
+    if required_wound_roll(board, board.attack_info) != 3:
+        return false
+    board.attack_info.profile_wound_roll_bonus.clear()
+    return required_wound_roll(board, board.attack_info) == 4
+
+# pp.10/17/19: a fixed attack and damage actually remove wounds, proving that
+# successful smoke completion no longer hides zero fixed characteristics.
+fun test_attack_fixed_damage_reaches_live_model() -> Bool:
+    let board = attack_declaration_fixture()
+    let sequence = single_attack(board, board[1], board[0])
+    sequence.roll(board, board[1], board[0], attack_test_die(3))
+    sequence.roll(board, board[1], board[0], attack_test_die(4))
+    let model : ModelID
+    model = 0
+    sequence.allocate_wound(board, board[1], board[0], model)
+    sequence.roll(board, board[1], board[0], attack_test_die(1))
+    return sequence.is_done() and board[1][0].suffered_wounds == 1
+
 # Supplied appendix 02.02.01: operation order and only-final rounding; amounts
 # use standard bounded numeric storage, separate from observation encoding.
 fun test_attack_modifier_order_final_rounding_and_zero_lock() -> Bool:
@@ -1886,3 +2200,77 @@ fun test_attack_modifier_characteristic_roll_and_cost_bounds() -> Bool:
     modifiers.append(rule)
     return modified_dice_result(5, modifiers, true, false) == 6 and modified_dice_result(6, modifiers, false, false) == 10 and modified_dice_result(11, modifiers, false, true) == 12 and modified_cp_cost(1, modifiers) == 2
 
+# p.79: unit keyword union activates ANTI; unmodified one still fails, and
+# an ordinary noncritical wound does not inherit a critical ability trigger.
+fun test_attack_anti_uses_unit_keyword_and_natural_one_precedence() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.source = Weapon::beastchoppa
+    board[1][0].keywords.append(Keyword::monster)
+    if !(classify_attack_wound(board, board.attack_info, attack_test_die(4), 6) == AttackRollResult::critical):
+        return false
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::anti_monster, 1))
+    return classify_attack_wound(board, board.attack_info, attack_test_die(1), 1) == AttackRollResult::failed
+
+# p.18: all save inputs precede any fixed damage. Task 10 will replace this
+# legacy allocation bridge; this case asserts the batch boundary only.
+fun test_attack_all_save_results_collected_before_damage() -> Bool:
+    let board = attack_declaration_fixture()
+    let damage = resolve_legacy_attack_damage(board, board[1], board[0], attack_test_count(2), attack_test_count(0))
+    let model : ModelID
+    damage.allocate_wound(board, board[1], board[0], model)
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    if board[1][0].suffered_wounds != 0 or board[1].empty():
+        return false
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    return damage.is_done() and board[1].empty()
+
+# Supplied appendix 02.02.03: random D is rolled only after an actual damaging
+# attack has a selected recipient, including critical save-bypassing wounds.
+fun test_attack_random_damage_waits_for_allocation() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.source = Weapon::smite_witchfire
+    let damage = resolve_legacy_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    if can damage.quantity(board, board[1], board[0], attack_test_die(1)):
+        return false
+    let model : ModelID
+    damage.allocate_wound(board, board[1], board[0], model)
+    damage.quantity(board, board[1], board[0], attack_test_die(1))
+    return damage.is_done() and board[1][0].suffered_wounds == 1
+
+# p.56 and supplied appendix 01.05.02: generated random A/D may reroll once;
+# a kept characteristic neither spends CP nor requests a replacement result.
+fun test_attack_random_characteristic_command_reroll_once() -> Bool:
+    let board = attack_declaration_fixture()
+    board.command_points[0] = 2
+    let characteristic = evaluate_weapon_characteristic(board, dice_stat(3), 2, false, unit_id(0))
+    characteristic.quantity(board, attack_test_die(1))
+    characteristic.keep_it(board, false)
+    if board.command_points[0] != 1 or (can characteristic.reroll(board, attack_test_die(4))):
+        return false
+    characteristic.reroll(board, attack_test_die(3))
+    return characteristic.is_done() and characteristic.result == 5 and !(can characteristic.keep_it(board, false))
+
+# p.17: finish all nonidentical groups against the selected unit before
+# choosing another target, and consume each source model's weapon only once.
+fun test_attack_finishes_selected_target_before_next_and_each_weapon_once() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    let sequence = attack(board, unit_id(0), unit_id(1), false, false)
+    sequence.select_weapon(board, attack_test_slot(0))
+    sequence.select_weapon(board, attack_test_slot(1))
+    sequence.skip(board)
+    sequence.declare_target(board, unit_id(0), unit_id(1))
+    sequence.declare_target(board, unit_id(0), unit_id(1))
+    sequence.choose_attack_target(board, unit_id(1))
+    sequence.no_defensive_stratagem(board)
+    sequence.no_offensive_stratagem(board)
+    sequence.choose_attack_weapon(board, attack_test_weapon(0))
+    # Captain bolter A2 + Rapid Fire2 at this range, all four miss.
+    for i in range(4):
+        sequence.roll(board, attack_test_die(1))
+    if (can sequence.choose_attack_target(board, unit_id(1))) or (can sequence.choose_attack_weapon(board, attack_test_weapon(0))) or !(can sequence.choose_attack_weapon(board, attack_test_weapon(1))):
+        return false
+    sequence.choose_attack_weapon(board, attack_test_weapon(1))
+    for i in range(4):
+        sequence.roll(board, attack_test_die(1))
+    return sequence.is_done() and sequence.declarations[0].made_attacks and sequence.declarations[1].made_attacks
