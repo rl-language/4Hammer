@@ -156,3 +156,14 @@ The current suite has **144 PASS, 3 XFAIL, 0 XPASS**; CTest exposes **149 entrie
 Fresh native artifacts are in `/workspace/4hammer-validation/task8-godot`; run `python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task8-godot`. The harness exercises bounded area fields, cover/Hidden, secured-objective snapshots through absence, schema-7 save restoration and actual-shot history, alongside existing selectors/deployment/Command checks. Area rendering and interactive GUI input remain unrun.
 
 The sanitized executable is `/workspace/4hammer-validation/task8-rules-fuzzer`, with seeded inputs in `task8-replays`. Replay both completed inputs and `tests/fuzz-regressions/geometry-placement-leak.bin` with leak detection enabled before mutation fuzzing. The fresh campaign completes 31 runs in 74 seconds without reported sanitizer failures; its external-symbolizer warning limits symbolic diagnostic names, not sanitizer instrumentation. Gym produces 164,014 finite observations and 9,950 action candidates across 20 checked steps. Fixed characteristics still suppress actual combat until task 9.
+
+
+## Attack declarations and dice (task 9)
+
+The supported suite now contains **171** passing rule tests, with **0 XFAIL and 0 XPASS**. CTest exposes **173 entries**, including two passing compilation fixtures. The three final discrepancy assertions were promoted unchanged. An empty discrepancy manifest is valid; an empty supported suite still fails validation. State/observation schemas are **8**, action schema **4**; earlier counts describe historical task results.
+
+The new cases test pre-roll declarations, target legality, split melee budgets, grouping, per-weapon random A, target replacement, stable source identity, batch rerolls, expenditure, exact Strength thresholds, critical abilities, modifier limits, fixed damage and random-D allocation order. The user-directed assumption that random-A melee weapons do not exist is enforced with an assertion. Read [the task-9 report](../doc/attack-declarations-dice.md) for mandatory downstream limitations.
+
+Build matching native/header/C++ artifacts together in `/workspace/4hammer-validation/task9-godot`, then run `python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task9-godot`. The new harness uses production weapon/group buttons and source/target clicks, checks batch chance ownership and restores a pending attack save. Numeric melee-share buttons are provided but are not interactively exercised by this shooting harness; deterministic Rulebook tests establish share legality.
+
+The fresh instrumented executable is `/workspace/4hammer-validation/task9-fuzzer`; keep leak detection and precondition/bounds checks enabled. Final seeded replay and campaign evidence is in ROADMAP.md. Task 10 must replace the legacy damage bridge before claiming full attack-resolution correctness.
