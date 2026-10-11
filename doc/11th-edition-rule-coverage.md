@@ -8,7 +8,7 @@ Inventory: **156 numbered subsections**, **31 supplemental entries**, **1114 ret
 
 ## Implemented progress overlay
 
-Task 3's [state foundations report](state-foundations.md) records tested bounded storage/capacity, identity, provenance, archive/history and schema changes. CP/Advance storage (08.02/09.06) and actual-cost/own-player stratagem checks (15.01) now have passing assertions, alongside lifecycle boundary tests. Their complete subsection workflows remain owned by later tasks; the original table rows below are not promoted to full-rule implementation. The current suite has 43 passing assertions and 8 remaining mandatory discrepancy fixes. Consult ROADMAP.md for task completion status.
+Task 3's [state foundations report](state-foundations.md) records tested bounded storage/capacity, identity, provenance, archive/history and schema changes. CP/Advance storage (08.02/09.06) and actual-cost/own-player stratagem checks (15.01) now have passing assertions, alongside lifecycle boundary tests. Their complete subsection workflows remain owned by later tasks; the original table rows below are not promoted to full-rule implementation. The current suite has 45 passing assertions and 8 remaining mandatory discrepancy fixes. Consult ROADMAP.md for task completion status.
 
 ## Status conventions
 

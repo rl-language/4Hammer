@@ -72,7 +72,7 @@ See [the recorded task-2 results](../doc/validation-baseline.md) for actual coun
 
 ## Current state foundations (task 3)
 
-The current suite has 43 passing tests and 8 remaining discrepancy assertions. See [the state report](../doc/state-foundations.md) and ROADMAP.md for fixed issues and remaining owners. State/observation schemas are 3 and action schema is 2; old policies, saves and ordered action traces are incompatible. Seeded replay JSON records all three versions. Full-game observations now contain 149,836 values and action enumeration contains 7,469 candidates.
+The current suite has 45 passing tests and 8 remaining discrepancy assertions. See [the state report](../doc/state-foundations.md) and ROADMAP.md for fixed issues and remaining owners. State/observation schemas are 3 and action schema is 2; old policies, saves and ordered action traces are incompatible. Seeded replay JSON records all three versions. Full-game observations now contain 149,836 values and action enumeration contains 7,469 candidates.
 
 `tests/godot_state.gd` exercises the existing source/target, unit and location selector APIs and engine save loading followed by explicit state replacement through regenerated native bindings. Run it with matching fresh `librules.so` and `librlcrules.so`:
 
@@ -99,3 +99,9 @@ Compile `src/gdexample.cpp` and `src/rlc_runtime.c` against that header, godot-c
 For the task-3 completed replay seed (5,169 bytes), use `-max_len=8192` in a mutation campaign rather than the earlier 4096 example. Native fixed-input replay remains a separate check.
 
 Numeric state uses standard bounded Rulebook types for inferred ML domains/encoding. The updated tests cover CP domain/tensor inference, out-of-range save rejection, and sufficient Advance/random-result/damage/starting-strength bounds. See the state report for configured inclusive ranges and standard clamping behavior.
+
+## Compiler 0.4.13 follow-up
+
+Use `rl_language==0.4.13` and matching core package. After correcting the bare `is_character` name to `destroyed.is_character()`, the runner passes 45 tests with 8 XFAIL and 0 XPASS. Two added regressions cover the existing Feeder Tendrils character-casualty/attacker-ability gate; its faction source remains external. The compiler had misleadingly located the bad Boolean operand at the method declaration.
+
+The prepared Clang 19 toolchain cannot link this compiler's sanitized fuzzer: RLC 0.4.13 requests Clang 21 fuzzer/ASan archives. Its build command exits zero despite linker errors, so inspect diagnostics and require a produced runnable binary. A matching Clang 21 runtime is required; no new mutation campaign ran. Existing 0.3.3 native/Godot libraries are historical and cannot validate the upgraded compiler.

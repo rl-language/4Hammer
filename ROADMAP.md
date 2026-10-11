@@ -68,6 +68,13 @@ Production changes to `scripts/Rules.gd` and `scripts/TraceManager.gd` were remo
 
 State foundations do not complete tasks 4–17: exact geometry, attachment permissions/detachment, timing and usage restrictions, attack/save workflows, revival, One Shot enforcement and action eligibility remain with their owners. The fixed-characteristic defect still suppresses actual attacks and remains a mandatory task-9 fix. Native artifacts/logs remain outside the checkout. **Next pending task: 4, geometry and movement primitives.**
 
+#### Follow-up — compiler 0.4.13 and character predicate
+
+- [x] Upgrade the environment to `rl_language`/`rl_language_core` 0.4.13.
+- [x] Review every live `is_character` occurrence: one method declaration and one erroneous bare-name use. Invoke `destroyed.is_character()` in `on_model_destroyed`; generated documentation and historical artifact logs are not call sites.
+- [x] Add positive and negative regressions for the existing Feeder Tendrils character-casualty/attacker-ability gate; its faction definition remains external. Deterministic result: 45 pass, 8 XFAIL, 0 XPASS.
+- [ ] Prepare matching Clang 21 sanitizer/fuzzer runtimes and rerun native fuzzing: current Clang 19 linking fails because RLC requests missing Clang 21 archives. The compiler command misleadingly exits zero after linker errors; require a runnable output. No updated fuzz campaign or Godot runtime test has run. This does not change task 4–17 completion status.
+
 Tasks 1–5 establish the foundations. Attachments and geometry should precede combat; the attack and damage pipelines should precede shooting, fighting and combat stratagems. Godot checks belong in every task that changes actions, followed by a complete integration pass in task 17.
 
 Follow these dependencies when splitting work into implementation increments. A task may need smaller increments, but its complete scope must remain tracked. Record source uncertainties, external data dependencies and unsupported behavior rather than silently dropping requirements or calling partial coverage full-edition support.
