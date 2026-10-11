@@ -167,3 +167,20 @@ The new cases test pre-roll declarations, target legality, split melee budgets, 
 Build matching native/header/C++ artifacts together in `/workspace/4hammer-validation/task9-godot`, then run `python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task9-godot`. The new harness uses production weapon/group buttons and source/target clicks, checks batch chance ownership and restores a pending attack save. Numeric melee-share buttons are provided but are not interactively exercised by this shooting harness; deterministic Rulebook tests establish share legality.
 
 The fresh instrumented executable is `/workspace/4hammer-validation/task9-fuzzer`; keep leak detection and precondition/bounds checks enabled. Final seeded replay and campaign evidence is in ROADMAP.md. Task 10 must replace the legacy damage bridge before claiming full attack-resolution correctness.
+
+## Task 10 current checks
+
+The supported suite is **202 PASS, 0 XFAIL, 0 XPASS**, with **204 passing CTest entries** including two compilation fixtures. The discrepancy manifest is empty. State/observation schemas are **9**, action schema **5**; earlier evidence in this document is historical. See [the saves/damage/destruction report](../doc/saves-damage-destruction.md) for rule-page ownership, core regressions and deferred attachment/fight/transport/faction scope.
+
+Fresh matching native artifacts are in `/workspace/4hammer-validation/task10-godot`. Run:
+
+```bash
+python tools/check_godot_state.py \
+  --build-path /workspace/4hammer-validation/task10-godot --timeout 120
+```
+
+The expanded headless regression passes labelled save-group buttons, model clicks on the actual defender, all-save batch boundaries, save/reload while awaiting allocation, individual Feel No Pain rolls and archival. Prior deployment, Command, terrain/Hidden, objective and weapon/target controls remain tested. The timeout is explicit because expanded serialized action state exceeds the old 30-second check on this machine; script errors and missing PASS evidence still fail. Interactive rendering and mouse input remain unrun.
+
+The final instrumented executable is `/workspace/4hammer-validation/task10-final-fuzzer`; keep leak/precondition/bounds checks enabled. Replay completed `task10-replays/*.bin` and the original geometry leak input before mutation fuzzing. The fresh campaign completes **25 runs in 78 seconds**, coverage **10,184**, features **23,383**, without reported sanitizer failures or crash artifacts. A slow-unit artifact retains the complete full-game seed; it is a performance diagnostic, not a sanitizer failure. Keep it and the campaign log outside the checkout for later comparison. The 60-second requested campaign duration can be exceeded by a slow individual replay.
+
+Seed 40000 completes full/shooting games in **625/9 actions**. Gym checks **20** legal steps, **12,744** action candidates and **1,595,388** finite observations. The larger bounded destruction work stack materially expands inferred ML layout; saves and policies from previous schemas are incompatible. Actual interactive integration and complete downstream rules remain owned by ROADMAP.md.

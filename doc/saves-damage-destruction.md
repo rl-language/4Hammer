@@ -1,0 +1,44 @@
+# Saves, damage and destruction — task 10
+
+Task 10 replaces the legacy damage bridge with ordered allocation groups, per-attack damage and an explicit destruction work stack. Use [ROADMAP.md](../ROADMAP.md) for completion evidence and remaining work. This implements the printed core procedures within the existing quad grid and user-approved area visibility approximation; attachments remain deferred by user instruction.
+
+## Source authority and implemented behavior
+
+The specification is [the procedural reference](11th-edition-core-rules-procedural.txt), especially pp.19–24 and pp.80–87. [The supplied appendix](11th-edition-supplied-appendix.md) supplies random-D timing, rerolls and modifiers. Simultaneous destruction choices follow the user's Rules Sequencing definition: current player's effects in their chosen order, then opponent's.
+
+- **Save groups and order (p.19):** live non-CHARACTER models combine only when W, Sv and InSv match; each CHARACTER is a separate group. The defender declares all groups before saves, in wounded non-character, other non-character, wounded character, other character priority. Within a tier the defender chooses. Membership uses persistent identities, so compaction cannot redirect allocation. A wounded member receives the next result before an unwounded member of the same group.
+- **Saves (pp.19–23):** collect the entire save batch before rerolls or damage, process results ascending, and advance groups when their last live member is destroyed. Natural 1 fails. Check the same face against InSv, then against Sv with AP applied; no second save roll. Normalize legacy positive AP literals to the nonpositive AP convention without changing their magnitude. The worked 1,1,3,4,5 sequence is covered with explicit mixed-profile fixtures; it does not grant unavailable attachment permissions or invent unit datasheets.
+- **PRECISION (p.84):** the attacker may override normal allocation with a visible CHARACTER group. The defender still chooses the model. Maintain that group until exhausted, then fall back to the declared order. Visibility comes from actual bearers in the gathered attack group, using the existing area/Hidden approximation.
+- **Ordinary damage (p.19):** allocate and determine D separately for each failed save. Never multiply all failed saves into one damage application; excess damage from an attack is discarded when its recipient dies. Snapshot MELTA at declaration using that weapon's half-range and carry the bounded damage increment through gathering (p.83).
+- **Feel No Pain (p.81):** roll for every potential wound in each ordinary damage application before committing losses. Each mortal wound has its own prevention roll. Successful prevention consumes no wound; no Command Re-roll is offered for these rolls.
+- **Mortal wounds (p.24):** resolve ordinary attacks first, then allocate mortals by wounded non-character, other non-character, wounded character, other character priority. Ordinary mortals continue onto further models. DEVASTATING WOUNDS resolves separately per critical attack without saves and discards excess after destroying one model (p.80). If its first mortal is prevented, an otherwise unwounded recipient has not acquired wounded-model priority.
+- **Hazardous (p.24):** count every selected hazardous weapon, including one whose unresolved target became unavailable. Collect all original hazard dice before any reroll or wound. Results 1–2 fail. Each failure inflicts one mortal wound, or three if every live model individually has MONSTER or VEHICLE. The controlling player owns Command Re-roll decisions and pays before the replacement roll.
+- **Destruction (p.87):** models without destruction-triggered rules are removed and archived immediately. Models with such rules are retained, marked dead and excluded from targeting, ordinary allocations, OC and active unit abilities. Attack-caused triggers wait until the attacking unit finishes all target groups; non-attack triggers interrupt the damage sequence. Store stable provenance and reject malformed pending-death saves atomically. Resolve each trigger once and remove its retained model after its effects.
+- **Deadly Demise (p.80):** roll a D6, trigger on 6, and apply mortal wounds to each eligible nearby unit within inclusive 6-inch base distance. Determine random X separately per unit. Retain the destroyed model physically until its nearby damage finishes. Transport emergency disembarkation is a task-16 prerequisite and is not claimed implemented.
+
+## State, actions and Godot contracts
+
+State/observation schemas are **9**, action schema **5**. Old saves, ordered action traces and ML policies require migration/retraining. Use standard bounded numeric types; allocation IDs have 32 candidates, model selectors retain `ModelID`, and damage jobs use a checked capacity of 1,024 with explicit overflow failure. These are configured simulation limits, not tabletop limits. The generated full-game observation layout contains **1,595,388** finite values and **12,744** action candidates; the work stack materially increases layout size.
+
+`src/damage_rules.rl` holds group legality, stable membership, save comparison, wound-loss commitment and destruction eligibility. `resolve_attack_damage` preserves its three-context Board/target/source interface. `resolve_damage_jobs` processes bounded jobs rather than embedding recursive coroutine frames. Capture value snapshots before child actions; do not retain ordinary locals or references across suspension.
+
+Production actions include `choose_save_group`, optional `choose_precision_group`, `allocate_wound`, `allocate_mortal`, `select_mortal_model`, `choose_destruction_unit` and `resolve_destruction_model`. Original dice and FNP/Demise dice remain explicit chance actions. Nested damage restores the caller's decision owner and target context.
+
+The choice panel labels groups with character status, W, Sv and InSv. The interaction manager uses `board.attack_info.target_unit_id` for these damage/destruction model selectors, since self-inflicted hazards and destruction effects can target another unit. Other model selectors retain their existing target contract. Rules.gd and TraceManager.gd are unchanged.
+
+## Validation and remaining owners
+
+There are **202 supported passing assertions, no expected or unexpected discrepancy passes**, and **204 passing CTest entries**, including the two compilation fixtures. Thirty-one added regressions cover group legality, ascending results, AP, invulnerable saves, Precision, no spill, prevention, mortals, hazards, deferred/immediate destruction, Deadly Demise, MELTA snapshots and pending-death save integrity. Existing coherency, attack batching and storage assertions remain enforced.
+
+Seed 40000 completes full/shooting games in **625/9 actions**. The gym check completes **20** legal steps with finite observations. Final native/Godot, CLI and sanitizer evidence is recorded in ROADMAP.md; build artifacts and logs stay outside the checkout under `/workspace/4hammer-validation/task10-*`.
+
+Remaining scope must be implemented in its owning task:
+
+- **Task 6/17:** real attachments, permitted bodyguards and new datasheets. Mixed-model fixtures verify core allocation, not attachment formation or ability retention after an attached component dies.
+- **Task 11/12:** movement state, complete shooting modes and weapon-ability interactions. Generic modifier helpers still require integration in future effect consumers. Random-D evaluation uses existing fixed/single-die `Stat` representations; unsupported compound datasheet expressions need supplied data and explicit modeling.
+- **Task 14/17:** complete Fight phase and Fight on Death attacks. The existing retaliation bridge now resolves/removes all qualifying retained casualties, including failed rolls, but its legacy combat/faction definitions are not certified as new-edition rules. Existing Feeder Tendrils/Master of Possession hooks retain legacy effects; no core citation is substituted for unavailable faction sources.
+- **Task 15:** effects that create mortal wounds, including Explosives and Crushing Impact, must use the common action engine and exact printed timing/costs.
+- **Task 16:** emergency disembarkation must precede a transport's Deadly Demise. Passenger/offboard interactions are absent and remain source-gated.
+- **Task 17:** real mission/faction integration, area configuration/rendering, all changed interactive controls and wider validation. Multiple Weapon Profiles remains unsupplied.
+
+Low-level `Unit.damage`/`deal_mortal_wound_damage` remain storage-oriented fixture helpers, not full prevention/destruction procedures. Production attack, hazard and existing direct mortal consumers now use the shared engine. Do not add gameplay consumers that bypass it.

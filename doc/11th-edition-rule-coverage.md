@@ -438,3 +438,20 @@ See [the terrain/objective report](terrain-objectives.md) and ROADMAP.md for **1
 | U15 / Plunging Fire | Weapon ability remains task 12; physical upper surfaces deferred with features. |
 
 The Ignores Cover consumer now checks parameterless ability presence. Other legacy parameter-based consumers still require task-12 correction. The three manifest failures all belong to task 9; fixed characteristics remain a mandatory fix, so full-game completion does not certify attacks. Physical feature deferral is an explicit scope adjustment, not a missing-source resolution or a claim of full rules fidelity.
+
+## Task 10 implementation overlay
+
+Read [the saves/damage/destruction report](saves-damage-destruction.md) and ROADMAP.md for **202 PASS, 0 XFAIL, 0 XPASS**, **204 passing CTest entries**, schema 9/5/9, Godot, gameplay and sanitizer evidence. Original inspection rows remain historical. Core allocation/damage is implemented; real attachments and new faction data remain deferred/source-gated.
+
+| Source rows | Current result / remaining owner |
+| --- | --- |
+| 05.03–05.04, pp.20–23 worked examples | Live stable-identity W/Sv/InSv groups, separate characters, mandatory wounded/character tiers, pre-roll group order, ascending save faces, one die against InSv/AP-adjusted Sv, per-attack allocation and no excess normal spill implemented/tested. Mixed-model examples do not certify unavailable attachment grants/datasheets. |
+| 06.02 | Ordinary-before-mortal damage, explicit mortal recipient priorities, individual prevention and ordinary spill implemented/tested. |
+| 06.03 | All selected hazardous weapons counted; simultaneous original rolls, 1–2 failures, per-live-model MONSTER/VEHICLE test, one/three mortal wounds and paid reroll ownership implemented/tested. |
+| 24.08 | Deadly Demise on 6, retained physical casualty, inclusive 6-inch base distance, per-unit random X and attack-trigger deferral implemented/tested. Emergency disembarkation/passengers remain task 16. |
+| 24.10 / 24.12 | Critical Devastating damage after normal damage, no saves, one destroyed recipient per critical attack, excess discarded; Feel No Pain per would-be wound implemented/tested. Broader weapon-mode combinations remain task 12. |
+| 24.25 / 24.28 | MELTA half-range declaration snapshot and per-attack increment; PRECISION visible CHARACTER group override and fallback implemented/tested. Full shooting modes and unsupplied profile/datasheet cases remain tasks 12/17. |
+| U19 / destroyed models (p.87) | Immediate removal without triggers, conditional attack-caused delay, immediate non-attack trigger sequencing, pending-model ineligibility, stable provenance, save validation and exactly-once archival implemented/tested. Full Fight on Death attacks remain task 14; attachment ability retention remains task 6. |
+| 15.03 / 15.05–15.06 | Core Precision and mortal engine available, but Epic Challenge, Explosives and Crushing Impact effects/timing remain task 15. |
+
+Printed destruction/allocation foundations now have tests; D06/D07 are not blanket closures of attached/faction/transport dependencies. Generic modifier helpers require integration in later consumers. Legacy faction destruction hooks are preserved without inventing new-edition faction authority. The complete migration must still close every confirmed downstream defect assigned in ROADMAP.md.
