@@ -6,6 +6,10 @@ Specification: [procedural/source-wording reference](11th-edition-core-rules-pro
 
 Inventory: **156 numbered subsections**, **31 supplemental entries**, **1114 retained excerpt locators** across **73 text-bearing pages**. The [excerpt ledger](11th-edition-source-coverage.tsv) maps every retained locator to coverage entries and task owners, including sidebars, examples, tables, FAQs and cross-reference panels. Page-level ownership in that ledger is a completeness index, not an assertion that every excerpt is itself an operative rule.
 
+## Implemented progress overlay
+
+Task 3's [state foundations report](state-foundations.md) records tested bounded storage/capacity, identity, provenance, archive/history and schema changes. CP/Advance storage (08.02/09.06) and actual-cost/own-player stratagem checks (15.01) now have passing assertions, alongside lifecycle boundary tests. Their complete subsection workflows remain owned by later tasks; the original table rows below are not promoted to full-rule implementation. The current suite has 43 passing assertions and 8 remaining mandatory discrepancy fixes. Consult ROADMAP.md for task completion status.
+
 ## Status conventions
 
 - **partial**: related structures or behavior exist; audit/change/test still required.

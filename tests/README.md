@@ -69,3 +69,33 @@ PY
 Use `rules_fuzzer path/to/replay.bin -runs=1` for a fixed-input replay. That is distinct from a mutation campaign. Keep the optimized/debug/sanitizer/precondition/bounds flags, preserve failures and add regressions; do not weaken instrumentation to get a pass. A seeded duration-limited run is not guaranteed identical across hardware or an already-grown corpus.
 
 See [the recorded task-2 results](../doc/validation-baseline.md) for actual counts, known defects and practical limits.
+
+## Current state foundations (task 3)
+
+The current suite has 43 passing tests and 8 remaining discrepancy assertions. See [the state report](../doc/state-foundations.md) and ROADMAP.md for fixed issues and remaining owners. State/observation schemas are 3 and action schema is 2; old policies, saves and ordered action traces are incompatible. Seeded replay JSON records all three versions. Full-game observations now contain 149,836 values and action enumeration contains 7,469 candidates.
+
+`tests/godot_state.gd` exercises the existing source/target, unit and location selector APIs and engine save loading followed by explicit state replacement through regenerated native bindings. Run it with matching fresh `librules.so` and `librlcrules.so`:
+
+```bash
+python tools/check_godot_state.py \
+  --build-path /workspace/4hammer-validation/godot-build
+```
+
+The runner creates an isolated temporary project, uses writable XDG directories and rejects missing PASS evidence, script/load errors, nonzero exits, timeout and ObjectDB leak warnings. The harness frees its test-owned library; production script ownership and automatic load/trace integration are outside this change. It does not exercise interactive mouse input or rendering.
+
+The task-3 build used godot-cpp 4.3 commit `d5cc777a89d899665fb61f1650ef0dc0cf6488c4`, SCons and Godot 4.6.3's dumped extension API. Its reduced SDK build profile enables RefCounted, Node, OS, FileAccess, Image, WorkerThreadPool, XMLParser and EditorPlugin, including their generated dependencies. Regenerate the native library and header together after every source change; stale template instantiations can leave undefined symbols even when the shared extension links.
+
+Native generation used:
+
+```bash
+rlc src/full_game.rl --godot -o /workspace/4hammer-validation/godot-build/rules.inc
+rlc src/full_game.rl --shared -O2 -g \
+  --emit-precondition-checks --emit-bound-checks --abort-symbol rlc_abort \
+  -o /workspace/4hammer-validation/godot-build/librlcrules.so
+```
+
+Compile `src/gdexample.cpp` and `src/rlc_runtime.c` against that header, godot-cpp's include/generated/include/gdextension directories and its static library. Link `librlcrules.so` and set the extension's runtime search path to `$ORIGIN`. The repository's CMake rules describe the complete SDK/extension build; task 3 used this narrower native path, not the web/repository-wide CMake targets.
+
+For the task-3 completed replay seed (5,169 bytes), use `-max_len=8192` in a mutation campaign rather than the earlier 4096 example. Native fixed-input replay remains a separate check.
+
+Numeric state uses standard bounded Rulebook types for inferred ML domains/encoding. The updated tests cover CP domain/tensor inference, out-of-range save rejection, and sufficient Advance/random-result/damage/starting-strength bounds. See the state report for configured inclusive ranges and standard clamping behavior.
