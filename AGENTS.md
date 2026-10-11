@@ -4,6 +4,8 @@ Your task is to modify the game rules requested by the user and validate their b
 
 Use the existing isolated checkout; do not create a Git worktree unless requested. Inspect existing changes before editing. Unlike environment onboarding, a rule-change task permits the necessary source and test changes.
 
+Preserve the existing quad-based game representation. Model positions, placement choices and movement destinations must remain on the whole-inch quad grid, using the existing BoardPosition action domain and Godot grid interactions. Do not introduce fractional model positions or migrate to continuous/non-quad coordinates during the edition update. Physical distance calculations may account for base sizes without changing the coordinate representation. A migration away from quads is deferred until the user explicitly requests it; document rules that the grid cannot faithfully express.
+
 ## 11th-edition migration plan
 
 Read and use [ROADMAP.md](ROADMAP.md) before planning or implementing the edition migration. It contains the agreed 17 logically distinct tasks, their scope, source-page citations, dependencies, Godot requirements and completion criteria. Treat it as the canonical migration plan; update task status and validation evidence there as work proceeds. Distinguish completed documentation from implemented and tested mechanics. A request to document or plan work does not authorize implementation.
