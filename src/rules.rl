@@ -6,6 +6,7 @@ import vector2d
 import stats
 import board
 import movement_geometry
+import terrain_rules
 
 # Calculates the required roll to wound given a particular game state,
 # that is, the calculation includes situational condition like the usage
@@ -155,6 +156,10 @@ fun get_hit_roll_bonus(Board board) -> Int:
 # Hold generated hit/wound/damage counters across dice decisions
 # (attack sequence pp.18–19). The new-edition pipeline remains tasks 9/10.
 act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> SingleAttack:
+    # Invoking a real ranged attack, even one that misses, breaks Hidden for
+    # this and the following turn (p.50). Merely selecting/skipping does not.
+    if board.attack_info.source.range() > 0:
+        board.record_ranged_attacks(board.attack_info.source_unit_id)
     frm generated_hits : CombatCounter
     frm generated_wounds : CombatCounter
     frm generated_effective_wounds : CombatCounter
@@ -171,7 +176,7 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
                                                   bool(source_unit.owner_id()), board.attack_info.source_unit_id)
         subaction*(board) board.current_roll
         let roll_modifiers = get_hit_roll_bonus(board)
-        if board.current_roll.result + roll_modifiers < board.attack_info.source.skill() or board.current_roll.result == 1:
+        if !attack_hit_roll_succeeds(board.current_roll.result, roll_modifiers, effective_attack_skill(board, board.attack_info)):
             board.current_state = CurrentStateDescription::none
             return
         # sixes trigger a explosive hits
@@ -278,6 +283,9 @@ act resolve_weapon(ctx Board board,
                    frm UnitID source, 
                    frm ModelID current_model, 
                    frm UnitID target) -> ResolveWeapon:
+    # Cover is assessed for every target model from this firing model, and
+    # changes BS rather than a save or clamped hit modifier (p.50).
+    board.attack_info.target_has_cover = board.attack_info.source.range() > 0 and unit_has_benefit_of_cover(board, board[source][current_model], board[target])
     let distance = board[target].distance(board[source][current_model])
     let rapid_fire_attacks = 0
     if distance <= float(board.attack_info.source.range()) / 2.0:
@@ -356,7 +364,8 @@ act resolve_model_attack(ctx Board board,
                 !melee or board[source][current_model].weapons[weapon_id.value].range() == 0,
                 dist.value <= float(board[source][current_model].weapons[weapon_id.value].range()),
                 !board[source].has_run or board[source][current_model].weapons[weapon_id.value].has_rule(WeaponRuleKind::assault),
-                !used_weapons[weapon_id.value]
+                !used_weapons[weapon_id.value],
+                melee or model_can_see_unit(board, board[source][current_model], board[target])
             }
                 board.attack_info.source = board[source][current_model].weapons[weapon_id.value]            
                 used_weapons[weapon_id.value] = true
@@ -594,9 +603,10 @@ fun has_incoherent_units(Board board, Bool player) -> Bool:
     return false
 
 # Snap shooting has a friendly unengaged, non-TITANIC source and one enemy
-# in 24-inch range (p.57). Actual visibility/weapon target rules are tasks 8/12.
+# in 24-inch range and visible under the user-approved area abstraction
+# (p.57). Full shooting modes and weapon target rules remain task 12.
 fun overwatch_target_valid(Board board, UnitID source, UnitID target) -> Bool:
-    return source.get() < board.units.size() and target.get() < board.units.size() and !board[source].empty() and !board[target].empty() and board[source].owned_by_player1 != board[target].owned_by_player1 and board[source].distance(board[target]) <= 24.0 and (!board[target].is_lone_operative() or board[source].distance(board[target]) <= 12.0)
+    return source.get() < board.units.size() and target.get() < board.units.size() and !board[source].empty() and !board[target].empty() and board[source].owned_by_player1 != board[target].owned_by_player1 and board[source].distance(board[target]) <= 24.0 and unit_visible_to_unit(board, board[source], board[target]) and (!board[target].is_lone_operative() or board[source].distance(board[target]) <= 12.0)
 
 # Check a source before offering the timing rule: accepting an option with
 # no eligible target would otherwise stall the phase (p.57).
@@ -1281,10 +1291,10 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
                 !board[source].has_shoot,
                 board[source].can_shoot,
                 board.units[source.get()].owned_by_player1 == board.current_player,
-                board.units[target.get()].owned_by_player1 != board.current_player
+                board.units[target.get()].owned_by_player1 != board.current_player,
+                unit_visible_to_unit(board, board[source], board[target])
             }
                 board[source.get()].has_shoot = true
-                board[source.get()].history.last_ranged_attack_turn = board.turn_serial
                 board.attack = attack(board, source, target, false, false)
                 subaction*(board) board.attack
     

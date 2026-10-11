@@ -21,6 +21,8 @@ cls AttackSequenceInfo:
     UnitID target_unit_id # required
     Bool penetration_bonus
     Bool hit_roll_bonus
+    # Cover changes BS, separate from the clamped hit modifier (p.50).
+    Bool target_has_cover
     Bool hit_roll_malus
     CheckedVector<Profile, 8> profile_hit_roll_bonus
     CheckedVector<WeaponRule, 8> temporary_weapon_abilities
@@ -457,6 +459,13 @@ cls Board:
         let result = self.objectives[objective_id]
         result.position = self.objective_position(objective_id)
         return result
+
+    # Hidden depends on actual ranged attacks this/previous turn (p.50), not
+    # merely being selected to shoot or declining every weapon. Keep this
+    # history across phase/turn cleanup so the previous turn remains available.
+    fun record_ranged_attacks(UnitID source):
+        if source.get() < self.units.size() and !self[source].empty():
+            self[source].history.last_ranged_attack_turn = self.turn_serial
 
     # Model membership uses any part of its supported circular base (p.9 and
     # the user's Within definition); terrain areas do not impose a height limit.

@@ -1615,3 +1615,211 @@ fun test_objective_and_area_save_integrity() -> Bool:
     state.board.objectives[0].area_id = 0
     state.board.terrain_areas[0].upper = state.board.terrain_areas[0].lower
     return !set_state(restored, to_string(state)) and restored.board.objectives[0].secured_by == ObjectiveController::army_1
+
+# pp.46/52 and user's scope: only valid categorized whole-quad areas are accepted.
+fun test_terrain_area_categories_and_transactional_links() -> Bool:
+    let board : Board
+    let area = terrain_area(10, 10, 14, 20, false)
+    area.light = true
+    area.dense = true
+    if !valid_terrain_area(area):
+        return false
+    board.terrain_areas.append(area)
+    if !board.link_objective_terrain_areas() or !board.objectives[0].terrain_objective:
+        return false
+    board.terrain_areas.append(area)
+    if board.link_objective_terrain_areas():
+        return false
+    if board.objectives[0].area_id.value != 0:
+        return false
+    area.exposed = false
+    area.light = false
+    area.dense = false
+    return !valid_terrain_area(area)
+
+# p.9 and supplied Within: a large base can intersect an area outside its centre.
+fun test_terrain_area_membership_uses_base_and_model_keywords() -> Bool:
+    let board : Board
+    board.terrain_areas.append(terrain_area(10, 10, 15, 15, false))
+    let model = make_tantus()[0]
+    model.position = board_position(9, 12)
+    model.profile = Profile::squighog_boyz
+    if !board.model_in_terrain_area(model, 0):
+        return false
+    model.position.x = 8
+    if board.model_in_terrain_area(model, 0):
+        return false
+    model.keywords.clear()
+    if terrain_cover_model_kind(model):
+        return false
+    model.keywords.append(Keyword::swarm)
+    return terrain_cover_model_kind(model)
+
+# User's area-only approximation: crossing means partial, never physical blocking.
+fun test_area_crossing_partial_visibility_and_cover() -> Bool:
+    let board = geometry_fixture()
+    let target = make_tantus()
+    target[0].position = board_position(20, 5)
+    board.terrain_areas.append(terrain_area(10, 4, 12, 6, true))
+    if !model_visible_to_model(board, board[0][0], target, target[0]) or !model_partially_obscured(board, board[0][0], target[0]) or !unit_has_benefit_of_cover(board, board[0][0], target):
+        return false
+    target[0].position.y = 15
+    return model_visible_to_model(board, board[0][0], target, target[0]) and !model_partially_obscured(board, board[0][0], target[0]) and !unit_has_benefit_of_cover(board, board[0][0], target)
+
+# User's quad ray approximation includes tangent crossings and endpoints.
+fun test_area_crossing_boundary_and_endpoint() -> Bool:
+    let source = make_tantus()[0]
+    let target = source
+    source.position = board_position(5, 5)
+    target.position = board_position(20, 5)
+    let area = terrain_area(10, 5, 12, 7, false)
+    if !sight_crosses_terrain_area(source, target, area):
+        return false
+    source.position.y = 4
+    target.position.y = 4
+    if sight_crosses_terrain_area(source, target, area):
+        return false
+    target.position = board_position(10, 6)
+    return sight_crosses_terrain_area(source, target, area)
+
+# p.50: all target models need cover, possibly from different conditions.
+# Unit-level inherited Infantry cannot make a non-Infantry member eligible.
+fun test_cover_requires_each_model_and_preserves_model_keywords() -> Bool:
+    let board = geometry_fixture()
+    board[0][0].position = board_position(2, 5)
+    let target = make_infernus_squad()
+    target.models.resize(2)
+    target[0].position = board_position(18, 5)
+    target[1].position = board_position(18, 10)
+    target[1].profile = Profile::squighog_boyz
+    board.terrain_areas.append(terrain_area(9, 4, 12, 6, false))
+    if unit_has_benefit_of_cover(board, board[0][0], target):
+        return false
+    board.terrain_areas.append(terrain_area(19, 10, 21, 12, false))
+    if !unit_has_benefit_of_cover(board, board[0][0], target):
+        return false
+    target[1].keywords.clear()
+    return target.has_keyword(Keyword::infantry) and !unit_has_benefit_of_cover(board, board[0][0], target)
+
+# p.50: a dense-area model is hidden until it fires; the previous turn matters.
+fun test_hidden_current_previous_turn_and_never_fired() -> Bool:
+    let board = geometry_fixture()
+    board.terrain_areas.append(terrain_area(4, 4, 6, 6, true))
+    if !model_is_hidden(board, board[0], board[0][0]):
+        return false
+    board.turn_serial = 10
+    board.record_ranged_attacks(unit_id(0))
+    if model_is_hidden(board, board[0], board[0][0]):
+        return false
+    board.start_turn_history()
+    if model_is_hidden(board, board[0], board[0][0]):
+        return false
+    board.start_turn_history()
+    return model_is_hidden(board, board[0], board[0][0])
+
+# p.50: Hidden belongs to qualifying models in dense areas; light is insufficient.
+fun test_hidden_dense_category_and_individual_keyword() -> Bool:
+    let board = geometry_fixture()
+    let area = terrain_area(4, 4, 6, 6, false)
+    area.light = true
+    board.terrain_areas.append(area)
+    if model_is_hidden(board, board[0], board[0][0]):
+        return false
+    board.terrain_areas[0].dense = true
+    board[0][0].keywords.clear()
+    if model_is_hidden(board, board[0], board[0][0]):
+        return false
+    board[0][0].keywords.append(Keyword::beasts)
+    return model_is_hidden(board, board[0], board[0][0])
+
+# p.50: base-to-base detection, default 15in, explicit supplied range overrides.
+fun test_hidden_detection_range_and_unit_visibility() -> Bool:
+    let board = geometry_fixture()
+    let target = make_tantus()
+    target[0].position = board_position(22, 5)
+    board.terrain_areas.append(terrain_area(21, 4, 23, 6, true))
+    if model_visible_to_model(board, board[0][0], target, target[0]):
+        return false
+    if !model_visible_to_model(board, board[0][0], target, target[0], 20):
+        return false
+    board[0][0].position.x = 6
+    if !model_visible_to_model(board, board[0][0], target, target[0]):
+        return false
+    if model_visible_to_model(board, board[0][0], target, target[0], -1):
+        return false
+    board[0][0].position.x = 5
+    let visible = target[0]
+    visible.position = board_position(25, 5)
+    target.models.append(visible)
+    if !model_can_see_unit(board, board[0][0], target) or !unit_visible_to_unit(board, board[0], target):
+        return false
+    target.models.clear()
+    return !unit_visible_to_unit(board, board[0], target) and !unit_has_benefit_of_cover(board, board[0][0], target)
+
+# p.50: BS worsens separately from hit modifiers/saves; p.82 Ignores Cover cancels.
+fun test_cover_changes_bs_not_hit_modifier_or_save() -> Bool:
+    let board = attack_fixture()
+    board.attack_info.target_has_cover = true
+    let base = board.attack_info.source.skill()
+    let original_save = board[1][0].profile.save()
+    if effective_attack_skill(board, board.attack_info) != base + 1 or board.attack_info.total_hit_modifier() != 0 or board[1][0].profile.save() != original_save:
+        return false
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::ignore_cover))
+    if effective_attack_skill(board, board.attack_info) != base:
+        return false
+    board.attack_info.temporary_weapon_abilities.clear()
+    board.attack_info.source = Weapon::relic_weapon
+    return effective_attack_skill(board, board.attack_info) == board.attack_info.source.skill()
+
+# pp.18/50: natural six succeeds even at modified BS7; natural one always fails.
+fun test_cover_high_bs_natural_six_and_modified_threshold() -> Bool:
+    let six : Dice
+    six = 6
+    let one : Dice
+    one = 1
+    let three : Dice
+    three = 3
+    return attack_hit_roll_succeeds(six, -1, 7) and !attack_hit_roll_succeeds(one, 10, 2) and attack_hit_roll_succeeds(three, 1, 4) and !attack_hit_roll_succeeds(three, 0, 4)
+
+# p.50: native attack resolution uses covered BS and records even a missed shot.
+fun test_cover_attack_hit_transition_and_actual_shot_history() -> Bool:
+    let board = attack_fixture()
+    board.attack_info.target_has_cover = true
+    board.turn_serial = 4
+    let attack = single_attack(board, board[1], board[0])
+    let two : Dice
+    two = 2
+    attack.roll(board, board[1], board[0], two)
+    if !attack.is_done() or board[0].history.last_ranged_attack_turn != 4:
+        return false
+    attack = single_attack(board, board[1], board[0])
+    let three : Dice
+    three = 3
+    attack.roll(board, board[1], board[0], three)
+    let expected = CurrentStateDescription::wound_roll
+    return (can attack.roll(board, board[1], board[0], three)) and board.current_state.value == expected.value
+
+# p.50: selecting a unit but skipping its weapons does not break Hidden.
+fun test_skipped_shooting_does_not_record_ranged_attacks() -> Bool:
+    let board = timing_fixture()
+    board[0].can_shoot = true
+    let shooting = shooting_phase(board)
+    shooting.select_target(board, unit_id(0), unit_id(1))
+    shooting.no_defensive_stratagem(board)
+    shooting.no_offensive_stratagem(board)
+    shooting.skip(board)
+    return board[0].has_shoot and board[0].history.last_ranged_attack_turn == -1 and (can shooting.end_shooting_phase(board))
+
+# pp.16/50/57: unit selectors, per-model weapons and Overwatch respect Hidden.
+fun test_hidden_target_rejected_by_shooting_and_overwatch() -> Bool:
+    let board = timing_fixture()
+    board[0].can_shoot = true
+    board[1][0].position.x = 22
+    board.terrain_areas.append(terrain_area(21, 4, 23, 6, true))
+    let shooting = shooting_phase(board)
+    if can shooting.select_target(board, unit_id(0), unit_id(1)):
+        return false
+    if overwatch_target_valid(board, unit_id(0), unit_id(1)):
+        return false
+    board[1].history.last_ranged_attack_turn = board.turn_serial
+    return (can shooting.select_target(board, unit_id(0), unit_id(1))) and overwatch_target_valid(board, unit_id(0), unit_id(1))

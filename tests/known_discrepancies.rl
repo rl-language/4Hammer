@@ -27,4 +27,3 @@ fun test_05_02_exact_half_strength() -> Bool:
     info.source = Weapon::captain_storm_bolter
     info.target_toughness = info.source.strenght() * 2
     return required_wound_roll(board, info) == 6
-

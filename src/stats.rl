@@ -102,6 +102,9 @@ enum Keyword:
     aircraft
     titanic
     walker
+    # Model-level cover/Hidden categories (p.50); no feature traversal added.
+    beasts
+    swarm
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value
