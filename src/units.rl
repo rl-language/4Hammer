@@ -303,6 +303,11 @@ cls Unit:
 
         return best_leadership
         
+    # A leadership roll succeeds at or above any characteristic (p.9).
+    # Callers supply the complete 2D6 total, not just the first die.
+    fun leadership_roll_succeeds(Int total) -> Bool:
+        return !self.empty() and total >= self.get_leadership()
+
     fun has_temporary_wepon_rule(WeaponRuleKind rule) -> Bool: 
         let temp_rules = self.get_temporary_weapon_rules()
         let i = 0

@@ -1344,3 +1344,17 @@ fun test_command_cp_then_shock_then_abilities() -> Bool:
         return false
     command.roll_pair(board, three, three)
     return !board[0].battle_socked and (can command.choose_timing_rule(board, TimingRule::oath_of_moment)) and board.current_decision_maker == board.current_player
+
+# p.9: the existing Dark Pact consumer must use both Leadership dice.
+# This does not claim new-edition faction effect/eligibility certification.
+fun test_leadership_consumer_uses_complete_pair_total() -> Bool:
+    let board = timing_fixture()
+    board.players_faction[0] = Faction::zarkan_daemonkin
+    board.players_faction[1] = Faction::zarkan_daemonkin
+    let strats = use_attack_stratagems(board, unit_id(0), unit_id(1), false)
+    strats.no_defensive_stratagem(board)
+    strats.use_dark_pact(board)
+    let three : Dice
+    three = 3
+    strats.roll_pair(board, three, three)
+    return (can strats.select_ability(board, true)) and board[0][0].suffered_wounds == 0

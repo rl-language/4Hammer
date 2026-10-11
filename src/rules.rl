@@ -433,7 +433,9 @@ act use_attack_stratagems(ctx Board board,
         }
             board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, false, board[source].owned_by_player1)
             subaction*(board) board.current_pair_roll
-            if board.current_pair_roll.result < board[source].get_leadership():
+            # Generic Leadership is the sum of both dice (p.9); this fixes
+            # the existing faction roll without supplying new faction effects.
+            if !board[source].leadership_roll_succeeds(board.current_pair_roll.result.value + board.current_pair_roll.result2.value):
                 board.current_roll = rerollable_dice_roll(board, false, false, false, !target_player)
                 subaction*(board) board.current_roll 
                 board[source].deal_mortal_wound_damage(board.current_roll.result.value)
@@ -884,7 +886,7 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         # Leadership/Battle-shock is absent from Command Re-roll's list (p.56).
         board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, false, unit.owned_by_player1)
         subaction*(board) board.current_pair_roll
-        if board.current_pair_roll.result.value + board.current_pair_roll.result2.value < unit.get_leadership():
+        if !unit.leadership_roll_succeeds(board.current_pair_roll.result.value + board.current_pair_roll.result2.value):
             unit.battle_socked = true
         else:
             if command_step and recover_shock:
