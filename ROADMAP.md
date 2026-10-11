@@ -115,6 +115,8 @@ Task-5 completion establishes timing foundations, not complete core effects. The
 - [x] Fix the collection mismatch in deployment selection: reserve UnitIDs cannot be selected using battlefield-model IDs. Add named legal reserve-unit buttons to `MultipleChoises.gd` and suppress battlefield selection for `RLCGameSelectUnit` in `InteractionManager.gd`.
 - [x] Extend the headless Godot regression to press both armies’ deployment buttons, verify opposite ownership/regions, reject the incorrect battlefield ID and check the click-handler guard. The previous choice panel fails the new assertion; the corrected scripts pass. Direct engine checks also find legal opposing placements for all six faction fixtures.
 
+- [x] Verify the reported “Done deploying” handoff through actual Godot buttons with different and identical army fixtures. Army 1 passes control to Army 2; after another placement Army 2 retains control while Army 1 has passed. Label deployment and finish buttons with Army 1/2 to expose decision ownership. The headless check passes against task-5 bindings; no engine handoff failure was reproduced. Deployment currently alternates after each placed unit, so the finish button belongs to the next decision owner.
+
 `Rules.gd`, `TraceManager.gd`, Rulebook source, schemas and quad coordinates are unchanged. This fixes one editor workflow; it does not complete task 11’s full deployment rules or task 17’s complete integration. Their outstanding issues remain required fixes.
 
 Tasks 1–5 establish the foundations. Attachments and geometry should precede combat; the attack and damage pipelines should precede shooting, fighting and combat stratagems. Godot checks belong in every task that changes actions, followed by a complete integration pass in task 17.
