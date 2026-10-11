@@ -140,7 +140,7 @@ fun attacks_are_identical(Board board, AttackSequenceInfo left, AttackSequenceIn
         return false
     if left.total_hit_modifier() != right.total_hit_modifier() or left.total_wound_modifier() != right.total_wound_modifier():
         return false
-    if left.penetration_bonus != right.penetration_bonus or left.only_hits_on_6 != right.only_hits_on_6 or left.reroll_hits != right.reroll_hits or left.reroll1_hits != right.reroll1_hits or left.reroll_wounds != right.reroll_wounds or left.reroll1_wounds != right.reroll1_wounds:
+    if left.melta_damage_bonus != right.melta_damage_bonus or left.penetration_bonus != right.penetration_bonus or left.only_hits_on_6 != right.only_hits_on_6 or left.reroll_hits != right.reroll_hits or left.reroll1_hits != right.reroll1_hits or left.reroll_wounds != right.reroll_wounds or left.reroll1_wounds != right.reroll1_wounds:
         return false
     if left.target_toughness != right.target_toughness or left.greater_strenght_wound_protection != right.greater_strenght_wound_protection or left.fight_on_death != right.fight_on_death or left.fight_on_death_roll != right.fight_on_death_roll:
         return false

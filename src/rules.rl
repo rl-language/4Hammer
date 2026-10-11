@@ -9,6 +9,7 @@ import movement_geometry
 import terrain_rules
 import attack_dice
 import attack_declarations
+import damage_rules
 
 # Wound thresholds use the printed equality boundaries (p.18). The user-
 # supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus
@@ -228,58 +229,231 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                 add_attack_count(generated_wounds, wounds.pool.faces[wound_result.value - 1].value)
     board.current_state = CurrentStateDescription::none
 
-# Temporary downstream bridge: task 9 supplies complete hit/wound/save batches
-# but task 10 must replace legacy allocation and damage with ordered save groups
-# (pp.19–23). This bridge is not new-edition allocation certification.
-act resolve_legacy_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit, frm CombatCounter generated_wounds, frm CombatCounter generated_critical_wounds) -> LegacyAttackDamage:
-    frm generated_effective_wounds : CombatCounter
-    if target.empty() or (generated_wounds == 0 and generated_critical_wounds == 0):
-        board.current_state = CurrentStateDescription::none
+# Declare the target owner's full allocation order before saves (p.19). Even
+# mandatory singleton choices retain a finite group selector for the editor.
+act declare_allocation_order(ctx Board board, frm AllocationGroups groups, frm Bool player) -> AllocationOrder:
+    frm order : CheckedVector<AllocationGroupID, MAX_UNIT_MODELS>
+    frm chosen : Bool[MAX_UNIT_MODELS]
+    board.current_state = CurrentStateDescription::allocation_order
+    board.current_decision_maker = player
+    while order.size() < groups.size():
+        act choose_save_group(frm AllocationGroupID group) {allocation_order_valid(groups, chosen, group)}
+        order.append(group)
+        chosen[group.value] = true
+
+# Feel No Pain rolls for every would-be wound in a normal damage application
+# before committing losses; mortals call this with one wound (p.81).
+act prevent_wound_loss(ctx Board board, frm UnitID target, frm ModelID model, frm CombatCounter amount) -> WoundPrevention:
+    frm lost : CombatCounter
+    frm count : CombatCounter
+    frm threshold : LinearlyDistributedInt<0, 11>
+    threshold = board[target][model].profile.feel_no_pain()
+    if threshold > 6:
+        lost = amount
         return
-    frm previous_decision_maker = board.current_decision_maker
-    if board.attack_info.source.has_rule(WeaponRuleKind::precision):
-        board.current_decision_maker = !target.owned_by_player1
-    else:
-        board.current_decision_maker = target.owned_by_player1
-    board.current_state = CurrentStateDescription::allocate_wound
+    board.current_decision_maker = board[target].owned_by_player1
+    board.current_state = CurrentStateDescription::feel_no_pain_roll
+    while count < amount:
+        act roll(Dice prevention)
+        if prevention.value < threshold.value:
+            lost = lost + 1
+        count = count + 1
 
-    # Elects which model to allocate a suffered wounds too
-    act allocate_wound(frm ModelID id) {
-        id.get() < target.models.size(),
-        !(target[id].state == ModelState::fight_on_death),
-        board.attack_info.source.has_rule(WeaponRuleKind::precision) or !target[id.get()].has_keyword(Keyword::character) or target.all_have_keyword(Keyword::character)
-    }
-    board.current_decision_maker = previous_decision_maker
-        
-    board.current_state = CurrentStateDescription::save_roll
-    subaction*(board) saves = collect_attack_dice(board, generated_wounds, false, false, true, target.owned_by_player1, board.attack_info.target_unit_id)
-    frm save_face : BInt<1, 8>
-    save_face = 1
-    while save_face.value <= 6:
-        if saves.pool.faces[save_face.value - 1] == 0:
-            save_face = save_face + 1
+# Finite jobs and a nonrecursive destruction scan let immediate death effects
+# interrupt mortal allocation, while attack-triggered deaths wait (pp.24/80/87).
+# Job snapshots, not references into the work vector, survive child actions.
+act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_attacks, frm UnitID finished_source) -> DamageResolution:
+    frm previous_owner = board.current_decision_maker
+    frm previous_target = board.attack_info.target_unit_id
+    frm current_job : DamageJob
+    frm event : PendingDestruction
+    frm casualty : Model
+    frm absent_source : Unit
+    frm retaliation : CombatCounter
+    while true:
+        event = next_destruction(board, finish_attacks, finished_source)
+        if event.found:
+            board.current_decision_maker = board[event.unit].owned_by_player1
+            act choose_destruction_unit(frm UnitID dying_unit) {destruction_unit_valid(board, dying_unit, board.current_decision_maker, finish_attacks, finished_source)}
+            event.unit = dying_unit
+            board.attack_info.target_unit_id = dying_unit
+            act resolve_destruction_model(frm ModelID dying_model) {dying_model.get() < board[dying_unit].models.size(), destruction_ready(board[dying_unit][dying_model], finish_attacks, finished_source)}
+            event.model = dying_model
+            casualty = board[event.unit][event.model]
+            board[event.unit][event.model].destruction_pending = false
+            absent_source.owned_by_player1 = !board[event.unit].owned_by_player1
+            retaliation = 0
+            if casualty.destroying_unit_known:
+                subaction*(board, board[casualty.destroying_unit], casualty) triggered = on_model_destroyed(board, board[casualty.destroying_unit], casualty)
+                retaliation = triggered.generated_mortal
+            else:
+                subaction*(board, absent_source, casualty) uncredited = on_model_destroyed(board, absent_source, casualty)
+            # Retain physical presence through the triggered effects; removal
+            # is queued beneath their mortal jobs (Deadly Demise p.80).
+            if casualty.state == ModelState::pending_destruction:
+                jobs.append(damage_job(DamageKind::remove_destroyed, event.unit, casualty.destroying_unit, casualty.destroying_unit_known, false, 0, casualty.identity))
+            if casualty.destroying_unit_known and retaliation > 0:
+                jobs.append(damage_job(DamageKind::mortal, casualty.destroying_unit, event.unit, true, false, retaliation.value, invalid_entity_identity()))
+            if casualty.has_deadly_demise:
+                board.current_state = CurrentStateDescription::destruction_roll
+                act roll(Dice explosion)
+                if explosion == 6:
+                    frm nearby : UnitIterator
+                    nearby = board.units.size()
+                    while nearby.value > 0:
+                        nearby = nearby - 1
+                        if has_live_attack_recipient(board[nearby.value]) and board[nearby.value].distance(casualty) <= 6.0:
+                            subaction* demise_amount = evaluate_random_stat(casualty.deadly_demise)
+                            let affected : UnitID
+                            affected = nearby.value
+                            jobs.append(damage_job(DamageKind::mortal, affected, event.unit, true, false, demise_amount.result.value, invalid_entity_identity()))
             continue
-        saves.pool.faces[save_face.value - 1] = saves.pool.faces[save_face.value - 1] - 1
-        ref target_model = target.models[id.get()]
-        let best_save = min(target_model.profile.save() + board.attack_info.source.penetration() + int(board.attack_info.penetration_bonus), target_model.profile.invuln_save())
-        if save_face.value >= best_save and save_face.value != 1:
+        if jobs.empty():
+            break
+        current_job = jobs.back()
+        jobs.pop()
+        if current_job.kind == DamageKind::remove_destroyed:
+            let removed = board[current_job.target].find_model(current_job.recipient)
+            if removed >= 0:
+                board[current_job.target].remove_model(removed)
             continue
-        board.current_state = CurrentStateDescription::damage_roll
-        subaction*(board) damage_roll = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), 0, source_unit.owned_by_player1, board.attack_info.source_unit_id)
-        generated_effective_wounds = generated_effective_wounds + damage_roll.result.value
-
-    # Random D is determined per damaging attack after allocation (supplied
-    # appendix 02.02.03); critical wounds do not roll damage in the wound step.
-    while generated_critical_wounds > 0:
-        board.current_state = CurrentStateDescription::damage_roll
-        subaction*(board) critical_damage = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), 0, source_unit.owned_by_player1, board.attack_info.source_unit_id)
-        generated_effective_wounds = generated_effective_wounds + critical_damage.result.value
-        generated_critical_wounds = generated_critical_wounds - 1
-    frm target_model = target[id]
-    if target.damage(id.get(), generated_effective_wounds.value, board.attack_info.fight_on_death):
-        subaction*(board, source_unit, target_model) on_model_destroyed = on_model_destroyed(board, source_unit, target_model)
+        if current_job.amount == 0 or !has_live_attack_recipient(board[current_job.target]):
+            continue
+        board.attack_info.target_unit_id = current_job.target
+        board.current_decision_maker = board[current_job.target].owned_by_player1
+        frm recipient : ModelID
+        if current_job.recipient.value >= 0:
+            let existing = board[current_job.target].find_model(current_job.recipient)
+            if existing < 0 or !board[current_job.target][existing].is_alive():
+                continue
+            recipient = existing
+        else:
+            board.current_state = CurrentStateDescription::mortal_wound
+            act select_mortal_model(frm ModelID mortal_model) {mortal_model_valid(board[current_job.target], mortal_model)}
+            recipient = mortal_model
+        frm identity = board[current_job.target][recipient].identity
+        frm application : CombatCounter
+        application = 1
+        if current_job.kind == DamageKind::normal:
+            application = current_job.amount
+        subaction*(board) prevention = prevent_wound_loss(board, current_job.target, recipient, application)
+        commit_wound_loss(board, current_job, recipient, prevention.lost.value, current_job.from_attack and board.attack_info.fight_on_death and current_job.target.get() == previous_target.get())
+        if !(current_job.kind == DamageKind::normal):
+            current_job.amount = current_job.amount - 1
+            if current_job.kind == DamageKind::devastating:
+                if prevention.lost > 0:
+                    current_job.recipient = identity
+                else:
+                    if current_job.recipient.value == identity.value and board[current_job.target].find_model(identity) >= 0 and board[current_job.target][board[current_job.target].find_model(identity)].suffered_wounds == 0:
+                        current_job.recipient = invalid_entity_identity()
+            if current_job.amount > 0:
+                jobs.append(current_job)
+    board.attack_info.target_unit_id = previous_target
+    board.current_decision_maker = previous_owner
     board.current_state = CurrentStateDescription::none
 
+# Explicit invalid identity denotes mortal allocation still to be selected;
+# it is lifecycle metadata, not an unbounded damage or ML numeric domain.
+fun invalid_entity_identity() -> EntityIdentity:
+    let identity : EntityIdentity
+    return identity
+
+# Ordinary mortals spill by one-wound allocation; damage jobs process immediate
+# destruction before the next recipient, with no save roll (pp.24/87).
+act resolve_mortal_wounds(ctx Board board, frm UnitID target, frm UnitID source, frm Bool source_known, frm CombatCounter amount) -> MortalWounds:
+    frm jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::mortal, target, source, source_known, false, amount.value, invalid_entity_identity()))
+    subaction*(board) damage = resolve_damage_jobs(board, jobs, false, source)
+
+# Ordered group saves use ascending rerolled results; evaluate each against
+# the live current group's characteristics, then apply that attack alone (p.19).
+# DEVASTATING WOUNDS follows all normal damage and caps each critical attack
+# to one actually damaged model (pp.24/80), with FNP still allowed (p.81).
+act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit, frm CombatCounter generated_wounds, frm CombatCounter generated_critical_wounds) -> AttackDamage:
+    frm previous_owner = board.current_decision_maker
+    if !has_live_attack_recipient(target) or (generated_wounds == 0 and generated_critical_wounds == 0):
+        return
+    board.identify_unit(target)
+    frm groups = make_allocation_groups(board, target, board.attack_info)
+    board.active_allocation_groups = groups
+    board.active_allocation_target = board.attack_info.target_unit_id
+    frm precision : AllocationGroupID
+    frm use_precision = false
+    if generated_wounds > 0:
+        subaction*(board) ordered = declare_allocation_order(board, groups, target.owned_by_player1)
+        if board.attack_info.has_weapon_rule(board, WeaponRuleKind::precision):
+            frm has_visible = false
+            for i in range(groups.size()):
+                has_visible = has_visible or (groups[i].character and groups[i].precision_visible)
+            if has_visible:
+                board.current_decision_maker = source_unit.owned_by_player1
+                actions:
+                    act skip_precision()
+                    act choose_precision_group(frm AllocationGroupID group) {group.value < groups.size(), groups[group.value].character, groups[group.value].precision_visible}
+                        precision = group
+                        use_precision = true
+        board.current_state = CurrentStateDescription::save_roll
+        subaction*(board) saves = collect_attack_dice(board, generated_wounds, false, false, true, target.owned_by_player1, board.attack_info.target_unit_id)
+        frm face : BInt<1, 8>
+        face = 1
+        frm order_index : AllocationGroupCounter
+        frm active_group : AllocationGroupID
+        while face.value <= 6 and has_live_attack_recipient(target):
+            if saves.pool.faces[face.value - 1] == 0:
+                face = face + 1
+                continue
+            if use_precision and !allocation_group_alive(target, groups[precision.value]):
+                use_precision = false
+            while order_index.value < ordered.order.size() and !allocation_group_alive(target, groups[ordered.order[order_index.value].value]):
+                order_index = order_index + 1
+            if use_precision:
+                active_group = precision
+            else:
+                if order_index.value == ordered.order.size():
+                    break
+                active_group = ordered.order[order_index.value]
+            board.current_decision_maker = target.owned_by_player1
+            board.current_state = CurrentStateDescription::allocate_wound
+            act allocate_wound(frm ModelID id) {allocation_model_valid(target, groups[active_group.value], id)}
+            frm die : Dice
+            die = face.value
+            saves.pool.faces[face.value - 1] = saves.pool.faces[face.value - 1] - 1
+            if attack_save_succeeds(groups[active_group.value], die, board.attack_info.source.penetration() - int(board.attack_info.penetration_bonus)):
+                continue
+            board.current_state = CurrentStateDescription::damage_roll
+            subaction*(board) normal_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+            frm jobs : DamageJobs
+            jobs.clear()
+            jobs.append(damage_job(DamageKind::normal, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, normal_amount.result.value, target[id].identity))
+            subaction*(board) normal_damage = resolve_damage_jobs(board, jobs, false, board.attack_info.source_unit_id)
+    while generated_critical_wounds > 0 and has_live_attack_recipient(target):
+        board.current_decision_maker = target.owned_by_player1
+        board.current_state = CurrentStateDescription::mortal_wound
+        act allocate_mortal(frm ModelID critical_model) {mortal_model_valid(target, critical_model)}
+        frm critical_recipient = target[critical_model].identity
+        board.current_state = CurrentStateDescription::damage_roll
+        subaction*(board) critical_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+        frm critical_jobs : DamageJobs
+        critical_jobs.clear()
+        critical_jobs.append(damage_job(DamageKind::devastating, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, critical_amount.result.value, critical_recipient))
+        subaction*(board) mortal_damage = resolve_damage_jobs(board, critical_jobs, false, board.attack_info.source_unit_id)
+        generated_critical_wounds = generated_critical_wounds - 1
+    board.current_decision_maker = previous_owner
+    board.current_state = CurrentStateDescription::none
+
+# Hazard count is selected weapons, including weapons that never found a
+# target (p.81). Collect every hazard before rerolls/damage; 1–2 fails (p.24).
+act resolve_hazards(ctx Board board, frm UnitID unit, frm HazardousUses count) -> HazardRolls:
+    if count == 0 or !has_live_attack_recipient(board[unit]):
+        return
+    frm amount : CombatCounter
+    amount = count.value
+    frm multiplier : LinearlyDistributedInt<1, 4>
+    multiplier = hazard_mortal_multiplier(board[unit])
+    board.current_state = CurrentStateDescription::hazardous_roll
+    subaction*(board) hazards = collect_attack_dice(board, amount, false, false, true, board[unit].owned_by_player1, unit)
+    amount = (hazards.pool.faces[0].value + hazards.pool.faces[1].value) * multiplier.value
+    subaction*(board) mortals = resolve_mortal_wounds(board, unit, unit, false, amount)
 
 # Preserve the existing one-attack entrypoint for fixtures and legacy callers;
 # dice use the same batch pipeline as declared groups (pp.17–18).
@@ -287,7 +461,7 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
     let count : CombatCounter
     count = 1
     subaction*(board, target, source_unit) dice = resolve_attack_dice(board, target, source_unit, count)
-    subaction*(board, target, source_unit) damage = resolve_legacy_attack_damage(board, target, source_unit, dice.generated_wounds, dice.generated_critical_wounds)
+    subaction*(board, target, source_unit) damage = resolve_attack_damage(board, target, source_unit, dice.generated_wounds, dice.generated_critical_wounds)
 
 # Dispatch existing on-destruction abilities/stratagems after a casualty (core p.19).
 # Feeder Tendrils checks the destroyed model, not the attacker; its faction
@@ -295,11 +469,12 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
 act on_model_destroyed(ctx Board board, 
                        ctx Unit source, 
                        ctx Model destroyed) -> OnModelDestroyed:
+    frm generated_mortal : CombatCounter
     if destroyed.is_character() and source.has_ability(AbilityKind::feeder_tendrils):
         board.add_extra_cp(int(source.owned_by_player1))
 
     frm previous_owner = board.current_decision_maker
-    if destroyed.has_keyword(Keyword::master_of_possession) and board.can_use_strat(!source.owned_by_player1, Stratagem::violent_unbidding):
+    if !source.empty() and destroyed.has_keyword(Keyword::master_of_possession) and board.can_use_strat(!source.owned_by_player1, Stratagem::violent_unbidding):
         board.current_decision_maker = !source.owned_by_player1
         actions:
             act skip()
@@ -312,10 +487,10 @@ act on_model_destroyed(ctx Board board,
                     board.current_decision_maker = previous_owner
                     return
                 if dice == 6:
-                    source.deal_mortal_wound_damage(3)
+                    generated_mortal = 3
                 if dice == 5:
                     act roll(frm Dice damage)
-                    source.deal_mortal_wound_damage(damage.value / 2)
+                    generated_mortal = damage.value / 2
 
     board.current_decision_maker = previous_owner
 
@@ -491,7 +666,11 @@ act use_attack_stratagems(ctx Board board,
             if !board[source].leadership_roll_succeeds(board.current_pair_roll.result.value + board.current_pair_roll.result2.value):
                 board.current_roll = rerollable_dice_roll(board, false, false, false, !target_player)
                 subaction*(board) board.current_roll 
-                board[source].deal_mortal_wound_damage(board.current_roll.result.value)
+                # The legacy faction effect now uses core mortal allocation/FNP
+                # instead of repeatedly damaging model zero (pp.24/81).
+                frm pact_damage : CombatCounter
+                pact_damage = board.current_roll.result.value
+                subaction*(board) pact_mortals = resolve_mortal_wounds(board, source, source, false, pact_damage)
             act select_ability(Bool use_letal_hits)
             if use_letal_hits:
                 board.attack_info.add_letal_hits()
@@ -522,7 +701,11 @@ act use_attack_stratagems(ctx Board board,
             act select_model(frm ModelID model) {
                 model.get() < board[source].models.size()
             }
-            board[source].damage(model.get(), 1)
+            # Wound-loss prevention/destruction is shared core infrastructure;
+            # the faction rule itself still awaits task-17 source validation.
+            frm offering_jobs : DamageJobs
+            offering_jobs.append(damage_job(DamageKind::normal, source, source, false, false, 1, board[source][model].identity))
+            subaction*(board) offering = resolve_damage_jobs(board, offering_jobs, false, source)
             board.attack_info.profile_hit_roll_bonus.append(Profile::aranis_zarkan)
             board.attack_info.profile_wound_roll_bonus.append(Profile::aranis_zarkan)
 
@@ -576,6 +759,11 @@ act declare_weapon_targets(ctx Board board, frm DeclaredWeapon weapon, frm UnitI
                 !weapon.targeted[target_id.get()]
             }
                 weapon.targeted[target_id.get()] = true
+                # MELTA uses target-selection range, not later positions (p.83).
+                if weapon.weapon.range() > 0 and board[target_id].distance(board[source][declared_model_index(board, source, weapon)]) <= float(weapon.weapon.range()) / 2.0:
+                    let bonus = board[source].max_weapon_parameter(weapon.weapon, WeaponRuleKind::melta)
+                    assert(bonus >= 0 and bonus < MAX_STAT_MODIFIER, "Melta bonus capacity exceeded")
+                    weapon.melta_bonus[target_id.get()] = bonus
                 chosen = target_id
             act skip_target() {!melee}
                 break
@@ -621,6 +809,7 @@ act revalidate_attack_targets(ctx Board board, ctx DeclaredWeapons declarations,
 fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeapon weapon, AttackSequenceInfo target_info) -> AttackSequenceInfo:
     let info = target_info
     info.source = weapon.weapon
+    info.melta_damage_bonus = weapon.melta_bonus[target.get()]
     let model = declared_model_index(board, source, weapon)
     assert(model >= 0, "declared source no longer exists")
     info.source_profile = board[source][model].profile
@@ -668,9 +857,16 @@ act gather_attack_group(ctx Board board, ctx DeclaredWeapons declarations, frm U
     frm info = declared_attack_info(board, source, target, declarations[chosen.value], target_info)
     frm count : CombatCounter
     frm index : LinearlyDistributedInt<0, MAX_SELECTED_WEAPONS_PLUS1>
+    info.precision_visibility_known = true
+    let no_visibility : Bool[MAX_UNIT_MODELS]
+    info.precision_visible_targets = no_visibility
     while index.value < declarations.size():
         if declarations[index.value].targeted[target.get()] and !declarations[index.value].resolved[target.get()] and declared_weapon_matches(board, source, target, declarations[index.value], info, target_info):
             declarations[index.value].resolved[target.get()] = true
+            # PRECISION visibility is the union of actual gathered bearers
+            # rather than every member of the source unit (p.84).
+            for target_model in range(board[target].models.size()):
+                info.precision_visible_targets[target_model] = info.precision_visible_targets[target_model] or model_visible_to_model(board, board[source][declared_model_index(board, source, declarations[index.value])], board[target], board[target][target_model])
             subaction*(board) generated = gather_weapon_count(board, source, target, declarations[index.value], melee)
             add_attack_count(count, generated.result.value)
             declarations[index.value].made_attacks = declarations[index.value].made_attacks or generated.result.value > 0
@@ -679,7 +875,8 @@ act gather_attack_group(ctx Board board, ctx DeclaredWeapons declarations, frm U
 
 # Full activation: select all weapons, declare all targets, choose target then
 # weapon group and complete that target before another (pp.16–18). Existing
-# Hazardous/fight-on-death effects are a legacy bridge owned by tasks 10/14.
+# Attack-triggered destruction waits for all target groups, then Hazardous
+# resolves (pp.24/87). Full fight-on-death combat sequencing remains task 14.
 act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee, frm Bool overwatch) -> Attack:
     if board[source].empty():
         return
@@ -723,49 +920,48 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             }
             subaction*(board, declarations) gathering = gather_attack_group(board, declarations, source, target, weapon, melee, target_info)
             subaction*(board, board[target], board[source]) dice = resolve_attack_dice(board, board[target], board[source], gathering.count)
-            subaction*(board, board[target], board[source]) damage = resolve_legacy_attack_damage(board, board[target], board[source], dice.generated_wounds, dice.generated_critical_wounds)
+            subaction*(board, board[target], board[source]) damage = resolve_attack_damage(board, board[target], board[source], dice.generated_wounds, dice.generated_critical_wounds)
+    # Finish conditional attack-caused triggers after every declared target,
+    # before post-attack Hazardous checks (pp.81/87).
+    frm cleanup_jobs : DamageJobs
+    subaction*(board) deaths = resolve_damage_jobs(board, cleanup_jobs, true, source)
     for i in range(declarations.size()):
-        if declarations[i].made_attacks and declarations[i].weapon.has_rule(WeaponRuleKind::hazardous):
+        if declarations[i].weapon.has_rule(WeaponRuleKind::hazardous):
             hazardous_uses = hazardous_uses + 1
-    ### Dangerous weapons
-    board.attack_info.target_unit_id = source
-    board.current_decision_maker = board[source].owned_by_player1
-    while hazardous_uses != 0 and !board[source].empty():
-        hazardous_uses = hazardous_uses - 1
-        board.current_state = CurrentStateDescription::hazardous_roll
-        board.current_roll = rerollable_dice_roll(board, false, false, true, bool(board[source].owner_id()), source)
-        subaction*(board) board.current_roll
-        if board.current_roll.result != 1:
-            continue
-        # select a model to damage because of a hazardous roll
-        act select_model(ModelID model) {
-            model.get() < board[source].models.size(),
-            board[source][model.get()].has_weapon_rule(WeaponRuleKind::hazardous)
-        }
-        # ToDo: handle non character version
-        board[source].damage(model.get(), 3)
-    board.current_state = CurrentStateDescription::none
+    subaction*(board) hazards = resolve_hazards(board, source, hazardous_uses)
 
-    # Legacy destruction retention remains task 10; do not attempt a reciprocal
-    # attack when either army has no surviving battlefield models.
-    if !board[source].empty() and !board[target].empty():
-        frm death_roll = board.attack_info.fight_on_death_roll
-        configure_attack_info(board, target.get(), source.get(), overwatch, melee)
-        board.current_decision_maker = board[target].owned_by_player1
-        board.timing.active_player = board[target].owned_by_player1
-        model = 0
-        while model.value < board[target].models.size() and !board[source].empty():
-            if board[target][model.value].state == ModelState::fight_on_death:
-                if death_roll != 2:
-                    act roll(Dice result)
-                    if result < death_roll:
-                        model = model + 1
-                        continue
-                let id : ModelID
-                id = model.value
-                subaction*(board) fight_on_death_attack = resolve_model_attack(board, target, source, id, melee)
-            model = model + 1
-        board[target].remove_figth_on_death_models()
+    # Retaliation eligibility remains the legacy faction/fighting bridge (task
+    # 14), but every retained casualty across all declared targets is cleaned
+    # exactly once after its triggers/explicit fight-on-death exception (p.87).
+    frm death_unit : UnitIterator
+    while death_unit.value < board.units.size():
+        if board[death_unit.value].owned_by_player1 != board[source].owned_by_player1:
+            model = 0
+            while model.value < board[death_unit.value].models.size():
+                if board[death_unit.value][model.value].state == ModelState::fight_on_death and board[death_unit.value][model.value].destroying_unit.get() == source.get():
+                    frm death_identity = board[death_unit.value][model.value].identity
+                    frm retaliate = has_live_attack_recipient(board[source])
+                    frm death_roll = board[death_unit.value][model.value].destruction_fight_roll
+                    if retaliate and death_roll != 2:
+                        act roll(Dice result)
+                        retaliate = result.value >= death_roll.value
+                    if retaliate:
+                        frm dying_unit : UnitID
+                        dying_unit = death_unit.value
+                        configure_attack_info(board, dying_unit.get(), source.get(), overwatch, melee)
+                        board.current_decision_maker = board[dying_unit].owned_by_player1
+                        board.timing.active_player = board[dying_unit].owned_by_player1
+                        let id : ModelID
+                        id = model.value
+                        subaction*(board) fight_on_death_attack = resolve_model_attack(board, dying_unit, source, id, melee)
+                        cleanup_jobs.clear()
+                        subaction*(board) retaliation_deaths = resolve_damage_jobs(board, cleanup_jobs, true, dying_unit)
+                    let retained = board[death_unit.value].find_model(death_identity)
+                    if retained >= 0:
+                        board[death_unit.value].remove_model(retained)
+                    continue
+                model = model + 1
+        death_unit = death_unit + 1
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
     board.current_state = CurrentStateDescription::none
@@ -958,7 +1154,7 @@ act timing_heroic_intervention(ctx Board board, frm Bool player) -> TimingHeroic
     board.commit_stratagem_with_cost(player, Stratagem::heroic_intervention, board[source], heroic_intervention_cost(board[source]))
     act intervention_target(frm UnitID target) {
         target.get() < board.units.size(),
-        !board[target].empty(),
+        has_live_attack_recipient(board[target]),
         board[target].owned_by_player1 != player,
         board[target].has_charged,
         board[source].distance(board[target]) <= 12.0
@@ -1158,12 +1354,12 @@ act neural_disruption(ctx Board board) -> NeuralDisruption:
                 break
             act select_neural_disruption_target(frm UnitID source, frm UnitID target) {
                 source.get() < board.units.size(),
-                !board[source].empty(),
+                has_live_attack_recipient(board[source]),
                 !used[source.get()],
                 board[source].owned_by_player1 == board.current_player,
                 board[source].has_ability(AbilityKind::neural_disruption),
                 target.get() < board.units.size(),
-                !board[target].empty(),
+                has_live_attack_recipient(board[target]),
                 board[target].owned_by_player1 != board.current_player,
                 board[source].distance(board[target]) <= 12.0
             }
@@ -1194,7 +1390,7 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
         act skip()
         act overwatch(frm UnitID source) {
             source.get() < board.units.size(),
-            !board[source].empty(),
+            has_live_attack_recipient(board[source]),
             !board[moved_unit].is_lone_operative() or board[source].distance(board[source]) < 12.0,
             24.0 > board[source.get()].distance(board[moved_unit.get()]),
             board[source.get()].owned_by_player1 == !board[moved_unit].owned_by_player1,
@@ -1253,11 +1449,11 @@ act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
                 board.current_decision_maker = !board.current_decision_maker
             act select_target(frm UnitID source, frm UnitID target) {
                 source.get() < board.units.size(),
-                !board[source].empty(),
+                has_live_attack_recipient(board[source]),
                 target.get() < board.units.size(),
-                !board[target].empty(),
-                !board[target.get()].empty(),
-                !board[source.get()].empty(),
+                has_live_attack_recipient(board[target]),
+                has_live_attack_recipient(board[target]),
+                has_live_attack_recipient(board[source]),
                 !board[source.get()].has_fought,
                 !fight_first_phase or board.units[source.get()].has_charged or board.units[source.get()].has_ability(AbilityKind::fight_first),
                 board.units[source.get()].owned_by_player1 == board.current_decision_maker,
@@ -1281,7 +1477,7 @@ act fight_phase(ctx Board board) -> FightPhase:
         actions:
             act use_bestial_bellow(frm UnitID unit, frm UnitID target) {
                 target.get() < board.units.size(),
-                !board[target].empty(),
+                has_live_attack_recipient(board[target]),
                 unit.get() < board.units.size(),
                 !board[unit].empty(),
                 board[unit].has_keyword(Keyword::beastboss) or board[unit].has_keyword(Keyword::squighog_boyz),
@@ -1334,11 +1530,11 @@ act charge_phase(ctx Board board) -> ChargePhase:
                 break
             act select_target(frm UnitID source, frm UnitID target) {
                 source.get() < board.units.size(),
-                !board[source].empty(),
+                has_live_attack_recipient(board[source]),
                 target.get() < board.units.size(),
-                !board[target].empty(),
-                !board[target.get()].empty(),
-                !board[source.get()].empty(),
+                has_live_attack_recipient(board[target]),
+                has_live_attack_recipient(board[target]),
+                has_live_attack_recipient(board[source]),
                 !board.units[source.get()].has_run,
                 board.units[source.get()].can_charge,
                 !board.units[source.get()].has_charged,
@@ -1485,9 +1681,9 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
                 break
             act select_target(frm UnitID source, frm UnitID target) {
                 source.get() < board.units.size(),
-                !board[source].empty(),
+                has_live_attack_recipient(board[source]),
                 target.get() < board.units.size(),
-                !board[target].empty(),
+                has_live_attack_recipient(board[target]),
                 !board[target].is_lone_operative() or board[source].distance(board[source]) < 12.0,
                 !board[source].has_shoot,
                 board[source].can_shoot,

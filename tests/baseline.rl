@@ -2158,8 +2158,9 @@ fun test_attack_fixed_damage_reaches_live_model() -> Bool:
     sequence.roll(board, board[1], board[0], attack_test_die(4))
     let model : ModelID
     model = 0
-    sequence.allocate_wound(board, board[1], board[0], model)
+    sequence.choose_save_group(board, board[1], board[0], allocation_test_group(0))
     sequence.roll(board, board[1], board[0], attack_test_die(1))
+    sequence.allocate_wound(board, board[1], board[0], model)
     return sequence.is_done() and board[1][0].suffered_wounds == 1
 
 # Supplied appendix 02.02.01: operation order and only-final rounding; amounts
@@ -2211,17 +2212,19 @@ fun test_attack_anti_uses_unit_keyword_and_natural_one_precedence() -> Bool:
     board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::anti_monster, 1))
     return classify_attack_wound(board, board.attack_info, attack_test_die(1), 1) == AttackRollResult::failed
 
-# p.18: all save inputs precede any fixed damage. Task 10 will replace this
-# legacy allocation bridge; this case asserts the batch boundary only.
+# pp.18–19: allocation groups precede all saves; every save input precedes
+# per-attack allocation and fixed damage. This case asserts that boundary.
 fun test_attack_all_save_results_collected_before_damage() -> Bool:
     let board = attack_declaration_fixture()
-    let damage = resolve_legacy_attack_damage(board, board[1], board[0], attack_test_count(2), attack_test_count(0))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(2), attack_test_count(0))
     let model : ModelID
-    damage.allocate_wound(board, board[1], board[0], model)
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(0))
     damage.roll(board, board[1], board[0], attack_test_die(1))
     if board[1][0].suffered_wounds != 0 or board[1].empty():
         return false
     damage.roll(board, board[1], board[0], attack_test_die(1))
+    damage.allocate_wound(board, board[1], board[0], model)
+    damage.allocate_wound(board, board[1], board[0], model)
     return damage.is_done() and board[1].empty()
 
 # Supplied appendix 02.02.03: random D is rolled only after an actual damaging
@@ -2229,11 +2232,11 @@ fun test_attack_all_save_results_collected_before_damage() -> Bool:
 fun test_attack_random_damage_waits_for_allocation() -> Bool:
     let board = attack_declaration_fixture()
     board.attack_info.source = Weapon::smite_witchfire
-    let damage = resolve_legacy_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
     if can damage.quantity(board, board[1], board[0], attack_test_die(1)):
         return false
     let model : ModelID
-    damage.allocate_wound(board, board[1], board[0], model)
+    damage.allocate_mortal(board, board[1], board[0], model)
     damage.quantity(board, board[1], board[0], attack_test_die(1))
     return damage.is_done() and board[1][0].suffered_wounds == 1
 
@@ -2275,6 +2278,83 @@ fun test_attack_finishes_selected_target_before_next_and_each_weapon_once() -> B
         sequence.roll(board, attack_test_die(1))
     return sequence.is_done() and sequence.declarations[0].made_attacks and sequence.declarations[1].made_attacks
 
+# Test-only finite constructors for p.19 group and model selectors.
+fun allocation_test_group(Int value) -> AllocationGroupID:
+    let result : AllocationGroupID
+    result = value
+    return result
+
+fun damage_test_model(Int value) -> ModelID:
+    let result : ModelID
+    result = value
+    return result
+
+# Mixed models are explicit core allocation fixtures, not attachment grants.
+fun damage_test_fixture() -> Board:
+    let board = attack_declaration_fixture()
+    board[1].models.append(board[1][0])
+    board[1][1].identity = -1
+    board.identify_units()
+    return board
+
+# p.19: noncharacters combine by W/Sv/InSv, each character stays separate.
+fun test_damage_allocation_group_membership() -> Bool:
+    let board = damage_test_fixture()
+    let captain = make_octavius()
+    board[1].models.append(captain[0])
+    board[1].models.append(captain[0])
+    board.identify_units()
+    let groups = make_allocation_groups(board, board[1], board.attack_info)
+    return groups.size() == 3 and groups[0].members.size() == 2 and groups[1].character and groups[2].character and groups[1].members.size() == 1 and groups[1].members[0].value != groups[2].members[0].value
+
+# p.19: wounded ordinary groups precede others; characters remain last, and
+# wounded characters precede other characters. Duplicate/stale groups fail.
+fun test_damage_allocation_order_priority_and_duplicates() -> Bool:
+    let board = damage_test_fixture()
+    board[1][1].profile = Profile::terminator_squad
+    board[1][1].suffered_wounds = 1
+    let captain = make_octavius()
+    board[1].models.append(captain[0])
+    board[1].models.append(captain[0])
+    board[1][3].suffered_wounds = 1
+    board.identify_units()
+    let groups = make_allocation_groups(board, board[1], board.attack_info)
+    let order = declare_allocation_order(board, groups, true)
+    if can order.choose_save_group(board, allocation_test_group(0)) or can order.choose_save_group(board, allocation_test_group(2)):
+        return false
+    order.choose_save_group(board, allocation_test_group(1))
+    if can order.choose_save_group(board, allocation_test_group(1)):
+        return false
+    order.choose_save_group(board, allocation_test_group(0))
+    if can order.choose_save_group(board, allocation_test_group(2)):
+        return false
+    order.choose_save_group(board, allocation_test_group(3))
+    order.choose_save_group(board, allocation_test_group(2))
+    return order.is_done() and order.order.size() == 4
+
+# p.19: select a wounded live member of the current group if possible.
+fun test_damage_wounded_member_priority_and_live_identity() -> Bool:
+    let board = damage_test_fixture()
+    board[1][1].suffered_wounds = 1
+    let groups = make_allocation_groups(board, board[1], board.attack_info)
+    if allocation_model_valid(board[1], groups[0], damage_test_model(0)):
+        return false
+    if !allocation_model_valid(board[1], groups[0], damage_test_model(1)):
+        return false
+    board[1].remove_model(0)
+    return allocation_model_valid(board[1], groups[0], damage_test_model(0)) and !allocation_model_valid(board[1], groups[0], damage_test_model(1))
+
+# p.19: natural 1 fails; same result tests InSv before AP-adjusted Sv.
+fun test_damage_invulnerable_armour_ap_and_natural_one() -> Bool:
+    let group : AllocationGroup
+    group.save = 2
+    group.invulnerable = 4
+    if attack_save_succeeds(group, attack_test_die(1), 0) or !attack_save_succeeds(group, attack_test_die(4), -5):
+        return false
+    group.invulnerable = 10
+    group.save = 3
+    return !attack_save_succeeds(group, attack_test_die(3), -1) and attack_save_succeeds(group, attack_test_die(4), -1) and attack_save_succeeds(group, attack_test_die(6), 0)
+
 # p.19: AP is nonpositive; old factories mixed signs and could improve saves.
 fun test_damage_all_weapon_ap_signs_are_consistent() -> Bool:
     let weapon : Weapon
@@ -2284,14 +2364,398 @@ fun test_damage_all_weapon_ap_signs_are_consistent() -> Bool:
             return false
     return Weapon::relic_weapon.penetration() == -2 and Weapon::smite_witchfire.penetration() == -1
 
-
-# Mixed models are explicit core allocation fixtures, not attachment grants.
-fun damage_test_fixture() -> Board:
+# pp.19/22–23: use the printed 1,1,3,4,5 saves. The explicit first group is
+# wounded W3 models with two wounds remaining, not invented Geminae datasheets.
+fun test_damage_ascending_saves_change_current_group() -> Bool:
     let board = attack_declaration_fixture()
-    board[1].models.append(board[1][0])
-    board[1][1].identity = -1
+    let term = make_terminator_squad()
+    board[1].models.clear()
+    board[1].models.append(term[0])
+    board[1].models.append(term[0])
+    board[1][0].suffered_wounds = 1
+    board[1][1].suffered_wounds = 1
+    let infantry = make_infernus_squad()
+    board[1].models.append(infantry[0])
+    let captain = make_octavius()
+    board[1].models.append(captain[0])
     board.identify_units()
-    return board
+    board.attack_info.source = Weapon::heavy_bolter
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(5), attack_test_count(0))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(0))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(1))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(2))
+    damage.roll(board, board[1], board[0], attack_test_die(5))
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    damage.roll(board, board[1], board[0], attack_test_die(4))
+    damage.roll(board, board[1], board[0], attack_test_die(3))
+    if board[1].models.size() != 4:
+        return false
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    for i in range(5):
+        damage.allocate_wound(board, board[1], board[0], damage_test_model(0))
+    return damage.is_done() and board[1].models.size() == 1 and board[1][0].is_character() and board[1][0].suffered_wounds == 0 and board[1].destroyed_models.value.size() == 3
+
+# p.19: D2 on a model with one remaining wound loses its excess; the next
+# save is allocated to the next live model, not aggregated with the first.
+fun test_damage_normal_attacks_do_not_aggregate_or_spill() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].suffered_wounds = 1
+    board.attack_info.source = Weapon::heavy_bolter
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(2), attack_test_count(0))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(0))
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    damage.roll(board, board[1], board[0], attack_test_die(6))
+    damage.allocate_wound(board, board[1], board[0], damage_test_model(0))
+    if board[1].models.size() != 1 or board[1][0].suffered_wounds != 0:
+        return false
+    damage.allocate_wound(board, board[1], board[0], damage_test_model(0))
+    return damage.is_done() and board[1][0].suffered_wounds == 0
+
+# p.84: attacker's optional override applies only to a visible character
+# group; defender still chooses that group's model and receives save choices.
+fun test_damage_precision_character_group_and_fallback() -> Bool:
+    let board = damage_test_fixture()
+    let captain = make_octavius()
+    board[1].models.append(captain[0])
+    board[1][2].suffered_wounds = 5
+    board.identify_units()
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::precision))
+    board.attack_info.precision_visibility_known = true
+    board.attack_info.precision_visible_targets[2] = true
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(2), attack_test_count(0))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(0))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(1))
+    if board.current_decision_maker or can damage.choose_precision_group(board, board[1], board[0], allocation_test_group(0)):
+        return false
+    damage.choose_precision_group(board, board[1], board[0], allocation_test_group(1))
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    if can damage.allocate_wound(board, board[1], board[0], damage_test_model(0)):
+        return false
+    damage.allocate_wound(board, board[1], board[0], damage_test_model(2))
+    damage.allocate_wound(board, board[1], board[0], damage_test_model(0))
+    return damage.is_done() and board[1].models.size() == 2 and board[1][0].suffered_wounds == 1
+
+# p.84: hidden/nonvisible characters do not expose the precision decision.
+fun test_damage_precision_hidden_character_not_selectable() -> Bool:
+    let board = damage_test_fixture()
+    let captain = make_octavius()
+    board[1].models.append(captain[0])
+    board.identify_units()
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::precision))
+    board.attack_info.precision_visibility_known = true
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(1), attack_test_count(0))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(0))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(1))
+    return !(can damage.choose_precision_group(board, board[1], board[0], allocation_test_group(1))) and (can damage.roll(board, board[1], board[0], attack_test_die(1)))
+
+# p.81: all normal D wounds can be prevented independently; no loss is
+# committed before the prevention rolls finish, including damage beyond W.
+fun test_damage_feel_no_pain_normal_damage_each_wound() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].profile = Profile::beast_snagga_boy
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 3, board[1][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    damage.roll(board, attack_test_die(6))
+    damage.roll(board, attack_test_die(1))
+    if board[1][0].suffered_wounds != 0:
+        return false
+    damage.roll(board, attack_test_die(6))
+    return damage.is_done() and board[1][0].suffered_wounds == 1
+
+# p.24: mortal priority ignores save groups; wounded noncharacters first,
+# unwounded noncharacters before wounded characters, then other characters.
+fun test_damage_mortal_recipient_priority() -> Bool:
+    let board = damage_test_fixture()
+    let captain = make_octavius()
+    board[1].models.append(captain[0])
+    board[1][2].suffered_wounds = 1
+    if mortal_model_valid(board[1], damage_test_model(2)):
+        return false
+    board[1][1].suffered_wounds = 1
+    return !mortal_model_valid(board[1], damage_test_model(0)) and mortal_model_valid(board[1], damage_test_model(1))
+
+# pp.24/81: each mortal has its own FNP roll; prevention consumes a mortal,
+# actual excess mortals spill after destruction of the previous recipient.
+fun test_damage_mortal_feel_no_pain_and_spill() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].profile = Profile::beast_snagga_boy
+    board[1][1].profile = Profile::beast_snagga_boy
+    let mortals = resolve_mortal_wounds(board, unit_id(1), unit_id(0), true, attack_test_count(4))
+    for i in range(4):
+        mortals.select_mortal_model(board, damage_test_model(0))
+        if i == 0:
+            mortals.roll(board, attack_test_die(6))
+        else:
+            mortals.roll(board, attack_test_die(1))
+    return mortals.is_done() and board[1].models.size() == 1 and board[1][0].suffered_wounds == 1
+
+# p.80: each critical Devastating Wound can damage one model only; a D3
+# critical destroys a W2 model and loses its final mortal wound.
+fun test_damage_devastating_wounds_loses_per_attack_excess() -> Bool:
+    let board = damage_test_fixture()
+    board.attack_info.source = Weapon::smite_focused_witchfire
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    damage.allocate_mortal(board, board[1], board[0], damage_test_model(0))
+    damage.quantity(board, board[1], board[0], attack_test_die(3))
+    return damage.is_done() and board[1].models.size() == 1 and board[1][0].suffered_wounds == 0
+
+# pp.24/80: a normal wound damages the first model before the critical mortal
+# finishes it; mortals bypass saves rather than adding to normal damage.
+fun test_damage_normal_before_devastating_mortals() -> Bool:
+    let board = damage_test_fixture()
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(1), attack_test_count(1))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(0))
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    damage.allocate_wound(board, board[1], board[0], damage_test_model(0))
+    if board[1][0].suffered_wounds != 1:
+        return false
+    damage.allocate_mortal(board, board[1], board[0], damage_test_model(0))
+    return damage.is_done() and board[1].models.size() == 1 and board[1][0].suffered_wounds == 0
+
+# p.24: mixed monster/vehicle models qualify, mixed ordinary models do not.
+fun test_damage_hazard_large_model_multiplier() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].keywords.append(Keyword::monster)
+    board[1][1].keywords.append(Keyword::vehicle)
+    if hazard_mortal_multiplier(board[1]) != 3:
+        return false
+    board[1][1].keywords.clear()
+    return hazard_mortal_multiplier(board[1]) == 1
+
+# pp.24/81: all hazard dice precede allocation; both 1 and 2 fail and each
+# inflicts one ordinary mortal for a non-MONSTER/VEHICLE unit.
+fun test_damage_hazard_batch_one_and_two_fail() -> Bool:
+    let board = damage_test_fixture()
+    let count : HazardousUses
+    count = 3
+    let hazards = resolve_hazards(board, unit_id(1), count)
+    hazards.roll(board, attack_test_die(1))
+    hazards.roll(board, attack_test_die(2))
+    if board[1][0].suffered_wounds != 0:
+        return false
+    hazards.roll(board, attack_test_die(3))
+    hazards.select_mortal_model(board, damage_test_model(0))
+    hazards.select_mortal_model(board, damage_test_model(0))
+    return hazards.is_done() and board[1].models.size() == 1
+
+# p.81: HAZARDOUS counts selected weapons even if all targets were skipped.
+fun test_damage_hazard_selected_but_skipped_weapon() -> Bool:
+    let board = damage_test_fixture()
+    board[0][0].weapons.clear()
+    board[0][0].weapons.append(Weapon::smite_focused_witchfire)
+    let sequence = attack(board, unit_id(0), unit_id(1), false, false)
+    sequence.select_weapon(board, attack_test_slot(0))
+    sequence.skip(board)
+    sequence.skip_target(board)
+    if !(can sequence.roll(board, attack_test_die(2))):
+        return false
+    sequence.roll(board, attack_test_die(2))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    return sequence.is_done() and board[0][0].suffered_wounds == 1
+
+# p.87: no triggered rule means immediate removal, not unconditional retention.
+fun test_damage_no_trigger_immediate_destruction() -> Bool:
+    let board = damage_test_fixture()
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 10, board[1][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    return damage.is_done() and board[1].models.size() == 1 and board[1].destroyed_models.value.size() == 1
+
+# p.87: a real attack-caused trigger retains the model until the whole source
+# activation finishes; the retained model cannot be allocated further damage.
+fun test_damage_triggered_attack_death_is_deferred_and_ineligible() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].has_deadly_demise = true
+    board[1][0].deadly_demise = raw_stat(1)
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 10, board[1][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    if !damage.is_done() or board[1].models.size() != 2 or board[1][0].is_alive() or mortal_model_valid(board[1], damage_test_model(0)):
+        return false
+    let empty_jobs : DamageJobs
+    let cleanup = resolve_damage_jobs(board, empty_jobs, true, unit_id(0))
+    cleanup.choose_destruction_unit(board, unit_id(1))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    cleanup.roll(board, attack_test_die(1))
+    return cleanup.is_done() and board[1].models.size() == 1 and board[1].destroyed_models.value.size() == 1
+
+# pp.80/87: non-attack destruction triggers before the next ordinary mortal;
+# a failed Deadly Demise still removes/archives exactly once.
+fun test_damage_nonattack_trigger_interrupts_mortal_sequence() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].suffered_wounds = 1
+    board[1][0].has_deadly_demise = true
+    board[1][0].deadly_demise = raw_stat(1)
+    let mortals = resolve_mortal_wounds(board, unit_id(1), unit_id(0), true, attack_test_count(2))
+    mortals.select_mortal_model(board, damage_test_model(0))
+    if can mortals.select_mortal_model(board, damage_test_model(1)):
+        return false
+    mortals.choose_destruction_unit(board, unit_id(1))
+    mortals.resolve_destruction_model(board, damage_test_model(0))
+    mortals.roll(board, attack_test_die(1))
+    mortals.select_mortal_model(board, damage_test_model(0))
+    return mortals.is_done() and board[1].models.size() == 1 and board[1][0].suffered_wounds == 1
+
+# p.87 and supplied Rules Sequencing: current player's pending triggers are
+# chosen before opponent triggers, with each owner choosing their own order.
+fun test_damage_destruction_current_player_priority() -> Bool:
+    let board = damage_test_fixture()
+    board.current_player = true
+    for i in range(2):
+        board[i][0].state = ModelState::pending_destruction
+        board[i][0].destruction_pending = true
+    let jobs : DamageJobs
+    let cleanup = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    if can cleanup.choose_destruction_unit(board, unit_id(0)):
+        return false
+    cleanup.choose_destruction_unit(board, unit_id(1))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    cleanup.choose_destruction_unit(board, unit_id(0))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    return cleanup.is_done() and board[0].empty() and board[1].models.size() == 1
+
+# p.83: MELTA range is snapshotted when selecting its target, not remeasured
+# after declaration when a model/target changes its position.
+fun test_damage_melta_declaration_snapshot() -> Bool:
+    let board = damage_test_fixture()
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    weapon.weapon = Weapon::meltagun
+    let declaration = declare_weapon_targets(board, weapon, unit_id(0), false)
+    declaration.declare_target(board, unit_id(0), unit_id(1))
+    let bonus = declaration.weapon.melta_bonus[1].value
+    board[1][0].position.x = 30
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration.weapon, board.attack_info)
+    return bonus == weapon.weapon.get_rule_parameter(WeaponRuleKind::melta) and bonus > 0 and info.melta_damage_bonus.value == bonus
+
+# pp.80/87: a successful demise damages nearby live units, then removes the
+# physically retained corpse. This fixture has no embarked passengers (task 16).
+fun test_damage_deadly_demise_retains_model_through_nearby_damage() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].has_deadly_demise = true
+    board[1][0].deadly_demise = raw_stat(1)
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 10, board[1][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    let empty_jobs : DamageJobs
+    let cleanup = resolve_damage_jobs(board, empty_jobs, true, unit_id(0))
+    cleanup.choose_destruction_unit(board, unit_id(1))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    cleanup.roll(board, attack_test_die(6))
+    if board[1].models.size() != 2:
+        return false
+    cleanup.select_mortal_model(board, damage_test_model(0))
+    cleanup.select_mortal_model(board, damage_test_model(1))
+    if board[1].models.size() != 2:
+        return false
+    cleanup.select_mortal_model(board, damage_test_model(0))
+    return cleanup.is_done() and board[0][0].suffered_wounds == 1 and board[1].models.size() == 1 and board[1][0].suffered_wounds == 1 and board[2][0].suffered_wounds == 1
+
+# p.80: random demise amounts are determined separately for every nearby unit,
+# not once reused for the entire explosion. Damage may itself destroy units.
+fun test_damage_deadly_demise_random_amount_per_unit() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].has_deadly_demise = true
+    board[1][0].deadly_demise = dice_stat(3)
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 10, board[1][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    let empty_jobs : DamageJobs
+    let cleanup = resolve_damage_jobs(board, empty_jobs, true, unit_id(0))
+    cleanup.choose_destruction_unit(board, unit_id(1))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    cleanup.roll(board, attack_test_die(6))
+    cleanup.quantity(board, attack_test_die(1))
+    cleanup.quantity(board, attack_test_die(2))
+    cleanup.quantity(board, attack_test_die(3))
+    for i in range(2):
+        cleanup.select_mortal_model(board, damage_test_model(0))
+    for i in range(2):
+        cleanup.select_mortal_model(board, damage_test_model(1))
+    cleanup.select_mortal_model(board, damage_test_model(0))
+    return cleanup.is_done() and board[0].empty() and board[1].empty() and board[2][0].suffered_wounds == 1
+
+# pp.24/80/81: prevention is allowed for devastating mortals, but a failed
+# prevention that destroys the recipient does not spill that critical's excess.
+fun test_damage_devastating_feel_no_pain_and_one_model_limit() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].profile = Profile::beast_snagga_boy
+    board[1][1].profile = Profile::beast_snagga_boy
+    board.attack_info.source = Weapon::smite_focused_witchfire
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    damage.allocate_mortal(board, board[1], board[0], damage_test_model(0))
+    damage.quantity(board, board[1], board[0], attack_test_die(3))
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    return damage.is_done() and board[1].models.size() == 1 and board[1][0].suffered_wounds == 0
+
+# p.80's cap concerns models damaged, not wounds successfully prevented. A
+# prevented first mortal does not force another unwounded model out of eligibility.
+fun test_damage_devastating_prevented_first_wound_allows_new_recipient() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].profile = Profile::beast_snagga_boy
+    board[1][1].profile = Profile::beast_snagga_boy
+    board.attack_info.source = Weapon::smite_focused_witchfire
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    damage.allocate_mortal(board, board[1], board[0], damage_test_model(0))
+    damage.quantity(board, board[1], board[0], attack_test_die(3))
+    damage.roll(board, board[1], board[0], attack_test_die(6))
+    if !(can damage.select_mortal_model(board, board[1], board[0], damage_test_model(1))):
+        return false
+    damage.select_mortal_model(board, board[1], board[0], damage_test_model(1))
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    damage.roll(board, board[1], board[0], attack_test_die(6))
+    return damage.is_done() and board[1][0].suffered_wounds == 0 and board[1][1].suffered_wounds == 1
+
+# pp.24/56/81: a hazard batch allows one targeted CP reroll after originals,
+# with replacement eligibility/cost separated from remaining failed hazards.
+fun test_damage_hazard_command_reroll_owner_cost_and_result() -> Bool:
+    let board = damage_test_fixture()
+    board.command_points[1] = 2
+    let count : HazardousUses
+    count = 2
+    let hazards = resolve_hazards(board, unit_id(1), count)
+    hazards.roll(board, attack_test_die(1))
+    hazards.roll(board, attack_test_die(2))
+    if !board.current_decision_maker:
+        return false
+    hazards.select_reroll(board, attack_test_die(1))
+    if board.command_points[1] != 1:
+        return false
+    hazards.reroll(board, attack_test_die(6))
+    hazards.select_mortal_model(board, damage_test_model(0))
+    return hazards.is_done() and board[1][0].suffered_wounds == 1 and board.command_points[1] == 1
+
+# pp.24/81: three mortals for each failed all-large-unit hazard spill normally.
+fun test_damage_large_unit_hazard_three_mortals_spill() -> Bool:
+    let board = damage_test_fixture()
+    for i in range(2):
+        board[1][i].keywords.append(Keyword::vehicle)
+    let count : HazardousUses
+    count = 1
+    let hazards = resolve_hazards(board, unit_id(1), count)
+    hazards.roll(board, attack_test_die(2))
+    for i in range(3):
+        hazards.select_mortal_model(board, damage_test_model(0))
+    return hazards.is_done() and board[1].models.size() == 1 and board[1][0].suffered_wounds == 1
+
+# p.87: existing feeder-tendrils hook is deferred with the character casualty;
+# its legacy faction effect is retained, not asserted as new-edition faction data.
+fun test_damage_feeder_trigger_waits_until_activation_cleanup() -> Bool:
+    let board = damage_test_fixture()
+    board[0][0].abilities.append(AbilityKind::feeder_tendrils)
+    board[1][0].keywords.append(Keyword::character)
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 10, board[1][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    if board.command_points[0] != 0 or !board[1][0].destruction_pending:
+        return false
+    let empty_jobs : DamageJobs
+    let cleanup = resolve_damage_jobs(board, empty_jobs, true, unit_id(0))
+    cleanup.choose_destruction_unit(board, unit_id(1))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    return cleanup.is_done() and board.command_points[0] == 1 and board[1].destroyed_models.value.size() == 1
 
 # p.87: retained destroyed models contribute no OC and cannot supply active
 # unit abilities; explicit on-destruction properties remain readable to hooks.

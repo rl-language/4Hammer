@@ -672,23 +672,26 @@ enum Weapon:
         WeaponRules rules = weapon_rules()
 
 
+    # Magnitude lookup retains the first declared parameter, distinct from
+    # presence for parameterless abilities (pp.80–85). Own copies exit once.
     fun get_rule_parameter(WeaponRuleKind rule) -> Int:
-        let i = 0
         let rules = self.rules()
-        while i != rules.size():
-            if rules[i].kind == rule: 
-                return rules[i].parameter
-            i = i + 1
-        return 0 
+        let result = 0
+        let found = false
+        for i in range(rules.size()):
+            if !found and rules[i].kind == rule:
+                result = rules[i].parameter
+                found = true
+        return result
 
+    # HAZARDOUS/PRECISION/DEVASTATING WOUNDS depend on presence even at zero
+    # parameter (pp.80/81/84). Finish the owning rule snapshot before returning.
     fun has_rule(WeaponRuleKind rule) -> Bool:
-        let i = 0
         let rules = self.rules()
-        while i != rules.size():
-            if rules[i].kind == rule: 
-                return true 
-            i = i + 1
-        return false
+        let found = false
+        for i in range(rules.size()):
+            found = found or rules[i].kind == rule
+        return found
 
 fun write_in_observation_tensor(Weapon obj, Int observer_id, Vector<Float> output, Int index):
     output[index] = (float(obj.value) - (float(max(obj)) / 2.0)) / float(max(obj))
