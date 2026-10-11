@@ -865,18 +865,20 @@ act spawn_unit(ctx Board board) -> PickUnit:
             unit.try_arrange_at(position)
             board.units.append(unit)
 
-# The sequence to perform a battle shock test, 
-# including using stratagems to avoid it
-# Offer/spend Insane Bravery for the affected unit's owner, not the active
-# opponent (stratagem payer p.54; Battle-shock p.30). New timing is tasks 7/15.
-act battle_shock_test(ctx Board board, ctx Unit unit) -> BattleShockTest:
+# Roll against any Leadership characteristic (p.9). Only a successful roll
+# in the Command Battle-shock step clears shock present at that step's start
+# (p.30). Insane Bravery is restricted to that step and once per battle (p.56).
+act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm Bool recover_shock) -> BattleShockTest:
+    if unit.empty():
+        return
     frm previous_owner = board.current_decision_maker
     board.current_decision_maker = unit.owned_by_player1
     frm auto_pass = false
-    if board.can_target_strat(unit.owned_by_player1, Stratagem::insane_bravery, unit):
+    if command_step and board.timing.phase == BattlePhase::command and unit.owned_by_player1 == board.current_player and !board.has_used_insane_bravery[int(unit.owned_by_player1)] and board.can_target_strat(unit.owned_by_player1, Stratagem::insane_bravery, unit):
         act insane_bravery(Bool do_it)
         if do_it:
             board.commit_stratagem(unit.owned_by_player1, Stratagem::insane_bravery, unit)
+            board.has_used_insane_bravery[int(unit.owned_by_player1)] = true
             auto_pass = true
     if !auto_pass:
         # Leadership/Battle-shock is absent from Command Re-roll's list (p.56).
@@ -884,20 +886,30 @@ act battle_shock_test(ctx Board board, ctx Unit unit) -> BattleShockTest:
         subaction*(board) board.current_pair_roll
         if board.current_pair_roll.result.value + board.current_pair_roll.result2.value < unit.get_leadership():
             unit.battle_socked = true
+        else:
+            if command_step and recover_shock:
+                unit.battle_socked = false
+    else:
+        if command_step and recover_shock:
+            unit.battle_socked = false
     board.current_decision_maker = previous_owner
 
-# the core rules battle shock step
+# Test each live friendly unit once when already shocked or at/below half
+# (p.30). Snapshot shock at the step's start for the printed recovery condition;
+# never clear the opponent's shock or automatically expire a friendly effect.
 act battle_shock_step(ctx Board board) -> BattleShockStep:
+    frm shocked_at_start : Bool[MAX_UNIT_COUNT]
+    for index in range(board.units.size()):
+        shocked_at_start[index] = board[index].battle_socked
     frm i : UnitIterator
     while i != board.units.size():
-        board[i.value].battle_socked = false 
-        if board[i.value].owned_by_player1 != board.current_player:
+        if board[i.value].empty() or board[i.value].owned_by_player1 != board.current_player:
             i = i + 1
             continue
-        if !board[i.value].is_below_half_strenght():
+        if !board[i.value].battle_socked and !board[i.value].is_at_or_below_half_strength():
             i = i + 1
             continue
-        subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value])
+        subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value], true, shocked_at_start[i.value])
         i = i + 1
 
 
@@ -913,7 +925,7 @@ act shadow_in_the_warp(ctx Board board, frm Bool player) -> ShadowInTheWarp:
         frm i : UnitIterator
         while i != board.units.size():
             if !board[i.value].empty() and board[i.value].owned_by_player1 != player:
-                subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value])
+                subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value], false, false)
             i = i + 1
     board.current_decision_maker = previous_owner
 
@@ -940,16 +952,15 @@ act neural_disruption(ctx Board board) -> NeuralDisruption:
                 board[source].distance(board[target]) <= 12.0
             }
                 used[source.get()] = true
-                subaction*(board, board[target]) shock_test = battle_shock_test(board, board[target])
+                subaction*(board, board[target]) shock_test = battle_shock_test(board, board[target], false, false)
 
 # core rule command phase 
-# Store core CP gains without the former cap of three and exclude retired
-# target slots (CP p.30; destroyed units p.19). Shock recovery remains task 7.
+# Gain both players' Core CP before Battle-shock, then resolve Command
+# abilities (p.30). Start/end windows are owned by turn(), not repeated here.
 act command_phase(ctx Board board) -> CommandPhase:
     for i in range(2):
         board.command_points[i] = board.command_points[i] + 1
-    # Battle-shock precedes Command abilities (p.30); recovery/strength details
-    # remain task 7, while this task establishes the correct timing sequence.
+    # Recovery is a roll here rather than automatic shock expiration (p.30).
     subaction*(board) shock_step = battle_shock_step(board)
     subaction*(board) abilities = resolve_timing_window(board, TimingWindow::command_abilities)
     board.current_decision_maker = board.current_player
@@ -1063,7 +1074,7 @@ act fight_phase(ctx Board board) -> FightPhase:
             }
                 board.commit_stratagem(board.current_player, Stratagem::bestial_bellow, board[unit])
 
-                subaction*(board, board[target]) shock_test = battle_shock_test(board, board[target])
+                subaction*(board, board[target]) shock_test = battle_shock_test(board, board[target], false, false)
                 
             act skip()
     subaction*(board) fight_first_step = fight_step(board, true)

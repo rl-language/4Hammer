@@ -332,11 +332,13 @@ fun test_phase_movement_and_setup_history() -> Bool:
     board.start_turn_history()
     return board.turn_serial == 1 and !board[0].history.was_set_up_this_turn and !board[0][0].history.was_set_up_this_turn and board[0][0].history.distance_moved_this_turn.value == 0.0
 
-# p.54: expenditure follows the using unit's owner, including opposing shock tests.
+# pp.54/56: own Command-step Bravery is charged to the active unit's owner.
 fun test_insane_bravery_charges_the_units_owner() -> Bool:
     let board = attack_fixture()
     board.command_points[1] = 1
-    let sequence = battle_shock_test(board, board[1])
+    board.current_player = true
+    board.begin_phase(BattlePhase::command)
+    let sequence = battle_shock_test(board, board[1], true, false)
     if !(can sequence.insane_bravery(board, board[1], true)):
         return false
     sequence.insane_bravery(board, board[1], true)
@@ -1179,3 +1181,166 @@ fun test_half_strength_empty_and_uninitialized_units() -> Bool:
     unit = make_octavius()
     unit.starting_strenght = 0
     return !unit.is_at_or_below_half_strength() and !unit.is_below_half_strenght()
+
+# Rule 08.03, p.30. Opponent's shock is not cleared by our Command phase.
+fun test_08_03_opponent_shock_persists() -> Bool:
+    let board : Board
+    let unit = make_tantus()
+    unit.owned_by_player1 = true
+    unit.battle_socked = true
+    board.units.append(unit)
+    let step = battle_shock_step(board)
+    return board[0].battle_socked
+
+# p.30: a live full-strength unit still rolls if already battle-shocked.
+fun test_command_shocked_full_strength_recovers_on_success() -> Bool:
+    let board : Board
+    board.units.append(make_infernus_squad())
+    board[0].capture_starting_strength()
+    board[0].battle_socked = true
+    board.begin_phase(BattlePhase::command)
+    let step = battle_shock_step(board)
+    let three : Dice
+    three = 3
+    if !(can step.roll_pair(board, three, three)) or !board[0].battle_socked:
+        return false
+    step.roll_pair(board, three, three)
+    return step.is_done() and !board[0].battle_socked
+
+# pp.9/30: failure keeps existing shock and does not spend CP on a reroll.
+fun test_command_failed_recovery_preserves_shock() -> Bool:
+    let board : Board
+    board.units.append(make_tantus())
+    board[0].capture_starting_strength()
+    board[0].battle_socked = true
+    board.command_points[0] = 2
+    board.begin_phase(BattlePhase::command)
+    let step = battle_shock_step(board)
+    let one : Dice
+    one = 1
+    if can step.insane_bravery(board, true):
+        return false
+    step.roll_pair(board, one, one)
+    return step.is_done() and board[0].battle_socked and board.command_points[0] == 2
+
+# p.30: meeting both conditions causes exactly one roll, including exact half.
+fun test_command_exact_half_and_shocked_rolls_once() -> Bool:
+    let board : Board
+    board.units.append(make_octavius())
+    board[0].capture_starting_strength()
+    board[0][0].suffered_wounds = 3
+    board[0].battle_socked = true
+    let step = battle_shock_step(board)
+    let three : Dice
+    three = 3
+    step.roll_pair(board, three, three)
+    return step.is_done() and !board[0].battle_socked
+
+# pp.30/86: multi-model exact half rolls; an odd count above half does not.
+fun test_command_model_count_eligibility() -> Bool:
+    let board : Board
+    let unit = make_infernus_squad()
+    unit.capture_starting_strength()
+    unit.models.resize(3)
+    board.units.append(unit)
+    let no_roll = battle_shock_step(board)
+    if !no_roll.is_done():
+        return false
+    board[0].starting_strenght = 6
+    let half_roll = battle_shock_step(board)
+    let one : Dice
+    one = 1
+    if !(can half_roll.roll_pair(board, one, one)):
+        return false
+    half_roll.roll_pair(board, one, one)
+    return half_roll.is_done() and board[0].battle_socked
+
+# pp.19/30: no roll/indexing for retired units or healthy units above half.
+fun test_command_empty_and_healthy_units_are_skipped() -> Bool:
+    let board : Board
+    board.units.append(make_octavius())
+    board[0].capture_starting_strength()
+    board.units.append(make_tantus())
+    board[1].damage(0, 100)
+    board[1].battle_socked = true
+    let step = battle_shock_step(board)
+    return step.is_done() and !board[0].battle_socked and board[1].battle_socked
+
+# pp.9/30: a successful roll outside the recovery step does not clear shock.
+fun test_shock_success_outside_command_does_not_recover() -> Bool:
+    let board = timing_fixture()
+    board[1].battle_socked = true
+    let step = battle_shock_test(board, board[1], false, false)
+    let three : Dice
+    three = 3
+    if !board.current_decision_maker:
+        return false
+    step.roll_pair(board, board[1], three, three)
+    return step.is_done() and board[1].battle_socked and !board.current_decision_maker
+
+# p.9: 2D6 reaches the easier Ld6 exactly, although another model has Ld7.
+fun test_shock_roll_uses_lowest_mixed_leadership() -> Bool:
+    let board : Board
+    board.units.append(make_infernus_squad())
+    board[0][1].profile = Profile::beast_snagga_boy
+    let step = battle_shock_test(board, board[0], false, false)
+    let three : Dice
+    three = 3
+    step.roll_pair(board, board[0], three, three)
+    if !step.is_done() or board[0].battle_socked:
+        return false
+    step = battle_shock_test(board, board[0], false, false)
+    let two : Dice
+    two = 2
+    step.roll_pair(board, board[0], three, two)
+    return step.is_done() and board[0].battle_socked
+
+# p.56: Insane Bravery cannot be offered for an out-of-step faction shock roll.
+fun test_bravery_only_in_own_command_shock_step() -> Bool:
+    let board = timing_fixture()
+    board.begin_phase(BattlePhase::command)
+    let outside = battle_shock_test(board, board[0], false, false)
+    let opposing = battle_shock_test(board, board[1], true, false)
+    board.timing.phase = BattlePhase::movement
+    let wrong_phase = battle_shock_test(board, board[0], true, false)
+    return !(can outside.insane_bravery(board, board[0], true)) and !(can opposing.insane_bravery(board, board[1], true)) and !(can wrong_phase.insane_bravery(board, board[0], true))
+
+# pp.54/56: declining Bravery preserves CP, once-per-battle flag and target use.
+fun test_bravery_decline_preserves_battle_and_phase_limits() -> Bool:
+    let board = timing_fixture()
+    board.begin_phase(BattlePhase::command)
+    let step = battle_shock_test(board, board[0], true, false)
+    step.insane_bravery(board, board[0], false)
+    let three : Dice
+    three = 3
+    step.roll_pair(board, board[0], three, three)
+    return step.is_done() and board.command_points[0] == 3 and !board.has_used_insane_bravery[0] and !board[0].history.stratagem_targeted_by_player[0]
+
+# p.56: accepting Bravery is successful without dice; later phases cannot reuse.
+fun test_bravery_once_per_battle_survives_phase_and_turn_reset() -> Bool:
+    let board = timing_fixture()
+    board.begin_phase(BattlePhase::command)
+    let step = battle_shock_test(board, board[0], true, false)
+    step.insane_bravery(board, board[0], true)
+    if !step.is_done() or board[0].battle_socked or board.command_points[0] != 2:
+        return false
+    board.begin_phase(BattlePhase::movement)
+    board.start_turn_history()
+    board.begin_phase(BattlePhase::command)
+    let again = battle_shock_test(board, board[0], true, false)
+    let three : Dice
+    three = 3
+    return board.has_used_insane_bravery[0] and !(can again.insane_bravery(board, board[0], true)) and (can again.roll_pair(board, board[0], three, three))
+
+# p.30: CP is granted before shock; Command abilities wait until shock resolves.
+fun test_command_cp_then_shock_then_abilities() -> Bool:
+    let board = timing_fixture()
+    board[0].battle_socked = true
+    board.players_faction[0] = Faction::strike_force_octavius
+    let command = command_phase(board)
+    let three : Dice
+    three = 3
+    if board.command_points[0] != 4 or board.command_points[1] != 4 or (can command.choose_timing_rule(board, TimingRule::oath_of_moment)):
+        return false
+    command.roll_pair(board, three, three)
+    return !board[0].battle_socked and (can command.choose_timing_rule(board, TimingRule::oath_of_moment)) and board.current_decision_maker == board.current_player

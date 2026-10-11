@@ -28,10 +28,5 @@
     "source": "01.07, p.9",
     "task": 7,
     "category": "missing shock effect"
-  },
-  "test_08_03_opponent_shock_persists": {
-    "source": "08.03, p.30",
-    "task": 7,
-    "category": "shock lifecycle requires migration"
   }
 }

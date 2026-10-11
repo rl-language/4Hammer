@@ -100,6 +100,8 @@ cls Board:
     TerrainGeometryVector terrain_geometry
 
     UnitID oath_of_moment_target
+    # Insane Bravery is once per battle, not reset by phase/turn cleanup (p.56).
+    Bool[2] has_used_insane_bravery
     Bool[2] has_used_shadow_in_the_warp
 
     AttackSequenceInfo attack_info

@@ -70,12 +70,3 @@ fun test_01_07_shock_removes_objective_control() -> Bool:
 # Rule 08.02, p.30. Core CP gain must not disappear at the arbitrary storage cap.
 # Does not assert a general additional-CP-generation policy (external gate D12).
 # Rule 09.06, p.33. D6=5 must provide the complete five-inch increment.
-# Rule 08.03, p.30. Opponent's shock is not cleared by our Command phase.
-fun test_08_03_opponent_shock_persists() -> Bool:
-    let board : Board
-    let unit = make_tantus()
-    unit.owned_by_player1 = true
-    unit.battle_socked = true
-    board.units.append(unit)
-    let step = battle_shock_step(board)
-    return board[0].battle_socked
