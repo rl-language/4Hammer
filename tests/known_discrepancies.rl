@@ -85,19 +85,3 @@ fun test_08_03_opponent_shock_persists() -> Bool:
     board.units.append(unit)
     let step = battle_shock_step(board)
     return board[0].battle_socked
-# Task 3 prerequisite: safe CP expenditure; p.54.
-fun test_15_01_actual_stratagem_cost() -> Bool:
-    let board : Board
-    board.command_points[0] = 1
-    return board.can_use_strat(false, Stratagem::reroll)
-
-
-
-
-
-# Task 3 prerequisite: safe CP expenditure; p.54.
-fun test_15_01_own_player_usage() -> Bool:
-    let board : Board
-    board.command_points[0] = 3
-    board.mark_strat_used(Stratagem::reroll, 0)
-    return !board.can_use_strat(false, Stratagem::reroll)

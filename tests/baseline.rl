@@ -262,6 +262,42 @@ fun test_empty_unit_is_not_a_shooting_target() -> Bool:
     let source = unit_id(0)
     let target = unit_id(1)
     return !(can phase.select_target(board, source, target)) and (can phase.end_shooting_phase(board))
+
+# Task 3 prerequisite: safe CP expenditure; p.54.
+fun test_15_01_actual_stratagem_cost() -> Bool:
+    let board : Board
+    board.command_points[0] = 1
+    return board.can_use_strat(false, Stratagem::reroll)
+
+
+# Task 3 prerequisite: safe CP expenditure; p.54.
+fun test_15_01_own_player_usage() -> Bool:
+    let board : Board
+    board.command_points[0] = 3
+    board.mark_strat_used(Stratagem::reroll, 0)
+    return !board.can_use_strat(false, Stratagem::reroll)
+
+
+# Existing Overwatch expenditure defects exposed by checked CP (p.55).
+# Its new-edition timing/eligibility remains task 15.
+fun test_overwatch_with_no_cp_cannot_spend() -> Bool:
+    let board = attack_fixture()
+    board[1].can_shoot = true
+    let moved = unit_id(0)
+    let sequence = overwatch(board, moved)
+    return sequence.is_done() and board.command_points[1] == 0 and !board.has_used_strat(Stratagem::overwatch, 1)
+
+fun test_declining_overwatch_preserves_cp_and_usage() -> Bool:
+    let board = attack_fixture()
+    board.command_points[1] = 1
+    board[1].can_shoot = true
+    let moved = unit_id(0)
+    let sequence = overwatch(board, moved)
+    if !(can sequence.skip(board)):
+        return false
+    sequence.skip(board)
+    return sequence.is_done() and board.command_points[1] == 1 and !board.has_used_strat(Stratagem::overwatch, 1)
+
 fun test_oversized_collection_decode_is_rejected() -> Bool:
     let unchecked : BoundedVector<Int, 2>
     unchecked._data.append(1)
@@ -286,6 +322,49 @@ fun test_phase_movement_and_setup_history() -> Bool:
         return false
     board.start_turn_history()
     return board.turn_serial == 1 and !board[0].history.was_set_up_this_turn and !board[0][0].history.was_set_up_this_turn and board[0][0].history.distance_moved_this_turn.value == 0.0
+
+# p.54: expenditure follows the using unit's owner, including opposing shock tests.
+fun test_insane_bravery_charges_the_units_owner() -> Bool:
+    let board = attack_fixture()
+    board.command_points[1] = 1
+    let sequence = battle_shock_test(board, board[1])
+    if !(can sequence.insane_bravery(board, board[1], true)):
+        return false
+    sequence.insane_bravery(board, board[1], true)
+    return sequence.is_done() and board.command_points[0] == 0 and board.command_points[1] == 0 and board.has_used_strat(Stratagem::insane_bravery, 1) and !board.has_used_strat(Stratagem::insane_bravery, 0)
+
+# Existing faction data: spending must match the cost/player actually gated.
+# New-edition faction replacement remains dependent on task 17 supplied data.
+fun test_bestial_bellow_rejects_missing_target_and_charges_correct_player() -> Bool:
+    let board : Board
+    board.units.append(make_beastboss_morgrim())
+    board.units.append(make_infernus_squad())
+    board[1].owned_by_player1 = true
+    board.players_faction[0] = Faction::morgrim_butchas
+    board.command_points[0] = 1
+    let sequence = fight_phase(board)
+    let source = unit_id(0)
+    let target = unit_id(1)
+    let missing = unit_id(MAX_UNIT_COUNT - 1)
+    if can sequence.use_bestial_bellow(board, source, missing):
+        return false
+    if !(can sequence.use_bestial_bellow(board, source, target)):
+        return false
+    sequence.use_bestial_bellow(board, source, target)
+    return board.command_points[0] == 0 and board.command_points[1] == 0 and board.has_used_strat(Stratagem::bestial_bellow, 0) and !board.has_used_strat(Stratagem::heroic_intervention, 1)
+
+fun test_accepting_overwatch_charges_only_opponent() -> Bool:
+    let board = attack_fixture()
+    board.command_points[1] = 1
+    board[1].can_shoot = true
+    let moved = unit_id(0)
+    let source = unit_id(1)
+    let sequence = overwatch(board, moved)
+    if !(can sequence.overwatch(board, source)):
+        return false
+    sequence.overwatch(board, source)
+    return board.command_points[0] == 0 and board.command_points[1] == 0 and board.has_used_strat(Stratagem::overwatch, 1) and !board.has_used_strat(Stratagem::overwatch, 0)
+
 # Bounds are reflected directly in standard enumeration/ML layout.
 fun test_bounded_cp_layout_and_domain() -> Bool:
     let value : CommandPoints

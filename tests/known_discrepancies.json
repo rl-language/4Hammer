@@ -38,15 +38,5 @@
     "source": "08.03, p.30",
     "task": 7,
     "category": "shock lifecycle requires migration"
-  },
-  "test_15_01_actual_stratagem_cost": {
-    "source": "15.01, p.54",
-    "task": 5,
-    "category": "wrong selected stratagem cost"
-  },
-  "test_15_01_own_player_usage": {
-    "source": "15.01, p.54",
-    "task": 5,
-    "category": "wrong player usage record"
   }
 }

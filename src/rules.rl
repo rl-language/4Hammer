@@ -590,13 +590,14 @@ act spawn_unit(ctx Board board) -> PickUnit:
 
 # The sequence to perform a battle shock test, 
 # including using stratagems to avoid it
+# Offer/spend Insane Bravery for the affected unit's owner, not the active
+# opponent (stratagem payer p.54; Battle-shock p.30). New timing is tasks 7/15.
 act battle_shock_test(ctx Board board, ctx Unit unit) -> BattleShockTest:
-    if board.can_use_strat(!board.current_player, Stratagem::insane_bravery):
+    if board.can_use_strat(unit.owned_by_player1, Stratagem::insane_bravery):
         act insane_bravery(Bool do_it)
         if do_it:
-            board.command_points[int(board.current_player)] = board.command_points[int(board.current_player)] - 1
-                
-            board.mark_strat_used(Stratagem::insane_bravery, int(board.current_player))
+            board.pay_strat(unit.owned_by_player1, Stratagem::insane_bravery)
+            board.mark_strat_used(Stratagem::insane_bravery, int(unit.owned_by_player1))
                 return
 
     board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, true, board.current_player)
@@ -719,22 +720,25 @@ act command_phase(ctx Board board) -> CommandPhase:
 
     
 # core rules overwatch sequence
+# Only spend/record Overwatch when an affordable opponent accepts it
+# (cost/player p.54; Overwatch p.55). New timing/targets remain task 15.
 act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
-    if board.can_use_strat(!board.current_player, Stratagem::overwatch):
+    if board[moved_unit].empty() or !board.can_use_strat(!board[moved_unit].owned_by_player1, Stratagem::overwatch):
         return
-    board.mark_strat_used(Stratagem::overwatch, int(!board.current_player))
     board.current_decision_maker = !board[moved_unit.get()].owned_by_player1
     board.current_state = CurrentStateDescription::overwatch
     actions:
         act skip()
         act overwatch(frm UnitID source) {
             source.get() < board.units.size(),
+            !board[source].empty(),
             !board[moved_unit].is_lone_operative() or board[source].distance(board[source]) < 12.0,
             24.0 > board[source.get()].distance(board[moved_unit.get()]),
-            board[source.get()].owned_by_player1 == !board.current_player,
+            board[source.get()].owned_by_player1 == !board[moved_unit].owned_by_player1,
             board[source].can_shoot
         }
-            board.command_points[int(!board.current_player)] = board.command_points[int(!board.current_player)] - 1
+            board.pay_strat(!board[moved_unit].owned_by_player1, Stratagem::overwatch)
+            board.mark_strat_used(Stratagem::overwatch, int(!board[moved_unit].owned_by_player1))
             board.attack = attack(board, source, moved_unit, false, true)
             subaction*(board) board.attack
     board.current_state = CurrentStateDescription::none
@@ -797,17 +801,22 @@ act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
                     board.current_decision_maker = !board.current_decision_maker
 
 # core rules fight phase
+# Correct existing Bestial Bellow target bounds and its actual payer/cost
+# (generic stratagem expenditure p.54). Its faction effect requires faction data.
 act fight_phase(ctx Board board) -> FightPhase:
     if board.players_faction[int(board.current_player)] == Faction::morgrim_butchas:
         actions:
             act use_bestial_bellow(frm UnitID unit, frm UnitID target) {
+                target.get() < board.units.size(),
+                !board[target].empty(),
                 unit.get() < board.units.size(),
+                !board[unit].empty(),
                 board[unit].has_keyword(Keyword::beastboss) or board[unit].has_keyword(Keyword::squighog_boyz),
                 board.can_use_strat(board.current_player, Stratagem::bestial_bellow),
                 board[target].distance(board[unit]) < 3.0
             }
-                board.pay_strat(!board.current_player, Stratagem::heroic_intervention)
-                board.mark_strat_used(Stratagem::heroic_intervention, int(!board.current_player))
+                board.pay_strat(board.current_player, Stratagem::bestial_bellow)
+                board.mark_strat_used(Stratagem::bestial_bellow, int(board.current_player))
 
                 subaction*(board, board[target]) shock_test = battle_shock_test(board, board[target])
                 

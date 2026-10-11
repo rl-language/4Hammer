@@ -213,15 +213,23 @@ cls Board:
                 return true
         return false
 
+    # Check the requested cost and using player, not a different stratagem or
+    # opponent record (stratagem use p.54). Per-unit/windows remain tasks 5/15.
     fun can_use_strat(Bool player, Stratagem strat) -> Bool:
-        return self.command_points[int(player)] >= Stratagem::heroic_intervention.cost() and !self.has_used_strat(strat, int(!player))
+        return self.command_points[int(player)] >= strat.cost() and !self.has_used_strat(strat, int(player))
 
+    # Charge the player whose eligibility was checked, at the selected cost
+    # (CP expenditure for stratagems p.54; reference 15.01).
     fun pay_strat(Bool player, Stratagem strat):
         self.command_points[int(player)] = self.command_points[int(player)] - strat.cost()
 
+    # Keep one usage entry per player/phase without duplicates filling storage
+    # (stratagem-use restrictions p.54; complete targeting limits are task 15).
     fun mark_strat_used(Stratagem strat, Int player):
-        self.phase_info.already_used_stratagems[player].append(strat)
+        if !self.has_used_strat(strat, player):
+            self.phase_info.already_used_stratagems[player].append(strat)
 
+    # Read the using player's phase record for repeated-use eligibility (p.54).
     fun has_used_strat(Stratagem strat, Int player) -> Bool:
         ref strats = self.phase_info.already_used_stratagems[player]
         let i = 0
