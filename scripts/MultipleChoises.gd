@@ -22,7 +22,13 @@ func on_state_change():
 	for action in GlobalRules.valid_actions:
 		var unwrapped = action.unwrap()
 		if unwrapped.members_count() == 0:
-			make_choise(unwrapped.get_class().substr(7), action)
+			if unwrapped is RLCGameDoneDeploying:
+				# This finishes the current decision owner's deployment, not
+				# the army that placed the preceding model.
+				var army = GlobalRules.library.get_current_player(GlobalRules.state) + 1
+				make_choise("Done deploying army " + str(army), action)
+			else:
+				make_choise(unwrapped.get_class().substr(7), action)
 			added += 1
 		if unwrapped.members_count() == 1 and GlobalRules.library.is_enum(unwrapped.get_member(0)):
 			make_choise(GlobalRules.library.as_string_literal(unwrapped.get_member(0)), action)
@@ -37,7 +43,8 @@ func on_state_change():
 			var reserves = GlobalRules.state.get_board().get_reserve_units()
 			var unit = GlobalRules.library.get(reserves, reserve_id)
 			var unit_name = RLCLib.convert_string(unit.get_name().get_value())
-			make_choise("Deploy " + unit_name, action)
+			var army = 2 if unit.get_owned_by_player1() else 1
+			make_choise("Deploy army " + str(army) + ": " + unit_name, action)
 			added += 1
 		if unwrapped is RLCGameSelectWeapon:
 			make_choise(GlobalRules.action_to_pretty_string(action), action)
