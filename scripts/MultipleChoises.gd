@@ -40,7 +40,7 @@ func on_state_change():
 			added += 1
 		if unwrapped.members_count() == 1 and unwrapped.get_member(0) is bool:
 			var label = GlobalRules.as_str(unwrapped.get_member(0))
-			if unwrapped is RLCGameTakeToSkies:
+			if unwrapped is RLCGameTakeToSkies or unwrapped is RLCGameChargeTakeToSkies:
 				label = "Take to the skies" if unwrapped.get_member(0) else "Stay grounded"
 			if unwrapped is RLCGameWalkerMobile:
 				label = "Gain Mobile for this move" if unwrapped.get_member(0) else "Keep current keywords"
@@ -97,7 +97,7 @@ func on_state_change():
 			var kind = "Character " if group.get_character() else "Non-character "
 			make_choise(prefix + str(group_id + 1) + ": " + kind + characteristics, action)
 			added += 1
-		if unwrapped is RLCGameRotateModel and unwrapped.get_member(0).get_value() % 90 == 0:
+		if (unwrapped is RLCGameRotateModel or unwrapped is RLCGameRotateChargeModel) and unwrapped.get_member(0).get_value() % 90 == 0:
 			make_choise("Rotate " + str(unwrapped.get_member(0).get_value()) + " degrees", action)
 			added += 1
 		if unwrapped is RLCGameSelectReroll:

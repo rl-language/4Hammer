@@ -52,7 +52,7 @@ func mark_possible_target(node):
 		# attack target (e.g. self hazards); its explicit context identifies it.
 		if current_select_model_action is RLCGameAllocateWound or current_select_model_action is RLCGameAllocateMortal or current_select_model_action is RLCGameSelectMortalModel or current_select_model_action is RLCGameResolveDestructionModel:
 			target_id = GlobalRules.state.get_board().get_attack_info().get_target_unit_id().get_id().get_value()
-		if current_select_model_action is RLCGameSelectMovingModel:
+		if current_select_model_action is RLCGameSelectMovingModel or current_select_model_action is RLCGameSelectChargingModel:
 			target_id = GlobalRules.state.get_board().get_moving_unit().get_id().get_value()
 		if node.unit_id != target_id:
 			return
