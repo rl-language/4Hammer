@@ -509,3 +509,7 @@ Read [the transport/Aircraft report](transports-aircraft.md) for 18.01–18.05 (
 ## Task17.C1 predicate overlay
 
 [The keyword predicate report](orks-keyword-predicates.md) implements appendix02.05.01 ALL/ANY/NONE conditions with explicit unit/model scope, weapon presence/magnitude, ANTI and Hunter target consumers, saved metadata validation and editor labels. This resolves O02's compound-target predicate defect, while effective characteristics and other consumers remain17.C2–C4. The user-authorized obsolete Tough as Squig Hide and Bestial Bellow actions are removed. No legacy factory or current datasheet is certified; ROADMAP.md retains the pending source-driven consumers and final validation evidence.
+
+## Task17.C2a model characteristic overlay
+
+[The model characteristic report](model-characteristics.md) integrates supplied modifier arithmetic with model M/T/Sv/InSv/Ld/OC consumers, movement pp.12/33, attack configuration p.18, save groups p.19, Leadership/Battle-shock p.9 and objective control p.52. Appendix05.02.01's highest battlefield T now has a correct running maximum; retained Fight on Death models remain constituents until removal. Attached bodyguard-only selection remains17.G. O02 is partially resolved: weapon arithmetic, named selectors, Damaged, incoming reductions/ignoring modifiers and live source-effect consumers retain their pending owners. No current datasheet is certified.

@@ -232,3 +232,15 @@ python tools/check_godot_state.py --build-path /workspace/4hammer-validation/tas
 ```
 
 Omitting `--script` runs the full existing interaction harness; use an explicit extended timeout. Replays must match the removed old action payloads and schema14. See [the predicate report](../doc/orks-keyword-predicates.md) and ROADMAP.md for final fuzzer evidence, layout measurements and pending17.C2–C4 mechanics. Predicate completion does not certify any Orks datasheet.
+
+## Model characteristics (batch17.C2a)
+
+Schemas are state/observation **19**, action **14**. The final suite passes **477 supported assertions /479 CTest entries**, with an empty discrepancy manifest. Compilation fixtures allow600 seconds; individual assertions keep30 seconds. Prepared tests are `/workspace/4hammer-validation/task17c2-model-tests`; the final native sanitizer driver is `task17c2-model-sanitized/driver-final`, with12 cases and leak detection.
+
+Matching final native/header/C++ bindings are in `task17c2-model-final-godot`. Run the affected model/query/allocation bridge checks with:
+
+```sh
+python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17c2-model-final-godot --script tests/godot_model_characteristics.gd --timeout 120
+```
+
+The existing focused keyword script also passes with this build. The full interaction harness was not rerun for this batch. Use `task17c2-model-final-fuzzer` for preserved inputs and current-schema game replay; the mutation campaign passes51 runs in64 seconds. See [the report](../doc/model-characteristics.md) and ROADMAP.md for provenance and remaining weapon/named selector scope.
