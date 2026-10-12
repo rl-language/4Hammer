@@ -455,3 +455,19 @@ Read [the saves/damage/destruction report](saves-damage-destruction.md) and ROAD
 | 15.03 / 15.05–15.06 | Core Precision and mortal engine available, but Epic Challenge, Explosives and Crushing Impact effects/timing remain task 15. |
 
 Printed destruction/allocation foundations now have tests; D06/D07 are not blanket closures of attached/faction/transport dependencies. Generic modifier helpers require integration in later consumers. Legacy faction destruction hooks are preserved without inventing new-edition faction authority. The complete migration must still close every confirmed downstream defect assigned in ROADMAP.md.
+
+## Task 11 movement/deployment overlay
+
+Read [movement/deployment](movement-deployment.md) for implementation and configured limits. This overlay supersedes the original inventory only for the supported mechanics below.
+
+| Source rows | Current result / remaining owner |
+| --- | --- |
+| 09.01–09.07; pp.32–33 | Explicit movement selection, stationary, Normal/Advance, per-model budgets and resumable paths, Ordered Retreat and Desperate Escape through shared damage/destruction engine. |
+| 20.01–20.04; pp.68–69 | Explicit points-gated reserve selection, every-base ingress constraints, round restrictions, locks, repositioning and never-arrived expiry. Aircraft/passengers remain task 16. |
+| 21.01–21.03; pp.70–71 | Explicitly granted surge, eligible closest targets, finite-grid reachable endpoints and per-model approach checks with other chosen positions fixed. Faction triggers/data remain task 17. |
+| 24.09 / 24.17 / 24.20; pp.80–82 | All-model Deep Strike and Infiltrators setup checks, individual FLY traversal and non-Hover budget adjustment. Full charge/fight flight belongs to tasks 13/14. |
+| 24.31–24.32; pp.84 | Pre-battle Scouts movement/setup; user requires uniform duplicate values, asserted for dynamic data. Transport alternatives remain task 16. |
+| 24.35; p.85 | Super-heavy Walker traversal, optional temporary Mobile and end-move shock. Terrain-feature categories/heights remain deferred. |
+| U19 / U20; p.87 | Pending corpses excluded from live engagement/coherency; each model uses its own M. |
+
+Every-base deployment checks replace anchor-only checks. Whole-grid presets do not enumerate every possible formation; user-directed destruction archives units with no supported placement, rather than restarting deployment. Missing mission/points/datasheet geometry, attachments, revival anchors and terrain-feature definitions remain explicit dependencies, not closed source gates.

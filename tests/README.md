@@ -21,7 +21,7 @@ For another virtual environment, activate it first; if CMake cached a different 
 
 `ctest -N --test-dir build-tests` lists the tests. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` runs a selected case. Labels `baseline`, `discrepancies` and `expected-failure` allow filtering with `-L`. CTest automatically includes the matching compilation fixture even for a single selected test. Each suite compiles once per invocation with precondition/bounds checks; each assertion runs in its own process. A failed compilation blocks its cases rather than using an old library.
 
-The current discovery lists **107 entries**: 97 supported assertions, 8 recorded discrepancies and 2 compilation fixtures. Recorded false discrepancy assertions return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes; use `ctest -V` to see their source citations. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
+The current discovery lists **245 entries**: 243 supported assertions and 2 compilation fixtures. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
 
 CTest is also available in a normal game configuration (`BUILD_GAME=ON`, the default), and Make/Ninja support `cmake --build build-tests --target test`. CMake itself has no `--test` command. Reconfigure after changing test declarations or the manifest; CMake also tracks these files for regeneration during a build. Generated libraries stay in the chosen build directory. The original Python runner below remains available.
 
@@ -43,7 +43,7 @@ python tools/check_gameplay_baseline.py examples/single_shooting_maximize.rl \
 python tools/check_gym_baseline.py
 ```
 
-The gym check exercises JIT/wrappers, legal masks and finite observations for 20 steps. The existing `rlc-random` commands in AGENTS.md remain useful smoke checks, but that CLI has no seed option and applies its action budget across iterations. Use the seeded runner for reproducible completion evidence. Completion alone does not validate combat: the baseline currently reproduces zero evaluation of fixed characteristics, which can let shooting finish without attacks.
+The gym check exercises JIT/wrappers, legal masks and finite observations for 20 steps. The existing `rlc-random` commands in AGENTS.md remain useful smoke checks, but that CLI has no seed option and applies its action budget across iterations. Use the seeded runner for reproducible completion evidence. Completion alone does not validate combat semantics. Task 9 fixed fixed-characteristic evaluation; later tasks must still certify complete shooting and fighting workflows.
 
 ## Sanitized fuzzer
 
