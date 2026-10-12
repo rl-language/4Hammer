@@ -256,3 +256,9 @@ python tools/check_godot_state.py --build-path /workspace/4hammer-validation/tas
 ```
 
 The prior model script also passes against this build. Full rendered/interaction journeys were not rerun. Use `task17c2b1-verified-fuzzer` for preserved inputs/schema20 game and final mutation checks. See [the report](../doc/weapon-characteristics.md) and ROADMAP.md for measured layout, provenance and pending A/D/named-selector scope.
+
+## Attacks and Damage (batch17.C2b2)
+
+Schemas are state/observation21, action14. Final CTest passes509 assertions /511 registered entries with an empty discrepancy manifest. Configure after the complete test list is frozen; do not add declarations while the compilation fixture is running. Prepared tests are `/workspace/4hammer-validation/task17c2b2-tests`, and the12-case native sanitizer driver is `task17c2b2-sanitized/driver-final`, with leak detection enabled.
+
+Matching native/header/C++ artifacts are in `task17c2b2-godot`. Run the weapon and model scripts as above with this path; both pass. The weapon script also checks actual A/D modifier APIs. Full rendered/interaction journeys were not rerun. Use `task17c2b2-fuzzer` for preserved-input, game-replay and mutation checks. See [the A/D report](../doc/weapon-attacks-damage.md) and ROADMAP.md for exact provenance and remaining named/source-dependent modifiers and datasheets.

@@ -517,3 +517,7 @@ Read [the transport/Aircraft report](transports-aircraft.md) for 18.01–18.05 (
 ## Task17.C2b1 fixed weapon overlay
 
 [The fixed weapon report](weapon-characteristics.md) integrates effective Range/WS/BS/S/AP into actual targeting/half-range, hit/wound/save and grouping consumers (pp.16–19/50/79/83; supplied modifier appendix). It refreshes group source/target identities and battlefield T (05.02.01/02.05.01), and distinguishes borrowed Firing Deck profiles (p.81). O02 remains partial: A/D arithmetic/random timing/grouping, named selectors, Damaged, incoming reductions and live source effects retain pending owners. No current datasheet is certified; ROADMAP.md contains final evidence.
+
+## Task17.C2b2 Attacks/Damage overlay
+
+[The A/D report](weapon-attacks-damage.md) integrates scoped A into fixed melee declaration/shares and per-weapon ranged gathering, and scoped D into post-allocation normal/Devastating damage. Original random dice/re-rolls precede arithmetic; grouping compares effective fixed D or every same-domain random face. Zero-A declarations do not stall. O02 remains partial: named selectors, Damaged, incoming reductions, live sources and actual datasource grants remain pending. ROADMAP.md contains509 assertions /511 entries and final sanitizer/binding/game/replay/fuzzer evidence. No current datasheet is certified.

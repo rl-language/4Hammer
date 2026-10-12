@@ -411,9 +411,9 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
 - [x] **17.C1:** ALL/ANY/NONE keyword predicates, explicit unit/model scope, actual weapon/Hunter target consumers, saved metadata validation and editor labels. Retire obsolete Orks runtime cards under the user's new instruction.
 - [ ] **17.C2 (in progress):** Effective characteristic consumers and named weapon/unit selectors, preserving source scope, random-characteristic timing, arithmetic order and special values.
   - [x] **17.C2a:** Sparse bearer-scoped M/T/Sv/InSv/Ld/OC arithmetic, actual movement/attack/save/Leadership/objective consumers and mixed-Toughness maximum fix.
-  - [ ] **17.C2b (in progress):** Weapon characteristic consumers.
+  - [x] **17.C2b:** Weapon characteristic consumers.
     - [x] **17.C2b1:** Effective fixed Range/WS/BS/S/AP, slot/bearer scope, ordered core increments, group identity/T refresh and actual targeting/hit/wound/save consumers.
-    - [ ] **17.C2b2:** Effective A/D, fixed melee shares, random-characteristic timing/re-rolls and complete damage grouping. Preserve the user-required assertion for nonexistent random-A melee weapons.
+    - [x] **17.C2b2:** Effective A/D, fixed melee shares, random-characteristic timing/re-rolls and complete damage grouping. Preserve the user-required assertion for nonexistent random-A melee weapons.
   - [ ] **17.C2c:** Named physical-weapon/profile and datasheet selectors, with actual source consumers; live aura/conditional grants retain their later batch owners.
 - [ ] **17.C3:** Damaged remaining-wounds metadata and the hit-roll consumer, applied before the cumulative +/-1 cap.
 - [ ] **17.C4:** Incoming AP/damage reductions and selective modifier ignoring, with actual save/damage consumers and grouping boundaries.
@@ -477,3 +477,15 @@ The final suite passes in246.70s (`task17c2b1-ctest-complete.log`), with an empt
 The fixed-characteristic build completes seed40000 in878 actions, terminal owner-4 (`task17c2b1-gameplay.log`); after the body-only explicit-ID correction, the final sanitized fuzzer replays that matching input. The20-step ML check reports22,379 candidates /17,050,509 finite observations, without tensor warnings (`task17c2b1-gym.log`). Layout is unchanged by the ID correction. Sparse scope/operation snapshots add about0.7% over17.C2a; coordinate/action domains remain unchanged. State/observation schemas20, action14 and next-state21. Read [the report](doc/weapon-characteristics.md) for exact source semantics and validation limits. The separate context/T commit's source snapshot type-checks before the scoped modifier commit.
 
 **Next:17.C2b2**, A/D arithmetic, fixed melee shares, random timing/re-rolls and complete damage grouping; keep the user's nonexistent-random-melee-A assertion. Named selectors remain17.C2c, followed by17.C3/C4. Source-instance/aura/expiry, attached bodyguard-only T and datasheets retain17.E/17.G/17.H owners. No current datasheet is certified and17.C2b/17.C2 remain in progress.
+
+## Batch17.C2b2 validation
+
+[The A/D report](doc/weapon-attacks-damage.md) documents bearer/profile A before fixed melee shares, independent ranged A gathering, post-allocation per-attack D, original dice/re-rolls before arithmetic, ordered core increments, zero-A selector avoidance and effective fixed/random D grouping. The user-required random-melee-A assertion remains. This is engine infrastructure; current Orks grants and profiles are still pending.
+
+Final frozen CTest passes **509 assertions /511 entries**, empty discrepancies, **292.22s** (`/workspace/4hammer-validation/task17c2b2-ctest-final.log`). All **12** final focused native cases pass ASAN/UBSAN and leak detection (`task17c2b2-sanitized-final.log`). Matching generated/native/C++ bindings in `task17c2b2-godot` pass focused weapon and model scripts; full rendered/interaction journeys were not rerun. The earlier CTest attempt rejected a changing declaration list and is superseded, not passing evidence.
+
+The final fuzzer passes both preserved lifetime inputs and fixed zero input (`task17c2b2-replay-preserved.log`). Fresh short-seed mutation fuzzing completes **24 runs /69s**, coverage8,139 /features11,381, without failures/artifacts (`task17c2b2-fuzz.log`). Gym passes20 steps, **22,379 candidates /17,051,447 finite observations** (`task17c2b2-gym.log`), only938 more observations than the prior batch. State/observation21, action14, next-state22; quad/action domains and production Rules.gd/TraceManager.gd remain unchanged.
+
+Current-schema seed40000 completes **878 actions**, terminal owner-4 (`task17c2b2-gameplay.log`, `task17c2b2-replays/full_game-seed-40000.{json,trace,bin}`). The final sanitized replay passes in **32.115s** (`task17c2b2-replay-game.log`). These scaffold-roster integration checks do not certify current Orks data.
+
+**17.C2b2 and17.C2b are complete. Next:17.C2c**, named physical-weapon/profile and datasheet selectors, followed by17.C3/C4. Source instances, compound profiles, attachments and datasheets retain their later owners.17.C2/task17 remain in progress. All identified errors must still be fixed by their owning batches.
