@@ -40,3 +40,12 @@ Multiple Weapon Profiles was subsequently supplied below. Source gates for heali
 Source: user-supplied appendix wording.
 
 In the Select Weapons step (04.01), if a selected weapon has more than one profile, then the controlling player must also select one of those profiles. The selected profile is then used in the Resolve Attacks step (04.03). Some of these profiles are known as Hunter profiles. Hunter profiles can only target units with the specified keywords. Note that if a unit is equipped with more than one such weapon, a different profile can be selected for each model within that unit.
+
+
+## Fight on Death — user supplied during task 14 (appendix number not supplied)
+
+Some rules enable models to attack after they have been destroyed. When a model under such an effect is destroyed, do not remove it from play. Those models will stay on the battlefield until their unit is selected to attack and has attacked, or until the end of the phase (whichever comes first). Any rules triggered by those models being destroyed are resolved, and then those destroyed models are removed.
+
+If a rule instructs a destroyed model to fight immediately after the attacking unit, instead that model is not removed from the battlefield until that model’s unit has fought, or until the end of the phase (whichever comes first). This allows the models in the unit to fight all at once, and stratagems that target that unit will also affect that destroyed model.
+
+Authority: user-provided appendix wording, not a PDF quotation. Specific datasheet/faction grants and probability thresholds remain supplied-data obligations.
