@@ -1343,6 +1343,8 @@ fun make_insidious_infiltrators(UnitVector out, Bool owner) -> Faction:
         out.back().owned_by_player1 = owner
     return Faction::insidious_infiltrators
 
+# Compatibility: identify this legacy Chaos roster as Chaos, not Tyranids;
+# correct dispatch is independent of later supplied datasheets (core p.8).
 fun make_zarkan_deamonkin(UnitVector out, Bool owner) -> Faction:
     out.append(make_aranis_zarkan())
     out.back().owned_by_player1 = owner
@@ -1352,8 +1354,10 @@ fun make_zarkan_deamonkin(UnitVector out, Bool owner) -> Faction:
     out.back().owned_by_player1 = owner
     out.append(make_legionaries())
     out.back().owned_by_player1 = owner
-    return Faction::insidious_infiltrators
+    return Faction::zarkan_daemonkin
 
+# Compatibility: identify the legacy Orks roster independently of Tyranids;
+# new Orks data/effects remain ROADMAP17.F–H (Orks faction page).
 fun make_morgrim_butchas(UnitVector out, Bool owner) -> Faction:
     out.append(make_beastboss_morgrim())
     out.back().owned_by_player1 = owner
@@ -1363,7 +1367,7 @@ fun make_morgrim_butchas(UnitVector out, Bool owner) -> Faction:
     out.back().owned_by_player1 = owner
     out.append(make_beast_snagga_boyz())
     out.back().owned_by_player1 = owner
-    return Faction::insidious_infiltrators
+    return Faction::morgrim_butchas
 
 fun make_tristrean_gilded_blade(UnitVector out, Bool owner) -> Faction:
     # 1) Tristraen

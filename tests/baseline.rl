@@ -1,5 +1,120 @@
 import full_game
 
+# User point-free/three-detachment scope; Orks faction source and core p.8.
+fun test_orks17b_roster_identities_and_armies() -> Bool:
+    let chaos : UnitVector
+    let orks : UnitVector
+    let chaos_roster = make_zarkan_deamonkin(chaos, false)
+    let ork_roster = make_morgrim_butchas(orks, true)
+    return chaos_roster == Faction::zarkan_daemonkin and ork_roster == Faction::morgrim_butchas and army_faction_for_roster(chaos_roster) == ArmyFaction::chaos_space_marines and army_faction_for_roster(ork_roster) == ArmyFaction::orks and army_faction_for_roster(Faction::strike_force_octavius) == ArmyFaction::space_marines and army_faction_for_roster(Faction::vengeful_brethren) == ArmyFaction::space_marines and army_faction_for_roster(Faction::insidious_infiltrators) == ArmyFaction::tyranids and army_faction_for_roster(Faction::tristraen_gilded_blade) == ArmyFaction::adeptus_custodes
+
+# Three distinct packages, even War Horde plus two others, use no DP budget.
+fun test_orks17b_unique_three_package_bound() -> Bool:
+    let army : ArmyConfiguration
+    army.faction = ArmyFaction::orks
+    if !army.record_detachment(OrksDetachment::war_horde) or army.record_detachment(OrksDetachment::war_horde) or army.record_detachment(OrksDetachment::none):
+        return false
+    if !army.record_detachment(OrksDetachment::da_big_hunt) or !army.record_detachment(OrksDetachment::green_tide):
+        return false
+    let before = to_string(army)
+    return !army.record_detachment(OrksDetachment::bully_boyz) and to_string(army) == before and army.detachments.size() == 3 and army_configuration_valid(army)
+
+# Non-Orks do not receive Orks choices; raw enum corruption must reject safely.
+fun test_orks17b_non_orks_and_invalid_picks() -> Bool:
+    let army : ArmyConfiguration
+    army.faction = ArmyFaction::space_marines
+    if army.record_detachment(OrksDetachment::war_horde):
+        return false
+    army.faction = ArmyFaction::orks
+    let invalid : OrksDetachment
+    invalid.value = -1
+    if army.record_detachment(invalid):
+        return false
+    invalid.value = 16
+    return !army.record_detachment(invalid) and army.detachments.empty()
+
+# New configuration is independent of roster and the other player's picks.
+fun test_orks17b_game_handoff_and_pending_selection_save() -> Bool:
+    let state = play()
+    state.pick_morgrim_butcha()
+    state.choose_orks_detachment(OrksDetachment::war_horde)
+    state.choose_orks_detachment(OrksDetachment::da_big_hunt)
+    let restored = play()
+    if !set_state(restored, to_string(state).to_indented_lines()) or get_current_player(restored) != 0 or can restored.choose_orks_detachment(OrksDetachment::war_horde):
+        return false
+    restored.choose_orks_detachment(OrksDetachment::green_tide)
+    if get_current_player(restored) != 1 or can restored.choose_orks_detachment(OrksDetachment::bully_boyz):
+        return false
+    restored.pick_morgrim_butcha()
+    restored.choose_orks_detachment(OrksDetachment::bully_boyz)
+    restored.finish_detachment_selection()
+    return restored.board.armies[0].detachments.size() == 3 and restored.board.armies[1].detachments.size() == 1 and restored.board.armies[0].reserve_budget == ReserveBudgetMode::point_free and restored.board.armies[1].reserve_budget == ReserveBudgetMode::point_free and valid_state_foundations(restored.board)
+
+# Up to three permits finishing with zero or two; no fourth decision remains.
+fun test_orks17b_optional_selection_zero_and_two() -> Bool:
+    let board : Board
+    board.armies[0].faction = ArmyFaction::orks
+    board.armies[1].faction = ArmyFaction::orks
+    let first = select_orks_detachments(board, false)
+    first.finish_detachment_selection(board)
+    let second = select_orks_detachments(board, true)
+    second.choose_orks_detachment(board, OrksDetachment::war_horde)
+    second.choose_orks_detachment(board, OrksDetachment::bully_boyz)
+    second.finish_detachment_selection(board)
+    return first.is_done() and second.is_done() and board.armies[0].detachments.empty() and board.armies[1].detachments.size() == 2 and board.current_decision_maker
+
+# Serialized duplicates, wrong faction and invalid enum/mode values are not
+# accepted as legal configuration (implementation invariant; source above).
+fun test_orks17b_reject_malformed_configuration_save() -> Bool:
+    let state = play()
+    state.pick_morgrim_butcha()
+    state.choose_orks_detachment(OrksDetachment::war_horde)
+    let corrupt = state
+    corrupt.board.armies[0].detachments.append(OrksDetachment::war_horde)
+    if set_state(state, to_string(corrupt)):
+        return false
+    corrupt = state
+    corrupt.board.armies[0].faction = ArmyFaction::tyranids
+    if set_state(state, to_string(corrupt)):
+        return false
+    corrupt = state
+    corrupt.board.armies[0].reserve_budget.value = 2
+    return !set_state(state, to_string(corrupt)) and state.board.armies[0].detachments.size() == 1
+
+# User point-free mode bypasses only the p.68 pricing cap, not ownership,
+# repeated choice, Fortification exclusion or mandatory Aircraft reserves.
+fun test_orks17b_point_free_reserve_permissions() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_infernus_squad())
+    board.identify_units()
+    if strategic_reserve_valid(board, false, unit_id(0)):
+        return false
+    board.armies[0].reserve_budget = ReserveBudgetMode::point_free
+    if !strategic_reserve_valid(board, false, unit_id(0)) or strategic_reserve_valid(board, true, unit_id(0)) or strategic_reserve_valid(board, false, unit_id(1)):
+        return false
+    board.reserve_units[0].history.strategic_reserve = true
+    if strategic_reserve_valid(board, false, unit_id(0)):
+        return false
+    board.reserve_units[0].history.strategic_reserve = false
+    board.reserve_units[0][0].keywords.append(Keyword::fortification)
+    return !strategic_reserve_valid(board, false, unit_id(0))
+
+# Unknown passenger prices cannot block an explicitly point-free carrier.
+# Point-aware mode still rejects them; no passenger pricing is introduced.
+fun test_orks17b_point_free_reserved_carrier_and_passengers() -> Bool:
+    let board = transport16_fixture()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    if !reposition_unit(board, unit_id(0)):
+        return false
+    board.reserve_units[0].history.strategic_reserve = false
+    board.battle_points_limit = 100
+    board.reserve_units[0].points_known = true
+    board.reserve_units[0].points = 1
+    if strategic_reserve_valid(board, false, unit_id(0)):
+        return false
+    board.armies[0].reserve_budget = ReserveBudgetMode::point_free
+    return strategic_reserve_valid(board, false, unit_id(0))
+
 # User-required quad representation: physical calculations (core pp.9/12)
 # must not admit fractional model/path coordinates during this migration.
 fun test_geometry_preserves_whole_inch_quad_positions() -> Bool:

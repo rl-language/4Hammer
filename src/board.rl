@@ -190,6 +190,9 @@ cls Board:
     Bool starting_player
     Bool current_decision_maker
     Faction[2] players_faction
+    # Per-player army identity/selection, independent of legacy roster IDs
+    # (Orks faction page; user maximum three detachments and no points/DP).
+    ArmyConfiguration[2] armies
     VictoryPoints[2] score
 
     PhaseInfo phase_info
@@ -362,6 +365,11 @@ cls Board:
     # and affordability (p.54), without changing storage or action domains.
     fun command_points_for_player(Bool player) -> ref CommandPoints:
         return self.command_points[int(player)]
+
+    # Fixed arrays need a reference accessor for editor configuration and
+    # fixtures, just like CP; no copied army may lose a selection (core p.8).
+    fun army_for_player(Bool player) -> ref ArmyConfiguration:
+        return self.armies[int(player)]
 
     fun add_extra_cp(Int player_id):
         if self.obtained_extra_cp_this_round[player_id]:
@@ -743,9 +751,12 @@ fun valid_unit_identities(Unit unit, Int next_identity, Vector<Int> seen) -> Boo
         i = i + 1
     return true
 
-# Compatibility/integrity gate for saved state; versioning is implementation
-# policy, while identity integrity protects the lifecycle rules (pp.19/88).
+# Compatibility/integrity gate: configurations cannot bypass their bounded
+# policies; identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
+    for configured_player in range(2):
+        if !army_configuration_valid(board.armies[configured_player]):
+            return false
     if !valid_passenger_links(board):
         return false
     if board.schema_version.value != STATE_SCHEMA_VERSION or board.next_identity < 0 or board.next_identity.value >= MAX_IDENTITY_SEQUENCE or board.phase_serial < 0 or board.phase_serial.value >= MAX_PHASE_SERIAL or board.turn_serial < 0 or board.turn_serial.value >= MAX_TURN_SERIAL:

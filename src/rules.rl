@@ -2540,7 +2540,24 @@ fun<T> pretty_string(Board b, T obj) -> String:
     return to_string(obj)
 
 
-# the game sequence where players are allowed to pick units.
+# Configure at most three distinct Orks packages; no DP accounting is performed
+# by user instruction (source: https://wahapedia.ru/wh40k11ed/factions/orks/).
+# Package effects are later ROADMAP batches, not manufactured here.
+act select_orks_detachments(ctx Board board, frm Bool detachment_player) -> SelectOrksDetachments:
+    if board.armies[int(detachment_player)].faction != ArmyFaction::orks:
+        return
+    board.current_decision_maker = detachment_player
+    frm detachment_finished = false
+    while !detachment_finished and board.armies[int(detachment_player)].detachments.has_capacity():
+        actions:
+            act finish_detachment_selection()
+                detachment_finished = true
+            act choose_orks_detachment(OrksDetachment detachment) {board.armies[int(detachment_player)].detachment_selection_valid(detachment)}
+                let recorded = board.armies[int(detachment_player)].record_detachment(detachment)
+                assert(recorded, "legal detachment selection must be recorded")
+
+# The game sequence where players pick a legacy roster, then independent
+# detachment configuration. Point-free play is explicit user authority.
 # Assign entity identities as roster models enter state, before attachment or
 # casualty bookkeeping (attachments pp.66–67; destruction/returns pp.19/88).
 act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
@@ -2562,4 +2579,7 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
 
 
 
+    board.armies[int(current_player)].faction = army_faction_for_roster(board.players_faction[int(current_player)])
+    board.armies[int(current_player)].reserve_budget = ReserveBudgetMode::point_free
     board.identify_units()
+    subaction*(board) selected_detachments = select_orks_detachments(board, current_player)

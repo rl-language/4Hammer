@@ -230,13 +230,18 @@ fun expire_unused_reserves(Board board):
             board.reserve_units.erase(i)
         i = i - 1
 
-# A missing points limit/roster cost cannot silently waive the 50% rule.
-# Only explicit configured rosters can voluntarily reserve units (p.68).
+# The user explicitly excludes points in public play; only that configuration
+# omits the p.68 percentage. Other permissions remain, and point-aware fixtures
+# still require known army/passenger costs rather than an invented substitute.
 fun strategic_reserve_valid(Board board, Bool player, UnitID id) -> Bool:
-    if id.get() >= board.reserve_units.size() or board.battle_points_limit == 0:
+    if id.get() >= board.reserve_units.size():
         return false
     ref unit = board.reserve_units[id.get()]
-    if unit.owned_by_player1 != player or unit.history.strategic_reserve or !unit.points_known or unit.has_keyword(Keyword::fortification):
+    if unit.owned_by_player1 != player or unit.history.strategic_reserve or unit.has_keyword(Keyword::fortification):
+        return false
+    if board.armies[int(player)].reserve_budget == ReserveBudgetMode::point_free:
+        return true
+    if board.battle_points_limit == 0 or !unit.points_known:
         return false
     let passenger_points = passenger_reserve_points(board, unit)
     if passenger_points < 0:

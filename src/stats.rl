@@ -1,5 +1,6 @@
 import bounded_arg
 import weapons
+import army_configuration
 
 enum AbilityKind:
     deep_strike
@@ -52,6 +53,19 @@ enum Faction:
 
     fun equal(Faction other) -> Bool:
         return self.value == other.value
+
+# Compatibility mapping separates six legacy rosters from actual army identity;
+# it does not certify their old datasheets (Orks source; ROADMAP17.H).
+fun army_faction_for_roster(Faction roster) -> ArmyFaction:
+    if roster == Faction::insidious_infiltrators:
+        return ArmyFaction::tyranids
+    if roster == Faction::zarkan_daemonkin:
+        return ArmyFaction::chaos_space_marines
+    if roster == Faction::morgrim_butchas:
+        return ArmyFaction::orks
+    if roster == Faction::tristraen_gilded_blade:
+        return ArmyFaction::adeptus_custodes
+    return ArmyFaction::space_marines
 
 enum Keyword:
     infantry
