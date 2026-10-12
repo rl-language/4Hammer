@@ -505,3 +505,7 @@ Read [the transport/Aircraft report](transports-aircraft.md) for 18.01–18.05 (
 ## Task17.B configuration overlay
 
 [The configuration report](orks-configuration.md) separates actual army identity from legacy roster IDs, implements independent selections of up to three Orks detachments and explicitly enables user-directed point-free public reserves. This adjusts the pricing portion of 20.01/p.68 without certifying new point totals or replacing them with another percentage. Existing point-aware fixtures remain supported. The CP registry covers all 40 source cards' costs/package gates, with common shocked/destroyed target exceptions; their full timing/keyword/effect actions remain later batches. Core 15.01/p.54 payment/use limits and the supplied appendix maximum +1CP increase retain deterministic coverage. ROADMAP.md owns final validation; selecting a package does not implement its effects or certify any of the 67 datasheets.
+
+## Task17.C1 predicate overlay
+
+[The keyword predicate report](orks-keyword-predicates.md) implements appendix02.05.01 ALL/ANY/NONE conditions with explicit unit/model scope, weapon presence/magnitude, ANTI and Hunter target consumers, saved metadata validation and editor labels. This resolves O02's compound-target predicate defect, while effective characteristics and other consumers remain17.C2–C4. The user-authorized obsolete Tough as Squig Hide and Bestial Bellow actions are removed. No legacy factory or current datasheet is certified; ROADMAP.md retains the pending source-driven consumers and final validation evidence.

@@ -220,3 +220,15 @@ Use `task15-final-fuzzer` for matching instrumented replay/mutation checks. Both
 Schemas are state/observation **17**, action **13**. The suite has **442 supported assertions / 444 CTest entries**, with an empty discrepancy manifest. Prepared builds are `/workspace/4hammer-validation/task17b-tests`, `task17b-godot`, `task17b-sanitized-tests` and `task17b-fuzzer`. Sixteen focused native assertions include malformed configuration saves, point-free carriers/passengers and shocked/destroyed CP targets; require leak detection as well as address/undefined-behavior checks.
 
 The full headless Godot harness passes, beginning with both players selecting independent packages through actual enum buttons, duplicate rejection and pending selection restoration. Use an explicit extended timeout for the existing large binding suite (`--timeout 1200` for this batch). Matching full-game seed40000 now selects Orks detachments and point-free reserves; regenerate old legal-choice replays after the action/schema change. See ROADMAP.md and [the configuration report](../doc/orks-configuration.md) for final validation and the remaining faction-rule batches.
+
+## Orks keyword predicates (batch17.C1)
+
+Current schemas are state/observation **18**, action **14**. The suite has **465 supported assertions /467 CTest entries**, with an empty discrepancy manifest. Prepared tests are `/workspace/4hammer-validation/task17c1-tests`; the final focused native sanitizer driver in `task17c1-sanitized-tests` passes24 cases with leak detection. Use `task17c1-final-godot` for matching final native/header/C++ bindings.
+
+The complete headless interaction harness passes for the compact layout; a later body-only temporary-ANTI filter fix has dedicated final-binding coverage:
+
+```sh
+python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17c1-final-godot --script tests/godot_keyword_predicates.gd --timeout 120
+```
+
+Omitting `--script` runs the full existing interaction harness; use an explicit extended timeout. Replays must match the removed old action payloads and schema14. See [the predicate report](../doc/orks-keyword-predicates.md) and ROADMAP.md for final fuzzer evidence, layout measurements and pending17.C2–C4 mechanics. Predicate completion does not certify any Orks datasheet.

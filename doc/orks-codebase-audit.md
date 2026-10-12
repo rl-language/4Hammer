@@ -54,7 +54,10 @@ Each row is a separately reviewable batch, usually with smaller function/rule co
 | --- | --- | --- |
 | 17.A | Complete source inventory, all-unit requirements, CP-card inventory and user-adjusted scope. | Complete: audit only |
 | 17.B | Separate army/detachment configuration, select up to three unique packages, explicit point-free reserve mode, and shared CP exception policy. No roster/DP/enhancement pricing. | Complete: [implementation/validation](orks-configuration.md); effects remain later batches |
-| 17.C | Effective characteristic consumers and ALL/ANY/NONE/model/weapon predicates; retain generic modifier arithmetic and source lifetime. Split Damaged, incoming reductions and selective ignoring into focused changes. | Pending |
+| 17.C1 | ALL/ANY/NONE keyword predicates, unit versus model queries, weapon/Hunter consumers and editor labels. | Complete; see predicate report |
+| 17.C2 | Effective characteristic consumers and named weapon/unit selectors; retain modifier arithmetic, source scope and random/special values. | Pending |
+| 17.C3 | Damaged remaining-wounds metadata and hit penalties before the cumulative cap. | Pending |
+| 17.C4 | Incoming AP/damage reductions and selective modifier ignoring in saves/damage/grouping. | Pending |
 | 17.D1 | Physical weapon copies/profile groups, loadout bounds and Nazdreg's sourced profile-selection exception. | Pending |
 | 17.D2 | Compound random characteristics and demise; summed-roll re-rolls, intrinsic constants and preserved random-melee assertion. | Pending |
 | 17.E | Source-instance event hooks, bounded use-scope records and effect durations/expiry across battlefield/reserve/passenger banks. | Pending |
@@ -83,4 +86,8 @@ Army point costs, enhancement prices, DP costs and points-derived reserve percen
 
 ## Batch17.B completion
 
-Configuration, explicit point-free reserves and shared CP policies are implemented and validated; see [the report](orks-configuration.md) and ROADMAP.md. O01's army/selection portion and O17 are complete; O01's Waaagh!/Warlord/Da Boss and O18's source-specific card/discount consumers remain pending. CP metadata is not a playable card action. No datasheet row is certified complete by this batch. Remaining storage/use capacities must be rederived when the actual source-instance consumers in 17.E and replacement units in O19 become playable. Next batch is17.C.
+Configuration, explicit point-free reserves and shared CP policies are implemented and validated; see [the report](orks-configuration.md) and ROADMAP.md. O01's army/selection portion and O17 are complete; O01's Waaagh!/Warlord/Da Boss and O18's source-specific card/discount consumers remain pending. CP metadata is not a playable card action. No datasheet row is certified complete by this batch. Remaining storage/use capacities must be rederived when the actual source-instance consumers in 17.E and replacement units in O19 become playable. Next batch is17.C2.
+
+## Batch17.C1 completion
+
+[The predicate report](orks-keyword-predicates.md) completes compound weapon/Hunter conditions, explicit unit/model queries, saved metadata checks and compound editor labels. O02's positive-OR-only target predicate defect is fixed; effective characteristics, named selectors, Damaged, incoming reductions and ignoring modifiers remain17.C2–C4. Obsolete Tough as Squig Hide and Bestial Bellow actions are removed under user authority. No datasheet row is certified and old factories remain explicitly uncertified17.H scaffolding. ROADMAP.md records final validation and pending owners. Next is17.C2.

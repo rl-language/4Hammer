@@ -286,3 +286,15 @@ Orks detachment selection uses a single enum and finish action, permits zero to 
 Schemas are state/observation **17**, action **13**. Keep `NEXT_STATE_SCHEMA_VERSION` one greater than `STATE_SCHEMA_VERSION`; equal endpoints make a zero-width storage range and break saves. Regenerate native libraries and Godot headers together. Avoid parameter names that shadow generated accessors: `final_cost`, rather than `cost`, is necessary when the function also calls `strat.cost()`. Preserve generated lifecycle methods and the existing grid/selectors.
 
 Batch17.B is complete: 442 assertions /444 CTest entries, 16 focused native sanitizer cases, matching full headless Godot, completed gameplay/replay, ML and short mutation fuzzing pass. Consult the report/roadmap for artifacts and limits. Next is 17.C; do not mark detachments, their cards or datasheets implemented because their configuration/CP enum entries exist.
+
+## Retire obsolete Orks implementation
+
+The user authorises stripping the previous Orks implementation: it is no longer authoritative and need not be preserved for compatibility. Remove obsolete runtime cards/effects as the new source-driven batches replace them. Old profile/factory names still used by core regression fixtures may remain temporarily as explicitly uncertified scaffolding until17.H replaces the actual data; do not preserve their obsolete faction permissions or certify them as current datasheets.
+
+## Keyword predicates — batch17.C1
+
+Read [the predicate report](doc/orks-keyword-predicates.md) and ROADMAP.md. Weapon/Hunter conditions use `KeywordPredicate`: the conjunction of ALL, ANY and NONE groups. Unit queries use the union of constituent models; model queries use only that model's keywords. Retained models still in a unit remain constituents, while target/ability live-state checks are separate. Never flatten negations or adjacent source keywords into positive OR. Preserve each selected instance's condition, including temporary ANTI grants.
+
+Store nine total keyword terms in contiguous groups with three bounded counts; compute the term count and semantic clause enum. Per-term categorical tags unnecessarily doubled the ML layout. The compact layout is14,493,920 observations with22,379 action candidates. Validate counts, total and keyword IDs before lookup; expand the documented bound explicitly for larger source conditions. Use typed count/keyword/clause bridges for Godot labels and refresh borrowed vector wrappers after mutations. Do not add custom lifecycle hooks or tensor encoding.
+
+Schemas are state/observation **18**, action **14**, next-state **19**. The final suite passes465 assertions /467 CTest entries and24 native sanitizer cases. Full compact Godot interaction checks and focused final-body ANTI bindings pass. The two obsolete Orks card actions are removed; legacy profile factories remain uncertified scaffolding for later replacement. **Next:17.C2**, then17.C3–C4. ROADMAP.md holds final replay/fuzzer evidence; do not mark all17.C or any datasheet complete.
