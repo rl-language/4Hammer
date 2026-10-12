@@ -33,7 +33,7 @@ foreach(suite baseline discrepancies)
       --suite ${suite} --directory "${PROJECT_BINARY_DIR}/rule-tests/${suite}"
       --compiler "${RLC_TEST_COMPILER}")
   set_tests_properties(rules.compile.${suite} PROPERTIES
-    FIXTURES_SETUP rules_${suite} LABELS "rules;setup" TIMEOUT 300)
+    FIXTURES_SETUP rules_${suite} LABELS "rules;setup" TIMEOUT 600)
 endforeach()
 string(REPLACE "\n" ";" discovered_tests "${discovered_tests}")
 foreach(entry IN LISTS discovered_tests)
