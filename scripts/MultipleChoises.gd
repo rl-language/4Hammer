@@ -34,17 +34,29 @@ func on_state_change():
 			make_choise(GlobalRules.library.as_string_literal(unwrapped.get_member(0)), action)
 			added += 1
 		if unwrapped.members_count() == 1 and unwrapped.get_member(0) is bool:
-			make_choise(GlobalRules.as_str(unwrapped.get_member(0)), action)
+			var label = GlobalRules.as_str(unwrapped.get_member(0))
+			if unwrapped is RLCGameTakeToSkies:
+				label = "Take to the skies" if unwrapped.get_member(0) else "Stay grounded"
+			if unwrapped is RLCGameWalkerMobile:
+				label = "Gain Mobile for this move" if unwrapped.get_member(0) else "Keep current keywords"
+			if unwrapped is RLCGameAdvance:
+				label = "Advance" if unwrapped.get_member(0) else "Normal move"
+			make_choise(label, action)
 			added += 1
 		# Deployment IDs refer to reserves, not the battlefield models used by
 		# the click selector. Offer the actual legal reserve action as a button.
-		if unwrapped is RLCGameSelectUnit:
+		if unwrapped is RLCGameSelectUnit or unwrapped is RLCGameSelectReserveUnit or unwrapped is RLCGameSelectIngressUnit or unwrapped is RLCGameSelectScoutReserve or unwrapped is RLCGameChooseStrategicReserve:
 			var reserve_id = unwrapped.get_member(0).get_id().get_value()
 			var reserves = GlobalRules.state.get_board().get_reserve_units()
 			var unit = GlobalRules.library.get(reserves, reserve_id)
 			var unit_name = RLCLib.convert_string(unit.get_name().get_value())
 			var army = 2 if unit.get_owned_by_player1() else 1
-			make_choise("Deploy army " + str(army) + ": " + unit_name, action)
+			var prefix = "Deploy" if unwrapped is RLCGameSelectUnit else "Reserve"
+			if unwrapped is RLCGameSelectScoutReserve:
+				prefix = "Scout setup"
+			if unwrapped is RLCGameChooseStrategicReserve:
+				prefix = "Hold in reserves"
+			make_choise(prefix + " army " + str(army) + ": " + unit_name, action)
 			added += 1
 		if unwrapped is RLCGameSelectWeapon:
 			make_choise(GlobalRules.action_to_pretty_string(action), action)
@@ -65,6 +77,9 @@ func on_state_change():
 			var characteristics = "W " + str(group.get_wounds().get_value()) + " Sv " + str(group.get_save().get_value()) + " InSv " + str(group.get_invulnerable().get_value())
 			var kind = "Character " if group.get_character() else "Non-character "
 			make_choise(prefix + str(group_id + 1) + ": " + kind + characteristics, action)
+			added += 1
+		if unwrapped is RLCGameRotateModel and unwrapped.get_member(0).get_value() % 90 == 0:
+			make_choise("Rotate " + str(unwrapped.get_member(0).get_value()) + " degrees", action)
 			added += 1
 		if unwrapped is RLCGameSelectReroll:
 			make_choise("Re-roll a " + str(unwrapped.get_member(0).get_value()), action)

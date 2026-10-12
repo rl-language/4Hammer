@@ -33,15 +33,16 @@ func check_bindings():
 	interaction.models = Node.new()
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
-	assert(rules.library.get_state_schema_version() == 9)
-	assert(rules.library.get_action_schema_version() == 5)
-	assert(rules.library.get_observation_schema_version() == 9)
+	assert(rules.library.get_state_schema_version() == 10)
+	assert(rules.library.get_action_schema_version() == 6)
+	assert(rules.library.get_observation_schema_version() == 10)
 	assert(rules.valid_actions.size() == 6)
 	var choose = RLCGamePickInsidiousInfiltrators.make()
 	rules.apply_action(choose)
 	assert(rules.valid_actions.size() == 6)
 	rules.apply_action(RLCGamePickStrikeForceOctavious.make())
 	rules.apply_action(RLCGameDoneAttaching.make())
+	finish_reserve_choices(rules)
 	var target = rules.get_current_target_action()
 	assert(target != null)
 	assert(target.get_member(0) is RLCUnitID)
@@ -53,6 +54,7 @@ func check_bindings():
 	rules.set_state(restored)
 	assert(rules.get_current_target_action() != null)
 	rules.apply_action(RLCGameDoneAttaching.make())
+	finish_reserve_choices(rules)
 	var select = rules.get_current_select_unit_action()
 	assert(select != null and select.get_member(0) is RLCUnitID)
 	var first_buttons = deployment_buttons(choices)
@@ -91,6 +93,11 @@ func check_bindings():
 	assert(rules.library.size(rules.state.get_board().get_units()) == 2)
 	assert(rules.library.get(rules.state.get_board().get_units(), 1).get_owned_by_player1())
 	assert(deployment_buttons(choices).size() == 4)
+	# Explicit reserve fixtures preserve the two-army button handoff check;
+	# production now requires every non-reserved unit to deploy.
+	mark_remaining_reserves(rules, false)
+	rules.valid_actions = rules._valid_actions()
+	choices.on_state_change()
 	# Finish army 1 through the real button while it still has reserves.
 	var done_button = null
 	for button in choices.get_node("ChoiseList").get_children():
@@ -128,8 +135,13 @@ func check_bindings():
 	rules.apply_action(RLCGamePickStrikeForceOctavious.make())
 	rules.apply_action(RLCGamePickStrikeForceOctavious.make())
 	rules.apply_action(RLCGameDoneAttaching.make())
+	finish_reserve_choices(rules)
 	rules.apply_action(RLCGameDoneAttaching.make())
+	finish_reserve_choices(rules)
 	assert(rules.library.get_current_player(rules.state) == 0)
+	mark_remaining_reserves(rules, false)
+	rules.valid_actions = rules._valid_actions()
+	choices.on_state_change()
 	for button in choices.get_node("ChoiseList").get_children():
 		if not button.is_queued_for_deletion() and button.text == "done deploying army 1":
 			button.button_down.emit()
@@ -153,10 +165,15 @@ func check_bindings():
 	assert(not rules.library.allows_action_start(unit))
 	assert(not rules.library.allows_action_completion(unit))
 	rules.state.get_board().set_starting_player(true)
+	mark_remaining_reserves(rules, true)
+	rules.valid_actions = rules._valid_actions()
+	choices.on_state_change()
 	for button in choices.get_node("ChoiseList").get_children():
 		if not button.is_queued_for_deletion() and button.text == "done deploying army 2":
 			button.button_down.emit()
 			break
+	while rules.can_apply(RLCGameFinishScouts.make()):
+		rules.apply_action(RLCGameFinishScouts.make())
 	assert(rules.library.get_current_player(rules.state) == -1)
 	assert(unit.get_battle_socked())
 	# Save/reload while waiting for recovery dice: preserve the start-step
@@ -243,17 +260,45 @@ func check_bindings():
 	var shoot = RLCGameSelectTarget.make()
 	shoot.get_member(0).get_id().set_value(0)
 	shoot.get_member(1).get_id().set_value(1)
-	for step in range(20):
+	var source_node = ModelClickFixture.new()
+	var target_node = ModelClickFixture.new()
+	target_node.unit_id = 1
+	interaction.models.add_child(source_node)
+	interaction.models.add_child(target_node)
+	for step in range(50):
 		if board.get_timing().get_phase().get_value() == 3 and rules.can_apply(shoot):
 			break
 		var advance = null
 		for action in rules.valid_actions:
 			var unwrapped = action.unwrap()
-			if unwrapped is RLCGameFinishTimingRules or unwrapped is RLCGameEndMove or unwrapped is RLCGameNothingToDeploy:
+			if unwrapped is RLCGameFinishTimingRules or unwrapped is RLCGameEndMove or unwrapped is RLCGameMoveUnit or unwrapped is RLCGameRemainStationary or unwrapped is RLCGameSelectReserveUnit or unwrapped is RLCGameReserveRemainStationary:
 				advance = action
 				break
 		assert(advance != null)
-		rules.apply_action(advance)
+		if advance.unwrap() is RLCGameMoveUnit:
+			rules.apply_action(advance)
+			rules.apply_action(RLCGameNormalMove.make())
+			interaction.on_state_change()
+			assert(interaction.current_select_model_action is RLCGameSelectMovingModel)
+			assert(source_node.marked and not target_node.marked)
+			interaction.select(source_node)
+			var waypoint = rules.get_location_saction()
+			assert(waypoint is RLCGameWaypoint)
+			waypoint.get_member(0).get_x().set_value(3)
+			waypoint.get_member(0).get_y().set_value(2)
+			assert(rules.can_apply(waypoint))
+			rules.apply_action(waypoint)
+			assert(rules.library.get(rules.library.get(board.get_units(), 0).get_models(), 0).get_position().get_x().get_value() == 2)
+			var moving_snapshot = rules.as_indented_str(rules.state)
+			var moving_restored = rules.library.play()
+			assert(rules.library.set_state(moving_restored, RLCLib.godot_string_to_rlc_string(moving_snapshot)))
+			rules.set_state(moving_restored)
+			board = rules.state.get_board()
+			rules.apply_action(RLCGameFinishModel.make())
+			rules.apply_action(RLCGameFinishMove.make())
+			assert(rules.library.get(rules.library.get(board.get_units(), 0).get_models(), 0).get_position().get_x().get_value() == 3)
+		else:
+			rules.apply_action(advance)
 	assert(board.get_timing().get_phase().get_value() == 3 and rules.can_apply(shoot))
 	rules.apply_action(shoot)
 	var weapon_choice = RLCGameSelectWeapon.make()
@@ -269,11 +314,6 @@ func check_bindings():
 	var declaration = rules.get_current_target_action()
 	assert(declaration is RLCGameDeclareTarget)
 	assert(declaration.get_member(0) is RLCUnitID and declaration.get_member(1) is RLCUnitID)
-	var source_node = ModelClickFixture.new()
-	var target_node = ModelClickFixture.new()
-	target_node.unit_id = 1
-	interaction.models.add_child(source_node)
-	interaction.models.add_child(target_node)
 	interaction.on_state_change()
 	assert(source_node.marked)
 	interaction.select(source_node)
@@ -384,7 +424,19 @@ func check_bindings():
 	assert(rules.library.size(rules.library.get(board.get_units(), 1).get_destroyed_models().get_value()) == 1)
 	assert(rules.can_apply(RLCGameEndShootingPhase.make()))
 	assert(rules.library.get_current_player(rules.state) == 1)
-	print("PASS: Godot schema exports, deployment, Command recovery, terrain/objective saves, weapon/target/group buttons and clicks, batch chance ownership, pending-attack/save restoration, allocation group/model controls and per-wound FNP")
+	print("PASS: Godot schema exports, deployment, Command recovery, terrain/objective saves, weapon/target/group buttons and clicks, batch chance ownership, pending-attack/save restoration, allocation group/model controls, per-wound FNP and independent movement clicks/waypoints/save restoration")
 	# Clean up the test-owned library; production ownership changes are out of scope.
 	rules.library.free()
 	call_deferred("quit", 0)
+
+# Explicit fixture-only strategic status, not permission to bypass points in play.
+func mark_remaining_reserves(rules, owner):
+	var reserves = rules.state.get_board().get_reserve_units()
+	for i in range(rules.library.size(reserves)):
+		var unit = rules.library.get(reserves, i)
+		if unit.get_owned_by_player1() == owner:
+			unit.get_history().set_strategic_reserve(true)
+
+func finish_reserve_choices(rules):
+	while rules.can_apply(RLCGameFinishReserveSelection.make()):
+		rules.apply_action(RLCGameFinishReserveSelection.make())
