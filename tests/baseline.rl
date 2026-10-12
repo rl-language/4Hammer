@@ -4769,6 +4769,9 @@ fun fight14_miss_attacks(FightStep sequence, Board board, UnitID source, UnitID 
     if can sequence.keep_batch(board):
         sequence.keep_batch(board)
 
+    if can sequence.decline_counteroffensive(board):
+        sequence.decline_counteroffensive(board)
+
 fun fight14_miss_attacks(MeleeMoveStep sequence, Board board, UnitID source, UnitID target):
     sequence.select_weapon(board, attack_test_slot(2))
     sequence.skip(board)
@@ -5345,3 +5348,65 @@ fun test_core15_smoke_attack_cover_snapshot() -> Bool:
     let melee = make_declared_weapon(board, unit_id(0), 0, 2)
     let close = declared_attack_info(board, unit_id(0), unit_id(1), melee, info)
     return ranged.target_has_cover and !close.target_has_cover
+
+fun core15_miss_attacks(FightStep sequence, Board board, UnitID source, UnitID target):
+    sequence.select_weapon(board, attack_test_slot(2))
+    sequence.skip(board)
+    sequence.declare_target(board, source, target)
+    sequence.assign_attacks(board, attack_test_share(3))
+    sequence.choose_attack_target(board, target)
+    sequence.no_defensive_stratagem(board)
+    sequence.no_offensive_stratagem(board)
+    sequence.choose_attack_weapon(board, attack_test_weapon(0))
+    for i in range(3):
+        sequence.roll(board, attack_test_die(1))
+    if can sequence.keep_batch(board):
+        sequence.keep_batch(board)
+
+# p.56: all four added 1CP stratagems and Counteroffensive's 2CP cost.
+fun test_core15_printed_costs() -> Bool:
+    return Stratagem::explosives.cost() == 1 and Stratagem::crushing_impact.cost() == 1 and Stratagem::epic_challenge.cost() == 1 and Stratagem::smokescreen.cost() == 1 and Stratagem::counteroffensive.cost() == 2
+
+# p.57: Counteroffensive needs two CP, opposing Fight phase and eligible unit.
+fun test_core15_counteroffensive_target_gates() -> Bool:
+    let board = fight14_fixture()
+    if !counteroffensive_target_valid(board, true, unit_id(1)) or counteroffensive_target_valid(board, false, unit_id(0)):
+        return false
+    board.command_points[1] = 1
+    if counteroffensive_available(board, true):
+        return false
+    board.command_points[1] = 2
+    board[1].has_fought = true
+    return !counteroffensive_available(board, true)
+
+# pp.40/57: after the current player's attacks, the opponent can grant Fights
+# First to a remaining unit and must select it next, not a different friendly.
+fun test_core15_counteroffensive_forces_next_own_selection() -> Bool:
+    let board = fight14_fixture()
+    board[0].has_charged = true
+    let other = board[1]
+    other.identity = 0
+    other[0].identity = 0
+    other[0].position = board_position(7, 7)
+    other[0].abilities.append(AbilityKind::fight_first)
+    board.units.append(other)
+    if !fight_unit_eligible(board, unit_id(2)) or !fight_first_unit(board[2]):
+        return false
+    let sequence = fight_step(board, true)
+    sequence.select_fighting_unit(board, unit_id(0))
+    sequence.choose_fight_kind(board, FightKind::normal)
+    core15_miss_attacks(sequence, board, unit_id(0), unit_id(1))
+    if !(can sequence.counteroffensive(board, unit_id(1))) or !board.current_decision_maker:
+        return false
+    sequence.counteroffensive(board, unit_id(1))
+    return board.command_points[1] == 1 and fight_first_unit(board[1]) and (can sequence.select_fighting_unit(board, unit_id(1))) and !(can sequence.select_fighting_unit(board, unit_id(2))) and !(can sequence.pass_fight(board))
+
+# p.57: declining Counteroffensive spends nothing and leaves normal alternation.
+fun test_core15_counteroffensive_decline() -> Bool:
+    let board = fight14_fixture()
+    let sequence = fight_step(board, true)
+    sequence.select_fighting_unit(board, unit_id(0))
+    sequence.choose_fight_kind(board, FightKind::normal)
+    core15_miss_attacks(sequence, board, unit_id(0), unit_id(1))
+    sequence.decline_counteroffensive(board)
+    return board.command_points[1] == 3 and (can sequence.select_fighting_unit(board, unit_id(1))) and !board[1].phase_modifiers.counteroffensive

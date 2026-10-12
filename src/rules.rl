@@ -1673,10 +1673,13 @@ act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
 # Current player starts; alternate after every fight. The chooser who first
 # encounters no remaining Fights First units starts remaining combats. Newly
 # eligible Fights First units restore priority after each remaining fight (p.40).
+# Counteroffensive follows enemy attacks here, not consolidation responses (p.57).
 act fight_step(ctx Board board, frm Bool start_first) -> FightStep:
     frm previous_owner = board.current_decision_maker
     frm chooser = board.current_player
     frm first = start_first
+    frm counter_pending = false
+    frm counter_source : UnitID
     begin_fight_step(board)
     while player_can_fight(board, false, false) or player_can_fight(board, true, false):
         refresh_fight_eligibility(board)
@@ -1688,9 +1691,19 @@ act fight_step(ctx Board board, frm Bool start_first) -> FightStep:
         actions:
             act pass_fight() {!player_can_fight(board, chooser, first)}
                 chooser = !chooser
-            act select_fighting_unit(frm UnitID source) {source.get() < board.units.size(), board[source].owned_by_player1 == chooser, fight_unit_eligible(board, source), !first or fight_first_unit(board[source])}
+            act select_fighting_unit(frm UnitID source) {source.get() < board.units.size(), board[source].owned_by_player1 == chooser, fight_unit_eligible(board, source), (!first or fight_first_unit(board[source])), !counter_pending or source.get() == counter_source.get()}
+                counter_pending = false
                 subaction*(board) fighting = selected_fight(board, source)
                 chooser = !chooser
+                if board[source].owned_by_player1 == board.current_player and counteroffensive_available(board, chooser):
+                    board.current_decision_maker = chooser
+                    actions:
+                        act decline_counteroffensive()
+                        act counteroffensive(UnitID counter_unit) {counteroffensive_target_valid(board, chooser, counter_unit)}
+                            board.commit_stratagem(chooser, Stratagem::counteroffensive, board[counter_unit])
+                            board[counter_unit].phase_modifiers.counteroffensive = true
+                            counter_source = counter_unit
+                            counter_pending = true
     board.current_decision_maker = previous_owner
 
 # Phase-wide moves resolve all active-player choices before opponent choices

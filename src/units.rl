@@ -206,6 +206,7 @@ cls PhaseModifiers:
     # Charge-roll effects are phase-scoped; appendix 02.02.01 supplies their order/cap.
     RuleModifiers charge_roll
     Bool smokescreen
+    Bool counteroffensive
 
 cls Unit:
     ShootingKind shooting_kind

@@ -173,3 +173,17 @@ fun smoke_cover_applies(Board board, Model observer, UnitID target) -> Bool:
                             if point_segment_distance_squared(float(centre.x.value), float(centre.y.value), float(start.x.value), float(start.y.value), float(finish.x.value), float(finish.y.value)) <= radius * radius:
                                 return true
     return false
+
+# p.57: after an enemy unit's attacks in the opponent's Fight step, target
+# any friendly eligible unit, even one without intrinsic Fights First.
+fun counteroffensive_target_valid(Board board, Bool player, UnitID source) -> Bool:
+    return source.get() < board.units.size() and player != board.current_player and board.timing.phase == BattlePhase::fight and board[source].owned_by_player1 == player and fight_unit_eligible(board, source) and board.can_target_strat(player, Stratagem::counteroffensive, board[source])
+
+# p.57: avoid presenting an empty optional Counteroffensive decision.
+fun counteroffensive_available(Board board, Bool player) -> Bool:
+    for i in range(board.units.size()):
+        let source : UnitID
+        source = i
+        if counteroffensive_target_valid(board, player, source):
+            return true
+    return false

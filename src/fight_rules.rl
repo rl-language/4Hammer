@@ -38,7 +38,7 @@ fun fight_engaged(Board board, Unit unit) -> Bool:
 # to have completed a charge this turn (pp.37/40/81). Retained fighters keep
 # the ability for their explicitly authorised unit attack.
 fun fight_first_unit(Unit unit) -> Bool:
-    if unit.has_charged:
+    if unit.has_charged or unit.phase_modifiers.counteroffensive:
         return true
     let present = false
     for i in range(unit.models.size()):

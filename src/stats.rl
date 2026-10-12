@@ -422,6 +422,8 @@ enum Stratagem:
         Int cost = 1
     smokescreen:
         Int cost = 1
+    counteroffensive:
+        Int cost = 2
 
 
     fun equal(Stratagem other) -> Bool:
