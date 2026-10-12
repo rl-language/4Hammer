@@ -401,17 +401,30 @@ cls Board:
     # Check the requested cost and using player, not a different stratagem or
     # opponent record (stratagem use p.54). Per-unit/windows remain tasks 5/15.
     fun can_use_strat(Bool player, Stratagem strat) -> Bool:
-        return self.command_points[int(player)] >= strat.cost() and !self.has_used_strat(strat, int(player)) and self.stratagem_battle_limit_available(player, strat)
+        return self.can_use_strat_with_cost(player, strat, strat.cost())
 
-    # Printed extra costs/free-use effects must still obey phase restrictions
-    # (p.54). Cost overrides are explicit internal inputs, not invented rules.
-    fun can_use_strat_with_cost(Bool player, Stratagem strat, Int cost) -> Bool:
-        return cost >= 0 and self.command_points[int(player)] >= cost and !self.has_used_strat(strat, int(player)) and self.stratagem_battle_limit_available(player, strat)
+    # New Orks cards require their selected package, independently of the
+    # roster and all CP restrictions (Orks detachment source sections).
+    fun stratagem_selected_for_player(Bool player, Stratagem strat) -> Bool:
+        let package = strat.orks_detachment()
+        return package == OrksDetachment::none or (self.armies[int(player)].faction == ArmyFaction::orks and self.armies[int(player)].has_detachment(package))
 
-    # Target bookkeeping belongs to each payer independently; shock blocks
-    # the controlling player's stratagems on that unit (pp.9/54).
+    # Printed extra costs/free-use effects still obey phase restrictions (p.54)
+    # and the supplied appendix02.02.01 maximum +1CP increase. An explicit
+    # final-cost input must not bypass the modifier helper's cap.
+    fun can_use_strat_with_cost(Bool player, Stratagem strat, Int final_cost) -> Bool:
+        return self.stratagem_selected_for_player(player, strat) and final_cost >= 0 and final_cost <= strat.cost() + 1 and self.command_points[int(player)] >= final_cost and !self.has_used_strat(strat, int(player)) and self.stratagem_battle_limit_available(player, strat)
+
+    # Target bookkeeping belongs to each payer independently (pp.9/54).
+    # Only the named Orks cards override shocked/destroyed target gates;
+    # their future actions still check the full printed timing/keywords.
     fun can_target_strat_with_cost(Bool player, Stratagem strat, Unit target, Int cost) -> Bool:
-        return self.can_use_strat_with_cost(player, strat, cost) and !target.empty() and !target.history.stratagem_targeted_by_player[int(player)] and !(target.battle_socked and target.owned_by_player1 == player)
+        let policy = strat.target_policy()
+        let present = !target.empty()
+        if policy == StratagemTargetPolicy::destroyed_unit:
+            present = destroyed_stratagem_target(target)
+        let friendly = strat.orks_detachment() == OrksDetachment::none or target.owned_by_player1 == player
+        return self.can_use_strat_with_cost(player, strat, cost) and friendly and present and !target.history.stratagem_targeted_by_player[int(player)] and !(target.battle_socked and target.owned_by_player1 == player and policy != StratagemTargetPolicy::allow_shocked)
 
     # Each player may target a unit only once per phase (p.54).
     fun can_target_strat(Bool player, Stratagem strat, Unit target) -> Bool:
@@ -749,6 +762,17 @@ fun valid_unit_identities(Unit unit, Int next_identity, Vector<Int> seen) -> Boo
         if !register_identity(unit.attached_units.value[i].identity, next_identity, seen):
             return false
         i = i + 1
+    return true
+
+# Retained destroyed models or a real casualty archive provide evidence;
+# an arbitrary empty/unidentified unit cannot receive a destroyed-unit card
+# (Orks Infested War Zone / Flyin' Headbutt; destruction core p.87).
+fun destroyed_stratagem_target(Unit target) -> Bool:
+    if target.identity.value == 0 or (target.models.empty() and target.destroyed_models.value.empty()):
+        return false
+    for surviving in range(target.models.size()):
+        if target[surviving].is_alive():
+            return false
     return true
 
 # Compatibility/integrity gate: configurations cannot bypass their bounded

@@ -54,6 +54,19 @@ enum ReserveBudgetMode:
     fun not_equal(ReserveBudgetMode other) -> Bool:
         return self.value != other.value
 
+# Only the printed target exception changes; CP/use checks still apply (p.54;
+# Orks Breakin' Heads, Infested War Zone and Flyin' Headbutt source cards).
+enum StratagemTargetPolicy:
+    ordinary
+    allow_shocked
+    destroyed_unit
+
+    fun equal(StratagemTargetPolicy other) -> Bool:
+        return self.value == other.value
+
+    fun not_equal(StratagemTargetPolicy other) -> Bool:
+        return self.value != other.value
+
 # Bounded enum collection gives the inferred ML layout exactly three slots.
 # No cost fields or custom lifecycle hooks: the user excludes points/DP.
 cls ArmyConfiguration:

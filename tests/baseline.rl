@@ -115,6 +115,103 @@ fun test_orks17b_point_free_reserved_carrier_and_passengers() -> Bool:
     board.armies[0].reserve_budget = ReserveBudgetMode::point_free
     return strategic_reserve_valid(board, false, unit_id(0))
 
+# Source CP inventory: simultaneous selected packages share payer bookkeeping,
+# but an unselected package grants no card (Orks cards; core p.54).
+fun orks17b_cp_fixture() -> Board:
+    let board = attack_fixture()
+    board.identify_units()
+    board.armies[0].faction = ArmyFaction::orks
+    let horde = board.armies[0].record_detachment(OrksDetachment::war_horde)
+    let swarm = board.armies[0].record_detachment(OrksDetachment::runt_swarm)
+    let flyers = board.armies[0].record_detachment(OrksDetachment::flyboyz)
+    board.command_points[0] = 5
+    return board
+
+fun test_orks17b_detachment_card_scope_and_base_cp() -> Bool:
+    let board = orks17b_cp_fixture()
+    if !board.can_use_strat(false, Stratagem::orks_hit_em_harder) or !board.can_use_strat(false, Stratagem::orks_infested_war_zone) or board.can_use_strat(false, Stratagem::orks_dakkastorm):
+        return false
+    board.command_points[0] = 1
+    return Stratagem::orks_infested_war_zone.cost() == 2 and Stratagem::orks_hit_em_harder.cost() == 1 and !board.can_use_strat(false, Stratagem::orks_infested_war_zone) and board.can_use_strat(false, Stratagem::orks_hit_em_harder)
+
+# Breakin' Heads overrides only shocked eligibility, preserving payment/use.
+fun test_orks17b_shocked_exception_preserves_cost_and_limits() -> Bool:
+    let board = orks17b_cp_fixture()
+    board[0].battle_socked = true
+    if board.can_target_strat(false, Stratagem::orks_hit_em_harder, board[0]) or !board.try_use_strat(false, Stratagem::orks_breakin_heads, board[0], 1):
+        return false
+    return board.command_points[0] == 4 and !board.can_target_strat(false, Stratagem::orks_breakin_heads, board[1]) and !board.can_target_strat(false, Stratagem::insane_bravery, board[0])
+
+# The exception does not permit an unaffordable use or a foreign Orks target.
+fun test_orks17b_exception_rejection_is_atomic() -> Bool:
+    let board = orks17b_cp_fixture()
+    board[0].battle_socked = true
+    board.command_points[0] = 0
+    if board.try_use_strat(false, Stratagem::orks_breakin_heads, board[0], 1):
+        return false
+    board.command_points[0] = 5
+    return !board.try_use_strat(false, Stratagem::orks_breakin_heads, board[1], 1) and board.command_points[0] == 5 and !board.has_used_strat(Stratagem::orks_breakin_heads, 0) and !board[0].history.stratagem_targeted_by_player[0]
+
+# Infested War Zone targets a real destroyed unit, not a live/empty placeholder;
+# it remains 2CP and cannot be repeated or waive a shocked-target restriction.
+fun test_orks17b_destroyed_unit_exception() -> Bool:
+    let board = orks17b_cp_fixture()
+    if board.can_target_strat(false, Stratagem::orks_infested_war_zone, board[0]):
+        return false
+    while !board[0].models.empty():
+        board[0].remove_model(0)
+    let empty : Unit
+    if destroyed_stratagem_target(empty) or board.can_target_strat(false, Stratagem::orks_hit_em_harder, board[0]):
+        return false
+    board[0].battle_socked = true
+    if board.can_target_strat(false, Stratagem::orks_infested_war_zone, board[0]):
+        return false
+    board[0].battle_socked = false
+    return board.try_use_strat(false, Stratagem::orks_infested_war_zone, board[0], 2) and board.command_points[0] == 3 and !board.can_target_strat(false, Stratagem::orks_infested_war_zone, board[0])
+
+# Destroyed Aircraft can be retained pending demise; do not require a fully
+# emptied vector to recognise this printed destruction-time target.
+fun test_orks17b_retained_destroyed_target_policy() -> Bool:
+    let board = orks17b_cp_fixture()
+    board[0].models.resize(1)
+    board[0][0].state = ModelState::pending_destruction
+    return board.can_target_strat(false, Stratagem::orks_flyin_headbutt, board[0]) and !board.can_target_strat(false, Stratagem::orks_infested_war_zone, board[1])
+
+# Discount to zero and the +1CP Hulking Brutes option retain target limits;
+# the cost primitive does not calculate points/DP (Orks cards; p.54).
+fun test_orks17b_zero_and_surcharged_cp_use() -> Bool:
+    let board = orks17b_cp_fixture()
+    board[1].owned_by_player1 = false
+    board.armies[0].detachments.clear()
+    let selected = board.armies[0].record_detachment(OrksDetachment::bully_boyz)
+    board.command_points[0] = 1
+    if board.try_use_strat(false, Stratagem::orks_hulking_brutes, board[0], 2):
+        return false
+    board.command_points[0] = 2
+    if !board.try_use_strat(false, Stratagem::orks_hulking_brutes, board[0], 2) or board.command_points[0] != 0:
+        return false
+    return !board.try_use_strat(false, Stratagem::orks_armed_to_da_teef, board[0], 0) and board.try_use_strat(false, Stratagem::crushing_impact, board[1], 0) and board.has_used_strat(Stratagem::crushing_impact, 0)
+
+# Appendix02.02.01: final-cost overrides also obey the +1CP cap; invalid
+# negative/excessive costs leave the balance and target bookkeeping intact.
+fun test_orks17b_final_cp_cost_cap() -> Bool:
+    let board = orks17b_cp_fixture()
+    if board.try_use_strat(false, Stratagem::orks_hit_em_harder, board[0], -1) or board.try_use_strat(false, Stratagem::orks_hit_em_harder, board[0], 3) or board.try_use_strat(false, Stratagem::reroll, board[0], 3):
+        return false
+    return board.command_points[0] == 5 and !board[0].history.stratagem_targeted_by_player[0] and board.can_target_strat_with_cost(false, Stratagem::orks_hit_em_harder, board[0], 2)
+
+# Core p.54: each player's phase use is independent, and the next phase
+# clears use records without changing selected packages or CP balances.
+fun test_orks17b_per_player_cp_and_phase_reset() -> Bool:
+    let board = orks17b_cp_fixture()
+    board.armies[1].faction = ArmyFaction::orks
+    let selected_other = board.armies[1].record_detachment(OrksDetachment::war_horde)
+    board.command_points[1] = 2
+    if !board.try_use_strat(false, Stratagem::orks_hit_em_harder, board[0], 1) or !board.try_use_strat(true, Stratagem::orks_hit_em_harder, board[1], 1):
+        return false
+    board.begin_phase(BattlePhase::fight)
+    return board.command_points[0] == 4 and board.command_points[1] == 1 and board.can_target_strat(false, Stratagem::orks_hit_em_harder, board[0]) and board.can_target_strat(true, Stratagem::orks_hit_em_harder, board[1]) and board.armies[0].detachments.size() == 3 and board.armies[1].detachments.size() == 1
+
 # User-required quad representation: physical calculations (core pp.9/12)
 # must not admit fractional model/path coordinates during this migration.
 fun test_geometry_preserves_whole_inch_quad_positions() -> Bool:

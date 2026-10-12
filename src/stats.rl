@@ -441,6 +441,126 @@ enum Stratagem:
     counteroffensive:
         Int cost = 2
 
+    orks_breakin_heads:
+        Int cost = 1
+    orks_hit_em_harder:
+        Int cost = 1
+    orks_orks_is_never_beaten:
+        Int cost = 1
+    orks_mow_em_down:
+        Int cost = 1
+    orks_fungus_fuel_injection:
+        Int cost = 1
+    orks_close_range_dakka:
+        Int cost = 1
+    orks_unbridled_carnage:
+        Int cost = 1
+    orks_mob_mentality:
+        Int cost = 1
+    orks_ere_we_go:
+        Int cost = 1
+    orks_too_arrogant_to_die:
+        Int cost = 1
+    orks_armed_to_da_teef:
+        Int cost = 1
+    orks_hulking_brutes:
+        Int cost = 1
+    orks_infested_war_zone:
+        Int cost = 2
+    orks_scarper:
+        Int cost = 1
+    orks_grot_shields:
+        Int cost = 1
+    orks_kustom_dakka:
+        Int cost = 1
+    orks_glowin_dakka:
+        Int cost = 1
+    orks_never_enough_dakka:
+        Int cost = 1
+    orks_dubious_restraint:
+        Int cost = 1
+    orks_mind_mostly_on_the_mission:
+        Int cost = 1
+    orks_while_their_backs_are_turned:
+        Int cost = 1
+    orks_drive_by_bustin:
+        Int cost = 1
+    orks_grab_it:
+        Int cost = 1
+    orks_gun_crazy_show_offs:
+        Int cost = 1
+    orks_where_d_ya_fink_you_re_going:
+        Int cost = 1
+    orks_goaded_into_action:
+        Int cost = 1
+    orks_instinctive_hunters:
+        Int cost = 1
+    orks_vindictive_artillerists:
+        Int cost = 1
+    orks_crazed_rampage:
+        Int cost = 1
+    orks_dread_power:
+        Int cost = 1
+    orks_stomping_juggernaut:
+        Int cost = 1
+    orks_keep_it_runnin:
+        Int cost = 1
+    orks_readied_brawlers:
+        Int cost = 1
+    orks_impending_krunch:
+        Int cost = 1
+    orks_delicious_eating_squigs:
+        Int cost = 1
+    orks_dakkastorm:
+        Int cost = 1
+    orks_speediest_freeks:
+        Int cost = 1
+    orks_flyin_headbutt:
+        Int cost = 1
+    orks_long_uncontrolled_bursts:
+        Int cost = 1
+    orks_whirligig_evasion:
+        Int cost = 1
+
+    # Configuration gates only: effects/targets/windows remain later batches.
+    # Source cards and CP values: doc/orks-stratagem-costs.tsv (Orks faction URL).
+    fun orks_detachment() -> OrksDetachment:
+        if self == Stratagem::orks_breakin_heads or self == Stratagem::orks_hit_em_harder or self == Stratagem::orks_orks_is_never_beaten or self == Stratagem::orks_mow_em_down or self == Stratagem::orks_fungus_fuel_injection or self == Stratagem::orks_close_range_dakka:
+            return OrksDetachment::war_horde
+        if self == Stratagem::orks_unbridled_carnage or self == Stratagem::orks_mob_mentality or self == Stratagem::orks_ere_we_go:
+            return OrksDetachment::green_tide
+        if self == Stratagem::orks_too_arrogant_to_die or self == Stratagem::orks_armed_to_da_teef or self == Stratagem::orks_hulking_brutes:
+            return OrksDetachment::bully_boyz
+        if self == Stratagem::orks_infested_war_zone or self == Stratagem::orks_scarper or self == Stratagem::orks_grot_shields:
+            return OrksDetachment::runt_swarm
+        if self == Stratagem::orks_kustom_dakka or self == Stratagem::orks_glowin_dakka or self == Stratagem::orks_never_enough_dakka:
+            return OrksDetachment::shoota_boyz
+        if self == Stratagem::orks_dubious_restraint or self == Stratagem::orks_mind_mostly_on_the_mission or self == Stratagem::orks_while_their_backs_are_turned:
+            return OrksDetachment::taktikal_brigade
+        if self == Stratagem::orks_drive_by_bustin or self == Stratagem::orks_grab_it or self == Stratagem::orks_gun_crazy_show_offs:
+            return OrksDetachment::wreckas
+        if self == Stratagem::orks_where_d_ya_fink_you_re_going or self == Stratagem::orks_goaded_into_action or self == Stratagem::orks_instinctive_hunters:
+            return OrksDetachment::da_big_hunt
+        if self == Stratagem::orks_vindictive_artillerists:
+            return OrksDetachment::madcap_meks
+        if self == Stratagem::orks_crazed_rampage or self == Stratagem::orks_dread_power or self == Stratagem::orks_stomping_juggernaut:
+            return OrksDetachment::dread_mob
+        if self == Stratagem::orks_keep_it_runnin or self == Stratagem::orks_readied_brawlers or self == Stratagem::orks_impending_krunch:
+            return OrksDetachment::blitz_brigade
+        if self == Stratagem::orks_delicious_eating_squigs or self == Stratagem::orks_dakkastorm or self == Stratagem::orks_speediest_freeks:
+            return OrksDetachment::kult_of_speed
+        if self == Stratagem::orks_flyin_headbutt or self == Stratagem::orks_long_uncontrolled_bursts or self == Stratagem::orks_whirligig_evasion:
+            return OrksDetachment::flyboyz
+        return OrksDetachment::none
+
+    # Printed exceptions do not waive affordability or phase/unit limits
+    # (Orks Breakin' Heads / Infested War Zone / Flyin' Headbutt; core p.54).
+    fun target_policy() -> StratagemTargetPolicy:
+        if self == Stratagem::orks_breakin_heads:
+            return StratagemTargetPolicy::allow_shocked
+        if self == Stratagem::orks_infested_war_zone or self == Stratagem::orks_flyin_headbutt:
+            return StratagemTargetPolicy::destroyed_unit
+        return StratagemTargetPolicy::ordinary
 
     fun equal(Stratagem other) -> Bool:
         return self.value == other.value
