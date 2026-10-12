@@ -4385,3 +4385,112 @@ fun test_charge13_malformed_modifier_rejected() -> Bool:
     let serialized = to_string(state)
     let restored = play()
     return !set_state(restored, serialized)
+
+# pp.38–42 fixture: two single live models, friendly at (5,5), enemy at
+# (8,5), with 1.74-inch base separation and neutral core faction fixtures.
+fun fight14_fixture() -> Board:
+    let board = charge13_fixture()
+    board[1][0].position.x = 8
+    board.begin_phase(BattlePhase::fight)
+    return board
+
+
+# Shared fixture activation misses all three ordinary melee attacks. It
+# traverses declarations/grouping without manufacturing target damage.
+fun fight14_miss_attacks(Attack sequence, Board board, UnitID source, UnitID target):
+    sequence.select_weapon(board, attack_test_slot(2))
+    sequence.skip(board)
+    sequence.declare_target(board, source, target)
+    sequence.assign_attacks(board, attack_test_share(3))
+    sequence.choose_attack_target(board, target)
+    sequence.no_defensive_stratagem(board)
+    sequence.no_offensive_stratagem(board)
+    sequence.choose_attack_weapon(board, attack_test_weapon(0))
+    for i in range(3):
+        sequence.roll(board, attack_test_die(1))
+    if can sequence.keep_batch(board):
+        sequence.keep_batch(board)
+
+
+# Supplied Fight on Death: source exception permits retained melee weapons
+# and targets with the unit, and unit stratagem effects apply to them too.
+fun test_fight14_retained_attack_exception_and_stratagem() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].suffered_wounds = board[0][0].profile.wounds()
+    board[0][0].state = ModelState::fight_on_death
+    board[0][0].destruction_pending = true
+    board[0][0].destruction_fight_roll = 1
+    let sequence = attack(board, unit_id(0), unit_id(1), true, false)
+    if !(can sequence.select_weapon(board, attack_test_slot(2))):
+        return false
+    sequence.select_weapon(board, attack_test_slot(2))
+    sequence.skip(board)
+    sequence.declare_target(board, unit_id(0), unit_id(1))
+    sequence.assign_attacks(board, attack_test_share(3))
+    sequence.choose_attack_target(board, unit_id(1))
+    return board.allow_destroyed_attack and (can sequence.no_defensive_stratagem(board)) and board.can_target_strat(false, Stratagem::reroll, board[0])
+
+
+# Supplied Fight on Death: phase-end fallback releases delayed triggers,
+# resolves their model choice, then removes/archives each corpse exactly once.
+fun test_fight14_phase_end_retained_cleanup() -> Bool:
+    let board = fight14_fixture()
+    board.attack_info.fight_on_death_roll = 1
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(1), true, true, 2, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 2, true)
+    let cleanup = cleanup_phase_retained(board)
+    cleanup.choose_destruction_unit(board, unit_id(0))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    return cleanup.is_done() and board[0].models.empty() and board[0].destroyed_models.value.size() == 1 and !board.allow_destroyed_attack
+
+
+# Supplied Fight on Death / p.87: other death triggers remain pending too;
+# Deadly Demise rolls only after the unit attacks or phase-end release.
+fun test_fight14_retained_demise_trigger_delayed() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].has_deadly_demise = true
+    board[0][0].deadly_demise = raw_stat(1)
+    board.attack_info.fight_on_death_roll = 1
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(1), true, true, 2, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 2, true)
+    let jobs : DamageJobs
+    let enemy_end = resolve_damage_jobs(board, jobs, true, unit_id(1))
+    if !enemy_end.is_done():
+        return false
+    let cleanup = cleanup_phase_retained(board)
+    cleanup.choose_destruction_unit(board, unit_id(0))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    if !(can cleanup.roll(board, attack_test_die(1))):
+        return false
+    cleanup.roll(board, attack_test_die(1))
+    return cleanup.is_done() and board[0].models.empty()
+
+
+# Supplied Fight on Death: failed legacy permission rolls skip corpse weapon
+# selection but still release and archive it after the unit's activation.
+fun test_fight14_failed_legacy_grant_still_cleans_up() -> Bool:
+    let board = fight14_fixture()
+    board.attack_info.fight_on_death_roll = 4
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(1), true, true, 2, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 2, true)
+    let sequence = attack(board, unit_id(0), unit_id(1), true, false)
+    sequence.roll(board, attack_test_die(1))
+    sequence.choose_destruction_unit(board, unit_id(0))
+    sequence.resolve_destruction_model(board, damage_test_model(0))
+    return sequence.is_done() and board[0].models.empty() and board[0].destroyed_models.value.size() == 1 and !board.allow_destroyed_attack
+
+
+# Supplied Fight on Death: retained models use the full declaration/group
+# pipeline, then their own destruction effects run and they are archived once.
+fun test_fight14_retained_model_attacks_with_unit_then_removed() -> Bool:
+    let board = fight14_fixture()
+    board.attack_info.fight_on_death_roll = 1
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(1), true, true, 2, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 2, true)
+    let sequence = attack(board, unit_id(0), unit_id(1), true, false)
+    fight14_miss_attacks(sequence, board, unit_id(0), unit_id(1))
+    if board[0].models.size() != 1 or !board[0][0].destruction_released:
+        return false
+    sequence.choose_destruction_unit(board, unit_id(0))
+    sequence.resolve_destruction_model(board, damage_test_model(0))
+    return sequence.is_done() and board[0].models.empty() and board[0].destroyed_models.value.size() == 1 and !board.allow_destroyed_attack and board[1][0].suffered_wounds == 0

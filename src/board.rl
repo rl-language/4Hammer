@@ -153,6 +153,9 @@ cls Board:
     # Explicit mission roster limit and movement editor context (pp.68/12).
     LinearlyDistributedInt<0, 10001> battle_points_limit
     UnitID moving_unit
+    # Explicit exception for the supplied Fight on Death's own-unit attack.
+    Bool allow_destroyed_attack
+    UnitID destroyed_attack_unit
     UnitID surge_target
     Hidden<Vector<Unit>> expired_reserves
     Bool prebattle_scouts
@@ -710,6 +713,8 @@ fun valid_unit_identities(Unit unit, Int next_identity, Vector<Int> seen) -> Boo
 # policy, while identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
     if board.schema_version.value != STATE_SCHEMA_VERSION or board.next_identity < 0 or board.next_identity.value >= MAX_IDENTITY_SEQUENCE or board.phase_serial < 0 or board.phase_serial.value >= MAX_PHASE_SERIAL or board.turn_serial < 0 or board.turn_serial.value >= MAX_TURN_SERIAL:
+        return false
+    if board.destroyed_attack_unit.get() < 0 or board.destroyed_attack_unit.get() >= MAX_UNIT_COUNT or (board.allow_destroyed_attack and board.destroyed_attack_unit.get() >= board.units.size()):
         return false
     # Terrain storage must preserve the user's quad grid and valid extents;
     # malformed saved geometry cannot become a legal path/placement (p.12).

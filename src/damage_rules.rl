@@ -182,7 +182,9 @@ fun next_destruction(Board board, Bool finish_attacks, UnitID finished_source) -
 # User-supplied Rules Sequencing: current player's triggers, in their chosen
 # order, then opponent's. Eligibility still respects attack deferral (p.87).
 fun destruction_ready(Model model, Bool finish_attacks, UnitID source) -> Bool:
-    return model.destruction_pending and (!model.destroyed_by_attack or (finish_attacks and model.destroying_unit_known and model.destroying_unit.get() == source.get()))
+    # Supplied Fight on Death postpones all destruction triggers until the
+    # model's own unit attacks or phase end, overriding immediate retaliation.
+    return model.destruction_pending and !(model.state == ModelState::fight_on_death) and (model.destruction_released or !model.destroyed_by_attack or (finish_attacks and model.destroying_unit_known and model.destroying_unit.get() == source.get()))
 
 # A unit choice belongs to the controller of the next trigger tier (supplied
 # Rules Sequencing); stale/foreign unit slots cannot consume a destruction.

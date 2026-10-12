@@ -45,6 +45,9 @@ cls Model:
     Stat deadly_demise
     # Trigger timing is lifecycle infrastructure for destruction p.87.
     Bool destruction_pending
+    # Supplied Fight on Death: keep triggers pending until own attack/phase end.
+    Bool destruction_released
+    Bool destruction_attack_suppressed
     Bool destroyed_by_attack
     Bool destroying_unit_known
     UnitID destroying_unit

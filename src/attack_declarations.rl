@@ -90,11 +90,11 @@ fun declaration_target_valid(Board board, UnitID source, DeclaredWeapon weapon, 
     let model = declared_model_index(board, source, weapon)
     if model < 0:
         return false
-    if board[source][model].state == ModelState::fight_on_death or board[source][model].wounds_left() <= 0:
+    if !attack_model_allowed(board, source, model, melee):
         return false
     if melee:
         for i in range(board[target].models.size()):
-            if board[source][model].is_engaged_with(board[target][i]):
+            if board[target][i].is_alive() and board[source][model].is_engaged_with(board[target][i]):
                 return true
         return false
     if board[source].shooting_kind == ShootingKind::snap and !allow_snap_replacement:
@@ -244,3 +244,13 @@ fun declaration_has_replacement_target(Board board, UnitID source, DeclaredWeapo
         if declaration_target_valid(board, source, weapon, target, melee, allow_snap_replacement):
             return true
     return false
+
+# Only live models normally attack (p.87). The supplied Fight on Death grants
+# a narrow melee exception while that model's own unit is selected to attack;
+# failed legacy grant rolls and arbitrary corpses remain ineligible.
+fun attack_model_allowed(Board board, UnitID source, Int model, Bool melee) -> Bool:
+    if source.get() >= board.units.size() or model < 0 or model >= board[source].models.size():
+        return false
+    if board[source][model].is_alive():
+        return true
+    return melee and board.allow_destroyed_attack and board.destroyed_attack_unit.get() == source.get() and board[source][model].state == ModelState::fight_on_death and !board[source][model].destruction_attack_suppressed

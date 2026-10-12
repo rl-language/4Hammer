@@ -12,6 +12,7 @@ import attack_declarations
 import damage_rules
 import movement_rules
 import charge_rules
+import fight_rules
 
 # Wound thresholds use the printed equality boundaries (p.18). The user-
 # supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus
@@ -731,6 +732,8 @@ act use_attack_stratagems(ctx Board board,
 # Retain the existing SelectWeapon numeric payload and Skip button; melee must
 # select its ordinary weapon, then may select additional Extra Attacks weapons.
 act declare_model_weapons(ctx Board board, ctx DeclaredWeapons declarations, frm UnitID source, frm ModelID current_model, frm Bool melee) -> DeclareModelWeapons:
+    if !attack_model_allowed(board, source, current_model.get(), melee):
+        return
     frm selected : Bool[MAX_WEAPONS]
     frm main_selected = false
     board.current_state = CurrentStateDescription::select_weapon
@@ -933,7 +936,8 @@ act prepare_target_weapon_abilities(ctx Board board, ctx DeclaredWeapons declara
 # Full activation: select all weapons, declare all targets, choose target then
 # weapon group and complete that target before another (pp.16–18). Existing
 # Attack-triggered destruction waits for all target groups, then Hazardous
-# resolves (pp.24/87). Full fight-on-death combat sequencing remains task 14.
+# resolves (pp.24/87). Supplied Fight on Death retains casualties until their
+# own unit attacks or phase end and uses this same grouped attack pipeline.
 act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee, frm Bool overwatch) -> Attack:
     if board[source].empty():
         return
@@ -949,6 +953,18 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     frm previous_active = board.timing.active_player
     board.timing.active_player = board[source].owned_by_player1
     board.current_decision_maker = board[source].owned_by_player1
+    frm previous_destroyed_attack = board.allow_destroyed_attack
+    frm previous_destroyed_unit = board.destroyed_attack_unit
+    board.allow_destroyed_attack = melee
+    board.destroyed_attack_unit = source
+    # Legacy grant thresholds remain explicit fixture data. A failed grant
+    # cannot authorise a corpse's attacks; generic timing is the supplied appendix.
+    frm grant_model : ModelIterator
+    while grant_model.value < board[source].models.size():
+        if melee and board[source][grant_model.value].state == ModelState::fight_on_death and board[source][grant_model.value].destruction_fight_roll > 1:
+            act roll(Dice grant_face)
+            board[source][grant_model.value].destruction_attack_suppressed = grant_face.value < board[source][grant_model.value].destruction_fight_roll.value
+        grant_model = grant_model + 1
     frm declarations : DeclaredWeapons
     frm model : ModelIterator
     frm hazardous_uses : HazardousUses
@@ -988,6 +1004,9 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             subaction*(board, board[target], board[source]) damage = resolve_attack_damage(board, board[target], board[source], dice.generated_wounds, dice.generated_critical_wounds)
     # Finish conditional attack-caused triggers after every declared target,
     # before post-attack Hazardous checks (pp.81/87).
+    release_retained_fighters(board, source)
+    board.allow_destroyed_attack = previous_destroyed_attack
+    board.destroyed_attack_unit = previous_destroyed_unit
     frm cleanup_jobs : DamageJobs
     subaction*(board) deaths = resolve_damage_jobs(board, cleanup_jobs, true, source)
     for i in range(declarations.size()):
@@ -995,38 +1014,6 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             hazardous_uses = hazardous_uses + 1
     subaction*(board) hazards = resolve_hazards(board, source, hazardous_uses)
 
-    # Retaliation eligibility remains the legacy faction/fighting bridge (task
-    # 14), but every retained casualty across all declared targets is cleaned
-    # exactly once after its triggers/explicit fight-on-death exception (p.87).
-    frm death_unit : UnitIterator
-    while death_unit.value < board.units.size():
-        if board[death_unit.value].owned_by_player1 != board[source].owned_by_player1:
-            model = 0
-            while model.value < board[death_unit.value].models.size():
-                if board[death_unit.value][model.value].state == ModelState::fight_on_death and board[death_unit.value][model.value].destroying_unit.get() == source.get():
-                    frm death_identity = board[death_unit.value][model.value].identity
-                    frm retaliate = has_live_attack_recipient(board[source])
-                    frm death_roll = board[death_unit.value][model.value].destruction_fight_roll
-                    if retaliate and death_roll != 2:
-                        act roll(Dice result)
-                        retaliate = result.value >= death_roll.value
-                    if retaliate:
-                        frm dying_unit : UnitID
-                        dying_unit = death_unit.value
-                        configure_attack_info(board, dying_unit.get(), source.get(), overwatch, melee)
-                        board.current_decision_maker = board[dying_unit].owned_by_player1
-                        board.timing.active_player = board[dying_unit].owned_by_player1
-                        let id : ModelID
-                        id = model.value
-                        subaction*(board) fight_on_death_attack = resolve_model_attack(board, dying_unit, source, id, melee)
-                        cleanup_jobs.clear()
-                        subaction*(board) retaliation_deaths = resolve_damage_jobs(board, cleanup_jobs, true, dying_unit)
-                    let retained = board[death_unit.value].find_model(death_identity)
-                    if retained >= 0:
-                        board[death_unit.value].remove_model(retained)
-                    continue
-                model = model + 1
-        death_unit = death_unit + 1
     board.timing.active_player = previous_active
     board[source].shooting_kind = previous_kind
     board.current_decision_maker = previous_owner
@@ -1551,6 +1538,16 @@ fun move(Board board, UnitID unit, Int additional_movement) -> Move:
     modifier = additional_movement
     return move(board, unit, modifier)
 
+# Phase-end fallback required by the supplied Fight on Death appendix: release
+# retained models, resolve destruction effects in the common ordering, then
+# archive/remove them. Turn reuses one bounded cleanup frame across all phases.
+act cleanup_phase_retained(ctx Board board) -> PhaseRetainedCleanup:
+    release_phase_retained_fighters(board)
+    frm jobs : DamageJobs
+    let source : UnitID
+    subaction*(board) destruction_cleanup = resolve_damage_jobs(board, jobs, false, source)
+
+
 # core rules fight step 
 # Do not expose empty retired slots as fighting participants/targets
 # (destroyed units p.19; fighting pp.38–43). Fight sequencing is task 14.
@@ -1897,29 +1894,40 @@ act turn(ctx Board board, frm Bool player_id) -> Turn:
     board.timing.active_player = player_id
     board.current_decision_maker = player_id
     board.start_turn_history()
+    frm retained_cleanup : PhaseRetainedCleanup
     subaction*(board) start = resolve_timing_window(board, TimingWindow::turn_start)
     board.begin_phase(BattlePhase::command)
     subaction*(board) command_start = resolve_timing_window(board, TimingWindow::command_start)
     subaction*(board) command_phase = command_phase(board)
     subaction*(board) command_end = resolve_timing_window(board, TimingWindow::command_end)
+    retained_cleanup = cleanup_phase_retained(board)
+    subaction*(board) retained_cleanup
     board.begin_phase(BattlePhase::movement)
     subaction*(board) movement_start = resolve_timing_window(board, TimingWindow::movement_start)
     subaction*(board) movement_phase = movement_phase(board)
     subaction*(board) movement_end = resolve_timing_window(board, TimingWindow::movement_end)
+    retained_cleanup = cleanup_phase_retained(board)
+    subaction*(board) retained_cleanup
     board.begin_phase(BattlePhase::shooting)
     subaction*(board) shooting_start = resolve_timing_window(board, TimingWindow::shooting_start)
     subaction*(board) shooting_phase = shooting_phase(board)
     subaction*(board) shooting_end = resolve_timing_window(board, TimingWindow::shooting_end)
+    retained_cleanup = cleanup_phase_retained(board)
+    subaction*(board) retained_cleanup
     for i in range(board.units.size()):
         board[i].history.ingress_locked = false
     board.begin_phase(BattlePhase::charge)
     subaction*(board) charge_start = resolve_timing_window(board, TimingWindow::charge_start)
     subaction*(board) charge_phase = charge_phase(board)
     subaction*(board) charge_end = resolve_timing_window(board, TimingWindow::charge_end)
+    retained_cleanup = cleanup_phase_retained(board)
+    subaction*(board) retained_cleanup
     board.begin_phase(BattlePhase::fight)
     subaction*(board) fight_start = resolve_timing_window(board, TimingWindow::fight_start)
     subaction*(board) fight_phase = fight_phase(board)
     subaction*(board) fight_end = resolve_timing_window(board, TimingWindow::fight_end)
+    retained_cleanup = cleanup_phase_retained(board)
+    subaction*(board) retained_cleanup
     board.clear_phase_modifiers()
     board.timing.phase = BattlePhase::none
     subaction*(board) end = resolve_timing_window(board, TimingWindow::turn_end)
