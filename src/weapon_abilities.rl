@@ -136,3 +136,11 @@ fun grant_model_weapon_rule(Board board, UnitID source, ModelID model, BInt<0, M
 # Editor bridge for the bounded fixed-array keyword alternatives (p.78).
 fun weapon_ability_other_target_count(WeaponRule rule) -> Int:
     return rule.other_target_count.value
+
+# p.83 and supplied appendix 04.01.03: One Shot belongs to the physical
+# weapon; changing its selected profile cannot restore a spent weapon.
+fun consume_one_shot_profile(Model model, Int slot):
+    let group = model.weapon_profile_groups[slot].value
+    for i in range(model.weapons.size()):
+        if i == slot or (group != 0 and model.weapon_profile_groups[i].value == group):
+            model.used_once_per_battle_weapon[i] = true

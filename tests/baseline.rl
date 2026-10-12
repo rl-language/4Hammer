@@ -3826,3 +3826,35 @@ fun test_shooting12_torrent_automatic_hits_without_critical_effects() -> Bool:
     dice.roll(board, board[1], board[0], attack_test_die(1))
     dice.roll(board, board[1], board[0], attack_test_die(1))
     return dice.is_done() and dice.generated_wounds == 0
+
+# Supplied appendix 04.01.03: profiles are exclusive per weapon, not per unit.
+fun test_shooting12_physical_profiles_and_shared_one_shot() -> Bool:
+    let board = shooting12_fixture()
+    board[0][0].weapons.append(board[0][0].weapons[0])
+    board[0][0].weapon_profile_groups[0] = 1
+    board[0][0].weapon_profile_groups[1] = 1
+    let selected : Bool[MAX_WEAPONS]
+    selected[0] = true
+    if weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false):
+        return false
+    selected[0] = false
+    if !weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false):
+        return false
+    consume_one_shot_profile(board[0][0], 0)
+    return board[0][0].used_once_per_battle_weapon[1] and !weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false)
+
+# Supplied appendix 04.01.03: Hunter target restrictions survive snapshots.
+fun test_shooting12_hunter_profile_target_keywords() -> Bool:
+    let board = shooting12_fixture()
+    board[0][0].hunter_profile_conditions[0] = conditional_weapon_rule(WeaponRuleKind::anti, 0, Keyword::monster)
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    if declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    board[1][0].keywords.append(Keyword::monster)
+    return declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false)
+
+# Legacy datasheet fixtures encode paired plasma profiles of one weapon.
+fun test_shooting12_legacy_plasma_profile_groups() -> Bool:
+    let legionaries = make_legionaries()
+    let hellblasters = make_hellblaster_squad()
+    return legionaries[0].weapon_profile_groups[0].value == 1 and legionaries[0].weapon_profile_groups[1].value == 1 and legionaries[1].weapon_profile_groups[0].value == 0 and hellblasters[0].weapon_profile_groups[1].value == 1 and hellblasters[0].weapon_profile_groups[2].value == 1

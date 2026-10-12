@@ -49,6 +49,10 @@ cls Model:
     UnitID destroying_unit
     Dice destruction_fight_roll
     ModelHistory history
+    # Appendix 04.01.03: nonzero equal IDs identify profiles of one physical weapon.
+    LinearlyDistributedInt<0, 9>[MAX_WEAPONS] weapon_profile_groups
+    # Infrastructure: reuse the bounded keyword predicate, not its ability kind/parameter.
+    WeaponRule[MAX_WEAPONS] hunter_profile_conditions
     Bool[MAX_WEAPONS] used_once_per_battle_weapon
 
     # A retained corpse is physically present but not a live recipient (p.87).
@@ -1026,10 +1030,14 @@ fun make_legionaries() -> Unit:
     model.weapons.clear()
     model.weapons.append(Weapon::plasma_pistol_standard)
     model.weapons.append(Weapon::plasma_pistol_supercharge)
+    model.weapon_profile_groups[0] = 1
+    model.weapon_profile_groups[1] = 1
     model.weapons.append(Weapon::accursed_weapon)
     profile.models.append(model)  # This copies champion’s state into the unit
 
     # 2) LEGIONARY with Meltagun
+    model.weapon_profile_groups[0] = 0
+    model.weapon_profile_groups[1] = 0
     model.weapons.clear()
     model.weapons.append(Weapon::bolt_pistol)
     model.weapons.append(Weapon::meltagun)
@@ -1417,6 +1425,8 @@ fun make_hellblaster_squad() -> Unit:
     base_model.weapons.append(Weapon::bolt_pistol)
     base_model.weapons.append(Weapon::plasma_incinerator_standard)
     base_model.weapons.append(Weapon::plasma_incinerator_supercharge)
+    base_model.weapon_profile_groups[1] = 1
+    base_model.weapon_profile_groups[2] = 1
     base_model.weapons.append(Weapon::close_combat_weapon)
 
     # 5 identical models

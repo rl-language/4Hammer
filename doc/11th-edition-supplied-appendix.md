@@ -33,4 +33,10 @@ The task-9 implementation permits replacement targets for unresolved weapon shar
 
 ## Remaining sources
 
-Multiple Weapon Profiles remains unavailable. Source gates for healing, off-battlefield rules, extra CP, supplied mission/faction data and other absent app definitions remain open; these definitions do not resolve them. They do not authorize an invented faction ability, profile-switching mechanic or deployment rule.
+Multiple Weapon Profiles was subsequently supplied below. Source gates for healing, off-battlefield rules, extra CP, supplied mission/faction data and other absent app definitions remain open; these definitions do not resolve them. They do not authorize an invented faction ability, profile-switching mechanic or deployment rule.
+
+## Multiple Weapon Profiles — 04.01.03
+
+Source: user-supplied appendix wording.
+
+In the Select Weapons step (04.01), if a selected weapon has more than one profile, then the controlling player must also select one of those profiles. The selected profile is then used in the Resolve Attacks step (04.03). Some of these profiles are known as Hunter profiles. Hunter profiles can only target units with the specified keywords. Note that if a unit is equipped with more than one such weapon, a different profile can be selected for each model within that unit.

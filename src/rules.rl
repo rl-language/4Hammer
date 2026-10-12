@@ -752,7 +752,7 @@ act declare_model_weapons(ctx Board board, ctx DeclaredWeapons declarations, frm
                 declarations.back().current_target_rules = ability_choices.chosen
                 # One Shot is consumed by selection, even if no target remains (p.83).
                 if declared_weapon_has_kind(declarations.back(), WeaponRuleKind::one_shot):
-                    board[source][current_model.get()].used_once_per_battle_weapon[weapon_id.value] = true
+                    consume_one_shot_profile(board[source][current_model.get()], weapon_id.value)
                 if !declared_weapon_has_kind(declarations.back(), WeaponRuleKind::extra_attacks):
                     main_selected = true
             act skip() {may_finish_all_weapon_selection(board, source, current_model.get(), melee, selected, main_selected)}

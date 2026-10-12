@@ -14,6 +14,7 @@ cls DeclaredWeapon:
     EntityIdentity model_identity
     BInt<0, MAX_WEAPONS> slot
     Weapon weapon
+    WeaponRule hunter_condition
     WeaponAbilitySet selected_rules
     WeaponAbilitySet current_target_rules
     Bool made_attacks
@@ -33,6 +34,7 @@ fun make_declared_weapon(Board board, UnitID source, Int model, Int slot) -> Dec
     result.model_identity = board[source][model].identity
     result.slot = slot
     result.weapon = board[source][model].weapons[slot]
+    result.hunter_condition = board[source][model].hunter_profile_conditions[slot]
     result.selected_rules = model_weapon_rules(board, source, model, slot)
     result.current_target_rules = result.selected_rules
     return result
@@ -82,6 +84,9 @@ fun declaration_target_valid(Board board, UnitID source, DeclaredWeapon weapon, 
         return false
     if board[source].owned_by_player1 == board[target].owned_by_player1:
         return false
+    # Supplied appendix 04.01.03: Hunter restrictions also apply to replacement targets.
+    if !board[target].weapon_rule_applies(weapon.hunter_condition):
+        return false
     let model = declared_model_index(board, source, weapon)
     if model < 0:
         return false
@@ -122,6 +127,11 @@ fun has_another_declaration_target(Board board, UnitID source, DeclaredWeapon we
 fun weapon_selection_valid(Board board, UnitID source, Int model, Int slot, Bool melee, Bool[MAX_WEAPONS] selected, Bool main_selected) -> Bool:
     if slot < 0 or slot >= board[source][model].weapons.size() or selected[slot]:
         return false
+    # Appendix 04.01.03: choose one profile per physical weapon per model.
+    let group = board[source][model].weapon_profile_groups[slot].value
+    for i in range(board[source][model].weapons.size()):
+        if group != 0 and board[source][model].weapon_profile_groups[i].value == group and selected[i]:
+            return false
     ref weapon = board[source][model].weapons[slot]
     if board[source][model].used_once_per_battle_weapon[slot]:
         return false
