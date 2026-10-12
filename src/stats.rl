@@ -417,6 +417,8 @@ enum Stratagem:
         Int cost = 1
     explosives:
         Int cost = 1
+    crushing_impact:
+        Int cost = 1
 
 
     fun equal(Stratagem other) -> Bool:

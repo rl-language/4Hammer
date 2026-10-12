@@ -120,3 +120,31 @@ fun explosives_source_valid(Board board, UnitID source) -> Bool:
         if explosives_model_has_target(board, source, model):
             return true
     return false
+
+# p.56: the selected bearer itself must engage a living enemy model.
+fun crushing_model_engaged(Model model, Unit target) -> Bool:
+    for i in range(target.models.size()):
+        if target[i].is_alive() and model.is_engaged_with(target[i]):
+            return true
+    return false
+
+# p.56: choose the engaged enemy before an engaged living Monster/Vehicle
+# bearer. Unit-wide qualification does not require the selected model's keyword.
+fun crushing_model_valid(Board board, UnitID source, UnitID target, ModelID model) -> Bool:
+    return source.get() < board.units.size() and target.get() < board.units.size() and model.get() < board[source].models.size() and board[source][model].is_alive() and crushing_model_engaged(board[source][model], board[target])
+
+# p.56: Crushing Impact belongs immediately after a successful own Charge-
+# phase move, never a failed declaration or an opponent's Heroic Intervention.
+fun crushing_target_valid(Board board, UnitID source, UnitID target) -> Bool:
+    return source.get() < board.units.size() and target.get() < board.units.size() and has_live_model(board[target]) and board[source].owned_by_player1 != board[target].owned_by_player1 and board[source].is_engaged_with(board[target])
+
+# p.56: successful move provenance plus printed MONSTER/VEHICLE and CP gates.
+fun crushing_source_valid(Board board, UnitID source) -> Bool:
+    if source.get() >= board.units.size() or !(board.timing.phase == BattlePhase::charge) or board[source].owned_by_player1 != board.current_player or !has_live_model(board[source]) or board[source].history.charge_move_phase != board.phase_serial.value + 1 or (!board[source].has_keyword(Keyword::monster) and !board[source].has_keyword(Keyword::vehicle)) or !board.can_target_strat(board.current_player, Stratagem::crushing_impact, board[source]):
+        return false
+    for i in range(board.units.size()):
+        let target : UnitID
+        target = i
+        if crushing_target_valid(board, source, target):
+            return true
+    return false

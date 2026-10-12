@@ -5200,3 +5200,110 @@ fun test_core15_explosives_feel_no_pain() -> Bool:
         return false
     sequence.roll(board, attack_test_die(5))
     return sequence.is_done() and board[1][0].suffered_wounds == 0 and board.command_points[1] == 3
+
+# p.56: a successful own Charge-phase move and keyword are mandatory.
+fun test_core15_crushing_success_phase_and_keyword_gates() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::monster)
+    board[0].history.charge_move_phase = board.phase_serial.value + 1
+    if crushing_source_valid(board, unit_id(0)):
+        return false
+    board.begin_phase(BattlePhase::charge)
+    if crushing_source_valid(board, unit_id(0)):
+        return false
+    record_charge_move(board, unit_id(0))
+    if !crushing_source_valid(board, unit_id(0)):
+        return false
+    board.current_player = true
+    return !crushing_source_valid(board, unit_id(0))
+
+# p.56: model selection requires that bearer to engage the chosen enemy.
+fun test_core15_crushing_selected_model_engagement() -> Bool:
+    let board = fight14_fixture()
+    let far = board[0][0]
+    far.position.x = 2
+    board[0].models.append(far)
+    return crushing_model_valid(board, unit_id(0), unit_id(1), damage_test_model(0)) and !crushing_model_valid(board, unit_id(0), unit_id(1), damage_test_model(1)) and !crushing_target_valid(board, unit_id(0), unit_id(0))
+
+# p.56: T=4 generates four dice, ones wound the source, 5+ the enemy.
+fun test_core15_crushing_both_mortal_totals() -> Bool:
+    let board = fight14_fixture()
+    board.begin_phase(BattlePhase::charge)
+    board[0][0].keywords.append(Keyword::vehicle)
+    record_charge_move(board, unit_id(0))
+    let sequence = resolve_crushing_impact(board, unit_id(0))
+    sequence.choose_impact_target(board, unit_id(1))
+    sequence.choose_impact_model(board, damage_test_model(0))
+    sequence.roll(board, attack_test_die(1))
+    sequence.roll(board, attack_test_die(5))
+    sequence.roll(board, attack_test_die(2))
+    sequence.roll(board, attack_test_die(4))
+    if sequence.self_amount != 1 or sequence.enemy_amount != 1 or (can sequence.roll(board, attack_test_die(6))):
+        return false
+    sequence.select_mortal_model(board, damage_test_model(0))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    return sequence.is_done() and board[0][0].suffered_wounds == 1 and board[1][0].suffered_wounds == 1 and board.command_points[0] == 2
+
+# p.56: both self and enemy totals cap at six independently, not dice count.
+fun test_core15_crushing_six_cap_per_unit() -> Bool:
+    let board = fight14_fixture()
+    board.begin_phase(BattlePhase::charge)
+    board[0][0].keywords.append(Keyword::monster)
+    board[0][0].profile = Profile::squighog_boyz
+    record_charge_move(board, unit_id(0))
+    let sequence = resolve_crushing_impact(board, unit_id(0))
+    sequence.choose_impact_target(board, unit_id(1))
+    sequence.choose_impact_model(board, damage_test_model(0))
+    for i in range(7):
+        sequence.roll(board, attack_test_die(1))
+    return sequence.total == 7 and sequence.self_amount == 6 and sequence.enemy_amount == 0 and !(can sequence.roll(board, attack_test_die(1)))
+
+# pp.37/56: only a completed charge exposes immediate Crushing Impact;
+# accepting it pays before the target/model/dice sequence.
+fun test_core15_crushing_after_real_charge_and_decline() -> Bool:
+    let board = charge13_fixture()
+    board.begin_phase(BattlePhase::charge)
+    board[0][0].keywords.append(Keyword::monster)
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    sequence.roll_pair(board, attack_test_die(4), attack_test_die(4))
+    sequence.keep_it(board, true)
+    sequence.select_charge_target(board, unit_id(1))
+    sequence.finish_charge_targets(board)
+    sequence.charge_move_to(board, board_position(11, 5))
+    if !(can sequence.crushing_impact(board)) or !(can sequence.decline_crushing_impact(board)):
+        return false
+    sequence.decline_crushing_impact(board)
+    return sequence.is_done() and board[0].has_charged and board.command_points[0] == 3
+
+# p.56: simultaneous generated impact amounts both resolve even when source
+# losses destroy the charger before the opposing losses are allocated.
+fun test_core15_crushing_source_death_does_not_cancel_enemy_mortals() -> Bool:
+    let board = fight14_fixture()
+    board.begin_phase(BattlePhase::charge)
+    board[0][0].keywords.append(Keyword::vehicle)
+    record_charge_move(board, unit_id(0))
+    let sequence = resolve_crushing_impact(board, unit_id(0))
+    sequence.choose_impact_target(board, unit_id(1))
+    sequence.choose_impact_model(board, damage_test_model(0))
+    sequence.roll(board, attack_test_die(1))
+    sequence.roll(board, attack_test_die(1))
+    sequence.roll(board, attack_test_die(5))
+    sequence.roll(board, attack_test_die(5))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    if !board[0].models.empty() or !(can sequence.select_mortal_model(board, damage_test_model(0))):
+        return false
+    sequence.select_mortal_model(board, damage_test_model(0))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    return sequence.is_done() and board[1].models.empty() and board[0].destroyed_models.value.size() == 1 and board[1].destroyed_models.value.size() == 1
+
+# p.56: failed or cancelled charge declarations never expose Crushing Impact.
+fun test_core15_crushing_failed_charge_has_no_option() -> Bool:
+    let board = charge13_fixture()
+    board.begin_phase(BattlePhase::charge)
+    board[0][0].keywords.append(Keyword::monster)
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    sequence.roll_pair(board, attack_test_die(1), attack_test_die(1))
+    sequence.keep_it(board, true)
+    sequence.cancel_charge(board)
+    return sequence.is_done() and !crushing_source_valid(board, unit_id(0)) and board.command_points[0] == 3

@@ -1732,6 +1732,7 @@ act fight_phase(ctx Board board) -> FightPhase:
 # Declare once, roll/reroll before choosing targets, and commit only a legal
 # completed move (pp.36–37). All pending numbers/paths remain bounded. Restore
 # caller roles and model-selector context on completion or cancellation (p.8).
+# Successful own Charge-phase moves offer immediate Crushing Impact (p.56).
 act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
     if source.get() >= board.units.size():
         return
@@ -1818,6 +1819,11 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
     board[source].history.declared_charge_phase = board.phase_serial.value + 1
     if completed:
         record_charge_move(board, source)
+        if crushing_source_valid(board, source):
+            actions:
+                act decline_crushing_impact()
+                act crushing_impact()
+                    subaction*(board) impact = resolve_crushing_impact(board, source)
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
@@ -2298,6 +2304,43 @@ act resolve_explosives(ctx Board board, frm UnitID source) -> Explosives:
             amount = amount + 1
         index = index + 1
     subaction*(board) damage = resolve_mortal_wounds(board, target, source, true, amount)
+    board.moving_unit = previous_mover
+    board.timing.active_player = previous_active
+    board.current_decision_maker = previous_owner
+
+# p.56: choose engaged enemy then engaged source model, roll T dice, cap both
+# mortal totals at six and apply both even if the source is destroyed. No
+# Command Re-roll is allowed for this stratagem-specific roll (p.56 list).
+act resolve_crushing_impact(ctx Board board, frm UnitID source) -> CrushingImpact:
+    if !crushing_source_valid(board, source):
+        return
+    frm previous_owner = board.current_decision_maker
+    frm previous_active = board.timing.active_player
+    frm previous_mover = board.moving_unit
+    board.current_decision_maker = board[source].owned_by_player1
+    board.timing.active_player = board[source].owned_by_player1
+    board.commit_stratagem(board[source].owned_by_player1, Stratagem::crushing_impact, board[source])
+    act choose_impact_target(frm UnitID target) {crushing_target_valid(board, source, target)}
+    board.moving_unit = source
+    act choose_impact_model(frm ModelID model) {crushing_model_valid(board, source, target, model)}
+    frm total : Toughness
+    total = board[source][model].profile.thoughness()
+    frm index : Toughness
+    frm self_amount : CombatCounter
+    frm enemy_amount : CombatCounter
+    while index < total:
+        act roll(Dice face)
+        if face.value == 1:
+            self_amount = min(6, self_amount.value + 1)
+        if face.value >= 5:
+            enemy_amount = min(6, enemy_amount.value + 1)
+        index = index + 1
+    frm jobs : DamageJobs
+    # Stack order applies current-player losses first; all destruction effects
+    # use the common Rules Sequencing engine, not bespoke casualty deletion.
+    jobs.append(damage_job(DamageKind::mortal, target, source, true, false, enemy_amount.value, invalid_entity_identity()))
+    jobs.append(damage_job(DamageKind::mortal, source, source, false, false, self_amount.value, invalid_entity_identity()))
+    subaction*(board) damage = resolve_damage_jobs(board, jobs, false, source)
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
