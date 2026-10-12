@@ -1632,6 +1632,7 @@ act melee_move(ctx Board board, frm UnitID source, frm Bool consolidate, frm Boo
 # Selection consumes a fight before attacks (p.40) and scopes roles (p.8).
 # Overrun permits an additional Pile In; retained destroyed models attack with
 # their unit through shared declarations/groups, never immediate retaliation.
+# Epic Challenge must be offered just after selection, before attacks (p.56).
 act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
     if !fight_unit_eligible(board, source):
         return
@@ -1642,6 +1643,16 @@ act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
     board[source].history.fight_eligible_phase = board.phase_serial.value + 1
     board[source].history.consolidation_fight_pending = 0
     board.current_decision_maker = board[source].owned_by_player1
+    if epic_source_valid(board, source):
+        actions:
+            act decline_epic_challenge()
+            act epic_challenge()
+                board.commit_stratagem(board[source].owned_by_player1, Stratagem::epic_challenge, board[source])
+                frm previous_mover = board.moving_unit
+                board.moving_unit = source
+                act choose_epic_character(ModelID model) {epic_model_valid(board, source, model)}
+                board[source][model].history.epic_challenge = true
+                board.moving_unit = previous_mover
     act choose_fight_kind(FightKind kind) {fight_kind_valid(board, source, kind)}
     if kind == FightKind::overrun:
         subaction*(board) overrun_move = melee_move(board, source, false, true)

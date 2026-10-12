@@ -295,6 +295,8 @@ cls Unit:
     fun clear_phase_modifiers():
         # Phase-local shooting restrictions also expire while in reserves (pp.34–35/68).
         self.history.shot_this_phase = false
+        for i in range(self.models.size()):
+            self.models[i].history.epic_challenge = false
         let mod : PhaseModifiers
         self.phase_modifiers = mod
 

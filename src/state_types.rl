@@ -188,6 +188,7 @@ cls ModelHistory:
     CheckedVector<HorizontalSquare, MAX_MOVEMENT_SEGMENTS> horizontal_segments
     VerticalDistance vertical_distance
     Bool was_set_up_this_turn
+    Bool epic_challenge
 
     # Every straight segment contributes its length (p.12); rotations do not.
     # Store integer grid data, not rounded floating totals (user requirement).

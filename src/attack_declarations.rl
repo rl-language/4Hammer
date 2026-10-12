@@ -36,6 +36,10 @@ fun make_declared_weapon(Board board, UnitID source, Int model, Int slot) -> Dec
     result.weapon = board[source][model].weapons[slot]
     result.hunter_condition = board[source][model].hunter_profile_conditions[slot]
     result.selected_rules = model_weapon_rules(board, source, model, slot)
+    # Epic Challenge grants Precision only to the selected CHARACTER
+    # model's melee weapons, including Extra Attacks (p.56).
+    if result.weapon.range() == 0 and board[source][model].history.epic_challenge:
+        result.selected_rules.append(weapon_rule(WeaponRuleKind::precision))
     result.current_target_rules = result.selected_rules
     return result
 

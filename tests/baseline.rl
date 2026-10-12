@@ -5045,3 +5045,53 @@ fun test_core15_malformed_action_history_rejected() -> Bool:
     board[0].history.action_records[0].started_turn = 1
     board[0].history.action_records[0].completed = true
     return !valid_state_foundations(board)
+
+# p.56: Epic Challenge chooses one CHARACTER, at selection rather than per
+# attack target; ordinary living models do not inherit its Precision grant.
+fun test_core15_epic_selected_character_only_melee() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::character)
+    let ordinary = board[0][0]
+    ordinary.keywords.clear()
+    board[0].models.append(ordinary)
+    let sequence = selected_fight(board, unit_id(0))
+    if !(can sequence.epic_challenge(board)) or (can sequence.choose_fight_kind(board, FightKind::normal)):
+        return false
+    sequence.epic_challenge(board)
+    if (can sequence.choose_epic_character(board, damage_test_model(1))):
+        return false
+    sequence.choose_epic_character(board, damage_test_model(0))
+    let melee = make_declared_weapon(board, unit_id(0), 0, 2)
+    let ranged = make_declared_weapon(board, unit_id(0), 0, 0)
+    let other = make_declared_weapon(board, unit_id(0), 1, 2)
+    return board.command_points[0] == 2 and declared_weapon_has_kind(melee, WeaponRuleKind::precision) and !declared_weapon_has_kind(ranged, WeaponRuleKind::precision) and !declared_weapon_has_kind(other, WeaponRuleKind::precision)
+
+# pp.54/56: decline spends nothing; shock/used-unit restrictions remove it.
+fun test_core15_epic_decline_and_stratagem_limits() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::character)
+    let sequence = selected_fight(board, unit_id(0))
+    sequence.decline_epic_challenge(board)
+    if board.command_points[0] != 3 or !(can sequence.choose_fight_kind(board, FightKind::normal)):
+        return false
+    board[0].battle_socked = true
+    return !epic_source_valid(board, unit_id(0))
+
+# p.56: Precision expires at phase end, including retained model metadata.
+fun test_core15_epic_phase_expiry() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].history.epic_challenge = true
+    board.begin_phase(BattlePhase::command)
+    return !board[0][0].history.epic_challenge
+
+# Supplied Fight on Death plus p.56: retained CHARACTER models remain valid
+# Epic Challenge recipients when selected with their own unit.
+fun test_core15_epic_retained_character() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::character)
+    board[0][0].state = ModelState::fight_on_death
+    board[0][0].suffered_wounds = 2
+    board[0][0].destruction_pending = true
+    let sequence = selected_fight(board, unit_id(0))
+    sequence.epic_challenge(board)
+    return can sequence.choose_epic_character(board, damage_test_model(0))

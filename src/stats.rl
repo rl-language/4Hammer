@@ -410,6 +410,8 @@ enum Stratagem:
         Int cost = 1
     unyielding:
         Int cost = 1
+    epic_challenge:
+        Int cost = 1
 
 
     fun equal(Stratagem other) -> Bool:
