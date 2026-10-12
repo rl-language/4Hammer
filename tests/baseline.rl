@@ -2795,3 +2795,26 @@ fun test_damage_pending_death_save_round_trip_and_source_guard() -> Bool:
     state.board[1][0].destroying_unit = 0
     state.board[1][0].destroying_unit_known = false
     return !set_state(restored, to_string(state)) and to_string(restored) == before
+
+# pp.12/33: explicit single-model board avoids unavailable faction/mission data.
+fun movement11_fixture() -> Board:
+    let board = geometry_fixture()
+    board.phase_serial = 3
+    board[0].can_charge = true
+    board[0].can_shoot = true
+    board.timing.phase = BattlePhase::movement
+    board.identify_units()
+    return board
+
+# p.87: retained dead models cannot supply engagement or coherency neighbours.
+fun test_movement11_pending_corpses_not_engagement_or_neighbours() -> Bool:
+    let board = movement11_fixture()
+    let enemy = board[0]
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(8, 5)
+    enemy[0].state = ModelState::pending_destruction
+    board.units.append(enemy)
+    board[0].models.append(board[0][0])
+    board[0][1].position = board_position(8, 5)
+    board[0][1].state = ModelState::pending_destruction
+    return !board.is_in_melee(board[0]) and board[0].is_coherent()

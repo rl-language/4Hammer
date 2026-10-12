@@ -500,7 +500,7 @@ cls Unit:
         while i < self.models.size():
             let j = 0
             while j < other.models.size():
-                if self.models[i].is_engaged_with(other.models[j]):
+                if self.models[i].is_alive() and other.models[j].is_alive() and self.models[i].is_engaged_with(other.models[j]):
                     return true
                 j = j + 1
             i = i + 1
@@ -509,12 +509,19 @@ cls Unit:
     # Every member needs a neighbour within 2/5 inches and must be within 9/5
     # of every other member. A connected chain alone is insufficient (p.14).
     fun is_coherent() -> Bool:
+        let live = 0
+        for model in range(self.models.size()):
+            if self.models[model].is_alive():
+                live = live + 1
         let i = 0
         while i < self.models.size():
-            let has_neighbour = self.models.size() == 1
+            if !self.models[i].is_alive():
+                i = i + 1
+                continue
+            let has_neighbour = live == 1
             let j = 0
             while j < self.models.size():
-                if i != j:
+                if i != j and self.models[j].is_alive():
                     let horizontal = self.models[i].horizontal_distance_micrometres(self.models[j])
                     let vertical = self.models[i].vertical_distance_micrometres(self.models[j])
                     if !within_geometry_limits(horizontal, vertical, 9, 5):
