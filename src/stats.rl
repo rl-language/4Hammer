@@ -112,6 +112,7 @@ enum Keyword:
     mobile
     explosives
     grenades
+    smoke
 
 
     fun equal(Keyword other) -> Bool:
@@ -418,6 +419,8 @@ enum Stratagem:
     explosives:
         Int cost = 1
     crushing_impact:
+        Int cost = 1
+    smokescreen:
         Int cost = 1
 
 

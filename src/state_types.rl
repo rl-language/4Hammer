@@ -291,6 +291,8 @@ enum TimingRule:
     oath_of_moment
     objective_stratagem
     heroic_intervention
+    smokescreen
+
 
     fun equal(TimingRule other) -> Bool:
         return self.value == other.value

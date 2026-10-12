@@ -843,7 +843,7 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     assert(model >= 0, "declared source no longer exists")
     info.source_profile = board[source][model].profile
     info.engaged_hit_penalties = 0
-    info.target_has_cover = info.source.range() > 0 and (target_info.target_has_cover or unit_has_benefit_of_cover(board, board[source][model], board[target]) or (info.shooting_kind == ShootingKind::indirect and info.has_weapon_rule(board, WeaponRuleKind::indirect_fire)))
+    info.target_has_cover = info.source.range() > 0 and (target_info.target_has_cover or smoke_cover_applies(board, board[source][model], target) or unit_has_benefit_of_cover(board, board[source][model], board[target]) or (info.shooting_kind == ShootingKind::indirect and info.has_weapon_rule(board, WeaponRuleKind::indirect_fire)))
     info.indirect_stationary_visible = !board[source].has_run and !board[source].history.was_set_up_this_turn and board[source].history.move_kind == MovementKind::stationary and stationary_this_turn(board[source]) and friendly_unit_sees_target(board, source, target)
     let cq = info.has_weapon_rule(board, WeaponRuleKind::pistol) or info.has_weapon_rule(board, WeaponRuleKind::close_quarters)
     let cq_exception = cq and board[source].is_engaged_with(board[target])
@@ -1133,6 +1133,12 @@ fun timing_rule_available(Board board, TimingWindow window, Bool player, TimingR
             if heroic_source_valid(board, player, slot):
                 return true
             i = i + 1
+    if window == TimingWindow::shooting_start and rule == TimingRule::smokescreen:
+        for i in range(board.units.size()):
+            let source : UnitID
+            source = i
+            if smoke_source_valid(board, player, source):
+                return true
     if window == TimingWindow::command_abilities:
         if rule == TimingRule::shadow_in_the_warp:
             return board.players_faction[int(player)] == Faction::insidious_infiltrators and !board.has_used_shadow_in_the_warp[int(player)]
@@ -1150,9 +1156,9 @@ fun timing_rule_available(Board board, TimingWindow window, Bool player, TimingR
 
 # Determine whether another choice is needed without adding empty-window
 # buttons. Resolved/declined optional rules are not offered twice (pp.28–30).
-fun timing_rules_remaining(Board board, TimingWindow window, Bool player, Bool[8] resolved) -> Bool:
+fun timing_rules_remaining(Board board, TimingWindow window, Bool player, Bool[9] resolved) -> Bool:
     let i = 0
-    while i < 8:
+    while i < 9:
         let rule : TimingRule
         rule.value = i
         if !resolved[i] and timing_rule_available(board, window, player, rule):
@@ -1262,10 +1268,10 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
     frm player = board.timing.active_player
     # Exactly two controller groups; bounded frame storage supports ML inference.
     frm count : BInt<0, 3>
-    frm resolved : Bool[8]
+    frm resolved : Bool[9]
     while count < 2:
         let i = 0
-        while i < 8:
+        while i < 9:
             resolved[i] = false
             i = i + 1
         board.current_decision_maker = player
@@ -1295,6 +1301,8 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
                         subaction*(board) oath = timing_oath_of_moment(board)
                     if rule == TimingRule::heroic_intervention:
                         subaction*(board) intervention = timing_heroic_intervention(board, player)
+                    if rule == TimingRule::smokescreen:
+                        subaction*(board) smoke = timing_smokescreen(board, player)
                     if rule == TimingRule::objective_stratagem:
                         subaction*(board) objective = timing_objective_stratagem(board)
                     board.current_decision_maker = player
@@ -2343,4 +2351,14 @@ act resolve_crushing_impact(ctx Board board, frm UnitID source) -> CrushingImpac
     subaction*(board) damage = resolve_damage_jobs(board, jobs, false, source)
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
+    board.current_decision_maker = previous_owner
+
+# p.57: select and spend before the phase-long cover grant; the enclosing
+# start window supplies exact timing and controller ordering.
+act timing_smokescreen(ctx Board board, frm Bool player) -> TimingSmokescreen:
+    frm previous_owner = board.current_decision_maker
+    board.current_decision_maker = player
+    act smokescreen(UnitID source) {smoke_source_valid(board, player, source)}
+    board.commit_stratagem(player, Stratagem::smokescreen, board[source])
+    board[source].phase_modifiers.smokescreen = true
     board.current_decision_maker = previous_owner

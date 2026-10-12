@@ -5307,3 +5307,41 @@ fun test_core15_crushing_failed_charge_has_no_option() -> Bool:
     sequence.keep_it(board, true)
     sequence.cancel_charge(board)
     return sequence.is_done() and !crushing_source_valid(board, unit_id(0)) and board.command_points[0] == 3
+
+# p.57: Smokescreen is only a start-of-opponent-Shooting window option.
+fun test_core15_smoke_window_target_and_expiry() -> Bool:
+    let board = core15_fixture()
+    board[1][0].keywords.append(Keyword::smoke)
+    if !timing_rule_available(board, TimingWindow::shooting_start, true, TimingRule::smokescreen) or timing_rule_available(board, TimingWindow::shooting_end, true, TimingRule::smokescreen) or smoke_source_valid(board, false, unit_id(0)):
+        return false
+    let window = resolve_timing_window(board, TimingWindow::shooting_start)
+    window.choose_timing_rule(board, TimingRule::smokescreen)
+    window.smokescreen(board, unit_id(1))
+    if !window.is_done() or board.command_points[1] != 2 or !board[1].phase_modifiers.smokescreen or !smoke_cover_applies(board, board[0][0], unit_id(1)):
+        return false
+    board.begin_phase(BattlePhase::charge)
+    return !board[1].phase_modifiers.smokescreen
+
+# p.57 under circular-base approximation: an intervening smoke model grants
+# cover to another target; moving it off the sight segment removes that cover.
+fun test_core15_smoke_intervening_base_cover() -> Bool:
+    let board = core15_fixture()
+    let smoke = board[1]
+    smoke[0].position = board_position(9, 5)
+    smoke.phase_modifiers.smokescreen = true
+    board.units.append(smoke)
+    if !smoke_cover_applies(board, board[0][0], unit_id(1)):
+        return false
+    board[2][0].position.y = 9
+    return !smoke_cover_applies(board, board[0][0], unit_id(1))
+
+# p.57: Smokescreen affects the actual per-bearer attack snapshot, never melee.
+fun test_core15_smoke_attack_cover_snapshot() -> Bool:
+    let board = core15_fixture()
+    board[1].phase_modifiers.smokescreen = true
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let info : AttackSequenceInfo
+    let ranged = declared_attack_info(board, unit_id(0), unit_id(1), declaration, info)
+    let melee = make_declared_weapon(board, unit_id(0), 0, 2)
+    let close = declared_attack_info(board, unit_id(0), unit_id(1), melee, info)
+    return ranged.target_has_cover and !close.target_has_cover

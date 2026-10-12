@@ -148,3 +148,28 @@ fun crushing_source_valid(Board board, UnitID source) -> Bool:
         if crushing_target_valid(board, source, target):
             return true
     return false
+
+# p.57: start of opponent's Shooting phase; duration expires with modifiers.
+fun smoke_source_valid(Board board, Bool player, UnitID source) -> Bool:
+    return source.get() < board.units.size() and player != board.current_player and board.timing.phase == BattlePhase::shooting and board[source].owned_by_player1 == player and has_live_model(board[source]) and board[source].has_keyword(Keyword::smoke) and board.can_target_strat(player, Stratagem::smokescreen, board[source])
+
+# p.57: direct SMOKE targets always gain cover. A target is not fully
+# visible if any of its models is partially obscured by a smoke model.
+# Use circular bases crossing centre sight segments under the retained grid
+# abstraction; physical bodies/silhouettes remain unavailable, not invented.
+fun smoke_cover_applies(Board board, Model observer, UnitID target) -> Bool:
+    if board[target].phase_modifiers.smokescreen:
+        return true
+    for m in range(board[target].models.size()):
+        if board[target][m].is_alive():
+            for u in range(board.units.size()):
+                if board[u].phase_modifiers.smokescreen:
+                    for s in range(board[u].models.size()):
+                        if board[u][s].is_alive():
+                            let centre = board[u][s].geometry_position()
+                            let radius = board[u][s].base_radius_micrometres()
+                            let finish = board[target][m].geometry_position()
+                            let start = observer.geometry_position()
+                            if point_segment_distance_squared(float(centre.x.value), float(centre.y.value), float(start.x.value), float(start.y.value), float(finish.x.value), float(finish.y.value)) <= radius * radius:
+                                return true
+    return false
