@@ -898,6 +898,13 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     let model = declared_model_index(board, source, weapon)
     assert(model >= 0, "declared source no longer exists")
     info.source_profile = board[source][model].profile
+    # Recompute each new group's battlefield T after earlier casualties/effects
+    # (appendix05.02.01); target_info only preserves the enclosing rule choices.
+    info.source_unit_id = source
+    info.target_unit_id = target
+    let live_toughness = board[target].get_unit_toughtness()
+    assert(live_toughness >= 0 and live_toughness < MAX_CHARACTERISTIC, "group Toughness snapshot capacity exceeded")
+    info.target_toughness = live_toughness
     info.engaged_hit_penalties = 0
     info.plunging_fire = plunging_fire_applies(board, source, model, target, info.source.range() > 0)
     info.target_has_cover = info.source.range() > 0 and (target_info.target_has_cover or smoke_cover_applies(board, board[source][model], target) or unit_has_benefit_of_cover(board, board[source][model], board[target]) or (info.shooting_kind == ShootingKind::indirect and info.has_weapon_rule(board, WeaponRuleKind::indirect_fire)))

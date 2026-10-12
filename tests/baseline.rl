@@ -6706,3 +6706,44 @@ fun test_transport16_firing_deck_action_selection() -> Bool:
     sequence.select_firing_deck_weapon(board, declarations, slot)
     sequence.finish_firing_deck(board, declarations)
     return sequence.is_done() and declarations.size() == 1 and declarations[0].model_identity == board[0][0].identity and board.embarked_units[0].history.deck_shooting_locked and !board.embarked_units[0][0].used_once_per_battle_weapon[0]
+
+# Gathered context identity/T: appendix05.02.01,02.05.01, core pp.17/79.
+fun orks17c2b_info(Board board, Int slot) -> AttackSequenceInfo:
+    let declaration = make_declared_weapon(board, unit_id(0), 0, slot)
+    return declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+
+# A weapon-specific increment affects its slot, not its neighbour or other bearer.
+# Gathered context identity/T: appendix05.02.01,02.05.01, core pp.17/79.
+fun test_orks17c2b_target_toughness_refresh_after_casualty() -> Bool:
+    let board = damage_test_fixture()
+    board[1][1].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 4))
+    configure_attack_info(board, 0, 1, false, false)
+    let first = orks17c2b_info(board, 0)
+    board[1].remove_model(1)
+    let next = orks17c2b_info(board, 0)
+    return first.target_toughness.value == 8 and next.target_toughness.value == 4 and board.attack_info.target_toughness.value == 8
+
+# Newly active target arithmetic also affects subsequent groups (02.02.01/05.02.01).
+# Gathered context identity/T: appendix05.02.01,02.05.01, core pp.17/79.
+fun test_orks17c2b_target_toughness_refresh_after_modifier() -> Bool:
+    let board = attack_declaration_fixture()
+    configure_attack_info(board, 0, 1, false, false)
+    board[1][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 2))
+    let next = orks17c2b_info(board, 0)
+    return next.target_toughness.value == 6 and board.attack_info.target_toughness.value == 4
+
+# The new group's explicit identities control target-dependent rules, even
+# when a neutral/stale enclosing context was supplied (pp.17/79;02.05.01).
+# Gathered context identity/T: appendix05.02.01,02.05.01, core pp.17/79.
+fun test_orks17c2b_group_identity_refreshes_target_keyword_subject() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1][0].keywords.append(Keyword::monster)
+    board[2].owned_by_player1 = false
+    board[2][0].position = board_position(5, 10)
+    let declaration = make_declared_weapon(board, unit_id(2), 0, 0)
+    declaration.current_target_rules.append(conditional_weapon_rule(WeaponRuleKind::anti_monster, 3, Keyword::monster))
+    let neutral : AttackSequenceInfo
+    let info = declared_attack_info(board, unit_id(2), unit_id(1), declaration, neutral)
+    return info.source_unit_id.get() == 2 and info.target_unit_id.get() == 1 and critical_wound_threshold(board, info) == 3
+
+# Actual target legality and replacement eligibility use effective Range (p.16/04.03.03).
