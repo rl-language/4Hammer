@@ -140,6 +140,11 @@ cls UnitHistory:
     PhaseStamp selected_move_phase
     PhaseStamp declared_charge_phase
     PhaseStamp charge_move_phase
+    PhaseStamp pile_in_phase
+    PhaseStamp consolidation_phase
+    PhaseStamp engaged_fight_start_phase
+    PhaseStamp fight_eligible_phase
+    PhaseStamp consolidation_fight_pending
     MovementKind move_kind
     Bool made_move_this_turn
     Bool advanced_this_turn

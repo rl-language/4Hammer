@@ -4394,23 +4394,272 @@ fun fight14_fixture() -> Board:
     board.begin_phase(BattlePhase::fight)
     return board
 
+# p.38: active player performs every optional Pile In before the opponent,
+# and both movement stages precede mandatory attack selection.
+fun test_fight14_phase_wide_pile_in_order() -> Bool:
+    let board = fight14_fixture()
+    let phase = fight_phase(board)
+    if board.current_decision_maker or !(can phase.select_melee_unit(board, unit_id(0))) or (can phase.select_melee_unit(board, unit_id(1))):
+        return false
+    phase.finish_melee_step(board)
+    if !board.current_decision_maker or !(can phase.select_melee_unit(board, unit_id(1))):
+        return false
+    phase.finish_melee_step(board)
+    return !board.current_decision_maker and (can phase.select_fighting_unit(board, unit_id(0))) and !(can phase.select_melee_unit(board, unit_id(0)))
 
-# Shared fixture activation misses all three ordinary melee attacks. It
-# traverses declarations/grouping without manufacturing target damage.
-fun fight14_miss_attacks(Attack sequence, Board board, UnitID source, UnitID target):
-    sequence.select_weapon(board, attack_test_slot(2))
-    sequence.skip(board)
-    sequence.declare_target(board, source, target)
-    sequence.assign_attacks(board, attack_test_share(3))
-    sequence.choose_attack_target(board, target)
-    sequence.no_defensive_stratagem(board)
-    sequence.no_offensive_stratagem(board)
-    sequence.choose_attack_weapon(board, attack_test_weapon(0))
-    for i in range(3):
-        sequence.roll(board, attack_test_die(1))
-    if can sequence.keep_batch(board):
-        sequence.keep_batch(board)
+# pp.40/81: current player starts Fights First; every participating model
+# needs the ability, while any completed charge grants it to the whole unit.
+fun test_fight14_first_requires_all_models_or_charge() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].abilities.append(AbilityKind::fight_first)
+    let ordinary = board[0][0]
+    ordinary.abilities.clear()
+    ordinary.position.y = 7
+    board[0].models.append(ordinary)
+    if fight_first_unit(board[0]):
+        return false
+    board[0].has_charged = true
+    board[1][0].abilities.append(AbilityKind::fight_first)
+    let sequence = fight_step(board, true)
+    return fight_first_unit(board[0]) and !board.current_decision_maker and (can sequence.select_fighting_unit(board, unit_id(0))) and !(can sequence.select_fighting_unit(board, unit_id(1))) and !(can sequence.pass_fight(board))
 
+# p.40: when neither player has Fights First units, the current player
+# moves the sequence into Remaining Combats and selects first.
+fun test_fight14_remaining_combats_current_player_starts() -> Bool:
+    let board = fight14_fixture()
+    let sequence = fight_step(board, true)
+    return !sequence.first and (can sequence.select_fighting_unit(board, unit_id(0))) and !(can sequence.pass_fight(board))
+
+# p.40: legal passing transfers selection only when no unit of the required
+# priority is available; an eligible normal unit cannot bypass enemy Fights First.
+fun test_fight14_priority_pass_and_owner_transfer() -> Bool:
+    let board = fight14_fixture()
+    board[1][0].abilities.append(AbilityKind::fight_first)
+    let sequence = fight_step(board, true)
+    if !(can sequence.pass_fight(board)) or (can sequence.select_fighting_unit(board, unit_id(0))):
+        return false
+    sequence.pass_fight(board)
+    return board.current_decision_maker and !(can sequence.pass_fight(board)) and (can sequence.select_fighting_unit(board, unit_id(1)))
+
+# p.40: selecting consumes the fight immediately; an already selected unit
+# cannot be chosen twice while nested weapon/attack decisions are unresolved.
+fun test_fight14_selection_consumes_once_before_attacks() -> Bool:
+    let board = fight14_fixture()
+    let sequence = fight_step(board, true)
+    sequence.select_fighting_unit(board, unit_id(0))
+    return board[0].has_fought and !fight_unit_eligible(board, unit_id(0)) and (can sequence.choose_fight_kind(board, FightKind::normal)) and !(can sequence.choose_fight_kind(board, FightKind::overrun))
+
+# p.40: a unit that was engaged at Fight-step start remains eligible after
+# its opponent disappears; it selects Overrun and cannot select Normal.
+fun test_fight14_start_engagement_survives_enemy_loss() -> Bool:
+    let board = fight14_fixture()
+    begin_fight_step(board)
+    board[1].models.clear()
+    return fight_unit_eligible(board, unit_id(0)) and fight_kind_valid(board, unit_id(0), FightKind::overrun) and !fight_kind_valid(board, unit_id(0), FightKind::normal)
+
+# p.40: newly engaged units become eligible and can choose Overrun even
+# while currently engaged; newly eligible Fights First restores priority.
+fun test_fight14_new_engagement_restores_first_priority() -> Bool:
+    let board = fight14_fixture()
+    let other = board[1]
+    other[0].position.x = 20
+    other[0].abilities.append(AbilityKind::fight_first)
+    board.units.append(other)
+    begin_fight_step(board)
+    if fight_unit_eligible(board, unit_id(2)):
+        return false
+    board[2][0].position = board_position(5, 7)
+    refresh_fight_eligibility(board)
+    return fight_unit_eligible(board, unit_id(2)) and player_can_fight(board, true, true) and fight_kind_valid(board, unit_id(2), FightKind::overrun) and board[2].history.fight_eligible_phase == board.phase_serial.value + 1
+
+# pp.38/40: phase-wide Pile In is once per completed move; Overrun grants an
+# additional one even when the phase-wide stamp is already present.
+fun test_fight14_overrun_additional_pile_in() -> Bool:
+    let board = fight14_fixture()
+    board[0].history.pile_in_phase = board.phase_serial.value + 1
+    return !melee_move_eligible(board, unit_id(0), false, false) and melee_move_eligible(board, unit_id(0), false, true)
+
+# pp.38/42: candidate formation is private until final constraints pass;
+# cancellation leaves position/distance/once-per-step stamps untouched.
+fun test_fight14_pile_in_path_commit_and_cancel() -> Bool:
+    let board = fight14_fixture()
+    let sequence = melee_move(board, unit_id(0), false, false)
+    sequence.select_melee_model(board, damage_test_model(0))
+    sequence.choose_melee_approach(board, unit_id(1))
+    sequence.melee_waypoint(board, board_position(6, 5))
+    sequence.finish_melee_model(board)
+    if board[0][0].position.x != 5 or !(can sequence.finish_melee_move(board)):
+        return false
+    sequence.finish_melee_move(board)
+    if !sequence.completed or board[0][0].position.x != 6 or board[0].history.pile_in_phase != board.phase_serial.value + 1 or board[0][0].history.distance_moved_this_turn() != 1.0:
+        return false
+    let declined = melee_move(board, unit_id(1), false, false)
+    declined.cancel_melee_move(board)
+    return declined.is_done() and board[1][0].position.x == 8 and board[1].history.pile_in_phase == 0
+
+# p.38: a charged unengaged unit chooses targets within 5, then must finish
+# engaged. No target outside 5 is accepted, even with a 3-inch path budget.
+fun test_fight14_unengaged_pile_targets_and_engaged_finish() -> Bool:
+    let board = fight14_fixture()
+    board[1][0].position.x = 11
+    board[0].has_charged = true
+    let sequence = melee_move(board, unit_id(0), false, false)
+    if !(can sequence.select_melee_target(board, unit_id(1))) or (can sequence.finish_melee_targets(board)):
+        return false
+    sequence.select_melee_target(board, unit_id(1))
+    sequence.finish_melee_targets(board)
+    if can sequence.finish_melee_move(board):
+        return false
+    sequence.select_melee_model(board, damage_test_model(0))
+    sequence.choose_melee_approach(board, unit_id(1))
+    sequence.melee_waypoint(board, board_position(8, 5))
+    sequence.finish_melee_model(board)
+    return can sequence.finish_melee_move(board)
+
+# pp.38/42: moved models must approach their own initial closest selected
+# enemy; controller choices preserve exact closest-unit ties.
+fun test_fight14_closest_target_ties_and_wrong_target() -> Bool:
+    let board = fight14_fixture()
+    let other = board[1]
+    other[0].position = board_position(5, 8)
+    board.units.append(other)
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    targets[2] = true
+    if !nearest_melee_target_valid(board, board[0][0], targets, unit_id(1)) or !nearest_melee_target_valid(board, board[0][0], targets, unit_id(2)):
+        return false
+    board[2][0].position.y = 9
+    return !nearest_melee_target_valid(board, board[0][0], targets, unit_id(2))
+
+# pp.38/42: an initially engaged model must stay engaged with every original
+# enemy unit, not only its chosen closest approach target.
+fun test_fight14_preserve_every_original_model_engagement() -> Bool:
+    let board = fight14_fixture()
+    let other = board[1]
+    other[0].position = board_position(5, 8)
+    board.units.append(other)
+    let candidate = board[0]
+    candidate[0].position = board_position(6, 4)
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    targets[2] = true
+    return !melee_placement_valid(board, board[0], candidate, unit_id(0), MeleeMoveKind::pile_in, targets, 0)
+
+# pp.12/38/42: no enemy overlap and no path-budget reset across waypoints.
+fun test_fight14_waypoint_total_and_enemy_collision() -> Bool:
+    let board = fight14_fixture()
+    let path : ModelPath
+    path.model = 0
+    if melee_waypoint_valid(board, board[0], path, board_position(8, 5), MeleeMoveKind::pile_in):
+        return false
+    path.append_point(geometry_point(5 * MICROMETRES_PER_INCH, 7 * MICROMETRES_PER_INCH, 0))
+    return !melee_waypoint_valid(board, board[0], path, board_position(5, 9), MeleeMoveKind::pile_in)
+
+# p.38: contact/overlap has zero base separation and is locked, including
+# rotation. The current millimetre fixtures cannot express exact contact on
+# whole quads, so this predicate boundary is not a valid placement fixture.
+fun test_fight14_contact_lock_predicate_and_dead_models() -> Bool:
+    let board = fight14_fixture()
+    board[1][0].position = board[0][0].position
+    if !melee_model_locked(board, board[0][0], board[0], MeleeMoveKind::pile_in):
+        return false
+    board[0][0].state = ModelState::fight_on_death
+    return melee_model_locked(board, board[0][0], board[0], MeleeMoveKind::engaging)
+
+# p.42: mandatory mode priority is ongoing, then nearby enemies, then objectives.
+fun test_fight14_consolidation_mode_priority() -> Bool:
+    let board = fight14_fixture()
+    if !(consolidation_kind(board, board[0]) == MeleeMoveKind::ongoing):
+        return false
+    board[1][0].position.x = 9
+    if !(consolidation_kind(board, board[0]) == MeleeMoveKind::engaging):
+        return false
+    board[1][0].position.x = 15
+    return consolidation_kind(board, board[0]) == MeleeMoveKind::objective
+
+# p.42: having been eligible earlier permits consolidation even after all
+# enemies disappear; an unrelated unit cannot consolidate merely by choosing it.
+fun test_fight14_consolidation_uses_earlier_eligibility() -> Bool:
+    let board = fight14_fixture()
+    begin_fight_step(board)
+    board[1].models.clear()
+    return melee_move_eligible(board, unit_id(0), true, false) and !melee_move_eligible(board, unit_id(1), true, false)
+
+# p.42: engaging consolidation must engage every selected enemy, but may
+# incidentally engage another enemy; it will be offered a response fight.
+fun test_fight14_engaging_consolidation_all_targets_and_incidental() -> Bool:
+    let board = fight14_fixture()
+    board[1][0].position.x = 9
+    let other = board[1]
+    other[0].position = board_position(7, 7)
+    board.units.append(other)
+    let candidate = board[0]
+    candidate[0].position.x = 7
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    if !melee_placement_valid(board, board[0], candidate, unit_id(0), MeleeMoveKind::engaging, targets, 0):
+        return false
+    board[2][0].position.x = 15
+    targets[2] = true
+    return !melee_placement_valid(board, board[0], candidate, unit_id(0), MeleeMoveKind::engaging, targets, 0)
+
+# p.42: objective selection is within 3 inches of any live base; a moved
+# model must end in objective range when a coherent endpoint can do so.
+fun test_fight14_objective_consolidation_range() -> Bool:
+    let board = fight14_fixture()
+    board[1].models.clear()
+    board.objectives[0].custom_position = true
+    board.objectives[0].position = board_position(8, 5)
+    board[0].history.fight_eligible_phase = board.phase_serial.value + 1
+    if !melee_objective_valid(board, board[0], 0):
+        return false
+    let sequence = melee_move(board, unit_id(0), true, false)
+    sequence.choose_melee_objective(board, fight14_objective(0))
+    if !(can sequence.finish_melee_move(board)):
+        return false
+    sequence.finish_melee_move(board)
+    return sequence.completed and board[0].history.consolidation_phase == board.phase_serial.value + 1 and !melee_move_eligible(board, unit_id(0), true, false)
+
+# pp.42/52: terrain objectives use their linked area, not marker distance.
+fun test_fight14_objective_terrain_area_distance() -> Bool:
+    let board = fight14_fixture()
+    board.terrain_areas.append(terrain_area(6, 4, 12, 6, false))
+    board.objectives[0].terrain_objective = true
+    board.objectives[0].area_id = 0
+    board.objectives[0].custom_position = true
+    board.objectives[0].position = board_position(12, 5)
+    return melee_objective_valid(board, board[0], 0) and melee_objective_distance(board, board[0][0], 0) < 1.0
+
+# p.42: consolidation response remains mandatory if an earlier response
+# removes its enemy, so the unit may make an Overrun instead of disappearing.
+fun test_fight14_consolidation_response_survives_enemy_loss() -> Bool:
+    let board = fight14_fixture()
+    board[1].history.consolidation_fight_pending = board.phase_serial.value + 1
+    board[0].models.clear()
+    return consolidation_response_valid(board, unit_id(1)) and has_consolidation_response(board, true) and fight_kind_valid(board, unit_id(1), FightKind::overrun)
+
+# p.74: only FLYING bearers can attack AIRCRAFT in melee; a mixed unit's
+# keyword cannot grant that permission to its non-flying model.
+fun test_fight14_aircraft_melee_bearer_restriction() -> Bool:
+    let board = fight14_fixture()
+    board[1][0].keywords.append(Keyword::aircraft)
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    if declaration_target_valid(board, unit_id(0), declaration, unit_id(1), true):
+        return false
+    board[0][0].keywords.append(Keyword::fly)
+    return declaration_target_valid(board, unit_id(0), declaration, unit_id(1), true)
+
+# Supplied Fight on Death: no destruction triggers/removal when the enemy
+# finishes attacking. Corpses stay ineligible as targets and ordinary attackers.
+fun test_fight14_retained_death_waits_for_own_unit() -> Bool:
+    let board = fight14_fixture()
+    board.attack_info.fight_on_death_roll = 1
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(1), true, true, 2, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 2, true)
+    let corpse = board[0][0].identity
+    let jobs : DamageJobs
+    let finished_enemy = resolve_damage_jobs(board, jobs, true, unit_id(1))
+    return finished_enemy.is_done() and board[0].find_model(corpse) == 0 and board[0][0].destruction_pending and !destruction_ready(board[0][0], true, unit_id(1)) and !has_live_attack_recipient(board[0]) and !attack_model_allowed(board, unit_id(0), 0, true) and fight_unit_eligible(board, unit_id(0))
 
 # Supplied Fight on Death: source exception permits retained melee weapons
 # and targets with the unit, and unit stratagem effects apply to them too.
@@ -4430,7 +4679,6 @@ fun test_fight14_retained_attack_exception_and_stratagem() -> Bool:
     sequence.choose_attack_target(board, unit_id(1))
     return board.allow_destroyed_attack and (can sequence.no_defensive_stratagem(board)) and board.can_target_strat(false, Stratagem::reroll, board[0])
 
-
 # Supplied Fight on Death: phase-end fallback releases delayed triggers,
 # resolves their model choice, then removes/archives each corpse exactly once.
 fun test_fight14_phase_end_retained_cleanup() -> Bool:
@@ -4442,7 +4690,6 @@ fun test_fight14_phase_end_retained_cleanup() -> Bool:
     cleanup.choose_destruction_unit(board, unit_id(0))
     cleanup.resolve_destruction_model(board, damage_test_model(0))
     return cleanup.is_done() and board[0].models.empty() and board[0].destroyed_models.value.size() == 1 and !board.allow_destroyed_attack
-
 
 # Supplied Fight on Death / p.87: other death triggers remain pending too;
 # Deadly Demise rolls only after the unit attacks or phase-end release.
@@ -4465,7 +4712,6 @@ fun test_fight14_retained_demise_trigger_delayed() -> Bool:
     cleanup.roll(board, attack_test_die(1))
     return cleanup.is_done() and board[0].models.empty()
 
-
 # Supplied Fight on Death: failed legacy permission rolls skip corpse weapon
 # selection but still release and archive it after the unit's activation.
 fun test_fight14_failed_legacy_grant_still_cleans_up() -> Bool:
@@ -4479,6 +4725,82 @@ fun test_fight14_failed_legacy_grant_still_cleans_up() -> Bool:
     sequence.resolve_destruction_model(board, damage_test_model(0))
     return sequence.is_done() and board[0].models.empty() and board[0].destroyed_models.value.size() == 1 and !board.allow_destroyed_attack
 
+# pp.38–42 storage infrastructure: snapshots and once-per-step markers have
+# bounded inferred ML layout; corrupted metadata cannot bypass save validation.
+fun test_fight14_malformed_phase_stamp_rejected() -> Bool:
+    let state = play()
+    let board = fight14_fixture()
+    state.board.units.append(board[0])
+    state.board.identify_unit(state.board[0])
+    state.board[0].history.consolidation_phase.value = MAX_PHASE_STAMP
+    let text = to_string(state)
+    let restored = play()
+    return !set_state(restored, text)
+
+# Four-slot objective selector matches the editor's finite numeric payload.
+fun fight14_objective(Int value) -> BInt<0, 4>:
+    let objective : BInt<0, 4>
+    objective = value
+    return objective
+
+# Shared fixture activation misses all three ordinary melee attacks. It
+# traverses declarations/grouping without manufacturing target damage.
+fun fight14_miss_attacks(Attack sequence, Board board, UnitID source, UnitID target):
+    sequence.select_weapon(board, attack_test_slot(2))
+    sequence.skip(board)
+    sequence.declare_target(board, source, target)
+    sequence.assign_attacks(board, attack_test_share(3))
+    sequence.choose_attack_target(board, target)
+    sequence.no_defensive_stratagem(board)
+    sequence.no_offensive_stratagem(board)
+    sequence.choose_attack_weapon(board, attack_test_weapon(0))
+    for i in range(3):
+        sequence.roll(board, attack_test_die(1))
+    if can sequence.keep_batch(board):
+        sequence.keep_batch(board)
+
+fun fight14_miss_attacks(FightStep sequence, Board board, UnitID source, UnitID target):
+    sequence.select_weapon(board, attack_test_slot(2))
+    sequence.skip(board)
+    sequence.declare_target(board, source, target)
+    sequence.assign_attacks(board, attack_test_share(3))
+    sequence.choose_attack_target(board, target)
+    sequence.no_defensive_stratagem(board)
+    sequence.no_offensive_stratagem(board)
+    sequence.choose_attack_weapon(board, attack_test_weapon(0))
+    for i in range(3):
+        sequence.roll(board, attack_test_die(1))
+    if can sequence.keep_batch(board):
+        sequence.keep_batch(board)
+
+fun fight14_miss_attacks(MeleeMoveStep sequence, Board board, UnitID source, UnitID target):
+    sequence.select_weapon(board, attack_test_slot(2))
+    sequence.skip(board)
+    sequence.declare_target(board, source, target)
+    sequence.assign_attacks(board, attack_test_share(3))
+    sequence.choose_attack_target(board, target)
+    sequence.no_defensive_stratagem(board)
+    sequence.no_offensive_stratagem(board)
+    sequence.choose_attack_weapon(board, attack_test_weapon(0))
+    for i in range(3):
+        sequence.roll(board, attack_test_die(1))
+    if can sequence.keep_batch(board):
+        sequence.keep_batch(board)
+
+# p.40: completed activations alternate owners, and all eligible units must
+# fight once. No optional end button can silently omit the second army.
+fun test_fight14_alternates_complete_unit_attacks() -> Bool:
+    let board = fight14_fixture()
+    let sequence = fight_step(board, true)
+    sequence.select_fighting_unit(board, unit_id(0))
+    sequence.choose_fight_kind(board, FightKind::normal)
+    fight14_miss_attacks(sequence, board, unit_id(0), unit_id(1))
+    if !board.current_decision_maker or !(can sequence.select_fighting_unit(board, unit_id(1))) or (can sequence.pass_fight(board)):
+        return false
+    sequence.select_fighting_unit(board, unit_id(1))
+    sequence.choose_fight_kind(board, FightKind::normal)
+    fight14_miss_attacks(sequence, board, unit_id(1), unit_id(0))
+    return sequence.is_done() and board[0].has_fought and board[1].has_fought and !board.current_decision_maker
 
 # Supplied Fight on Death: retained models use the full declaration/group
 # pipeline, then their own destruction effects run and they are archived once.
@@ -4494,3 +4816,97 @@ fun test_fight14_retained_model_attacks_with_unit_then_removed() -> Bool:
     sequence.choose_destruction_unit(board, unit_id(0))
     sequence.resolve_destruction_model(board, damage_test_model(0))
     return sequence.is_done() and board[0].models.empty() and board[0].destroyed_models.value.size() == 1 and !board.allow_destroyed_attack and board[1][0].suffered_wounds == 0
+
+# p.42: completing Engaging Consolidation immediately offers the newly
+# engaged unfought enemy a mandatory response before any further moves.
+fun test_fight14_engaging_consolidation_forces_response() -> Bool:
+    let board = fight14_fixture()
+    board[1][0].position.x = 9
+    board[0].history.fight_eligible_phase = board.phase_serial.value + 1
+    board[0].has_fought = true
+    let sequence = melee_move_step(board, true)
+    sequence.select_melee_unit(board, unit_id(0))
+    sequence.select_melee_target(board, unit_id(1))
+    sequence.finish_melee_targets(board)
+    sequence.select_melee_model(board, damage_test_model(0))
+    sequence.choose_melee_approach(board, unit_id(1))
+    sequence.melee_waypoint(board, board_position(7, 5))
+    sequence.finish_melee_model(board)
+    sequence.finish_melee_move(board)
+    if !board.current_decision_maker or !(can sequence.select_consolidation_fighter(board, unit_id(1))) or (can sequence.finish_melee_step(board)):
+        return false
+    sequence.select_consolidation_fighter(board, unit_id(1))
+    sequence.choose_fight_kind(board, FightKind::normal)
+    fight14_miss_attacks(sequence, board, unit_id(1), unit_id(0))
+    return !board.current_decision_maker and board[1].has_fought and (can sequence.finish_melee_step(board))
+
+# Supplied Fight on Death: a unit already selected to fight cannot fight a
+# second time; any newly retained casualties wait until phase-end release.
+fun test_fight14_already_fought_retained_unit_no_second_fight() -> Bool:
+    let board = fight14_fixture()
+    board[0].has_fought = true
+    board.attack_info.fight_on_death_roll = 1
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(1), true, true, 2, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 2, true)
+    return !fight_unit_eligible(board, unit_id(0)) and !destruction_ready(board[0][0], true, unit_id(1))
+
+# pp.38/42: a moved model cannot skip engagement when a coherent reachable
+# replacement exists, even if another model already engages the selected unit.
+fun test_fight14_moved_model_must_engage_if_possible() -> Bool:
+    let board = fight14_fixture()
+    board[1][0].position.x = 10
+    let other = board[0][0]
+    other.position.y = 7
+    board[0].models.append(other)
+    let candidate = board[0]
+    candidate[0].position = board_position(6, 6)
+    candidate[1].position = board_position(8, 7)
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    let approaches : UnitID[MAX_UNIT_MODELS]
+    approaches[0] = unit_id(1)
+    approaches[1] = unit_id(1)
+    return melee_placement_valid(board, board[0], candidate, unit_id(0), MeleeMoveKind::pile_in, targets, 0) and !melee_finish_valid(board, board[0], candidate, unit_id(0), MeleeMoveKind::pile_in, targets, approaches, 0) and candidate[0].position.x == 6
+
+# pp.38/42 storage: a pending per-model path and closest-target choice retain
+# their bounded state across a save round trip; positions commit only at finish.
+fun test_fight14_pending_melee_path_round_trip() -> Bool:
+    let board = fight14_fixture()
+    let sequence = melee_move(board, unit_id(0), false, false)
+    sequence.select_melee_model(board, damage_test_model(0))
+    sequence.choose_melee_approach(board, unit_id(1))
+    sequence.melee_waypoint(board, board_position(6, 5))
+    let text = to_string(sequence)
+    let restored : MeleeMove
+    let index = 0
+    if !from_string(restored, text, index):
+        return false
+    restored.finish_melee_model(board)
+    restored.finish_melee_move(board)
+    return restored.is_done() and restored.completed and board[0][0].position.x == 6
+
+# pp.8/40: the selected unit owns the active/decision roles even while
+# choosing its fight type, and both roles restore after an opposing activation.
+# An invalid direct constructor cannot consume a fight or index a foreign slot.
+fun test_fight14_selected_opponent_roles_and_invalid_constructor() -> Bool:
+    let board = fight14_fixture()
+    let invalid = selected_fight(board, unit_id(31))
+    if !invalid.is_done() or board[0].has_fought or board.timing.active_player:
+        return false
+    let sequence = selected_fight(board, unit_id(1))
+    if !board.current_decision_maker or !board.timing.active_player or board.current_player:
+        return false
+    sequence.choose_fight_kind(board, FightKind::normal)
+    sequence.select_weapon(board, attack_test_slot(2))
+    sequence.skip(board)
+    sequence.declare_target(board, unit_id(1), unit_id(0))
+    sequence.assign_attacks(board, attack_test_share(3))
+    sequence.choose_attack_target(board, unit_id(0))
+    sequence.no_defensive_stratagem(board)
+    sequence.no_offensive_stratagem(board)
+    sequence.choose_attack_weapon(board, attack_test_weapon(0))
+    for i in range(3):
+        sequence.roll(board, attack_test_die(1))
+    if can sequence.keep_batch(board):
+        sequence.keep_batch(board)
+    return sequence.is_done() and !board.current_decision_maker and !board.timing.active_player and board[1].has_fought

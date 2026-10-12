@@ -94,7 +94,7 @@ fun declaration_target_valid(Board board, UnitID source, DeclaredWeapon weapon, 
         return false
     if melee:
         for i in range(board[target].models.size()):
-            if board[target][i].is_alive() and board[source][model].is_engaged_with(board[target][i]):
+            if board[target][i].is_alive() and (!board[target][i].has_keyword(Keyword::aircraft) or board[source][model].has_keyword(Keyword::fly)) and board[source][model].is_engaged_with(board[target][i]):
                 return true
         return false
     if board[source].shooting_kind == ShootingKind::snap and !allow_snap_replacement:

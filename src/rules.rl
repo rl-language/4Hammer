@@ -1547,63 +1547,201 @@ act cleanup_phase_retained(ctx Board board) -> PhaseRetainedCleanup:
     let source : UnitID
     subaction*(board) destruction_cleanup = resolve_damage_jobs(board, jobs, false, source)
 
-
-# core rules fight step 
-# Do not expose empty retired slots as fighting participants/targets
-# (destroyed units p.19; fighting pp.38–43). Fight sequencing is task 14.
-act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
+# Pile In/consolidation are optional staged per-model moves, separate from
+# attack selection (pp.38/42). No partial path changes live positions; closest
+# target ties are controller choices. Physical features/continuous grid are deferred.
+act melee_move(ctx Board board, frm UnitID source, frm Bool consolidate, frm Bool overrun) -> MeleeMove:
+    if !melee_move_eligible(board, source, consolidate, overrun):
+        return
     frm previous_owner = board.current_decision_maker
-    board.current_decision_maker = !board.current_player
-    frm have_passed = [false, false]
-    while !have_passed[0] or !have_passed[1]:
+    frm previous_active = board.timing.active_player
+    frm previous_mover = board.moving_unit
+    frm original : Unit
+    original = board[source]
+    frm candidate : Unit
+    candidate = original
+    frm kind = MeleeMoveKind::pile_in
+    if consolidate:
+        kind = consolidation_kind(board, original)
+    frm objective : BInt<0, 4>
+    frm targets : Bool[MAX_UNIT_COUNT]
+    frm approaches : UnitID[MAX_UNIT_MODELS]
+    frm selected : Bool[MAX_UNIT_MODELS]
+    frm finished = false
+    frm completed = false
+    frm target_done = false
+    frm count : LinearlyDistributedInt<0, MAX_UNIT_COUNT_PLUS1>
+    board.current_decision_maker = original.owned_by_player1
+    board.timing.active_player = original.owned_by_player1
+    board.moving_unit = source
+    if kind == MeleeMoveKind::objective:
         actions:
-            act end_fight_step()
-                have_passed[int(board.current_decision_maker)] = true
-                board.current_decision_maker = !board.current_decision_maker
-            act select_target(frm UnitID source, frm UnitID target) {
-                source.get() < board.units.size(),
-                has_live_attack_recipient(board[source]),
-                target.get() < board.units.size(),
-                has_live_attack_recipient(board[target]),
-                has_live_attack_recipient(board[target]),
-                has_live_attack_recipient(board[source]),
-                !board[source.get()].has_fought,
-                !fight_first_phase or board.units[source.get()].has_charged or board.units[source.get()].has_ability(AbilityKind::fight_first),
-                board.units[source.get()].owned_by_player1 == board.current_decision_maker,
-                board.units[target.get()].owned_by_player1 != board.current_decision_maker,
-                board[target.get()].get_shortest_vector_to(board[source.get()]).length() < 2.0
-            }
-                board.units[source.get()].consolidate_torward(board.units[target.get()])
-                board.attack = attack(board, source, target, true, false)
-                subaction*(board) board.attack
-                board[source.get()].has_fought = true
-                if have_passed[int(!board.current_decision_maker)]:
-
-                    board.current_decision_maker = !board.current_decision_maker
+            act cancel_melee_move()
+                finished = true
+            act choose_melee_objective(BInt<0, 4> objective_id) {melee_objective_valid(board, original, objective_id.value)}
+                objective = objective_id
+    else:
+        if kind == MeleeMoveKind::ongoing or (kind == MeleeMoveKind::pile_in and board.is_in_melee(original)):
+            for i in range(board.units.size()):
+                if melee_enemy_valid(board, original, i) and original.is_engaged_with(board[i]):
+                    targets[i] = true
+                    count = count + 1
+            target_done = true
+        while !target_done:
+            actions:
+                act cancel_melee_move()
+                    target_done = true
+                    finished = true
+                act select_melee_target(UnitID target) {melee_target_valid(board, original, target, kind), !targets[target.get()]}
+                    targets[target.get()] = true
+                    count = count + 1
+                act finish_melee_targets() {count > 0}
+                    target_done = true
+        if count == 0:
+            finished = true
+    for i in range(original.models.size()):
+        for u in range(board.units.size()):
+            let target : UnitID
+            target = u
+            if nearest_melee_target_valid(board, original[i], targets, target):
+                approaches[i] = target
+                break
+    while !finished:
+        actions:
+            act cancel_melee_move()
+                finished = true
+            act restart_melee_move()
+                candidate = original
+                for i in range(MAX_UNIT_MODELS):
+                    selected[i] = false
+            act finish_melee_move() {melee_finish_valid(board, original, candidate, source, kind, targets, approaches, objective.value)}
+                board[source] = candidate
+                completed = true
+                finished = true
+            act select_melee_model(frm ModelID model) {model.get() < original.models.size(), !selected[model.get()], !melee_model_locked(board, original[model], original, kind)}
+                if !(kind == MeleeMoveKind::objective):
+                    act choose_melee_approach(UnitID target) {nearest_melee_target_valid(board, original[model], targets, target)}
+                    approaches[model.get()] = target
+                frm path : ModelPath
+                path.points.clear()
+                path.model = model
+                path.final_rotation = original[model].geometry.rotation
+                frm model_done = false
+                frm rotated = false
+                while !model_done:
+                    actions:
+                        act finish_melee_model()
+                            if !path.points.empty():
+                                candidate[model].set_geometry_position(path.points.back().as_geometry_point())
+                            candidate[model].geometry.rotation = path.final_rotation
+                            candidate[model].history = original[model].history
+                            record_path_movement(candidate[model].history, original[model], path, false)
+                            selected[model.get()] = true
+                            model_done = true
+                        act melee_waypoint(BoardPosition position) {melee_waypoint_valid(board, original, path, position, kind)}
+                            path.append_point(geometry_point(position.x.value * MICROMETRES_PER_INCH, position.y.value * MICROMETRES_PER_INCH, original[model].geometry_position().z.value))
+                        act rotate_melee_model(MovementRotation rotation) {!rotated}
+                            path.final_rotation = rotation.value * 1000
+                            rotated = true
+    if completed:
+        board[source].history.last_move_phase = board.phase_serial.value + 1
+        board[source].history.made_move_this_turn = true
+        if consolidate:
+            board[source].history.consolidation_phase = board.phase_serial.value + 1
+        else if !overrun:
+            board[source].history.pile_in_phase = board.phase_serial.value + 1
+    board.moving_unit = previous_mover
+    board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
 
-# core rules fight phase
-# Correct existing Bestial Bellow target bounds and its actual payer/cost
-# (generic stratagem expenditure p.54). Its faction effect requires faction data.
+# Selection consumes a fight before attacks (p.40) and scopes roles (p.8).
+# Overrun permits an additional Pile In; retained destroyed models attack with
+# their unit through shared declarations/groups, never immediate retaliation.
+act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
+    if !fight_unit_eligible(board, source):
+        return
+    frm previous_owner = board.current_decision_maker
+    frm previous_active = board.timing.active_player
+    board.timing.active_player = board[source].owned_by_player1
+    board[source].has_fought = true
+    board[source].history.fight_eligible_phase = board.phase_serial.value + 1
+    board[source].history.consolidation_fight_pending = 0
+    board.current_decision_maker = board[source].owned_by_player1
+    act choose_fight_kind(FightKind kind) {fight_kind_valid(board, source, kind)}
+    if kind == FightKind::overrun:
+        subaction*(board) overrun_move = melee_move(board, source, false, true)
+    let unused_target : UnitID
+    board.attack = attack(board, source, unused_target, true, false)
+    subaction*(board) board.attack
+    board.timing.active_player = previous_active
+    board.current_decision_maker = previous_owner
+
+# Current player starts; alternate after every fight. The chooser who first
+# encounters no remaining Fights First units starts remaining combats. Newly
+# eligible Fights First units restore priority after each remaining fight (p.40).
+act fight_step(ctx Board board, frm Bool start_first) -> FightStep:
+    frm previous_owner = board.current_decision_maker
+    frm chooser = board.current_player
+    frm first = start_first
+    begin_fight_step(board)
+    while player_can_fight(board, false, false) or player_can_fight(board, true, false):
+        refresh_fight_eligibility(board)
+        if !player_can_fight(board, false, true) and !player_can_fight(board, true, true):
+            first = false
+        else:
+            first = true
+        board.current_decision_maker = chooser
+        actions:
+            act pass_fight() {!player_can_fight(board, chooser, first)}
+                chooser = !chooser
+            act select_fighting_unit(frm UnitID source) {source.get() < board.units.size(), board[source].owned_by_player1 == chooser, fight_unit_eligible(board, source), !first or fight_first_unit(board[source])}
+                subaction*(board) fighting = selected_fight(board, source)
+                chooser = !chooser
+    board.current_decision_maker = previous_owner
+
+# Phase-wide moves resolve all active-player choices before opponent choices
+# (pp.38/42). Engaging consolidation queues every newly engaged, unfought enemy
+# for the opponent's mandatory response, even if it becomes unengaged later.
+act melee_move_step(ctx Board board, frm Bool consolidate) -> MeleeMoveStep:
+    frm mover = board.current_player
+    frm side : BInt<0, 3>
+    frm previous_owner = board.current_decision_maker
+    while side < 2:
+        board.current_decision_maker = mover
+        frm done = false
+        while !done:
+            actions:
+                act finish_melee_step()
+                    done = true
+                act select_melee_unit(frm UnitID source) {source.get() < board.units.size(), board[source].owned_by_player1 == mover, melee_move_eligible(board, source, consolidate, false)}
+                    subaction*(board) moving = melee_move(board, source, consolidate, false)
+                    if consolidate and moving.completed and moving.kind == MeleeMoveKind::engaging:
+                        for i in range(board.units.size()):
+                            if board[i].owned_by_player1 != mover and !board[i].has_fought and board[source].is_engaged_with(board[i]):
+                                board[i].history.consolidation_fight_pending = board.phase_serial.value + 1
+                                board[i].history.fight_eligible_phase = board.phase_serial.value + 1
+                        while has_consolidation_response(board, !mover):
+                            board.current_decision_maker = !mover
+                            act select_consolidation_fighter(frm UnitID response) {response.get() < board.units.size(), board[response].owned_by_player1 != mover, consolidation_response_valid(board, response)}
+                            subaction*(board) answering = selected_fight(board, response)
+                    board.current_decision_maker = mover
+        side = side + 1
+        mover = !mover
+    board.current_decision_maker = previous_owner
+
+# Keep the legacy Bestial Bellow grant explicit until faction data arrives.
+# Core fight bodies are phase-wide Pile In, dynamic mandatory fights and
+# phase-wide consolidation (pp.38–43); turn owns start/end windows.
 act fight_phase(ctx Board board) -> FightPhase:
     if board.players_faction[int(board.current_player)] == Faction::morgrim_butchas:
         actions:
-            act use_bestial_bellow(frm UnitID unit, frm UnitID target) {
-                target.get() < board.units.size(),
-                has_live_attack_recipient(board[target]),
-                unit.get() < board.units.size(),
-                !board[unit].empty(),
-                board[unit].has_keyword(Keyword::beastboss) or board[unit].has_keyword(Keyword::squighog_boyz),
-                board.can_target_strat(board.current_player, Stratagem::bestial_bellow, board[unit]),
-                board[target].distance(board[unit]) < 3.0
-            }
+            act use_bestial_bellow(frm UnitID unit, frm UnitID target) {target.get() < board.units.size(), has_live_attack_recipient(board[target]), unit.get() < board.units.size(), !board[unit].empty(), board[unit].has_keyword(Keyword::beastboss) or board[unit].has_keyword(Keyword::squighog_boyz), board.can_target_strat(board.current_player, Stratagem::bestial_bellow, board[unit]), board[target].distance(board[unit]) < 3.0}
                 board.commit_stratagem(board.current_player, Stratagem::bestial_bellow, board[unit])
-
                 subaction*(board, board[target]) shock_test = battle_shock_test(board, board[target], false, false)
-                
             act skip()
-    subaction*(board) fight_first_step = fight_step(board, true)
-    subaction*(board) fight_step = fight_step(board, false)
+    subaction*(board) pile_in = melee_move_step(board, false)
+    subaction*(board) fights = fight_step(board, true)
+    subaction*(board) consolidation = melee_move_step(board, true)
 
 # Declare once, roll/reroll before choosing targets, and commit only a legal
 # completed move (pp.36–37). All pending numbers/paths remain bounded. Restore

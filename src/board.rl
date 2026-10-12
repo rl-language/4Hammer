@@ -775,6 +775,8 @@ fun valid_model_numeric_history(Model model) -> Bool:
 # Timestamps remain within configured serial ranges, including zero sentinel.
 # Live and archived bearers must both retain bounded numeric history (pp.19/88).
 fun valid_unit_numeric_history(Unit unit) -> Bool:
+    if !valid_fight_history(unit.history):
+        return false
     for i in range(unit.phase_modifiers.charge_roll.size()):
         ref modifier = unit.phase_modifiers.charge_roll[i]
         if modifier.amount.value < 0 or modifier.amount.value >= MAX_RULE_MODIFIER or modifier.operation.value < 0 or modifier.operation.value > ModifierOperation::subtract.value:
@@ -788,3 +790,8 @@ fun valid_unit_numeric_history(Unit unit) -> Bool:
         if !valid_model_numeric_history(unit.destroyed_models.value[i]):
             return false
     return true
+
+# Fight phase snapshots/once-per-step guards are bounded save infrastructure
+# supporting pp.38–42; no invalid stamp may bypass eligibility on load.
+fun valid_fight_history(UnitHistory history) -> Bool:
+    return history.pile_in_phase.value >= 0 and history.pile_in_phase.value < MAX_PHASE_STAMP and history.consolidation_phase.value >= 0 and history.consolidation_phase.value < MAX_PHASE_STAMP and history.engaged_fight_start_phase.value >= 0 and history.engaged_fight_start_phase.value < MAX_PHASE_STAMP and history.fight_eligible_phase.value >= 0 and history.fight_eligible_phase.value < MAX_PHASE_STAMP and history.consolidation_fight_pending.value >= 0 and history.consolidation_fight_pending.value < MAX_PHASE_STAMP
