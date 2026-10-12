@@ -6931,3 +6931,142 @@ fun test_transport16_firing_deck_action_selection() -> Bool:
     sequence.select_firing_deck_weapon(board, declarations, slot)
     sequence.finish_firing_deck(board, declarations)
     return sequence.is_done() and declarations.size() == 1 and declarations[0].model_identity == board[0][0].identity and board.embarked_units[0].history.deck_shooting_locked and !board.embarked_units[0][0].used_once_per_battle_weapon[0]
+
+# Appendix02.02.01/02.02.03: fixed A uses bearer/profile arithmetic before
+# declaration and random A/D preserve their original dice until after re-rolls.
+fun test_orks17c2b2_modified_melee_shares() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::add, 2, 0))
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let count = declaration_fixed_attacks(board, unit_id(0), declaration, 0)
+    return count == 5
+
+# Core increments enter addition before division, including random results.
+fun test_orks17c2b2_random_arithmetic_after_reroll() -> Bool:
+    let board = attack_declaration_fixture()
+    board.command_points[0] = 2
+    let modifiers : RuleModifiers
+    modifiers.append(rule_modifier(ModifierOperation::multiply, 2))
+    modifiers.append(rule_modifier(ModifierOperation::divide, 2))
+    let characteristic = evaluate_weapon_characteristic(board, dice_stat(6), 3, false, unit_id(0), modifiers, ModifiedCharacteristic::damage)
+    characteristic.quantity(board, attack_test_die(1))
+    characteristic.keep_it(board, false)
+    characteristic.reroll(board, attack_test_die(4))
+    return characteristic.is_done() and characteristic.result.value == 6 and board.command_points[0] == 1
+
+# Fixed D differences disappear when cumulative operations give the same D.
+fun test_orks17c2b2_effective_fixed_damage_grouping() -> Bool:
+    let left : AttackSequenceInfo
+    let right : AttackSequenceInfo
+    left.source = Weapon::librarian_storm_bolter
+    right.source = left.source
+    left.damage_modifiers.append(rule_modifier(ModifierOperation::add, 2))
+    if same_effective_damage(left, right):
+        return false
+    right.damage_modifiers.append(rule_modifier(ModifierOperation::multiply, 3))
+    return same_effective_damage(left, right)
+
+# Comparing only one die face is insufficient for random D group identity.
+fun test_orks17c2b2_random_damage_grouping_all_faces() -> Bool:
+    let left : AttackSequenceInfo
+    let right : AttackSequenceInfo
+    left.source = Weapon::smite_witchfire
+    right.source = left.source
+    left.damage_modifiers.append(rule_modifier(ModifierOperation::multiply, 2))
+    right.damage_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+    return !same_effective_damage(left, right)
+
+# A zero replacement is locked against later additions by appendix02.02.01.
+fun test_orks17c2b2_zero_damage_replacement_locked() -> Bool:
+    let board = attack_declaration_fixture()
+    let modifiers : RuleModifiers
+    modifiers.append(rule_modifier(ModifierOperation::replace, 0))
+    let characteristic = evaluate_weapon_characteristic(board, raw_stat(2), 4, false, unit_id(0), modifiers, ModifiedCharacteristic::damage)
+    return characteristic.is_done() and characteristic.result.value == 0
+
+# Scoped D is captured from the actual selected bearer, including Firing Deck.
+fun test_orks17c2b2_damage_snapshot_scope() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::damage, ModifierOperation::add, 2, 0))
+    let first = orks17c2b_info(board, 0)
+    let second = orks17c2b_info(board, 1)
+    return first.damage_modifiers.size() == 1 and second.damage_modifiers.empty()
+
+# p.17: the actual share selector exposes modified A and gathering must not
+# apply it a second time to each split share.
+fun test_orks17c2b2_melee_share_selector_and_gathering() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::multiply, 2))
+    board[1][0].position = board[0][0].position
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let targets = declare_weapon_targets(board, declaration, unit_id(0), true)
+    targets.declare_target(board, unit_id(0), unit_id(1))
+    let share : AttackShareChoice
+    share = 6
+    targets.assign_attacks(board, share)
+    let gathered = gather_weapon_count(board, unit_id(0), unit_id(1), targets.weapon, true)
+    return targets.is_done() and gathered.is_done() and gathered.result.value == 6
+
+# Random ranged A is modified per weapon at gathering, not at declaration.
+fun test_orks17c2b2_random_attacks_gathering() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::smite_witchfire
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::multiply, 2))
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let gathered = gather_weapon_count(board, unit_id(0), unit_id(1), declaration, false)
+    gathered.quantity(board, attack_test_die(3))
+    return gathered.is_done() and gathered.result.value == 6
+
+# D modifiers are consumed by actual allocated damage, not just group labels.
+fun test_orks17c2b2_allocated_damage_uses_modifier() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.damage_modifiers.append(rule_modifier(ModifierOperation::replace, 0))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    let model : ModelID
+    damage.allocate_mortal(board, board[1], board[0], model)
+    return damage.is_done() and board[1][0].suffered_wounds == 0
+
+# Appendix02.02.01: replacing A by zero permits no melee share and must not
+# strand the declaration at an input boundary with no legal choices.
+fun test_orks17c2b2_zero_melee_attacks_no_selector() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::replace, 0))
+    board[1][0].position = board[0][0].position
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let targets = declare_weapon_targets(board, declaration, unit_id(0), true)
+    return targets.is_done()
+
+# p.17: a multiplied A is split once; both targets keep their declared share.
+fun test_orks17c2b2_modified_melee_split_not_multiplied_twice() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::multiply, 2))
+    board[1][0].position = board[0][0].position
+    board[2][0].position = board[0][0].position
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let targets = declare_weapon_targets(board, declaration, unit_id(0), true)
+    targets.declare_target(board, unit_id(0), unit_id(1))
+    targets.assign_attacks(board, attack_test_share(3))
+    targets.declare_target(board, unit_id(0), unit_id(2))
+    targets.assign_attacks(board, attack_test_share(3))
+    let first = gather_weapon_count(board, unit_id(0), unit_id(1), targets.weapon, true)
+    let second = gather_weapon_count(board, unit_id(0), unit_id(2), targets.weapon, true)
+    return targets.is_done() and first.result.value == 3 and second.result.value == 3
+
+# Appendix02.02.03: actual random D still waits for allocation and then
+# applies operations to the selected original die before inflicting damage.
+fun test_orks17c2b2_random_allocated_damage_uses_modifier() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.source = Weapon::smite_witchfire
+    board.attack_info.damage_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    if can damage.quantity(board, board[1], board[0], attack_test_die(2)):
+        return false
+    let model : ModelID
+    damage.allocate_mortal(board, board[1], board[0], model)
+    damage.quantity(board, board[1], board[0], attack_test_die(2))
+    return damage.is_done() and board[1][0].suffered_wounds == 1

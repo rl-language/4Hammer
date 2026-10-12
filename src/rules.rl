@@ -63,10 +63,12 @@ fun evaluate_random_stat(Stat stat, Int modifier) -> RollStat:
     return evaluate_random_stat(stat, mod) 
 
 # Random A is generated separately per weapon at gathering; random D per
-# damaging attack after allocation (supplied appendix 02.02.03). Command
+# damaging attack after allocation (supplied appendix 02.02.03). Apply
+# characteristic arithmetic only after any replacement dice (01.05.02). Command
 # Re-roll targets the controlling unit and spends before replacement (p.56).
-act evaluate_weapon_characteristic(ctx Board board, frm Stat stat, frm StatModifier extra, frm Bool player, frm UnitID target) -> WeaponStatRoll:
-    subaction* initial = evaluate_random_stat(stat, extra)
+act evaluate_weapon_characteristic(ctx Board board, frm Stat stat, frm StatModifier extra, frm Bool player, frm UnitID target, frm RuleModifiers modifiers, frm ModifiedCharacteristic characteristic_kind) -> WeaponStatRoll:
+    let zero : StatModifier
+    subaction* initial = evaluate_random_stat(stat, zero)
     frm result = initial.result
     if stat is Dice:
         frm maximum = stat
@@ -77,8 +79,17 @@ act evaluate_weapon_characteristic(ctx Board board, frm Stat stat, frm StatModif
             if !keep:
                 board.commit_stratagem(player, Stratagem::reroll, board[target])
                 act reroll(Dice replacement) {replacement.value <= maximum.value}
-                result = replacement.value + extra.value
+                result = replacement.value
             board.current_decision_maker = previous_owner
+    let effective = modified_characteristic(result.value, characteristic_kind, modifiers, false, extra.value)
+    assert(effective >= 0 and effective < MAX_RANDOM_STAT_RESULT, "weapon characteristic result capacity exceeded")
+    result = effective
+
+# Legacy callers use unmodified arithmetic; actual A/D consumers supply their
+# scoped operation list (appendix02.02.01/02.02.03).
+fun evaluate_weapon_characteristic(Board board, Stat stat, StatModifier extra, Bool player, UnitID target) -> WeaponStatRoll:
+    let modifiers : RuleModifiers
+    return evaluate_weapon_characteristic(board, stat, extra, player, target, modifiers, ModifiedCharacteristic::damage)
 
 # Convert a supported characteristic increment to standard bounded storage,
 # rejecting unsupported values rather than silently clamping (pp.17/19).
@@ -87,6 +98,14 @@ fun evaluate_weapon_characteristic(Board board, Stat stat, Int extra, Bool playe
     let bounded : StatModifier
     bounded = extra
     return evaluate_weapon_characteristic(board, stat, bounded, player, target)
+
+# Core A/D increments enter the addition step after the original dice and any
+# re-roll, before division/subtraction (appendix02.02.01/01.05.02).
+fun evaluate_weapon_characteristic(Board board, Stat stat, Int extra, Bool player, UnitID target, RuleModifiers modifiers, ModifiedCharacteristic kind) -> WeaponStatRoll:
+    assert(extra >= 0 and extra < MAX_STAT_MODIFIER, "characteristic increment capacity exceeded")
+    let bounded : StatModifier
+    bounded = extra
+    return evaluate_weapon_characteristic(board, stat, bounded, player, target, modifiers, kind)
 
 # Command Re-roll needs a friendly target and obeys phase/unit use limits
 # (pp.54/56). Unknown targets cannot bypass that eligibility gate.
@@ -495,7 +514,7 @@ act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit
             if attack_save_succeeds(groups[active_group.value], die, board.attack_info.attack_penetration()):
                 continue
             board.current_state = CurrentStateDescription::damage_roll
-            subaction*(board) normal_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+            subaction*(board) normal_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, board.attack_info.damage_modifiers, ModifiedCharacteristic::damage)
             frm jobs : DamageJobs
             jobs.clear()
             jobs.append(damage_job(DamageKind::normal, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, normal_amount.result.value, target[id].identity))
@@ -506,7 +525,7 @@ act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit
         act allocate_mortal(frm ModelID critical_model) {mortal_model_valid(target, critical_model)}
         frm critical_recipient = target[critical_model].identity
         board.current_state = CurrentStateDescription::damage_roll
-        subaction*(board) critical_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+        subaction*(board) critical_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, board.attack_info.damage_modifiers, ModifiedCharacteristic::damage)
         frm critical_jobs : DamageJobs
         critical_jobs.clear()
         critical_jobs.append(damage_job(DamageKind::devastating, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, critical_amount.result.value, critical_recipient))
@@ -822,9 +841,12 @@ act declare_weapon_targets(ctx Board board, frm DeclaredWeapon weapon, frm UnitI
     if !declaration_has_target(board, source, weapon, melee):
         return
     frm remaining : AttackShare
-    let attacks = weapon.weapon.attacks()
-    if attacks is FixedStat:
-        remaining = attacks.value
+    if melee:
+        let total = declaration_fixed_attacks(board, source, weapon, 0)
+        assert(total >= 0 and total < MAX_CHARACTERISTIC, "melee attack share capacity exceeded")
+        if melee and total == 0:
+            return
+        remaining = total
     frm chosen : UnitID
     while true:
         actions:
@@ -908,6 +930,7 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     info.skill_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::weapon_skill, weapon.borrowed_weapon)
     if weapon.weapon.range() > 0:
         info.skill_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::ballistic_skill, weapon.borrowed_weapon)
+    info.damage_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::damage, weapon.borrowed_weapon)
     info.ap_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::armour_penetration, weapon.borrowed_weapon)
     let strength_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::strength, weapon.borrowed_weapon)
     let strength = modified_characteristic(weapon.weapon.strenght(), ModifiedCharacteristic::strength, strength_modifiers, false)
@@ -959,14 +982,19 @@ fun gathering_extra_attacks(Board board, UnitID source, UnitID target, DeclaredW
 
 # Retain a selected weapon value, not a local reference into an iteration,
 # while collecting its random A (supplied appendix 02.02.03). Split fixed-A
-# melee weapons contribute exactly their previously declared target share.
+# melee weapons contribute their modified declared share. Apply a gather-time
+# core bonus as the difference of total modified A with/without that bonus;
+# applying the bearer modifiers to each share would multiply split attacks.
 act gather_weapon_count(ctx Board board, frm UnitID source, frm UnitID target, frm DeclaredWeapon declaration, frm Bool melee) -> WeaponAttackCount:
     frm result : RandomStatResult
     if melee and weapon_has_fixed_attacks(declaration.weapon):
-        result = declaration.shares[target.get()].value + gathering_extra_attacks(board, source, target, declaration)
+        let extra = gathering_extra_attacks(board, source, target, declaration)
+        let count = declaration.shares[target.get()].value + declaration_fixed_attacks(board, source, declaration, extra) - declaration_fixed_attacks(board, source, declaration, 0)
+        assert(count >= 0 and count < MAX_RANDOM_STAT_RESULT, "melee gathered attack capacity exceeded")
+        result = count
     else:
         board.current_state = CurrentStateDescription::quantity_roll
-        subaction*(board) generated = evaluate_weapon_characteristic(board, declaration.weapon.attacks(), gathering_extra_attacks(board, source, target, declaration), board[source].owned_by_player1, source)
+        subaction*(board) generated = evaluate_weapon_characteristic(board, declaration.weapon.attacks(), gathering_extra_attacks(board, source, target, declaration), board[source].owned_by_player1, source, declaration_attack_modifiers(board, source, declaration), ModifiedCharacteristic::attacks)
         result = generated.result
 
 # Gather every identical unresolved weapon; roll random A independently and

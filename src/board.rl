@@ -56,10 +56,12 @@ cls AttackSequenceInfo:
     Weapon source
     # Gathered weapon snapshots (pp.17–19/appendix02.02.01); skill/AP
     # retain operations so later core increments enter the right arithmetic step.
+    # D retains operations until its allocated per-attack random roll (02.02.03).
     Bool characteristics_known
     FixedStat weapon_strength
     RuleModifiers skill_modifiers
     RuleModifiers ap_modifiers
+    RuleModifiers damage_modifiers
     Profile source_profile
     BInt<0, MAX_ROUNDS> current_round
 
@@ -802,7 +804,7 @@ fun valid_weapon_condition(WeaponRule rule) -> Bool:
 # Compatibility/integrity gate: configurations cannot bypass their bounded
 # policies; identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
-    if !valid_rule_modifiers(board.attack_info.skill_modifiers) or !valid_rule_modifiers(board.attack_info.ap_modifiers):
+    if !valid_rule_modifiers(board.attack_info.skill_modifiers) or !valid_rule_modifiers(board.attack_info.ap_modifiers) or !valid_rule_modifiers(board.attack_info.damage_modifiers):
         return false
     for configured_player in range(2):
         if !army_configuration_valid(board.armies[configured_player]):

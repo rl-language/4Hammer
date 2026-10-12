@@ -5,8 +5,8 @@ func _initialize():
 
 func check_characteristics():
 	var library = root.get_node("GlobalRules").library
-	assert(library.get_state_schema_version() == 20)
-	assert(library.get_observation_schema_version() == 20)
+	assert(library.get_state_schema_version() == 21)
+	assert(library.get_observation_schema_version() == 21)
 	assert(library.get_action_schema_version() == 14)
 	var board = RLCBoard.make()
 	var unit = library.make_infernus_squad()

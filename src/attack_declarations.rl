@@ -189,13 +189,13 @@ fun target_has_unresolved_weapons(DeclaredWeapons declarations, UnitID target) -
 # applicable weapon rules, effective roll modifiers/rerolls, cover and target
 # defenses (p.17). Profile identity alone is not an attack characteristic.
 fun attacks_are_identical(Board board, AttackSequenceInfo left, AttackSequenceInfo right) -> Bool:
-    if effective_attack_skill(board, left) != effective_attack_skill(board, right) or left.attack_strength() != right.attack_strength() or left.attack_penetration() != right.attack_penetration() or !same_damage_characteristic(left.source.damage(), right.source.damage()):
+    if effective_attack_skill(board, left) != effective_attack_skill(board, right) or left.attack_strength() != right.attack_strength() or left.attack_penetration() != right.attack_penetration() or !same_effective_damage(left, right):
         return false
     if !(left.shooting_kind == right.shooting_kind) or left.indirect_stationary_visible != right.indirect_stationary_visible or left.heavy_bonus != right.heavy_bonus or left.engaged_hit_penalties != right.engaged_hit_penalties:
         return false
     if left.total_hit_modifier() != right.total_hit_modifier() or left.total_wound_modifier() != right.total_wound_modifier():
         return false
-    if left.melta_damage_bonus != right.melta_damage_bonus or left.only_hits_on_6 != right.only_hits_on_6 or left.reroll_hits != right.reroll_hits or left.reroll1_hits != right.reroll1_hits or left.reroll_wounds != right.reroll_wounds or left.reroll1_wounds != right.reroll1_wounds:
+    if left.only_hits_on_6 != right.only_hits_on_6 or left.reroll_hits != right.reroll_hits or left.reroll1_hits != right.reroll1_hits or left.reroll_wounds != right.reroll_wounds or left.reroll1_wounds != right.reroll1_wounds:
         return false
     if left.target_toughness != right.target_toughness or left.greater_strenght_wound_protection != right.greater_strenght_wound_protection or left.fight_on_death != right.fight_on_death or left.fight_on_death_roll != right.fight_on_death_roll:
         return false
@@ -277,3 +277,41 @@ fun declaration_weapon_range(Board board, UnitID source, DeclaredWeapon declarat
     let model = declared_model_index(board, source, declaration)
     assert(model >= 0, "missing declared bearer for Range")
     return model_weapon_range(board[source][model], declaration.weapon, declaration.slot.value, declaration.borrowed_weapon)
+
+# A is determined per selected bearer/profile (appendix02.02.01/02.02.03).
+# Borrowed Firing Deck weapons use the carrier-wide grants, not passenger slots.
+fun declaration_attack_modifiers(Board board, UnitID source, DeclaredWeapon declaration) -> RuleModifiers:
+    let model = declared_model_index(board, source, declaration)
+    assert(model >= 0, "declared source no longer exists")
+    return model_weapon_modifiers(board[source][model], declaration.slot.value, ModifiedCharacteristic::attacks, declaration.borrowed_weapon)
+
+# Fixed melee A must be known before assigning shares (p.17). Random melee A
+# is excluded by the user's explicit assumption; do not silently roll it early.
+fun declaration_fixed_attacks(Board board, UnitID source, DeclaredWeapon declaration, Int extra) -> Int:
+    let stat = declaration.weapon.attacks()
+    assert(stat is FixedStat, "random-A melee weapons are unsupported by user assumption")
+    if stat is FixedStat:
+        let modifiers = declaration_attack_modifiers(board, source, declaration)
+        return modified_characteristic(stat.value, ModifiedCharacteristic::attacks, modifiers, false, extra)
+    return 0
+
+# Group D by the effective characteristic, including every possible original
+# die face. A fixed result and a random expression retain different re-roll
+# opportunities and cannot group even if a replacement makes them numerically
+# equal (p.17; appendix02.02.03/01.05.02).
+fun same_effective_damage(AttackSequenceInfo left, AttackSequenceInfo right) -> Bool:
+    let left_stat = left.source.damage()
+    let right_stat = right.source.damage()
+    if left_stat is FixedStat:
+        if right_stat is FixedStat:
+            return modified_characteristic(left_stat.value, ModifiedCharacteristic::damage, left.damage_modifiers, false, left.melta_damage_bonus.value) == modified_characteristic(right_stat.value, ModifiedCharacteristic::damage, right.damage_modifiers, false, right.melta_damage_bonus.value)
+    if left_stat is Dice:
+        if right_stat is Dice:
+            if left_stat.value != right_stat.value:
+                return false
+            for face_index in range(left_stat.value):
+                let face = face_index + 1
+                if modified_characteristic(face, ModifiedCharacteristic::damage, left.damage_modifiers, false, left.melta_damage_bonus.value) != modified_characteristic(face, ModifiedCharacteristic::damage, right.damage_modifiers, false, right.melta_damage_bonus.value):
+                    return false
+            return true
+    return false

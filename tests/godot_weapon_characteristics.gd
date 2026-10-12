@@ -5,8 +5,8 @@ func _initialize():
 
 func check_weapon_characteristics():
 	var library = root.get_node("GlobalRules").library
-	assert(library.get_state_schema_version() == 20)
-	assert(library.get_observation_schema_version() == 20)
+	assert(library.get_state_schema_version() == 21)
+	assert(library.get_observation_schema_version() == 21)
 	assert(library.get_action_schema_version() == 14)
 	var board = RLCBoard.make()
 	var attacker = library.make_infernus_squad()
@@ -57,6 +57,17 @@ func check_weapon_characteristics():
 	var reverse_declaration = library.make_declared_weapon(board, target, 0, 0)
 	var reverse_info = library.declared_attack_info(board, target, source, reverse_declaration, neutral)
 	assert(reverse_info.get_source_unit_id().get_id().get_value() == 1)
+	# A/D grants reach the actual declaration/gathered snapshot APIs.
+	kind.set_value(7) # ATTACKS
+	operation.set_value(2) # ADD
+	library.append(bearer.get_characteristic_modifiers(), library.weapon_characteristic_modifier(kind, operation, 2, 0))
+	kind.set_value(12) # DAMAGE
+	library.append(bearer.get_characteristic_modifiers(), library.weapon_characteristic_modifier(kind, operation, 1, 0))
+	declaration.set_borrowed_weapon(false)
+	var modified = library.declared_attack_info(board, source, target, declaration, neutral)
+	assert(library.size(modified.get_damage_modifiers()) == 1)
+	assert(library.size(library.declaration_attack_modifiers(board, source, declaration)) == 1)
+	assert(not library.same_effective_damage(modified, borrowed))
 	print("PASS: Godot schema exports, weapon scope, effective S/AP/BS and fresh target Toughness")
 	library.free()
 	call_deferred("quit", 0)
