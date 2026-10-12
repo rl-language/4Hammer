@@ -1124,16 +1124,8 @@ act timing_rapid_ingress(ctx Board board, frm Bool player) -> TimingRapidIngress
     board.commit_stratagem(player, Stratagem::rapid_ingress, board.reserve_units[reserve.get()])
     actions:
         act skip()
-        act ingress_at(BoardPosition position) {
-            board.least_distance_from_player_units(position, !player) > 9.0,
-            board.is_position_valid_for_reserve(position, board.reserve_units[reserve.get()]),
-            setup_candidate_valid(board, board.reserve_units[reserve.get()], position)
-        }
-            board.units.append(board.reserve_units[reserve.get()])
-            board.units.back().mark_set_up()
-            board.units.back().try_arrange_at(position)
-            board.units.back().has_moved = true
-            board.reserve_units.erase(reserve.get())
+        act ingress_at(BoardPosition position) {board.units.has_capacity(), setup_at_valid(board, board.reserve_units[reserve.get()], position, MovementKind::ingress, false)}
+            enter_from_reserves(board, reserve, position, MovementKind::ingress)
 
 # Fire Overwatch is a choice at the end of the opponent's Movement phase,
 # rather than after every individual move/charge (p.57). Full snap-shooting
@@ -1408,29 +1400,77 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
 # of advancing and the triggering of overwatches
 # Keep the full Advance increment and record the movement phase
 # (Normal/Advance pp.32–33). Validate each model/path and final coherency (p.12);
-# independent-model selection and full movement-mode timing remain task 11.
-# A selected mover owns the active role until its move ends (p.8).
+# Independent model paths share the existing BoardPosition grid and ctx
+# contracts; stage positions until complete final coherency passes (pp.12/87).
 act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement) -> Move:
-    if board[unit.get()].models.size() == 0:
+    if unit.get() >= board.units.size() or !has_live_model(board[unit]) or board[unit].history.ingress_locked:
         return
     frm previous_owner = board.current_decision_maker
     frm previous_active = board.timing.active_player
-    board.current_decision_maker = board[unit].owned_by_player1
-    board.timing.active_player = board[unit].owned_by_player1
-    # An impossible/cancelled move leaves positions unchanged rather than
-    # trapping the game in a decision with no legal destinations (p.12).
-    # Full Fall Back/path choice permissions are still task 11.
-    actions:
-        act skip()
-        act move_to(BoardPosition position) {
-            can_translate_unit(board, unit, position, additional_movement.value)
-        }
-            try_translate_unit(board, unit, position, additional_movement.value)
+    frm previous_mover : UnitID
+    previous_mover = board.moving_unit
+    frm original : Unit
+    original = board[unit]
+    frm candidate : Unit
+    candidate = original
+    frm kind = original.pending_move_kind
+    if kind == MovementKind::stationary:
+        kind = MovementKind::normal
+    frm extra = additional_movement
+    frm override_m : MovementOverride
+    override_m = original.movement_override.value
+    frm skies = original.move_takes_to_skies
+    frm selected : Bool[MAX_UNIT_MODELS]
+    frm finished = false
+    frm completed = false
+    board.moving_unit = unit
+    board.current_decision_maker = original.owned_by_player1
+    board.timing.active_player = original.owned_by_player1
+    while !finished:
+        actions:
+            act skip()
+                finished = true
+            act finish_move() {complete_move_valid(board, original, candidate, unit, kind, extra.value)}
+                board[unit] = candidate
+                completed = true
+                finished = true
+            act move_to(BoardPosition position) {rigid_move_valid(board, original, unit, position, kind, extra.value, override_m.value, skies)}
+                candidate = original
+                translate_move_candidate(board, original, candidate, unit, position, kind, extra.value, override_m.value, skies)
+                board[unit] = candidate
+                completed = true
+                finished = true
+            act select_moving_model(frm ModelID model) {model.get() < original.models.size(), original[model].is_alive(), !selected[model.get()]}
+                frm path : ModelPath
+                path.points.clear()
+                path.model = model
+                path.final_rotation = original[model].geometry.rotation
+                frm model_done = false
+                frm rotated = false
+                while !model_done:
+                    actions:
+                        act finish_model()
+                            if path.points.size() > 0:
+                                candidate[model].set_geometry_position(path.points.back())
+                            candidate[model].geometry.rotation = path.final_rotation
+                            candidate[model].history.distance_moved_this_turn = original[model].history.distance_moved_this_turn.value + path_distance(original[model], path, skies) / float(MICROMETRES_PER_INCH)
+                            selected[model.get()] = true
+                            model_done = true
+                        act waypoint(BoardPosition position) {waypoint_valid(board, original, path, position, kind, extra.value, override_m.value, skies)}
+                            path.points.append(geometry_point(position.x.value * MICROMETRES_PER_INCH, position.y.value * MICROMETRES_PER_INCH, original[model].geometry_position().z.value))
+                        act rotate_model(MovementRotation rotation) {!rotated}
+                            path.final_rotation = rotation.value * 1000
+                            rotated = true
+    if completed:
+        # Any completed move, including out-of-phase moves, blocks a later
+        # surge in this phase (p.70); stationary never enters this action.
+        board[unit].history.last_move_phase = board.phase_serial
+    board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
 
-# Convert an internal movement increment to its bounded state domain
-# so a full D6 Advance fits (p.33); the bound also drives inferred ML layout.
+# Bound an internal allowance while retaining the legacy three-argument
+# context used by existing out-of-phase moves (pp.12/33).
 fun move(Board board, UnitID unit, Int additional_movement) -> Move:
     let modifier : StatModifier
     modifier = additional_movement
@@ -1560,115 +1600,142 @@ act charge_phase(ctx Board board) -> ChargePhase:
 
                 board.current_decision_maker = board.current_player
 
-# core rules reserve deployment 
-# Preserve setup history when a reserve unit transfers to the battlefield
-# (reserves/setup pp.68–71); placement/timing updates remain task 11.
+# Ingress setup validates every base before transfer; failed setup remains
+# selectable for another attempt or stationary choice (pp.14/69).
 act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeployment:
     frm done_deploying = false
-    board.current_decision_maker = current_player 
+    board.current_decision_maker = current_player
     actions:
-        act nothing_to_deploy()
+        act nothing_to_deploy() {movement_selection_complete(board, current_player)}
             done_deploying = true
-        act select_reserve_unit(frm UnitID id){
-            id.get() < board.reserve_units.size(),
-            board.reserve_units[id.get()].owned_by_player1 == current_player
-        }
-            # Failed/cancelled setup retains the reserve unit (p.14).
+        act select_reserve_unit(frm UnitID id) {id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[id.get()]), board.reserve_units[id.get()].owned_by_player1 == current_player, board.reserve_units[id.get()].history.selected_move_phase != board.phase_serial}
             actions:
                 act skip()
-                act place_at(BoardPosition position) {
-                    board.least_distance_from_player_units(position, !current_player) > 9.0,
-                    board.is_position_valid_for_reserve(position, board.reserve_units[id.get()]),
-                    setup_candidate_valid(board, board.reserve_units[id.get()], position)
-                }
-                board.units.append(board.reserve_units[id.get()])
-                board.units.back().mark_set_up()
-                board.units.back().try_arrange_at(position)
-                board.units.back().has_moved = true
-                board.reserve_units.erase(id.get())
-                act nothing_to_deploy()
-                    done_deploying = true
+                act reserve_remain_stationary()
+                    board.reserve_units[id.get()].history.selected_move_phase = board.phase_serial
+                    board.reserve_units[id.get()].history.move_kind = MovementKind::stationary
+                act place_at(BoardPosition position) {board.current_round >= 1, board.units.has_capacity(), setup_at_valid(board, board.reserve_units[id.get()], position, MovementKind::ingress, false)}
+                    enter_from_reserves(board, id, position, MovementKind::ingress)
 
-# core rules desperate escape 
-# Route casualties through the identity/history archive rather than bare erase
-# (Desperate Escape p.33; destroyed/returning models pp.19/88). Mode rules are task 11.
+# Desperate Escape rolls one complete hazard batch per model, then applies
+# ordinary mortal allocation/FNP/destruction instead of deleting models (pp.24/33).
 act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
-    if !board[id].battle_socked:
-        return
+    frm count : HazardousUses
+    count = board[id].models.size()
+    subaction*(board) hazards = resolve_hazards(board, id, count)
 
-    if board.faction_of_unit(id) == Faction::insidious_infiltrators and board.can_target_strat(board[id].owned_by_player1, Stratagem::predators_not_prey, board[id]):
-        act use_predators_not_prey(Bool do_it)
-        if do_it:
-            board.commit_stratagem(board[id].owned_by_player1, Stratagem::predators_not_prey, board[id])
-            return
-
-    frm i : UnitIterator
-    i = board[id].models.size()
-    while i != 0:
-        board.current_roll = rerollable_dice_roll(board, false, false, false, board[id].owned_by_player1)
-        subaction*(board) board.current_roll
-        if board.current_roll.result == 1:
-            board[id].remove_model(i.value - 1)
-        i = i - 1
-
-# movement of a single unit, including possibly advancing and falling back 
+# Choose an explicit mutually exclusive move. Random M is determined once
+# when selected; advance roll and fall-back hazards precede paths (p.33;
+# supplied appendix 02.02.03). A failed staged move can be retried (p.12).
 act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> Movement:
-    frm player_move : Move
-    if board.is_in_melee(board[id]):
-        subaction*(board) desperate_escape = desperate_escape(board, id)
-        board[id].has_moved = true
-        board[id].can_shoot = false
-        board[id].can_charge = false
-        player_move = move(board, id, 0)
-        subaction*(board, id) player_move 
-        return
-    act advance(Bool do_it)
-    if !do_it:
-        board[id.get()].has_moved = true
-        player_move = move(board, id, 2*int(use_the_gilded_spear))
-        subaction*(board, id) player_move 
-    else:
-        board[id.get()].has_moved = true
-        board[id.get()].has_run = true
-        board.current_roll = rerollable_dice_roll(board, false, false, true, board[id].owned_by_player1, id)
-        subaction*(board) board.current_roll
-        player_move = move(board, id, board.current_roll.result.value)
-        subaction*(board, id) player_move 
+    frm selected = false
+    frm kind : MovementKind
+    frm extra : StatModifier
+    frm previous_override : MovementOverride
+    previous_override = board[id].movement_override
+    board[id].movement_override = MOVE_M_UNSET
+    frm random_index : ModelIterator
+    random_index = 0
+    while random_index.value < board[id].models.size() and (!board[id][random_index.value].is_alive() or !board[id][random_index.value].has_random_movement):
+        random_index = random_index + 1
+    if random_index.value < board[id].models.size():
+        # Random characteristic determination is not on Command Re-roll's list.
+        subaction* random_m = evaluate_random_stat(board[id][random_index.value].random_movement)
+        board[id].movement_override = max(1, random_m.result.value) + 1
+    while !selected:
+        actions:
+            act remain_stationary() {battlefield_move_eligible(board, id, MovementKind::stationary)}
+                record_move(board, id, MovementKind::stationary)
+                selected = true
+            act normal_move() {battlefield_move_eligible(board, id, MovementKind::normal)}
+                kind = MovementKind::normal
+                extra = 2 * int(use_the_gilded_spear)
+                selected = true
+            act advance(Bool do_it) {battlefield_move_eligible(board, id, MovementKind::advance)}
+                kind = MovementKind::normal
+                extra = 2 * int(use_the_gilded_spear)
+                if do_it:
+                    kind = MovementKind::advance
+                    board.current_roll = rerollable_dice_roll(board, false, false, true, board[id].owned_by_player1, id)
+                    subaction*(board) board.current_roll
+                    extra = board.current_roll.result.value
+                selected = true
+            act ordered_retreat() {battlefield_move_eligible(board, id, MovementKind::ordered_retreat)}
+                kind = MovementKind::ordered_retreat
+                selected = true
+            act desperate_escape() {battlefield_move_eligible(board, id, MovementKind::desperate_escape)}
+                kind = MovementKind::desperate_escape
+                subaction*(board) escape = desperate_escape(board, id)
+                selected = true
+    if !(board[id].history.selected_move_phase == board.phase_serial) and has_live_model(board[id]):
+        board[id].pending_move_kind = kind
+        board[id].move_takes_to_skies = false
+        if board[id].has_keyword(Keyword::fly):
+            act take_to_skies(Bool do_it)
+            board[id].move_takes_to_skies = do_it
+        frm mobile = false
+        frm was_mobile : Bool[MAX_UNIT_MODELS]
+        if board[id].has_ability(AbilityKind::super_heavy_walker):
+            act walker_mobile(Bool do_it)
+            mobile = do_it
+            if mobile:
+                for i in range(board[id].models.size()):
+                    was_mobile[i] = board[id][i].has_keyword(Keyword::mobile)
+                    if !was_mobile[i]:
+                        board[id][i].keywords.append(Keyword::mobile)
+        subaction*(board, id) player_move = move(board, id, extra)
+        if mobile:
+            for i in range(board[id].models.size()):
+                if !was_mobile[i]:
+                    let k = board[id][i].keywords.size() - 1
+                    while k >= 0:
+                        if board[id][i].keywords[k] == Keyword::mobile:
+                            board[id][i].keywords.erase(k)
+                        k = k - 1
+            if player_move.completed:
+                act roll(Dice mobile_hazard)
+                if mobile_hazard.value == 1:
+                    board[id].battle_socked = true
+        if player_move.completed:
+            record_move(board, id, kind)
+            if kind == MovementKind::desperate_escape and !board[id].battle_socked:
+                subaction*(board, board[id]) shock = battle_shock_test(board, board[id], false, false)
+        else:
+            # The move failed and returns all positions. Selection still has a
+            # legal stationary/retry path through the phase loop (pp.12/32).
+            board[id].history.move_kind = MovementKind::stationary
+    if !has_live_model(board[id]):
+        board[id].history.selected_move_phase = board.phase_serial
+    board[id].movement_override = previous_override
+    board[id].move_takes_to_skies = false
+    board[id].pending_move_kind = MovementKind::normal
 
-# core rules movement phase
-# Exclude empty retired slots from movement decisions (destruction p.19;
-# movement pp.32–33). Exact modes/stratagem windows remain tasks 11/15.
+# Every friendly unit must be selected exactly once, including reserves.
+# No remaining arbitrary end-phase escape bypasses mandatory selection (p.32).
 act movement_phase(ctx Board board) -> MovementPhase:
-    board.current_decision_maker = board.current_player 
+    board.current_decision_maker = board.current_player
     while true:
         actions:
-            act end_move()
+            act end_move() {movement_selection_complete(board, board.current_player)}
                 break
-            act move_unit(frm UnitID id) {
-                id.get() < board.units.size(),
-                !board[id].empty(),
-                board[id].owned_by_player1 == board.current_player,
-                !board[id].has_moved
-            }
-
-                # stratagems
-                frm use_gilded_spear : Bool
+            act move_unit(frm UnitID id) {id.get() < board.units.size(), has_live_model(board[id]), board[id].owned_by_player1 == board.current_player, board[id].history.selected_move_phase != board.phase_serial}
+                frm use_gilded_spear = false
+                # Preserve this legacy supplied-roster hook without inventing
+                # new faction authority; exact faction replacement is task 17.
                 if board.get_current_player_faction() == Faction::tristraen_gilded_blade and board.can_target_strat(board.current_player, Stratagem::the_gilded_spear, board[id]):
                     act use_gilded_spear(Bool do_it)
                     use_gilded_spear = do_it
                     if do_it:
                         board.commit_stratagem(board.current_player, Stratagem::the_gilded_spear, board[id])
-       
-                # move
-                subaction*(board) move = movement(board, id, use_gilded_spear)
-
-    board.current_decision_maker = board.current_player 
-    # reserve managment
-    while true:
-        subaction*(board) reserve_deployment = reserve_deployment(board, board.current_player)
-        if reserve_deployment.done_deploying:
-            break
-
+                subaction*(board) chosen_move = movement(board, id, use_gilded_spear)
+            act select_reserve_unit(frm UnitID reserve_id) {reserve_id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[reserve_id.get()]), board.reserve_units[reserve_id.get()].owned_by_player1 == board.current_player, board.reserve_units[reserve_id.get()].history.selected_move_phase != board.phase_serial}
+                actions:
+                    act skip()
+                    act reserve_remain_stationary()
+                        board.reserve_units[reserve_id.get()].history.selected_move_phase = board.phase_serial
+                        board.reserve_units[reserve_id.get()].history.move_kind = MovementKind::stationary
+                    act place_at(BoardPosition position) {board.current_round >= 1, board.units.has_capacity(), setup_at_valid(board, board.reserve_units[reserve_id.get()], position, MovementKind::ingress, false)}
+                        enter_from_reserves(board, reserve_id, position, MovementKind::ingress)
     board.current_decision_maker = board.current_player
 
 # core rules shooting phase
@@ -1718,6 +1785,8 @@ act turn(ctx Board board, frm Bool player_id) -> Turn:
     subaction*(board) shooting_start = resolve_timing_window(board, TimingWindow::shooting_start)
     subaction*(board) shooting_phase = shooting_phase(board)
     subaction*(board) shooting_end = resolve_timing_window(board, TimingWindow::shooting_end)
+    for i in range(board.units.size()):
+        board[i].history.ingress_locked = false
     board.begin_phase(BattlePhase::charge)
     subaction*(board) charge_start = resolve_timing_window(board, TimingWindow::charge_start)
     subaction*(board) charge_phase = charge_phase(board)
@@ -1746,6 +1815,7 @@ act round(ctx Board board) -> Round:
     board.current_player = board.starting_player
     board.timing.active_player = board.starting_player
     subaction*(board) end = resolve_timing_window(board, TimingWindow::round_end)
+    expire_unused_reserves(board)
 
 # the game sequence before the battle start where players
 # can elect to attach leaders to units
@@ -1771,50 +1841,103 @@ act attach_leaders(ctx Board board) -> AttachLeaderStep:
             if !passed_players[int(!board.current_decision_maker)]:
                 board.current_decision_maker = !board.current_decision_maker
 
+# Legacy mission-zone accessor remains for external bindings; actual setup
+# always uses complete candidate checks below (pp.14/82).
 fun deployment_position_valid(Board board, BoardPosition position, Bool current_player, Bool infiltrates) -> Bool:
     if infiltrates:
-        if board.least_distance_from_player_units(position, !current_player) < 9.0:
-            return false
-        if current_player:
-            return position.y <= 18
-        else:
-            return position.y >= BOARD_HEIGHT - 18
-
+        return true
     if current_player:
-        return position.y <= 5
-    else:
-        return position.y >= BOARD_HEIGHT - 5
+        return position.y.value <= 5
+    return position.y.value >= BOARD_HEIGHT - 5
 
-# the core rules sequence where players
-# alterante deploying units in a valid position 
+# Pre-battle reserve choices require explicit points; AIRCRAFT/transport
+# formation exceptions await task 16, not invented roster costs (p.68).
+act declare_strategic_reserves(ctx Board board) -> DeclareStrategicReserves:
+    frm player = board.starting_player
+    frm count : BInt<0, 3>
+    while count.value < 2:
+        board.current_decision_maker = player
+        frm finished = false
+        while !finished:
+            actions:
+                act finish_reserve_selection()
+                    finished = true
+                act choose_strategic_reserve(UnitID reserve) {strategic_reserve_valid(board, player, reserve)}
+                    board.reserve_units[reserve.get()].history.strategic_reserve = true
+        count = count + 1
+        player = !player
+
+# Alternate deploying every non-reserved unit; validate every base's home or
+# Infiltrators constraints before removing a reserve entry (pp.14/68/82).
 act deploy(ctx Board board) -> Deployment:
     board.current_decision_maker = board.starting_player
     frm passed_players = [false, false]
     while !passed_players[0] or !passed_players[1]:
-        actions: 
-            act done_deploying()
+        actions:
+            act done_deploying() {deployment_complete(board, board.current_decision_maker)}
                 passed_players[int(board.current_decision_maker)] = true
                 board.current_decision_maker = !board.current_decision_maker
-            act select_unit(frm UnitID unit_id) {
-                unit_id.get() < board.reserve_units.size(),
-                board.reserve_units[unit_id.get()].owned_by_player1 == board.current_decision_maker 
-            }
-                frm infiltrates = board.reserve_units[unit_id.get()].has_ability(AbilityKind::infiltrators)
-                # Setup failure/cancellation must leave the unit in its original
-                # location and allow a later attempt, not stall the action (p.14).
+            act select_unit(frm UnitID unit_id) {unit_id.get() < board.reserve_units.size(), board.reserve_units[unit_id.get()].owned_by_player1 == board.current_decision_maker, !board.reserve_units[unit_id.get()].history.strategic_reserve, board.units.has_capacity()}
+                frm infiltrates = board.reserve_units[unit_id.get()].all_have_ability(AbilityKind::infiltrators)
                 actions:
                     act skip()
-                    act deploy_at(BoardPosition position) {
-                        deployment_position_valid(board, position, board.current_decision_maker, infiltrates),
-                        setup_candidate_valid(board, board.reserve_units[unit_id.get()], position)
-                    }
-                        board.units.append(board.reserve_units[unit_id.get()])
-                        board.reserve_units.erase(unit_id.get())
-                        board.units.back().mark_set_up()
-                        board.units.back().try_arrange_at(position)
+                    act deploy_at(BoardPosition position) {setup_at_valid(board, board.reserve_units[unit_id.get()], position, MovementKind::normal, infiltrates)}
+                        enter_from_reserves(board, unit_id, position, MovementKind::normal)
                         if !passed_players[int(!board.current_decision_maker)]:
                             board.current_decision_maker = !board.current_decision_maker
-        
+
+# A granting rule must explicitly trigger this move and provide its distance;
+# no illustrative faction trigger is manufactured (pp.70/74). Closest target,
+# per-model obligations and once-per-phase movement are enforced by helpers.
+act surge(ctx Board board, frm UnitID source, frm StatModifier distance, frm Bool triggered) -> Surge:
+    if !triggered or source.get() >= board.units.size() or !has_live_model(board[source]) or board[source].battle_socked or board.is_in_melee(board[source]) or board[source].history.last_move_phase == board.phase_serial or board[source].history.ingress_locked or !has_surge_target(board, source):
+        return
+    frm previous_owner = board.current_decision_maker
+    frm previous_target = board.surge_target
+    board.current_decision_maker = board[source].owned_by_player1
+    act select_surge_target(frm UnitID target) {surge_target_valid(board, source, target)}
+    board.surge_target = target
+    board[source].pending_move_kind = MovementKind::surge
+    subaction*(board, source) moved = move(board, source, distance)
+    if moved.completed:
+        record_move(board, source, MovementKind::surge)
+    board[source].pending_move_kind = MovementKind::normal
+    board.surge_target = previous_target
+    board.current_decision_maker = previous_owner
+
+# Resolve optional Scouts before the first battle round, current player's
+# choices before opponent's. Dedicated-transport passengers await task 16
+# (pp.78/84/88; user-supplied Rules Sequencing).
+act resolve_scouts(ctx Board board) -> ResolveScouts:
+    frm player = board.starting_player
+    frm count : BInt<0, 3>
+    board.prebattle_scouts = true
+    while count.value < 2:
+        board.current_decision_maker = player
+        frm finished = false
+        while !finished:
+            actions:
+                act finish_scouts()
+                    finished = true
+                act select_scout_unit(frm UnitID scout) {scout.get() < board.units.size(), board[scout].owned_by_player1 == player, !board[scout].history.scouts_resolved, scouts_distance(board[scout]) > 0, unit_in_home_zone(board[scout], player)}
+                    board[scout].pending_move_kind = MovementKind::scout
+                    frm distance : StatModifier
+                    distance = scouts_distance(board[scout])
+                    subaction*(board, scout) scout_move = move(board, scout, distance)
+                    if scout_move.completed:
+                        board[scout].history.scouts_resolved = true
+                        record_move(board, scout, MovementKind::scout)
+                    board[scout].pending_move_kind = MovementKind::normal
+                act select_scout_reserve(frm UnitID reserve) {reserve.get() < board.reserve_units.size(), board.reserve_units[reserve.get()].owned_by_player1 == player, board.reserve_units[reserve.get()].history.strategic_reserve, !board.reserve_units[reserve.get()].history.scouts_resolved, scouts_distance(board.reserve_units[reserve.get()]) > 0, board.units.has_capacity()}
+                    actions:
+                        act skip()
+                        act scout_setup_at(BoardPosition position) {setup_at_valid(board, board.reserve_units[reserve.get()], position, MovementKind::scout, false)}
+                            enter_from_reserves(board, reserve, position, MovementKind::scout)
+                            board.units.back().history.scouts_resolved = true
+        count = count + 1
+        player = !player
+    board.prebattle_scouts = false
+    board.current_decision_maker = board.starting_player
 
 # a 5 rounds battle, inlcuding deployment. 
 # Initialize identities before attachments and freeze combined starting counts
@@ -1823,7 +1946,9 @@ act battle(ctx Board board) -> Battle:
     board.identify_units()
     subaction*(board) attach_leaders = attach_leaders(board)
     board.capture_starting_strengths()
+    subaction*(board) reserves = declare_strategic_reserves(board)
     subaction*(board) deploy = deploy(board)
+    subaction*(board) scouts = resolve_scouts(board)
     while board.current_round != 5:
         subaction*(board) round = round(board)
         board.current_round = board.current_round + 1

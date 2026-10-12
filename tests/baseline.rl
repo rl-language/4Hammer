@@ -2806,19 +2806,6 @@ fun movement11_fixture() -> Board:
     board.identify_units()
     return board
 
-# p.87: retained dead models cannot supply engagement or coherency neighbours.
-fun test_movement11_pending_corpses_not_engagement_or_neighbours() -> Bool:
-    let board = movement11_fixture()
-    let enemy = board[0]
-    enemy.owned_by_player1 = true
-    enemy[0].position = board_position(8, 5)
-    enemy[0].state = ModelState::pending_destruction
-    board.units.append(enemy)
-    board[0].models.append(board[0][0])
-    board[0][1].position = board_position(8, 5)
-    board[0][1].state = ModelState::pending_destruction
-    return !board.is_in_melee(board[0]) and board[0].is_coherent()
-
 # p.33: normal/advance require unengaged; Ordered Retreat requires unshocked.
 fun test_movement11_modes_and_shock_legality() -> Bool:
     let board = movement11_fixture()
@@ -2845,6 +2832,126 @@ fun test_movement11_mandatory_selection_including_reserves() -> Bool:
         return false
     board.reserve_units[0].history.selected_move_phase = board.phase_serial
     return movement_selection_complete(board, false)
+
+# p.33: stationary neither rotates nor records an actual move/charge restriction.
+fun test_movement11_stationary_has_no_move_event() -> Bool:
+    let board = movement11_fixture()
+    let before = board[0][0].position
+    let selected = movement(board, unit_id(0), false)
+    selected.remain_stationary(board)
+    return selected.is_done() and board[0][0].position.x == before.x and board[0][0].position.y == before.y and board[0].history.last_move_phase == -1 and board[0].history.selected_move_phase == board.phase_serial and board[0].can_charge == true
+
+# pp.12/87: independently move mixed-M models, permitting intermediate
+# incoherency but requiring coherent final placement and each own distance.
+fun test_movement11_independent_models_stage_then_commit() -> Bool:
+    let board = movement11_fixture()
+    let fast = board[0][0]
+    fast.profile = Profile::possessed
+    board[0].models.append(fast)
+    board[0][1].position = board_position(7, 5)
+    let id = unit_id(0)
+    let sequence = move(board, id, 0)
+    sequence.select_moving_model(board, id, damage_test_model(0))
+    sequence.waypoint(board, id, board_position(11, 5))
+    sequence.finish_model(board, id)
+    if board[0][0].position.x != 5 or (can sequence.finish_move(board, id)):
+        return false
+    sequence.select_moving_model(board, id, damage_test_model(1))
+    if can sequence.waypoint(board, id, board_position(17, 5)):
+        return false
+    sequence.waypoint(board, id, board_position(13, 5))
+    sequence.finish_model(board, id)
+    if can sequence.select_moving_model(board, id, damage_test_model(1)):
+        return false
+    sequence.finish_move(board, id)
+    return sequence.completed and board[0][0].position.x == 11 and board[0][1].position.x == 13
+
+# p.12: all straight segments add up, including retracing; skip rolls back.
+fun test_movement11_waypoint_budget_and_atomic_cancel() -> Bool:
+    let board = movement11_fixture()
+    let id = unit_id(0)
+    let before = to_string(board[0])
+    let sequence = move(board, id, 0)
+    sequence.select_moving_model(board, id, damage_test_model(0))
+    sequence.waypoint(board, id, board_position(9, 5))
+    if can sequence.waypoint(board, id, board_position(5, 5)):
+        return false
+    sequence.finish_model(board, id)
+    sequence.skip(board, id)
+    return !sequence.completed and to_string(board[0]) == before
+
+# p.12: rotate circular fixtures freely; one degree choice changes no position.
+fun test_movement11_free_rotation_and_invalid_model_id() -> Bool:
+    let board = movement11_fixture()
+    let id = unit_id(0)
+    let sequence = move(board, id, 0)
+    if can sequence.select_moving_model(board, id, damage_test_model(1)):
+        return false
+    sequence.select_moving_model(board, id, damage_test_model(0))
+    let rotation : MovementRotation
+    rotation = 90
+    sequence.rotate_model(board, id, rotation)
+    sequence.finish_model(board, id)
+    sequence.finish_move(board, id)
+    return board[0][0].geometry.rotation.value == 90000 and board[0][0].position.x == 5 and board[0][0].history.distance_moved_this_turn.value == 0.0
+
+# p.33: Advance's full D6 allowance persists and forbids charge/action start.
+fun test_movement11_advance_roll_budget_and_flags() -> Bool:
+    let board = movement11_fixture()
+    board.command_points[0] = 0
+    let sequence = movement(board, unit_id(0), false)
+    sequence.advance(board, true)
+    sequence.roll(board, attack_test_die(6))
+    if !(can sequence.move_to(board, board_position(17, 5))) or (can sequence.move_to(board, board_position(18, 5))):
+        return false
+    sequence.move_to(board, board_position(17, 5))
+    return sequence.is_done() and board[0].has_run and board[0].history.advanced_this_turn and !board[0].can_charge and !board[0].allows_action_start()
+
+# p.33: Ordered Retreat offers no hazards and cannot cross enemy bases.
+fun test_movement11_ordered_retreat_path_and_flags() -> Bool:
+    let board = movement11_fixture()
+    let enemy = board[0]
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(7, 5)
+    board.units.append(enemy)
+    let sequence = movement(board, unit_id(0), false)
+    sequence.ordered_retreat(board)
+    if can sequence.roll(board, attack_test_die(3)) or can sequence.move_to(board, board_position(11, 5)):
+        return false
+    sequence.move_to(board, board_position(2, 5))
+    return board[0].history.fell_back_this_turn and !board[0].can_shoot and !board[0].can_charge and !board[0].allows_action_start()
+
+# pp.24/33: Desperate Escape hazards are mortal wounds, allow FNP and can
+# cross enemies; an unshocked surviving unit then rolls Battle-shock.
+fun test_movement11_desperate_escape_hazards_and_post_shock() -> Bool:
+    let board = movement11_fixture()
+    let enemy = board[0]
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(7, 5)
+    board.units.append(enemy)
+    let sequence = movement(board, unit_id(0), false)
+    sequence.desperate_escape(board)
+    sequence.roll(board, attack_test_die(2))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    if board[0][0].suffered_wounds != 1:
+        return false
+    sequence.move_to(board, board_position(11, 5))
+    sequence.roll_pair(board, attack_test_die(1), attack_test_die(1))
+    return sequence.is_done() and board[0].battle_socked and board[0][0].position.x == 11
+
+# p.33: already shocked Desperate Escape does not offer a second shock roll.
+fun test_movement11_shocked_escape_no_extra_shock_roll() -> Bool:
+    let board = movement11_fixture()
+    board[0].battle_socked = true
+    let enemy = board[0]
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(7, 5)
+    board.units.append(enemy)
+    let sequence = movement(board, unit_id(0), false)
+    sequence.desperate_escape(board)
+    sequence.roll(board, attack_test_die(3))
+    sequence.move_to(board, board_position(11, 5))
+    return sequence.is_done() and board[0].battle_socked
 
 # p.71/82: Take to the Skies costs 2 for all models; Hover is its exception.
 fun test_movement11_flying_budget_and_hover() -> Bool:
@@ -2894,6 +3001,38 @@ fun test_movement11_super_heavy_walker_traversal() -> Bool:
         return false
     board[1][0].keywords.append(Keyword::titanic)
     return !waypoint_valid(board, board[0], path, board_position(11, 5), MovementKind::normal, 0, -1, false)
+
+# p.85: temporary MOBILE ends with the move, and its end roll shocks on 1.
+fun test_movement11_walker_mobile_lifetime_and_shock() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].abilities.append(AbilityKind::super_heavy_walker)
+    let sequence = movement(board, unit_id(0), false)
+    sequence.normal_move(board)
+    sequence.walker_mobile(board, true)
+    if !board[0][0].has_keyword(Keyword::mobile):
+        return false
+    sequence.move_to(board, board_position(6, 5))
+    if board[0][0].has_keyword(Keyword::mobile):
+        return false
+    sequence.roll(board, attack_test_die(1))
+    return sequence.is_done() and board[0].battle_socked
+
+# Supplied 02.02.03: determine entire unit's random M once on selection;
+# characteristic determination cannot use Command Re-roll (p.56).
+fun test_movement11_random_movement_once_for_unit() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].has_random_movement = true
+    board[0][0].random_movement = dice_stat(3)
+    board.command_points[0] = 5
+    let sequence = movement(board, unit_id(0), false)
+    sequence.quantity(board, attack_test_die(2))
+    if can sequence.reroll(board, attack_test_die(3)):
+        return false
+    sequence.normal_move(board)
+    if can sequence.move_to(board, board_position(8, 5)):
+        return false
+    sequence.move_to(board, board_position(7, 5))
+    return sequence.is_done() and board[0].movement_override.value == MOVE_M_UNSET and board.command_points[0] == 5
 
 # p.14: every base must fit the home zone; merely fitting the anchor fails.
 fun test_movement11_deployment_whole_base_boundary() -> Bool:
@@ -2959,6 +3098,22 @@ fun test_movement11_ingress_history_and_lock() -> Bool:
     board.units.clear()
     enter_from_reserves(board, unit_id(0), board_position(5, 20), MovementKind::ingress)
     return board.reserve_units.empty() and board[0].history.has_ingressed and board[0].history.ingress_locked and board[0].history.was_set_up_this_turn and !battlefield_move_eligible(board, unit_id(0), MovementKind::normal)
+
+# p.14: failed ingress/cancel retains the reserve and its previous selection.
+fun test_movement11_ingress_cancel_then_stationary() -> Bool:
+    let board = movement11_fixture()
+    board.reserve_units.append(board[0])
+    board.units.clear()
+    board.current_round = 0
+    let phase = movement_phase(board)
+    phase.select_reserve_unit(board, unit_id(0))
+    if can phase.place_at(board, board_position(5, 20)):
+        return false
+    phase.skip(board)
+    phase.select_reserve_unit(board, unit_id(0))
+    phase.reserve_remain_stationary(board)
+    phase.end_move(board)
+    return phase.is_done() and board.reserve_units.size() == 1 and board.units.empty()
 
 # p.68: repositioning keeps ongoing effects, advance/fall-back flags and stable
 # identity while retiring, not compacting, the original battlefield slot.
@@ -3041,6 +3196,16 @@ fun test_movement11_surge_closest_and_aircraft() -> Bool:
     board[1][0].keywords.append(Keyword::aircraft)
     return surge_target_valid(board, unit_id(0), unit_id(2)) and !surge_target_valid(board, unit_id(0), unit_id(1))
 
+# p.70: a generic surge is never offered without an actual granting trigger.
+fun test_movement11_surge_requires_trigger_and_unshocked() -> Bool:
+    let board = movement11_fixture()
+    let distance : StatModifier
+    distance = 3
+    let absent = surge(board, unit_id(0), distance, false)
+    board[0].battle_socked = true
+    let shocked = surge(board, unit_id(0), distance, true)
+    return absent.is_done() and shocked.is_done()
+
 # p.70: a reachable engaged endpoint outranks an endpoint that stays away;
 # when out of reach, take the closest legal finite-grid endpoint.
 fun test_movement11_surge_approach_obligations() -> Bool:
@@ -3057,6 +3222,25 @@ fun test_movement11_surge_approach_obligations() -> Bool:
     candidate[0].position = board_position(8, 5)
     return surge_goals_valid(board, board[0], candidate, unit_id(0), 3)
 
+# p.87: retained dead models cannot supply engagement or coherency neighbours.
+fun test_movement11_pending_corpses_not_engagement_or_neighbours() -> Bool:
+    let board = movement11_fixture()
+    let enemy = board[0]
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(8, 5)
+    enemy[0].state = ModelState::pending_destruction
+    board.units.append(enemy)
+    board[0].models.append(board[0][0])
+    board[0][1].position = board_position(8, 5)
+    board[0][1].state = ModelState::pending_destruction
+    return !board.is_in_melee(board[0]) and board[0].is_coherent()
+
+# Finite source-data fixture constructor for Scouts distances (pp.78/84).
+fun movement11_scout_value(Int value) -> FixedStat:
+    let result : FixedStat
+    result = value
+    return result
+
 # pp.12/14: five 40mm Terminators need a different coherent preset to fit
 # the lower deployment zone. Probe and commit must use the same layout.
 fun test_movement11_setup_searches_valid_preset_and_commits_it() -> Bool:
@@ -3070,6 +3254,18 @@ fun test_movement11_setup_searches_valid_preset_and_commits_it() -> Bool:
         return false
     enter_from_reserves(board, unit_id(0), position, MovementKind::normal)
     return board.reserve_units.empty() and unit_in_home_zone(board[0], true) and unit_placement_valid(board, board[0], 0, true)
+
+# p.70: completing a generic out-of-phase move also consumes the phase's
+# surge eligibility; the caller need not be the Movement phase action.
+fun test_movement11_generic_move_blocks_later_surge() -> Bool:
+    let board = attack_declaration_fixture()
+    let source = unit_id(0)
+    let moved = move(board, source, 0)
+    moved.move_to(board, source, board_position(6, 5))
+    let distance : StatModifier
+    distance = 3
+    let subsequent = surge(board, source, distance, true)
+    return subsequent.is_done() and board[0].history.last_move_phase == board.phase_serial
 
 # p.87: do not strand a pending battlefield trigger by transferring its
 # retained model into reserves. The rejected transfer preserves all state.
@@ -3153,9 +3349,3 @@ fun test_movement11_mixed_row_fits_gap_between_deployed_models() -> Bool:
         return false
     enter_from_reserves(board, unit_id(0), position, MovementKind::normal)
     return board[2][3].position.x == 25 and unit_placement_valid(board, board[2], 2, true) and unit_in_home_zone(board[2], true)
-
-# Finite source-data fixture constructor for Scouts distances (pp.78/84).
-fun movement11_scout_value(Int value) -> FixedStat:
-    let result : FixedStat
-    result = value
-    return result
