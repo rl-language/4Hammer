@@ -113,6 +113,7 @@ enum Keyword:
     explosives
     grenades
     smoke
+    towering
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value

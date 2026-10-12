@@ -98,6 +98,8 @@ fun attack_ignores_cover(Board board, AttackSequenceInfo info) -> Bool:
 # cover (p.82). Other supplied cover grants may set target_has_cover directly.
 fun effective_attack_skill(Board board, AttackSequenceInfo info) -> Int:
     let skill = info.source.skill()
+    if skill != 0 and info.source.range() > 0 and info.plunging_fire:
+        skill = skill - 1
     if skill != 0 and info.source.range() > 0 and info.target_has_cover and !attack_ignores_cover(board, info):
         skill = skill + 1
     # User-supplied appendix 02.02.01: modified BS/WS remain 2+ through 6+.
@@ -114,3 +116,17 @@ fun attack_hit_roll_succeeds(Dice roll, Int modifier, Int skill) -> Bool:
     if roll == 6:
         return true
     return roll.value + modifier >= skill
+
+# Plunging Fire needs a visible target with at least one ground-level model,
+# and either existing supported elevation >=3in or a TOWERING bearer within
+# 12in (22.05 p.73). No new terrain features/body geometry are introduced.
+# Aircraft units on either side exclude the effect entirely (23.03 p.74).
+fun plunging_fire_applies(Board board, UnitID source, Int model, UnitID target, Bool ranged) -> Bool:
+    if !ranged or source.get() >= board.units.size() or target.get() >= board.units.size() or model < 0 or model >= board[source].models.size() or board[source].has_keyword(Keyword::aircraft) or board[target].has_keyword(Keyword::aircraft):
+        return false
+    if !model_can_see_unit(board, board[source][model], board[target]):
+        return false
+    let grounded = false
+    for ground_index in range(board[target].models.size()):
+        grounded = grounded or (board[target][ground_index].is_alive() and board[target][ground_index].geometry.elevation.value == 0)
+    return grounded and (board[source][model].geometry.elevation.value >= 3 or (board[source][model].has_keyword(Keyword::towering) and board[target].distance(board[source][model]) <= 12.0))

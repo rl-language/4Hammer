@@ -97,6 +97,9 @@ fun declaration_target_valid(Board board, UnitID source, DeclaredWeapon weapon, 
     if !attack_model_allowed(board, source, model, melee):
         return false
     if melee:
+        # 23.04 p.74: an Aircraft source may only attack a FLYING unit.
+        if board[source].has_keyword(Keyword::aircraft) and !board[target].has_keyword(Keyword::fly):
+            return false
         for i in range(board[target].models.size()):
             if board[target][i].is_alive() and (!board[target][i].has_keyword(Keyword::aircraft) or board[source][model].has_keyword(Keyword::fly)) and board[source][model].is_engaged_with(board[target][i]):
                 return true

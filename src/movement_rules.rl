@@ -110,7 +110,7 @@ fun setup_anchor_possible(Unit unit, BoardPosition anchor, MovementKind kind, Bo
 # No pending corpse can move; ingress locks all further move types until the
 # next Charge phase (pp.69/87). Selection and actual movement are distinct.
 fun battlefield_move_eligible(Board board, UnitID id, MovementKind kind) -> Bool:
-    if id.get() >= board.units.size() or board[id].history.ingress_locked or !has_live_model(board[id]):
+    if id.get() >= board.units.size() or board[id].history.ingress_locked or !has_live_model(board[id]) or board[id].has_keyword(Keyword::aircraft):
         return false
     if kind == MovementKind::stationary:
         return true
@@ -118,6 +118,12 @@ fun battlefield_move_eligible(Board board, UnitID id, MovementKind kind) -> Bool
         return board.is_in_melee(board[id]) and !board[id].battle_socked
     if kind == MovementKind::desperate_escape:
         return board.is_in_melee(board[id])
+    if kind == MovementKind::normal or kind == MovementKind::advance:
+        # p.74: Aircraft-only engagement does not block these two move types.
+        for enemy in range(board.units.size()):
+            if board[enemy].owned_by_player1 != board[id].owned_by_player1 and !board[enemy].has_keyword(Keyword::aircraft) and board[id].is_engaged_with(board[enemy]):
+                return false
+        return true
     return !board.is_in_melee(board[id])
 
 # Infrastructure helper exposes live membership without importing combat's
@@ -151,24 +157,30 @@ fun record_move(Board board, UnitID id, MovementKind kind):
 # Ingress is selected once per phase and locks later moves; no history reset
 # is allowed when a repositioned unit returns the same turn (pp.68–69).
 fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, MovementKind kind):
-    assert(board.units.has_capacity(), "battlefield unit capacity exceeded")
+    assert(battlefield_entry_available(board, board.reserve_units[reserve.get()]), "battlefield unit capacity exceeded or retired return slot occupied")
     let candidate : Unit
     candidate = board.reserve_units[reserve.get()]
     let infiltrates = candidate.all_have_ability(AbilityKind::infiltrators)
     let valid = arrange_setup_candidate(board, candidate, position, kind, infiltrates)
     assert(valid, "setup candidate must satisfy every placement condition")
-    board.units.append(candidate)
-    board.units.back().mark_set_up()
+    let destination = board.units.size()
+    if candidate.has_return_slot:
+        destination = candidate.return_slot.get()
+        board[destination] = candidate
+    else:
+        board.units.append(candidate)
+    board[destination].has_return_slot = false
+    board[destination].mark_set_up()
     # Arrival itself does not prohibit shooting/charging. Preserve surviving
     # same-turn Advance/Fall Back restrictions explicitly (pp.33/68–69).
-    board.units.back().can_shoot = !candidate.history.fell_back_this_turn
-    board.units.back().can_charge = !candidate.history.advanced_this_turn and !candidate.history.fell_back_this_turn
+    board[destination].can_shoot = !candidate.history.fell_back_this_turn
+    board[destination].can_charge = !candidate.history.advanced_this_turn and !candidate.history.fell_back_this_turn
     if kind == MovementKind::ingress:
-        board.units.back().history.has_ingressed = true
-        board.units.back().history.ingress_locked = true
-        board.units.back().history.selected_move_phase = board.phase_serial.value + 1
-        board.units.back().history.move_kind = kind
-        board.units.back().has_moved = true
+        board[destination].history.has_ingressed = true
+        board[destination].history.ingress_locked = true
+        board[destination].history.selected_move_phase = board.phase_serial.value + 1
+        board[destination].history.move_kind = kind
+        board[destination].has_moved = true
     board.reserve_units.erase(reserve.get())
 
 # Repositioning preserves effects/history and retires the battlefield slot
@@ -185,6 +197,8 @@ fun reposition_unit(Board board, UnitID id) -> Bool:
     board[id].interrupt_actions()
     board[id].history.repositioned = true
     board[id].history.strategic_reserve = true
+    board[id].has_return_slot = true
+    board[id].return_slot = id
     board.reserve_units.append(board[id])
     board[id].models.clear()
     board[id].destroyed_models.value.clear()
@@ -353,7 +367,7 @@ fun rigid_move_valid(Board board, Unit original, UnitID slot, BoardPosition posi
 # per phase, including the remain-stationary choice (p.32).
 fun movement_selection_complete(Board board, Bool player) -> Bool:
     for i in range(board.units.size()):
-        if board[i].owned_by_player1 == player and has_live_model(board[i]) and board[i].history.selected_move_phase != board.phase_serial.value + 1:
+        if board[i].owned_by_player1 == player and !board[i].has_keyword(Keyword::aircraft) and has_live_model(board[i]) and board[i].history.selected_move_phase != board.phase_serial.value + 1:
             return false
     for i in range(board.reserve_units.size()):
         if board.reserve_units[i].owned_by_player1 == player and has_live_model(board.reserve_units[i]) and board.reserve_units[i].history.selected_move_phase != board.phase_serial.value + 1:
@@ -551,3 +565,27 @@ fun record_path_movement(ModelHistory history, Model original, ModelPath path, B
     for i in range(path.points.size()):
         record_geometry_movement(history, start, path.points[i].as_geometry_point(), skies and original.has_keyword(Keyword::fly))
         start = path.points[i].as_geometry_point()
+
+# All Aircraft must reserve during formations, irrespective of voluntary
+# player choices (23.01 p.74). No unknown points are invented by this rule.
+fun reserve_aircraft_for_formations(Board board):
+    for aircraft_index in range(board.reserve_units.size()):
+        if board.reserve_units[aircraft_index].has_keyword(Keyword::aircraft):
+            board.reserve_units[aircraft_index].history.strategic_reserve = true
+
+# The opponent's turn end returns surviving Aircraft to reserves (23.02 p.74).
+# Repositioning retains identity and persisting effects (appendix 01.02.02).
+fun return_opponent_aircraft(Board board):
+    for aircraft_slot in range(board.units.size()):
+        if board[aircraft_slot].owned_by_player1 != board.current_player and board[aircraft_slot].has_keyword(Keyword::aircraft) and has_live_model(board[aircraft_slot]):
+            let aircraft_id : UnitID
+            aircraft_id = aircraft_slot
+            assert(reposition_unit(board, aircraft_id), "Aircraft return requires reserve capacity and completed destruction cleanup")
+
+
+# Restore the same retired slot on reserve return; repeated Aircraft ingress
+# must not allocate unbounded unit slots or redirect persistent handles (p.74).
+fun battlefield_entry_available(Board board, Unit unit) -> Bool:
+    if unit.has_return_slot:
+        return unit.return_slot.get() < board.units.size() and board[unit.return_slot].retired and board[unit.return_slot].empty()
+    return board.units.has_capacity()

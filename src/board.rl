@@ -36,6 +36,8 @@ cls AttackSequenceInfo:
     Bool hit_roll_bonus
     # Cover changes BS, separate from the clamped hit modifier (p.50).
     Bool target_has_cover
+    # Printed Plunging Fire changes BS; Aircraft are excluded (pp.73–74).
+    Bool plunging_fire
     Bool hit_roll_malus
     CheckedVector<Profile, 8> profile_hit_roll_bonus
     CheckedVector<WeaponRule, 8> temporary_weapon_abilities
@@ -780,6 +782,8 @@ fun valid_model_numeric_history(Model model) -> Bool:
 # Timestamps remain within configured serial ranges, including zero sentinel.
 # Live and archived bearers must both retain bounded numeric history (pp.19/88).
 fun valid_unit_numeric_history(Unit unit) -> Bool:
+    if unit.return_slot.get() < 0 or unit.return_slot.get() >= MAX_UNIT_COUNT:
+        return false
     if !valid_fight_history(unit.history) or !valid_action_history(unit.history):
         return false
     for i in range(unit.phase_modifiers.charge_roll.size()):

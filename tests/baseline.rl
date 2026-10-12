@@ -3132,7 +3132,7 @@ fun test_movement11_reposition_preserves_identity_and_restrictions() -> Bool:
     if !reposition_unit(board, unit_id(0)) or !board[0].empty() or !board[0].retired:
         return false
     enter_from_reserves(board, unit_id(0), board_position(5, 20), MovementKind::ingress)
-    return board.units.size() == 2 and board[1].identity == identity and board[1].history.advanced_this_turn and board[1].battle_socked and board[1].history.repositioned and !board[1].allows_action_start()
+    return board.units.size() == 1 and board[0].identity == identity and board[0].history.advanced_this_turn and board[0].battle_socked and board[0].history.repositioned and !board[0].allows_action_start()
 
 # p.69: expire never-arrived reserves at end round 3, exempt repositioned ones,
 # and preserve the destroyed roster rather than losing its archive.
@@ -5485,3 +5485,95 @@ fun test_offboard_command_tests_battlefield_then_reserve() -> Bool:
     step.roll_pair(board, three, three)
     return step.is_done() and !board.reserve_units[0].battle_socked
 
+# 23.01 p.74: mandatory Aircraft reserves do not depend on optional points choices.
+fun test_aircraft16_mandatory_formations_reserves() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_infernus_squad())
+    board.reserve_units.append(make_tantus())
+    board.reserve_units[1][0].keywords.append(Keyword::aircraft)
+    board.reserve_units[1].owned_by_player1 = true
+    reserve_aircraft_for_formations(board)
+    return !board.reserve_units[0].history.strategic_reserve and board.reserve_units[1].history.strategic_reserve and deployment_complete(board, true)
+
+# 23.02 p.74: Aircraft have no Stationary/Normal/Advance/Fall Back moves.
+fun test_aircraft16_only_ingress_move() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].keywords.append(Keyword::aircraft)
+    return !battlefield_move_eligible(board, unit_id(0), MovementKind::stationary) and !battlefield_move_eligible(board, unit_id(0), MovementKind::normal) and !battlefield_move_eligible(board, unit_id(0), MovementKind::advance) and !battlefield_move_eligible(board, unit_id(0), MovementKind::ordered_retreat) and movement_selection_complete(board, false)
+
+# 23.02 p.74: round-one deferral consumes selection, never a Stationary move.
+fun test_aircraft16_reserve_deferral_does_not_stall() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_tantus())
+    board.reserve_units[0][0].keywords.append(Keyword::aircraft)
+    let phase = movement_phase(board)
+    phase.select_reserve_unit(board, unit_id(0))
+    if (can phase.reserve_remain_stationary(board)) or !(can phase.defer_aircraft_ingress(board)) or (can phase.place_at(board, board_position(5, 5))):
+        return false
+    phase.defer_aircraft_ingress(board)
+    if !(can phase.end_move(board)):
+        return false
+    phase.end_move(board)
+    return phase.is_done() and !board.reserve_units[0].has_moved and !board.reserve_units[0].history.has_ingressed
+
+# 23.02 p.74: solely Aircraft engagement permits Normal and Advance.
+fun test_aircraft16_engagement_exception() -> Bool:
+    let board = fight14_fixture()
+    board[1][0].keywords.append(Keyword::aircraft)
+    if !board.is_in_melee(board[0]) or !battlefield_move_eligible(board, unit_id(0), MovementKind::normal) or !battlefield_move_eligible(board, unit_id(0), MovementKind::advance):
+        return false
+    board[1][0].keywords.clear()
+    return !battlefield_move_eligible(board, unit_id(0), MovementKind::normal)
+
+# 23.04 p.74: Aircraft source melee requires a FLYING target unit.
+fun test_aircraft16_melee_source_requires_flying_target() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::aircraft)
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    if declaration_target_valid(board, unit_id(0), declaration, unit_id(1), true):
+        return false
+    board[1][0].keywords.append(Keyword::fly)
+    return declaration_target_valid(board, unit_id(0), declaration, unit_id(1), true)
+
+# 23.02 p.74 / appendix 01.02.02: only opponent Aircraft depart; effects survive.
+fun test_aircraft16_opponent_turn_end_preserves_state() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::aircraft)
+    board[1][0].keywords.append(Keyword::aircraft)
+    board[1].battle_socked = true
+    board[1].history.advanced_this_turn = true
+    let identity = board[1].identity
+    return_opponent_aircraft(board)
+    return board.reserve_units.size() == 1 and board.reserve_units[0].identity == identity and board.reserve_units[0].battle_socked and board.reserve_units[0].history.advanced_this_turn and board.reserve_units[0].history.repositioned and board[1].empty() and board[1].retired and !board[0].empty() and valid_state_foundations(board)
+
+# pp.68–69/74: repeated ingress restores the same slot and all identities.
+fun test_aircraft16_repeated_ingress_reuses_slot() -> Bool:
+    let board = movement11_fixture()
+    board.current_round = 2
+    board[0][0].keywords.append(Keyword::aircraft)
+    let identity = board[0].identity
+    for repetition in range(5):
+        if !reposition_unit(board, unit_id(0)) or !battlefield_entry_available(board, board.reserve_units[0]):
+            return false
+        enter_from_reserves(board, unit_id(0), board_position(5, 10), MovementKind::ingress)
+        if board.units.size() != 1 or board[0].identity != identity or board.reserve_units.size() != 0 or !valid_state_foundations(board):
+            return false
+    return true
+
+# pp.73–74: one grounded target suffices; either Aircraft unit excludes Plunging Fire.
+fun test_aircraft16_plunging_fire_exclusions_and_bounds() -> Bool:
+    let board = shooting12_fixture()
+    board[0][0].geometry.elevation = 3
+    if !plunging_fire_applies(board, unit_id(0), 0, unit_id(1), true) or plunging_fire_applies(board, unit_id(0), 0, unit_id(1), false):
+        return false
+    board[0][0].keywords.append(Keyword::aircraft)
+    if plunging_fire_applies(board, unit_id(0), 0, unit_id(1), true):
+        return false
+    board[0][0].keywords.clear()
+    board[1][0].keywords.append(Keyword::aircraft)
+    if plunging_fire_applies(board, unit_id(0), 0, unit_id(1), true):
+        return false
+    board[1][0].keywords.clear()
+    for elevated_target in range(board[1].models.size()):
+        board[1][elevated_target].geometry.elevation = 1
+    return !plunging_fire_applies(board, unit_id(0), 0, unit_id(1), true)

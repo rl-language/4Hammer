@@ -209,6 +209,9 @@ cls PhaseModifiers:
     Bool counteroffensive
 
 cls Unit:
+    # Stable retired slot survives reserve round trips (pp.68–69/74).
+    Bool has_return_slot
+    UnitID return_slot
     ShootingKind shooting_kind
     UnitID snap_target
     FixedStat lone_operative_range

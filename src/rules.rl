@@ -520,6 +520,7 @@ act resolve_weapon(ctx Board board,
                    frm UnitID target) -> ResolveWeapon:
     # Cover is assessed for every target model from this firing model, and
     # changes BS rather than a save or clamped hit modifier (p.50).
+    board.attack_info.plunging_fire = plunging_fire_applies(board, source, current_model.get(), target, board.attack_info.source.range() > 0)
     board.attack_info.target_has_cover = board.attack_info.source.range() > 0 and unit_has_benefit_of_cover(board, board[source][current_model], board[target])
     let distance = board[target].distance(board[source][current_model])
     let rapid_fire_attacks = 0
@@ -843,6 +844,7 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     assert(model >= 0, "declared source no longer exists")
     info.source_profile = board[source][model].profile
     info.engaged_hit_penalties = 0
+    info.plunging_fire = plunging_fire_applies(board, source, model, target, info.source.range() > 0)
     info.target_has_cover = info.source.range() > 0 and (target_info.target_has_cover or smoke_cover_applies(board, board[source][model], target) or unit_has_benefit_of_cover(board, board[source][model], board[target]) or (info.shooting_kind == ShootingKind::indirect and info.has_weapon_rule(board, WeaponRuleKind::indirect_fire)))
     info.indirect_stationary_visible = !board[source].has_run and !board[source].history.was_set_up_this_turn and board[source].history.move_kind == MovementKind::stationary and stationary_this_turn(board[source]) and friendly_unit_sees_target(board, source, target)
     let cq = info.has_weapon_rule(board, WeaponRuleKind::pistol) or info.has_weapon_rule(board, WeaponRuleKind::close_quarters)
@@ -1194,7 +1196,7 @@ act timing_rapid_ingress(ctx Board board, frm Bool player) -> TimingRapidIngress
     board.commit_stratagem(player, Stratagem::rapid_ingress, board.reserve_units[reserve.get()])
     actions:
         act skip()
-        act ingress_at(BoardPosition position) {board.units.has_capacity(), setup_at_valid(board, board.reserve_units[reserve.get()], position, MovementKind::ingress, false)}
+        act ingress_at(BoardPosition position) {battlefield_entry_available(board, board.reserve_units[reserve.get()]), setup_at_valid(board, board.reserve_units[reserve.get()], position, MovementKind::ingress, false)}
             enter_from_reserves(board, reserve, position, MovementKind::ingress)
 
 # p.57: select and spend before the phase-long cover grant; the enclosing
@@ -1458,6 +1460,7 @@ act battle_shock_step(ctx Board board) -> BattleShockStep:
             continue
         subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value], true, shocked_at_start[i.value])
         i = i + 1
+
     # Supplied appendix 01.02.04 explicitly requires the same Command tests
     # for strategic reserves (core cross-reference pp.68–69). These are army
     # units, without granting battlefield visibility or distance eligibility.
@@ -1962,10 +1965,14 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
         act select_reserve_unit(frm UnitID id) {id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[id.get()]), board.reserve_units[id.get()].owned_by_player1 == current_player, board.reserve_units[id.get()].history.selected_move_phase != board.phase_serial.value + 1}
             actions:
                 act skip()
-                act reserve_remain_stationary()
+                # p.74 prohibits Stationary for Aircraft. Deferring arrival is
+                # a selection decision, not a new move type (pp.32/69).
+                act defer_aircraft_ingress() {board.reserve_units[id.get()].has_keyword(Keyword::aircraft)}
+                    board.reserve_units[id.get()].history.selected_move_phase = board.phase_serial.value + 1
+                act reserve_remain_stationary() {!board.reserve_units[id.get()].has_keyword(Keyword::aircraft)}
                     board.reserve_units[id.get()].history.selected_move_phase = board.phase_serial.value + 1
                     board.reserve_units[id.get()].history.move_kind = MovementKind::stationary
-                act place_at(BoardPosition position) {board.current_round >= 1, board.units.has_capacity(), setup_at_valid(board, board.reserve_units[id.get()], position, MovementKind::ingress, false)}
+                act place_at(BoardPosition position) {board.current_round >= 1, battlefield_entry_available(board, board.reserve_units[id.get()]), setup_at_valid(board, board.reserve_units[id.get()], position, MovementKind::ingress, false)}
                     enter_from_reserves(board, id, position, MovementKind::ingress)
 
 # Desperate Escape rolls one complete hazard batch per model, then applies
@@ -2069,7 +2076,7 @@ act movement_phase(ctx Board board) -> MovementPhase:
         actions:
             act end_move() {movement_selection_complete(board, board.current_player)}
                 break
-            act move_unit(frm UnitID id) {id.get() < board.units.size(), has_live_model(board[id]), board[id].owned_by_player1 == board.current_player, board[id].history.selected_move_phase != board.phase_serial.value + 1}
+            act move_unit(frm UnitID id) {id.get() < board.units.size(), has_live_model(board[id]), !board[id].has_keyword(Keyword::aircraft), board[id].owned_by_player1 == board.current_player, board[id].history.selected_move_phase != board.phase_serial.value + 1}
                 frm use_gilded_spear = false
                 # Preserve this legacy supplied-roster hook without inventing
                 # new faction authority; exact faction replacement is task 17.
@@ -2082,10 +2089,14 @@ act movement_phase(ctx Board board) -> MovementPhase:
             act select_reserve_unit(frm UnitID reserve_id) {reserve_id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[reserve_id.get()]), board.reserve_units[reserve_id.get()].owned_by_player1 == board.current_player, board.reserve_units[reserve_id.get()].history.selected_move_phase != board.phase_serial.value + 1}
                 actions:
                     act skip()
-                    act reserve_remain_stationary()
+                    # pp.32/69/74: a reserve Aircraft may defer ingress,
+                    # including round one, without making a Stationary move.
+                    act defer_aircraft_ingress() {board.reserve_units[reserve_id.get()].has_keyword(Keyword::aircraft)}
+                        board.reserve_units[reserve_id.get()].history.selected_move_phase = board.phase_serial.value + 1
+                    act reserve_remain_stationary() {!board.reserve_units[reserve_id.get()].has_keyword(Keyword::aircraft)}
                         board.reserve_units[reserve_id.get()].history.selected_move_phase = board.phase_serial.value + 1
                         board.reserve_units[reserve_id.get()].history.move_kind = MovementKind::stationary
-                    act place_at(BoardPosition position) {board.current_round >= 1, board.units.has_capacity(), setup_at_valid(board, board.reserve_units[reserve_id.get()], position, MovementKind::ingress, false)}
+                    act place_at(BoardPosition position) {board.current_round >= 1, battlefield_entry_available(board, board.reserve_units[reserve_id.get()]), setup_at_valid(board, board.reserve_units[reserve_id.get()], position, MovementKind::ingress, false)}
                         enter_from_reserves(board, reserve_id, position, MovementKind::ingress)
     board.current_decision_maker = board.current_player
 
@@ -2166,6 +2177,7 @@ act turn(ctx Board board, frm Bool player_id) -> Turn:
     board.clear_phase_modifiers()
     board.timing.phase = BattlePhase::none
     subaction*(board) end = resolve_timing_window(board, TimingWindow::turn_end)
+    return_opponent_aircraft(board)
     board.current_decision_maker = board.current_player
 
 # Round start precedes both turns; round end follows both (p.28). The current
@@ -2221,6 +2233,7 @@ fun deployment_position_valid(Board board, BoardPosition position, Bool current_
 # Pre-battle reserve choices require explicit points; AIRCRAFT/transport
 # formation exceptions await task 16, not invented roster costs (p.68).
 act declare_strategic_reserves(ctx Board board) -> DeclareStrategicReserves:
+    reserve_aircraft_for_formations(board)
     frm player = board.starting_player
     frm count : BInt<0, 3>
     while count.value < 2:
