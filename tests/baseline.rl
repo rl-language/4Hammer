@@ -5428,3 +5428,60 @@ fun test_core15_malformed_action_history_rejected() -> Bool:
     board[0].history.action_records[0].started_turn = 1
     board[0].history.action_records[0].completed = true
     return !valid_state_foundations(board)
+
+# Supplied appendix 01.02.04 / core pp.30/68: full-strength shocked reserves recover.
+fun test_offboard_command_shocked_reserve_recovers() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_infernus_squad())
+    board.reserve_units[0].capture_starting_strength()
+    board.reserve_units[0].battle_socked = true
+    let step = battle_shock_step(board)
+    let three : Dice
+    three = 3
+    if !(can step.roll_pair(board, three, three)):
+        return false
+    step.roll_pair(board, three, three)
+    return step.is_done() and !board.reserve_units[0].battle_socked
+
+# Supplied appendix 01.02.04 / core pp.30/86: exact half reserves also test.
+fun test_offboard_command_half_reserve_fails() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_octavius())
+    board.reserve_units[0].capture_starting_strength()
+    board.reserve_units[0][0].suffered_wounds = 3
+    let step = battle_shock_step(board)
+    let one : Dice
+    one = 1
+    if !(can step.roll_pair(board, one, one)):
+        return false
+    step.roll_pair(board, one, one)
+    return step.is_done() and board.reserve_units[0].battle_socked
+
+# Supplied appendix 01.02.04: our Command does not test healthy/foreign/empty reserves.
+fun test_offboard_command_skips_ineligible_reserves() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_infernus_squad())
+    board.reserve_units[0].capture_starting_strength()
+    board.reserve_units.append(make_tantus())
+    board.reserve_units[1].owned_by_player1 = true
+    board.reserve_units[1].battle_socked = true
+    board.reserve_units.resize(3)
+    let step = battle_shock_step(board)
+    return step.is_done() and board.reserve_units[1].battle_socked
+
+# Supplied appendix 01.02.04: each battlefield/offboard unit tests exactly once.
+fun test_offboard_command_tests_battlefield_then_reserve() -> Bool:
+    let board : Board
+    board.units.append(make_infernus_squad())
+    board[0].battle_socked = true
+    board.reserve_units.append(make_infernus_squad())
+    board.reserve_units[0].battle_socked = true
+    let step = battle_shock_step(board)
+    let three : Dice
+    three = 3
+    step.roll_pair(board, three, three)
+    if step.is_done() or board[0].battle_socked or !board.reserve_units[0].battle_socked:
+        return false
+    step.roll_pair(board, three, three)
+    return step.is_done() and !board.reserve_units[0].battle_socked
+

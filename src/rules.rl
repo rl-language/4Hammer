@@ -1458,6 +1458,15 @@ act battle_shock_step(ctx Board board) -> BattleShockStep:
             continue
         subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value], true, shocked_at_start[i.value])
         i = i + 1
+    # Supplied appendix 01.02.04 explicitly requires the same Command tests
+    # for strategic reserves (core cross-reference pp.68–69). These are army
+    # units, without granting battlefield visibility or distance eligibility.
+    frm reserve_index : UnitIterator
+    while reserve_index.value < board.reserve_units.size():
+        if !board.reserve_units[reserve_index.value].empty() and board.reserve_units[reserve_index.value].owned_by_player1 == board.current_player and (board.reserve_units[reserve_index.value].battle_socked or board.reserve_units[reserve_index.value].is_at_or_below_half_strength()):
+            frm reserve_recover = board.reserve_units[reserve_index.value].battle_socked
+            subaction*(board, board.reserve_units[reserve_index.value]) reserve_shock_test = battle_shock_test(board, board.reserve_units[reserve_index.value], true, reserve_recover)
+        reserve_index = reserve_index + 1
 
 
 # tyranids shadow in the warp rules
