@@ -7070,3 +7070,250 @@ fun test_orks17c2b2_random_allocated_damage_uses_modifier() -> Bool:
     damage.allocate_mortal(board, board[1], board[0], model)
     damage.quantity(board, board[1], board[0], attack_test_die(2))
     return damage.is_done() and board[1][0].suffered_wounds == 1
+
+# Named selectors use audited identities, not uncertified legacy stats. This
+# fixture deliberately tags generic profiles for selector/consumer regressions.
+fun named17c2c_fixture() -> Board:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.clear()
+    for slot in range(4):
+        board[0][0].weapons.append(Weapon::captain_storm_bolter)
+    set_named_weapon_profile(board[0][0], 0, NamedWeaponProfile::kustom_shoota_aimed)
+    set_named_weapon_profile(board[0][0], 1, NamedWeaponProfile::kustom_shoota_point_blank)
+    set_named_weapon_profile(board[0][0], 2, NamedWeaponProfile::kustom_shoota_aimed)
+    set_named_weapon_profile(board[0][0], 3, NamedWeaponProfile::slugga)
+    board[0][0].weapon_profile_groups[0] = 1
+    board[0][0].weapon_profile_groups[1] = 1
+    board[0][0].weapon_profile_groups[2] = 2
+    set_model_datasheet(board[0][0], OrksDatasheet::big_mek_in_mega_armour)
+    return board
+
+# Appendix04.01.03: all alternate profiles and copies share the named family.
+fun test_named17c2c_family_grant_all_profiles_and_copies() -> Bool:
+    let board = named17c2c_fixture()
+    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    let first = orks17c2b_info(board, 0)
+    let alternate = orks17c2b_info(board, 1)
+    let copy = orks17c2b_info(board, 2)
+    let unrelated = orks17c2b_info(board, 3)
+    return first.attack_strength() == 6 and alternate.attack_strength() == 6 and copy.attack_strength() == 6 and unrelated.attack_strength() == 4
+
+# A named profile restriction excludes a different profile of the same family.
+fun test_named17c2c_profile_grant_excludes_alternate() -> Bool:
+    let board = named17c2c_fixture()
+    board[0][0].characteristic_modifiers.append(named_profile_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeaponProfile::kustom_shoota_aimed))
+    let first = orks17c2b_info(board, 0)
+    let alternate = orks17c2b_info(board, 1)
+    let copy = orks17c2b_info(board, 2)
+    return first.attack_strength() == 6 and alternate.attack_strength() == 4 and copy.attack_strength() == 6
+
+# A physical-instance grant includes its alternate but excludes a second copy.
+fun test_named17c2c_physical_grant_distinguishes_copy() -> Bool:
+    let board = named17c2c_fixture()
+    board[0][0].characteristic_modifiers.append(physical_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, 0))
+    let first = orks17c2b_info(board, 0)
+    let alternate = orks17c2b_info(board, 1)
+    let copy = orks17c2b_info(board, 2)
+    return first.attack_strength() == 6 and alternate.attack_strength() == 6 and copy.attack_strength() == 4
+
+# Group0 means an independent slot, never every other zero-group slot.
+fun test_named17c2c_zero_group_selects_only_its_slot() -> Bool:
+    let board = named17c2c_fixture()
+    board[0][0].weapon_profile_groups[0] = 0
+    board[0][0].weapon_profile_groups[1] = 0
+    board[0][0].characteristic_modifiers.append(physical_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, 0))
+    let first = orks17c2b_info(board, 0)
+    let alternate = orks17c2b_info(board, 1)
+    return first.attack_strength() == 6 and alternate.attack_strength() == 4
+
+# Slot/family/profile predicates are conjunctive, not alternatives.
+fun test_named17c2c_conjunctive_selectors() -> Bool:
+    let board = named17c2c_fixture()
+    let grant = named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota)
+    grant.weapon_scope = 1
+    grant.physical_scope = true
+    grant.profile_name = NamedWeaponProfile::kustom_shoota_point_blank.value
+    board[0][0].characteristic_modifiers.append(grant)
+    let first = orks17c2b_info(board, 0)
+    let alternate = orks17c2b_info(board, 1)
+    let copy = orks17c2b_info(board, 2)
+    return first.attack_strength() == 4 and alternate.attack_strength() == 6 and copy.attack_strength() == 4
+
+# Unknown identity does not accidentally grant a named bonus to legacy models.
+fun test_named17c2c_unknown_weapon_never_matches_name() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    let info = orks17c2b_info(board, 0)
+    return info.attack_strength() == 4 and !model_matches_datasheet(board[0][0], OrksDatasheet::unknown)
+
+# Actual targeting consumes named Range, not only attack-context snapshots.
+fun test_named17c2c_named_range_target_legality() -> Bool:
+    let board = named17c2c_fixture()
+    board[1][0].position = board_position(35, 5)
+    let old = make_declared_weapon(board, unit_id(0), 0, 0)
+    if declaration_target_valid(board, unit_id(0), old, unit_id(1), false):
+        return false
+    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::range, ModifierOperation::add, 10, NamedWeapon::kustom_shoota))
+    return declaration_target_valid(board, unit_id(0), old, unit_id(1), false)
+
+# Named A/D reach the previous batch's real gathering and allocated snapshots.
+fun test_named17c2c_named_attacks_and_damage_consumers() -> Bool:
+    let board = named17c2c_fixture()
+    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::attacks, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    board[0][0].characteristic_modifiers.append(named_profile_modifier(ModifiedCharacteristic::damage, ModifierOperation::add, 1, NamedWeaponProfile::kustom_shoota_aimed))
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let count = gather_weapon_count(board, unit_id(0), unit_id(1), declaration, false)
+    let info = orks17c2b_info(board, 0)
+    return count.is_done() and count.result.value == 4 and info.damage_modifiers.size() == 1
+
+# Appendix02.05.01: mixed unit identity is a union, model identity stays local.
+fun test_named17c2c_unit_and_model_datasheet_scope() -> Bool:
+    let unit = make_infernus_squad()
+    set_model_datasheet(unit[0], OrksDatasheet::boyz)
+    set_model_datasheet(unit[1], OrksDatasheet::big_mek_with_shokk_attack_gun)
+    return unit_matches_datasheet(unit, OrksDatasheet::boyz) and unit_matches_datasheet(unit, OrksDatasheet::big_mek_with_shokk_attack_gun) and !model_matches_datasheet(unit[0], OrksDatasheet::big_mek_with_shokk_attack_gun) and !unit_matches_datasheet(unit, OrksDatasheet::unknown)
+
+# Datasheet-filtered model grants must not buff unrelated attached constituents.
+fun test_named17c2c_datasheet_model_grant_is_local() -> Bool:
+    let unit = make_infernus_squad()
+    set_model_datasheet(unit[0], OrksDatasheet::boyz)
+    let grant = characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 2)
+    grant_datasheet_characteristic(unit, OrksDatasheet::boyz, grant)
+    return unit[0].effective_toughness() == 6 and unit[1].effective_toughness() == 4
+
+# Named rule grants reach actual selected declarations (p.78/04.01.03).
+fun test_named17c2c_named_weapon_rule_consumers() -> Bool:
+    let board = named17c2c_fixture()
+    grant_named_weapon_rule(board[0][0], NamedWeapon::kustom_shoota, weapon_rule(WeaponRuleKind::precision))
+    let first = make_declared_weapon(board, unit_id(0), 0, 0)
+    let alternate = make_declared_weapon(board, unit_id(0), 0, 1)
+    let unrelated = make_declared_weapon(board, unit_id(0), 0, 3)
+    return declared_weapon_has_kind(first, WeaponRuleKind::precision) and declared_weapon_has_kind(alternate, WeaponRuleKind::precision) and !declared_weapon_has_kind(unrelated, WeaponRuleKind::precision)
+
+# Profile and physical rule grants remain narrower than a family grant.
+fun test_named17c2c_profile_and_physical_rules() -> Bool:
+    let board = named17c2c_fixture()
+    grant_named_profile_rule(board[0][0], NamedWeaponProfile::kustom_shoota_point_blank, weapon_rule(WeaponRuleKind::ignore_cover))
+    grant_physical_weapon_rule(board[0][0], 0, weapon_rule(WeaponRuleKind::precision))
+    let first = make_declared_weapon(board, unit_id(0), 0, 0)
+    let alternate = make_declared_weapon(board, unit_id(0), 0, 1)
+    let copy = make_declared_weapon(board, unit_id(0), 0, 2)
+    return !declared_weapon_has_kind(first, WeaponRuleKind::ignore_cover) and declared_weapon_has_kind(alternate, WeaponRuleKind::ignore_cover) and declared_weapon_has_kind(alternate, WeaponRuleKind::precision) and !declared_weapon_has_kind(copy, WeaponRuleKind::precision)
+
+# Identity and name predicates must survive archives and text saves.
+fun test_named17c2c_archive_keeps_datasheet_and_weapon_identity() -> Bool:
+    let board = named17c2c_fixture()
+    board[0].remove_model(0)
+    ref archived = board[0].destroyed_models.value[0]
+    return model_matches_datasheet(archived, OrksDatasheet::big_mek_in_mega_armour) and archived.weapon_names[0].value == NamedWeapon::kustom_shoota.value and valid_model_numeric_history(archived)
+
+# Reject conflicting profile/family tags instead of accepting a false selector.
+fun test_named17c2c_invalid_family_profile_metadata_rejected() -> Bool:
+    let board = named17c2c_fixture()
+    board[0][0].weapon_names[0] = NamedWeapon::slugga.value
+    return !valid_model_numeric_history(board[0][0])
+
+# Grouped alternate profiles must share their printed physical family.
+fun test_named17c2c_invalid_group_family_rejected() -> Bool:
+    let board = named17c2c_fixture()
+    board[0][0].weapon_profile_groups[3] = 1
+    return !valid_model_numeric_history(board[0][0])
+
+# Raw values can bypass bounded assignment on restore; reject both catalogs.
+fun test_named17c2c_invalid_catalog_codes_rejected() -> Bool:
+    let board = named17c2c_fixture()
+    board[0][0].datasheet.value = MAX_DATASHEETCODE
+    if valid_model_numeric_history(board[0][0]):
+        return false
+    board[0][0].datasheet = 0
+    board[0][0].weapon_profile_names[0].value = -1
+    return !valid_model_numeric_history(board[0][0])
+
+# Named or physical selectors cannot be attached to a model-only statistic.
+fun test_named17c2c_invalid_named_grant_metadata_rejected() -> Bool:
+    let grant = characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 1)
+    grant.weapon_name = NamedWeapon::slugga.value
+    let grants : CharacteristicModifiers
+    grants.append(grant)
+    return !valid_characteristic_modifiers(grants)
+
+# A physical selector must specify an owned representative slot.
+fun test_named17c2c_invalid_physical_scope_rejected() -> Bool:
+    let grant = characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 1)
+    grant.physical_scope = true
+    let grants : CharacteristicModifiers
+    grants.append(grant)
+    return !valid_characteristic_modifiers(grants)
+
+# Firing Deck keeps the passenger profile identity, while numerical grants
+# belong to the carrier (p.81). A coincident carrier slot grant is excluded.
+fun test_named17c2c_borrowed_named_grant_uses_passenger_identity() -> Bool:
+    let board = named17c2c_fixture()
+    let passenger = board[0]
+    board.embarked_units.append(passenger)
+    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    board[0][0].characteristic_modifiers.append(physical_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 10, 0))
+    board.embarked_units[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 20, NamedWeapon::kustom_shoota))
+    let declaration = make_deck_declaration(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 1)
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return info.attack_strength() == 6 and declaration.weapon_name.value == NamedWeapon::kustom_shoota.value and declaration.profile_name.value == NamedWeaponProfile::kustom_shoota_point_blank.value
+
+# A carrier's equipped name is not the identity of a borrowed weapon.
+fun test_named17c2c_borrowed_unrelated_name_does_not_match() -> Bool:
+    let board = named17c2c_fixture()
+    board.embarked_units.append(board[0])
+    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    let declaration = make_deck_declaration(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 3)
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return info.attack_strength() == 4
+
+# Declarations retain their selected profile's name despite later metadata
+# changes; currently source effects still use the live bearer (pp.16–17).
+fun test_named17c2c_declaration_identity_is_snapshot() -> Bool:
+    let board = named17c2c_fixture()
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    board[0][0].weapon_profile_groups[0] = 0
+    board[0][0].weapon_profile_groups[1] = 0
+    set_named_weapon_profile(board[0][0], 0, NamedWeaponProfile::slugga)
+    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return info.attack_strength() == 6
+
+# Real Game saves preserve catalog codes, physical scope and effective queries.
+fun test_named17c2c_saved_name_and_grant_round_trip() -> Bool:
+    let state = play()
+    state.board = named17c2c_fixture()
+    state.board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    let restored = play()
+    if !set_state(restored, to_string(state)):
+        return false
+    let info = orks17c2b_info(restored.board, 1)
+    return model_matches_datasheet(restored.board[0][0], OrksDatasheet::big_mek_in_mega_armour) and info.attack_strength() == 6
+
+# Catalog enums are used transiently; stored codes have exactly their domain.
+fun test_named17c2c_catalog_bounds_and_profile_family() -> Bool:
+    let datasheet : OrksDatasheet
+    let weapon : NamedWeapon
+    let profile : NamedWeaponProfile
+    let family = named_profile_weapon(NamedWeaponProfile::kustom_shoota_point_blank)
+    return max(datasheet) + 1 == MAX_DATASHEETCODE and max(weapon) + 1 == MAX_WEAPONNAMECODE and max(profile) + 1 == MAX_WEAPONPROFILECODE and family.value == NamedWeapon::kustom_shoota.value
+
+# Squighog Boyz Stikka is printed once in each attack table. Same-name
+# ranged/melee profiles require distinct identity (datasheet/04.01.03):
+# https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
+fun test_named17c2c_same_printed_name_distinct_attack_profiles() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::choppa)
+    set_named_weapon_profile(board[0][0], 0, NamedWeaponProfile::stikka_ranged)
+    set_named_weapon_profile(board[0][0], 1, NamedWeaponProfile::stikka_melee)
+    board[0][0].characteristic_modifiers.append(named_profile_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeaponProfile::stikka_melee))
+    let ranged = orks17c2b_info(board, 0)
+    let melee = orks17c2b_info(board, 1)
+    return ranged.attack_strength() == 4 and melee.attack_strength() == 7 and board[0][0].weapon_names[0] == board[0][0].weapon_names[1] and valid_model_numeric_history(board[0][0])
+
+# Restore validation rejects a melee tag attached to an actual ranged profile.
+fun test_named17c2c_profile_attack_kind_metadata_rejected() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapon_names[0] = NamedWeapon::stikka.value
+    board[0][0].weapon_profile_names[0] = NamedWeaponProfile::stikka_melee.value
+    return !valid_model_numeric_history(board[0][0])

@@ -1,3 +1,4 @@
+import named_identities
 import state_types
 
 # Authority: user-supplied appendix 02.02.01, not a quotation from the PDF.
@@ -143,6 +144,11 @@ cls CharacteristicModifier:
     # Zero affects the bearer/all equipped weapons; nonzero is slot+1.
     # Ordinary bounded storage avoids a separate modifier vector per slot.
     LinearlyDistributedInt<0, MAX_WEAPON_SCOPES> weapon_scope
+    # Optional conjunctive name predicates; zero means no named restriction.
+    WeaponNameCode weapon_name
+    WeaponProfileCode profile_name
+    # A nonzero representative slot may select every profile of that instance.
+    Bool physical_scope
 
 using CharacteristicModifiers = CheckedVector<CharacteristicModifier, 16>
 
@@ -161,6 +167,12 @@ fun valid_characteristic_modifiers(CharacteristicModifiers modifiers) -> Bool:
     for i in range(modifiers.size()):
         ref entry = modifiers[i]
         if entry.weapon_scope.value < 0 or entry.weapon_scope.value > MAX_WEAPONS or (entry.weapon_scope.value > 0 and !weapon_characteristic_kind(entry.characteristic)):
+            return false
+        if entry.weapon_name.value < 0 or entry.weapon_name.value >= MAX_WEAPONNAMECODE or entry.profile_name.value < 0 or entry.profile_name.value >= MAX_WEAPONPROFILECODE:
+            return false
+        if (entry.weapon_name.value > 0 or entry.profile_name.value > 0 or entry.physical_scope) and !weapon_characteristic_kind(entry.characteristic):
+            return false
+        if entry.physical_scope and entry.weapon_scope.value == 0:
             return false
         if entry.characteristic.value < 0 or entry.characteristic.value > ModifiedCharacteristic::detection_range.value:
             return false
@@ -201,3 +213,26 @@ fun valid_rule_modifiers(RuleModifiers modifiers) -> Bool:
         if modifiers[i].operation.value == ModifierOperation::divide.value and (modifiers[i].amount.value == 0 or modifiers[i].negative):
             return false
     return true
+
+# Named grants affect every equipped copy/profile of that physical family;
+# e.g. Hunta Rig Fully Loaded Butchery names Butcha Boyz specifically:
+# https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig
+fun named_weapon_modifier(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, NamedWeapon name) -> CharacteristicModifier:
+    assert(weapon_characteristic_kind(kind) and name.value > 0 and name.value < MAX_WEAPONNAMECODE, "invalid named weapon grant")
+    let result = characteristic_modifier(kind, operation, amount)
+    result.weapon_name = name.value
+    return result
+
+# Profile-only restrictions do not become family-wide grants (04.01.03).
+fun named_profile_modifier(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, NamedWeaponProfile profile) -> CharacteristicModifier:
+    assert(weapon_characteristic_kind(kind) and profile.value > 0 and profile.value < MAX_WEAPONPROFILECODE, "invalid named profile grant")
+    let result = characteristic_modifier(kind, operation, amount)
+    result.profile_name = profile.value
+    return result
+
+# Select a physical instance through one of its owned slots, including every
+# alternate profile in that nonzero group (appendix04.01.03); group0 is one slot.
+fun physical_weapon_modifier(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, Int slot) -> CharacteristicModifier:
+    let result = weapon_characteristic_modifier(kind, operation, amount, slot)
+    result.physical_scope = true
+    return result

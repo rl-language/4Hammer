@@ -39,6 +39,10 @@ cls Model:
     BoardPosition position # required
     ModelGeometry geometry
     Profile profile
+    # Explicit source identity; legacy uncertified factories remain unknown.
+    DatasheetCode datasheet
+    WeaponNameCode[MAX_WEAPONS] weapon_names
+    WeaponProfileCode[MAX_WEAPONS] weapon_profile_names
     # Model-scoped arithmetic, not implicit unit-wide grants (appendix02.02.01).
     CharacteristicModifiers characteristic_modifiers
     Wounds suffered_wounds
@@ -64,7 +68,7 @@ cls Model:
     Dice destruction_fight_roll
     ModelHistory history
     # Appendix 04.01.03: nonzero equal IDs identify profiles of one physical weapon.
-    LinearlyDistributedInt<0, 9>[MAX_WEAPONS] weapon_profile_groups
+    LinearlyDistributedInt<0, MAX_WEAPON_SCOPES>[MAX_WEAPONS] weapon_profile_groups
     # Infrastructure: reuse the bounded keyword predicate, not its ability kind/parameter.
     WeaponRule[MAX_WEAPONS] hunter_profile_conditions
     Bool[MAX_WEAPONS] used_once_per_battle_weapon
@@ -898,12 +902,12 @@ fun model_matches_keywords(Model model, KeywordPredicate predicate) -> Bool:
 # Appendix02.02.01: bearer WS/BS modifies every equipped weapon; specific
 # weapon grants affect only their slot. Firing Deck uses the carrier's grants,
 # not an unrelated equipped slot with the same index (24.14 p.81).
-fun model_weapon_modifiers(Model model, Int slot, ModifiedCharacteristic kind, Bool borrowed) -> RuleModifiers:
+fun model_weapon_modifiers(Model model, Int slot, ModifiedCharacteristic kind, Bool borrowed, WeaponNameCode name, WeaponProfileCode profile_name) -> RuleModifiers:
     assert(valid_characteristic_modifiers(model.characteristic_modifiers), "invalid weapon characteristic modifiers")
     let result : RuleModifiers
     for i in range(model.characteristic_modifiers.size()):
         ref entry = model.characteristic_modifiers[i]
-        if entry.characteristic.value == kind.value and (entry.weapon_scope.value == 0 or (!borrowed and entry.weapon_scope.value == slot + 1)):
+        if entry.characteristic.value == kind.value and weapon_modifier_slot_matches(model, entry, slot, borrowed) and (entry.weapon_name.value == 0 or entry.weapon_name == name) and (entry.profile_name.value == 0 or entry.profile_name == profile_name):
             result.append(entry.modifier)
     return result
 
@@ -1615,3 +1619,109 @@ fun make_vengeful_brethren(UnitVector out, Bool owner) -> Faction:
     out.back().owned_by_player1 = owner
 
     return Faction::vengeful_brethren
+
+# Ordinary equipped profiles obtain their explicit identities; legacy direct
+# borrowed helpers have no passenger identity. Real deck declarations carry it.
+fun model_weapon_modifiers(Model model, Int slot, ModifiedCharacteristic kind, Bool borrowed) -> RuleModifiers:
+    let name : WeaponNameCode
+    let profile_name : WeaponProfileCode
+    if !borrowed and slot >= 0 and slot < model.weapons.size():
+        name = model.weapon_names[slot]
+        profile_name = model.weapon_profile_names[slot]
+    return model_weapon_modifiers(model, slot, kind, borrowed, name, profile_name)
+
+# Physical group IDs distinguish copies; group0 never matches a neighbour.
+# Borrowed weapons are not one of the carrier's equipped instances (p.81).
+fun weapon_modifier_slot_matches(Model model, CharacteristicModifier entry, Int slot, Bool borrowed) -> Bool:
+    if entry.weapon_scope.value == 0:
+        return true
+    if borrowed or slot < 0 or slot >= model.weapons.size():
+        return false
+    let selected = entry.weapon_scope.value - 1
+    if selected < 0 or selected >= model.weapons.size():
+        return false
+    if selected == slot:
+        return true
+    return entry.physical_scope and model.weapon_profile_groups[selected].value > 0 and model.weapon_profile_groups[selected] == model.weapon_profile_groups[slot]
+
+# Named unit conditions use constituent identity, not a display-string match.
+# Support Shokka excludes BIG MEK WITH SHOKK ATTACK GUN units:
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-With-Shokk-Attack-Gun
+fun model_matches_datasheet(Model model, OrksDatasheet tag) -> Bool:
+    return tag.value > 0 and tag.value < MAX_DATASHEETCODE and model.datasheet.value == tag.value
+
+# Like unit keywords, an attached/mixed unit can contain a named constituent;
+# life/battlefield/range eligibility remains the source rule's separate gate.
+fun unit_matches_datasheet(Unit unit, OrksDatasheet tag) -> Bool:
+    let matches = false
+    for i in range(unit.models.size()):
+        matches = matches or model_matches_datasheet(unit[i], tag)
+    return matches
+
+# Explicit fixture/data ingestion; this assigns names only, not certified stats.
+fun set_model_datasheet(Model model, OrksDatasheet tag):
+    assert(tag.value >= 0 and tag.value < MAX_DATASHEETCODE, "invalid datasheet identity")
+    model.datasheet = tag.value
+
+# One profile's physical family is catalogued, not inferred from legacy stats.
+fun set_named_weapon_profile(Model model, Int slot, NamedWeaponProfile tag):
+    assert(slot >= 0 and slot < model.weapons.size() and tag.value >= 0 and tag.value < MAX_WEAPONPROFILECODE, "invalid named weapon profile")
+    assert(tag.value == 0 or named_profile_is_melee(tag) == (model.weapons[slot].range() == 0), "profile identity attack kind mismatch")
+    model.weapon_profile_names[slot] = tag.value
+    let family = named_profile_weapon(tag)
+    model.weapon_names[slot] = family.value
+
+# A model-datasheet grant is applied only to those constituents, not every model
+# in a mixed/attached unit. Source timing/expiry remains17.E/17.G.
+fun grant_datasheet_characteristic(Unit unit, OrksDatasheet tag, CharacteristicModifier modifier):
+    for i in range(unit.models.size()):
+        if model_matches_datasheet(unit[i], tag):
+            assert(unit[i].characteristic_modifiers.has_capacity(), "characteristic grant capacity exceeded")
+            unit[i].characteristic_modifiers.append(modifier)
+
+# Typed label bridges expose compact standard codes to the editor without
+# storing one-hot catalog enums or display-string gameplay selectors.
+fun named_model_datasheet(Model model) -> OrksDatasheet:
+    let tag : OrksDatasheet
+    tag.value = model.datasheet.value
+    return tag
+
+# Source name lookup for an actual equipped slot; unknown stays explicit.
+fun equipped_named_weapon(Model model, Int slot) -> NamedWeapon:
+    assert(slot >= 0 and slot < model.weapons.size(), "invalid equipped identity slot")
+    let tag : NamedWeapon
+    tag.value = model.weapon_names[slot].value
+    return tag
+
+# Alternate profile labels remain distinct from their physical weapon family.
+fun equipped_named_profile(Model model, Int slot) -> NamedWeaponProfile:
+    assert(slot >= 0 and slot < model.weapons.size(), "invalid equipped identity slot")
+    let tag : NamedWeaponProfile
+    tag.value = model.weapon_profile_names[slot].value
+    return tag
+
+# Named equipped-weapon grants feed the existing per-slot rule consumers
+# (p.78; appendix04.01.03). Source duration/expiry remains17.E.
+fun grant_named_weapon_rule(Model model, NamedWeapon name, WeaponRule rule):
+    assert(name.value > 0 and name.value < MAX_WEAPONNAMECODE, "invalid named weapon rule grant")
+    for slot in range(model.weapons.size()):
+        if model.weapon_names[slot].value == name.value:
+            assert(model.additional_weapon_rules[slot].has_capacity(), "weapon rule grant capacity exceeded")
+            model.additional_weapon_rules[slot].append(rule)
+
+# A profile grant affects only that printed profile, across equipped copies.
+fun grant_named_profile_rule(Model model, NamedWeaponProfile tag, WeaponRule rule):
+    assert(tag.value > 0 and tag.value < MAX_WEAPONPROFILECODE, "invalid named profile rule grant")
+    for slot in range(model.weapons.size()):
+        if model.weapon_profile_names[slot].value == tag.value:
+            assert(model.additional_weapon_rules[slot].has_capacity(), "weapon rule grant capacity exceeded")
+            model.additional_weapon_rules[slot].append(rule)
+
+# A physical-instance grant follows existing profile groups; a second copy
+# of the same named weapon does not inherit it (appendix04.01.03).
+fun grant_physical_weapon_rule(Model model, Int slot, WeaponRule rule):
+    assert(slot >= 0 and slot < model.weapons.size(), "invalid physical weapon rule grant")
+    for target_slot in range(model.weapons.size()):
+        if target_slot == slot or (model.weapon_profile_groups[slot].value > 0 and model.weapon_profile_groups[slot] == model.weapon_profile_groups[target_slot]):
+            assert(model.additional_weapon_rules[target_slot].has_capacity(), "weapon rule grant capacity exceeded")
+            model.additional_weapon_rules[target_slot].append(rule)

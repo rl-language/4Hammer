@@ -16,6 +16,8 @@ cls DeclaredWeapon:
     Weapon weapon
     # Borrowed profiles receive carrier-wide grants, not carrier slot grants (p.81).
     Bool borrowed_weapon
+    WeaponNameCode weapon_name
+    WeaponProfileCode profile_name
     WeaponRule hunter_condition
     WeaponAbilitySet selected_rules
     WeaponAbilitySet current_target_rules
@@ -36,6 +38,8 @@ fun make_declared_weapon(Board board, UnitID source, Int model, Int slot) -> Dec
     result.model_identity = board[source][model].identity
     result.slot = slot
     result.weapon = board[source][model].weapons[slot]
+    result.weapon_name = board[source][model].weapon_names[slot]
+    result.profile_name = board[source][model].weapon_profile_names[slot]
     result.hunter_condition = board[source][model].hunter_profile_conditions[slot]
     result.selected_rules = model_weapon_rules(board, source, model, slot)
     # Epic Challenge grants Precision only to the selected CHARACTER
@@ -276,14 +280,13 @@ fun attack_model_allowed(Board board, UnitID source, Int model, Bool melee) -> B
 fun declaration_weapon_range(Board board, UnitID source, DeclaredWeapon declaration) -> Int:
     let model = declared_model_index(board, source, declaration)
     assert(model >= 0, "missing declared bearer for Range")
-    return model_weapon_range(board[source][model], declaration.weapon, declaration.slot.value, declaration.borrowed_weapon)
+    let modifiers = declaration_modifiers(board, source, declaration, ModifiedCharacteristic::range)
+    return modified_characteristic(declaration.weapon.range(), ModifiedCharacteristic::range, modifiers, declaration.weapon.range() == 0)
 
 # A is determined per selected bearer/profile (appendix02.02.01/02.02.03).
 # Borrowed Firing Deck weapons use the carrier-wide grants, not passenger slots.
 fun declaration_attack_modifiers(Board board, UnitID source, DeclaredWeapon declaration) -> RuleModifiers:
-    let model = declared_model_index(board, source, declaration)
-    assert(model >= 0, "declared source no longer exists")
-    return model_weapon_modifiers(board[source][model], declaration.slot.value, ModifiedCharacteristic::attacks, declaration.borrowed_weapon)
+    return declaration_modifiers(board, source, declaration, ModifiedCharacteristic::attacks)
 
 # Fixed melee A must be known before assigning shares (p.17). Random melee A
 # is excluded by the user's explicit assumption; do not silently roll it early.
@@ -315,3 +318,10 @@ fun same_effective_damage(AttackSequenceInfo left, AttackSequenceInfo right) -> 
                     return false
             return true
     return false
+
+# Current bearer grants match the declared profile's explicit identity, even
+# when Firing Deck borrows a passenger weapon (pp.16/81; appendix04.01.03).
+fun declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration, ModifiedCharacteristic kind) -> RuleModifiers:
+    let model = declared_model_index(board, source, declaration)
+    assert(model >= 0, "declared source no longer exists")
+    return model_weapon_modifiers(board[source][model], declaration.slot.value, kind, declaration.borrowed_weapon, declaration.weapon_name, declaration.profile_name)

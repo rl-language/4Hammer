@@ -927,12 +927,12 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     let live_toughness = board[target].get_unit_toughtness()
     assert(live_toughness >= 0 and live_toughness < MAX_CHARACTERISTIC, "group Toughness snapshot capacity exceeded")
     info.target_toughness = live_toughness
-    info.skill_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::weapon_skill, weapon.borrowed_weapon)
+    info.skill_modifiers = declaration_modifiers(board, source, weapon, ModifiedCharacteristic::weapon_skill)
     if weapon.weapon.range() > 0:
-        info.skill_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::ballistic_skill, weapon.borrowed_weapon)
-    info.damage_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::damage, weapon.borrowed_weapon)
-    info.ap_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::armour_penetration, weapon.borrowed_weapon)
-    let strength_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::strength, weapon.borrowed_weapon)
+        info.skill_modifiers = declaration_modifiers(board, source, weapon, ModifiedCharacteristic::ballistic_skill)
+    info.damage_modifiers = declaration_modifiers(board, source, weapon, ModifiedCharacteristic::damage)
+    info.ap_modifiers = declaration_modifiers(board, source, weapon, ModifiedCharacteristic::armour_penetration)
+    let strength_modifiers = declaration_modifiers(board, source, weapon, ModifiedCharacteristic::strength)
     let strength = modified_characteristic(weapon.weapon.strenght(), ModifiedCharacteristic::strength, strength_modifiers, false)
     assert(strength >= 0 and strength < MAX_CHARACTERISTIC, "weapon Strength snapshot capacity exceeded")
     info.weapon_strength = strength
