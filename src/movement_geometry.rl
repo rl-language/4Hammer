@@ -9,6 +9,8 @@ cls MovementGeometryPolicy:
     Bool traverse_enemies
     Bool traverse_terrain
     Bool free_vertical_movement
+    # Super-heavy Walker crosses non-TITANIC models only (p.85).
+    Bool exclude_titanic
 
 # Check the entire circular footprint, not just its centre, against battlefield
 # edges. Unsupported footprints cannot silently become circular bases (p.12).
@@ -165,10 +167,10 @@ fun model_segment_valid(Board board, Unit unit, Model model, GeometryPoint start
         return false
     let i = 0
     while i < board.units.size():
-        if board[i].owned_by_player1 != unit.owned_by_player1 and !policy.traverse_enemies:
+        if board[i].owned_by_player1 != unit.owned_by_player1 and (!policy.traverse_enemies or policy.exclude_titanic):
             let j = 0
             while j < board[i].models.size():
-                if segment_crosses_model(model, start, end, board[i][j]):
+                if (!policy.exclude_titanic or board[i][j].has_keyword(Keyword::titanic)) and segment_crosses_model(model, start, end, board[i][j]):
                     return false
                 j = j + 1
         i = i + 1

@@ -10,6 +10,7 @@ import terrain_rules
 import attack_dice
 import attack_declarations
 import damage_rules
+import movement_rules
 
 # Wound thresholds use the printed equality boundaries (p.18). The user-
 # supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus

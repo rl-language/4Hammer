@@ -631,23 +631,61 @@ cls Unit:
     fun arrange_candidate_columns(BoardPosition anchor, Int columns) -> Bool:
         if columns <= 0 or self.empty():
             return false
+        # Full-base clearance depends on the two largest radii, not two
+        # copies of a unique Leader's radius. Overspacing small members can
+        # hide coherent mixed-base formations (pp.12/14; no attachment grant).
         let radius = 0.0
+        let second_radius = 0.0
         let i = 0
         while i < self.models.size():
             if self[i].geometry.unsupported_footprint:
                 return false
-            if self[i].base_radius_micrometres() > radius:
-                radius = self[i].base_radius_micrometres()
+            let model_radius = self[i].base_radius_micrometres()
+            if model_radius >= radius:
+                second_radius = radius
+                radius = model_radius
+            else:
+                if model_radius > second_radius:
+                    second_radius = model_radius
             i = i + 1
+        let clearance = radius + second_radius
         let spacing = 1
-        while float(spacing * MICROMETRES_PER_INCH) < radius * 2.0:
+        while float(spacing * MICROMETRES_PER_INCH) < clearance:
             spacing = spacing + 1
-        let stagger = spacing == 2 and radius * 2.0 <= sqrt(2.0) * float(MICROMETRES_PER_INCH)
+        let stagger = spacing == 2 and clearance <= sqrt(2.0) * float(MICROMETRES_PER_INCH)
+        # Adjacent columns need their actual pair's clearance. Using the
+        # largest pair for every column can prevent a legal mixed-base row
+        # from fitting between already deployed units (pp.12/14).
+        let row_y = anchor.y.value
+        let row_max_radius = 0.0
+        let previous_row_radius = 0.0
+        let row_x = anchor.x.value
         i = 0
         while i < self.models.size():
             let row = i / columns
-            let x = anchor.x.value + (i % columns) * spacing
-            let y = anchor.y.value + row * spacing
+            let column = i % columns
+            if column == 0:
+                previous_row_radius = row_max_radius
+                row_max_radius = 0.0
+                let end = min(self.models.size(), i + columns)
+                let model = i
+                while model < end:
+                    if self[model].base_radius_micrometres() > row_max_radius:
+                        row_max_radius = self[model].base_radius_micrometres()
+                    model = model + 1
+                if row > 0:
+                    let height = 1
+                    while float(height * MICROMETRES_PER_INCH) < previous_row_radius + row_max_radius:
+                        height = height + 1
+                    row_y = row_y + height
+                row_x = anchor.x.value
+            else:
+                let width = 1
+                while float(width * MICROMETRES_PER_INCH) < self[i - 1].base_radius_micrometres() + self[i].base_radius_micrometres():
+                    width = width + 1
+                row_x = row_x + width
+            let x = row_x
+            let y = row_y
             if stagger:
                 x = x + row % 2
                 y = anchor.y.value + row

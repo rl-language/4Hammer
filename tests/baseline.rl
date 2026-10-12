@@ -2818,3 +2818,344 @@ fun test_movement11_pending_corpses_not_engagement_or_neighbours() -> Bool:
     board[0][1].position = board_position(8, 5)
     board[0][1].state = ModelState::pending_destruction
     return !board.is_in_melee(board[0]) and board[0].is_coherent()
+
+# p.33: normal/advance require unengaged; Ordered Retreat requires unshocked.
+fun test_movement11_modes_and_shock_legality() -> Bool:
+    let board = movement11_fixture()
+    let enemy = board[0]
+    enemy.identity = -1
+    enemy[0].identity = -1
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(8, 5)
+    board.units.append(enemy)
+    let id = unit_id(0)
+    if battlefield_move_eligible(board, id, MovementKind::normal) or !battlefield_move_eligible(board, id, MovementKind::ordered_retreat):
+        return false
+    board[0].battle_socked = true
+    return !battlefield_move_eligible(board, id, MovementKind::ordered_retreat) and battlefield_move_eligible(board, id, MovementKind::desperate_escape) and battlefield_move_eligible(board, id, MovementKind::stationary)
+
+# p.32: phase end requires explicit selection of every unit, including reserves.
+fun test_movement11_mandatory_selection_including_reserves() -> Bool:
+    let board = movement11_fixture()
+    board.reserve_units.append(board[0])
+    if movement_selection_complete(board, false):
+        return false
+    record_move(board, unit_id(0), MovementKind::stationary)
+    if movement_selection_complete(board, false):
+        return false
+    board.reserve_units[0].history.selected_move_phase = board.phase_serial
+    return movement_selection_complete(board, false)
+
+# p.71/82: Take to the Skies costs 2 for all models; Hover is its exception.
+fun test_movement11_flying_budget_and_hover() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].keywords.append(Keyword::fly)
+    if model_move_budget(board[0][0], MovementKind::normal, 0, -1, true) != 4:
+        return false
+    board[0][0].abilities.append(AbilityKind::hover)
+    return model_move_budget(board[0][0], MovementKind::normal, 0, -1, true) == 6
+
+# p.71: only the flying models gain enemy traversal; mixed units keep the
+# non-FLY member's ordinary collision rule, even when the unit takes skies.
+fun test_movement11_mixed_flying_per_model_traversal() -> Bool:
+    let board = movement11_fixture()
+    let enemy = board[0]
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(7, 5)
+    board.units.append(enemy)
+    let path : ModelPath
+    path.model = 0
+    if waypoint_valid(board, board[0], path, board_position(9, 5), MovementKind::normal, 0, -1, true):
+        return false
+    board[0][0].keywords.append(Keyword::fly)
+    return waypoint_valid(board, board[0], path, board_position(9, 5), MovementKind::normal, 0, -1, true)
+
+# p.71: flying distance ignores vertical movement while grounded movement adds it.
+fun test_movement11_flying_vertical_distance() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].keywords.append(Keyword::fly)
+    let path : ModelPath
+    path.model = 0
+    path.points.append(geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 3 * MICROMETRES_PER_INCH))
+    return path_distance(board[0][0], path, true) == 0.0 and path_distance(board[0][0], path, false) == float(3 * MICROMETRES_PER_INCH)
+
+# p.85: walker traversal cannot cross TITANIC, but can cross ordinary enemies.
+fun test_movement11_super_heavy_walker_traversal() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].abilities.append(AbilityKind::super_heavy_walker)
+    let enemy = board[0]
+    enemy[0].abilities.clear()
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(8, 5)
+    board.units.append(enemy)
+    let path : ModelPath
+    path.model = 0
+    if !waypoint_valid(board, board[0], path, board_position(11, 5), MovementKind::normal, 0, -1, false):
+        return false
+    board[1][0].keywords.append(Keyword::titanic)
+    return !waypoint_valid(board, board[0], path, board_position(11, 5), MovementKind::normal, 0, -1, false)
+
+# p.14: every base must fit the home zone; merely fitting the anchor fails.
+fun test_movement11_deployment_whole_base_boundary() -> Bool:
+    let board = movement11_fixture()
+    let unit = board[0]
+    unit.owned_by_player1 = true
+    board.units.clear()
+    return setup_at_valid(board, unit, board_position(5, 4), MovementKind::normal, false) and !setup_at_valid(board, unit, board_position(5, 5), MovementKind::normal, false)
+
+# p.82: Infiltrators require every model and strict >8 from enemy zones/models.
+fun test_movement11_infiltrator_horizontal_clearance() -> Bool:
+    let board = movement11_fixture()
+    board[0].owned_by_player1 = true
+    if setup_at_valid(board, board[0], board_position(5, 17), MovementKind::normal, true):
+        return false
+    return setup_at_valid(board, board[0], board_position(5, 16), MovementKind::normal, true)
+
+# p.69: reserves start in round 2, wholly within the union of 6-inch edges;
+# before round 3 the opposite deployment zone is excluded, even at the side.
+fun test_movement11_ingress_round_edge_and_opponent_zone() -> Bool:
+    let board = movement11_fixture()
+    let unit = board[0]
+    board.units.clear()
+    board.current_round = 1
+    if !setup_at_valid(board, unit, board_position(5, 10), MovementKind::ingress, false) or setup_at_valid(board, unit, board_position(6, 10), MovementKind::ingress, false) or setup_at_valid(board, unit, board_position(2, 2), MovementKind::ingress, false):
+        return false
+    board.current_round = 2
+    return setup_at_valid(board, unit, board_position(2, 2), MovementKind::ingress, false)
+
+# p.69: no distant tail may escape edge-strip restrictions after an anchor fits.
+fun test_movement11_ingress_each_model_edge_strip() -> Bool:
+    let board = movement11_fixture()
+    board[0].models.append(board[0][0])
+    board[0][0].position = board_position(5, 10)
+    board[0][1].position = board_position(7, 10)
+    let candidate = board[0]
+    board.units.clear()
+    return !setup_rules_valid(board, candidate, MovementKind::ingress, false)
+
+# pp.69/80: all-model Deep Strike bypasses edge/opponent-zone restrictions;
+# mixed permissions do not. It never waives the strict enemy distance.
+fun test_movement11_deep_strike_all_models_and_distance() -> Bool:
+    let board = movement11_fixture()
+    let candidate = board[0]
+    candidate[0].abilities.append(AbilityKind::deep_strike)
+    candidate[0].position = board_position(20, 20)
+    if !setup_rules_valid(board, candidate, MovementKind::ingress, false):
+        return false
+    candidate.models.append(candidate[0])
+    candidate[1].position = board_position(22, 20)
+    candidate[1].abilities.clear()
+    if setup_rules_valid(board, candidate, MovementKind::ingress, false):
+        return false
+    candidate[1].abilities.append(AbilityKind::deep_strike)
+    board[0].owned_by_player1 = true
+    board[0][0].position = board_position(13, 20)
+    return !setup_rules_valid(board, candidate, MovementKind::ingress, false)
+
+# p.69: arrival locks later moves and captures ingress/setup history.
+fun test_movement11_ingress_history_and_lock() -> Bool:
+    let board = movement11_fixture()
+    board.reserve_units.append(board[0])
+    board.units.clear()
+    enter_from_reserves(board, unit_id(0), board_position(5, 20), MovementKind::ingress)
+    return board.reserve_units.empty() and board[0].history.has_ingressed and board[0].history.ingress_locked and board[0].history.was_set_up_this_turn and !battlefield_move_eligible(board, unit_id(0), MovementKind::normal)
+
+# p.68: repositioning keeps ongoing effects, advance/fall-back flags and stable
+# identity while retiring, not compacting, the original battlefield slot.
+fun test_movement11_reposition_preserves_identity_and_restrictions() -> Bool:
+    let board = movement11_fixture()
+    board[0].battle_socked = true
+    record_move(board, unit_id(0), MovementKind::advance)
+    let identity = board[0].identity
+    if !reposition_unit(board, unit_id(0)) or !board[0].empty() or !board[0].retired:
+        return false
+    enter_from_reserves(board, unit_id(0), board_position(5, 20), MovementKind::ingress)
+    return board.units.size() == 2 and board[1].identity == identity and board[1].history.advanced_this_turn and board[1].battle_socked and board[1].history.repositioned and !board[1].allows_action_start()
+
+# p.69: expire never-arrived reserves at end round 3, exempt repositioned ones,
+# and preserve the destroyed roster rather than losing its archive.
+fun test_movement11_unused_reserve_deadline_and_exemption() -> Bool:
+    let board = movement11_fixture()
+    board[0].history.strategic_reserve = true
+    board.reserve_units.append(board[0])
+    board[0].history.repositioned = true
+    board.reserve_units.append(board[0])
+    board.current_round = 1
+    expire_unused_reserves(board)
+    if board.reserve_units.size() != 2:
+        return false
+    board.current_round = 2
+    expire_unused_reserves(board)
+    return board.reserve_units.size() == 1 and board.reserve_units[0].history.repositioned and board.expired_reserves.value.size() == 1 and board.expired_reserves.value[0].destroyed_models.value.size() == 1
+
+# p.68: exactly half of configured points is legal; unknown data and
+# FORTIFICATIONS cannot be voluntarily placed in strategic reserves.
+fun test_movement11_strategic_reserve_points_and_fortification() -> Bool:
+    let board = movement11_fixture()
+    board.units.clear()
+    let unit = make_infernus_squad()
+    board.reserve_units.append(unit)
+    board.battle_points_limit = 1000
+    board.reserve_units[0].points_known = true
+    board.reserve_units[0].points = 500
+    if !strategic_reserve_valid(board, false, unit_id(0)):
+        return false
+    board.reserve_units[0].points = 501
+    if strategic_reserve_valid(board, false, unit_id(0)):
+        return false
+    board.reserve_units[0].points = 500
+    board.reserve_units[0][0].keywords.append(Keyword::fortification)
+    return !strategic_reserve_valid(board, false, unit_id(0))
+
+# User instruction: Scouts values are uniform, mismatches assert. Test its
+# pure validation predicate without intentionally crashing the supported suite.
+fun test_movement11_scouts_uniform_value_guard() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].scout_distances.append(movement11_scout_value(6))
+    board[0].models.append(board[0][0])
+    if scouts_distance(board[0]) != 6:
+        return false
+    board[0][1].scout_distances[0] = movement11_scout_value(8)
+    if scouts_values_uniform(board[0]):
+        return false
+    board[0][1].scout_distances.clear()
+    return scouts_distance(board[0]) == 0
+
+# p.84: scout setup from reserves must be wholly in own home zone; ordinary
+# scout movement also finishes strictly more than 8 horizontally from enemies.
+fun test_movement11_scout_setup_and_move_distance() -> Bool:
+    let board = movement11_fixture()
+    let candidate = board[0]
+    candidate.owned_by_player1 = true
+    candidate[0].position = board_position(20, 4)
+    if !setup_rules_valid(board, candidate, MovementKind::scout, false):
+        return false
+    candidate[0].position = board_position(12, 5)
+    return !movement_finish_valid(board, candidate, unit_id(1), MovementKind::scout)
+
+# p.70: closest target ignores Aircraft and permits tied nearest enemy choices.
+fun test_movement11_surge_closest_and_aircraft() -> Bool:
+    let board = attack_declaration_fixture()
+    if !surge_target_valid(board, unit_id(0), unit_id(1)) or surge_target_valid(board, unit_id(0), unit_id(2)):
+        return false
+    board[1][0].keywords.append(Keyword::aircraft)
+    return surge_target_valid(board, unit_id(0), unit_id(2)) and !surge_target_valid(board, unit_id(0), unit_id(1))
+
+# p.70: a reachable engaged endpoint outranks an endpoint that stays away;
+# when out of reach, take the closest legal finite-grid endpoint.
+fun test_movement11_surge_approach_obligations() -> Bool:
+    let board = attack_declaration_fixture()
+    board.surge_target = 1
+    let candidate = board[0]
+    if surge_goals_valid(board, board[0], candidate, unit_id(0), 3):
+        return false
+    candidate[0].position = board_position(8, 5)
+    if !complete_move_valid(board, board[0], candidate, unit_id(0), MovementKind::surge, 3):
+        return false
+    board[1][0].position = board_position(20, 5)
+    board[2][0].position = board_position(30, 8)
+    candidate[0].position = board_position(8, 5)
+    return surge_goals_valid(board, board[0], candidate, unit_id(0), 3)
+
+# pp.12/14: five 40mm Terminators need a different coherent preset to fit
+# the lower deployment zone. Probe and commit must use the same layout.
+fun test_movement11_setup_searches_valid_preset_and_commits_it() -> Bool:
+    let board : Board
+    let unit = make_terminator_squad()
+    unit.owned_by_player1 = true
+    board.reserve_units.append(unit)
+    board.identify_units()
+    let position = board_position(5, 1)
+    if !setup_at_valid(board, board.reserve_units[0], position, MovementKind::normal, false):
+        return false
+    enter_from_reserves(board, unit_id(0), position, MovementKind::normal)
+    return board.reserve_units.empty() and unit_in_home_zone(board[0], true) and unit_placement_valid(board, board[0], 0, true)
+
+# p.87: do not strand a pending battlefield trigger by transferring its
+# retained model into reserves. The rejected transfer preserves all state.
+fun test_movement11_reposition_pending_trigger_rejected_atomically() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].state = ModelState::pending_destruction
+    board[1][0].destruction_pending = true
+    let before = to_string(board)
+    return !reposition_unit(board, unit_id(1)) and to_string(board) == before
+
+# p.69: ingress is not a shooting/charge prohibition once its next-Charge
+# move lock ends; fresh reserve factories must receive valid core gates.
+fun test_movement11_ingress_allows_shooting_and_later_charge() -> Bool:
+    let board = movement11_fixture()
+    let reserve = make_infernus_squad()
+    board.units.clear()
+    board.reserve_units.append(reserve)
+    enter_from_reserves(board, unit_id(0), board_position(2, 20), MovementKind::ingress)
+    return board[0].can_shoot and board[0].can_charge and board[0].history.ingress_locked
+
+# p.68: a repositioned unit retains restrictions in the same turn, but those
+# turn-long restrictions expire at its next turn even while still in reserves.
+fun test_movement11_reserve_new_turn_expires_movement_restrictions() -> Bool:
+    let board = movement11_fixture()
+    record_move(board, unit_id(0), MovementKind::advance)
+    if !reposition_unit(board, unit_id(0)):
+        return false
+    board.start_turn_history()
+    return !board.reserve_units[0].has_run and !board.reserve_units[0].history.advanced_this_turn and board.reserve_units[0].can_shoot and board.reserve_units[0].can_charge
+
+# pp.12/14: one larger bearer plus ten smaller bases has a coherent lower-zone
+# preset; conservative uniform spacing must not hide a legal mixed layout.
+# This explicit geometry fixture does not grant new-edition attachment rights.
+fun test_movement11_mixed_base_preset_does_not_over_space() -> Bool:
+    let board : Board
+    let unit = make_beast_snagga_boyz()
+    let leader = make_beastboss_morgrim()
+    unit.models.append(leader[0])
+    unit.owned_by_player1 = true
+    board.reserve_units.append(unit)
+    board.identify_units()
+    let position = board_position(5, 1)
+    if !setup_at_valid(board, board.reserve_units[0], position, MovementKind::normal, false):
+        return false
+    enter_from_reserves(board, unit_id(0), position, MovementKind::normal)
+    return board[0].is_coherent() and unit_in_home_zone(board[0], true) and unit_placement_valid(board, board[0], 0, true)
+
+# pp.12/33/85: walker grants cannot revoke friendly traversal or Desperate
+# Escape's independent permission to cross all enemy models, even TITANIC.
+fun test_movement11_walker_does_not_revoke_other_traversal_permissions() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].abilities.append(AbilityKind::super_heavy_walker)
+    let obstacle = board[0]
+    obstacle[0].keywords.append(Keyword::titanic)
+    obstacle[0].position = board_position(7, 5)
+    board.units.append(obstacle)
+    let path : ModelPath
+    path.model = 0
+    if !waypoint_valid(board, board[0], path, board_position(11, 5), MovementKind::normal, 0, -1, false):
+        return false
+    board[1].owned_by_player1 = true
+    return waypoint_valid(board, board[0], path, board_position(11, 5), MovementKind::desperate_escape, 0, -1, false)
+
+# pp.12/14: the 90mm/75mm row fits between two deployed bases only when
+# each adjacent pair gets its own whole-quad clearance (4,3,3 inches).
+fun test_movement11_mixed_row_fits_gap_between_deployed_models() -> Bool:
+    let board : Board
+    let blocker = make_infernus_squad()
+    blocker.models.resize(1)
+    blocker.owned_by_player1 = true
+    board.units.append(blocker)
+    board.units.append(blocker)
+    board[0][0].position = board_position(12, 3)
+    board[1][0].position = board_position(27, 3)
+    let unit = make_squighog_boyz()
+    unit.owned_by_player1 = true
+    board.reserve_units.append(unit)
+    board.identify_units()
+    let position = board_position(15, 2)
+    if !setup_at_valid(board, board.reserve_units[0], position, MovementKind::normal, false):
+        return false
+    enter_from_reserves(board, unit_id(0), position, MovementKind::normal)
+    return board[2][3].position.x == 25 and unit_placement_valid(board, board[2], 2, true) and unit_in_home_zone(board[2], true)
+
+# Finite source-data fixture constructor for Scouts distances (pp.78/84).
+fun movement11_scout_value(Int value) -> FixedStat:
+    let result : FixedStat
+    result = value
+    return result
