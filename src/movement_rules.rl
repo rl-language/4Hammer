@@ -78,9 +78,34 @@ fun setup_rules_valid(Board board, Unit candidate, MovementKind kind, Bool infil
 # Single-exit staging avoids owning-local cleanup omissions; reject invalid
 # formation setup before removing the original reserve entry (p.14).
 fun setup_at_valid(Board board, Unit unit, BoardPosition anchor, MovementKind kind, Bool infiltrates) -> Bool:
-    let candidate = unit
+    if !setup_anchor_possible(unit, anchor, kind, infiltrates):
+        return false
+    return staged_setup_at_valid(board, unit, anchor, kind, infiltrates)
+
+# Infrastructure: keep owning-copy cleanup outside conditional/loop control
+# flow; all placement rules are still evaluated by the common kernel (p.14).
+fun staged_setup_at_valid(Board board, Unit unit, BoardPosition anchor, MovementKind kind, Bool infiltrates) -> Bool:
+    let candidate : Unit
+    candidate = unit
     let valid = arrange_setup_candidate(board, candidate, anchor, kind, infiltrates)
     return valid
+
+# The first preset model is centred on the anchor. Its base must fit on the
+# board and, for ordinary deployment/Scouts, wholly in its home zone (pp.14/84).
+# No sufficient-placement shortcut is introduced; full validation follows.
+fun setup_anchor_possible(Unit unit, BoardPosition anchor, MovementKind kind, Bool infiltrates) -> Bool:
+    if unit.empty() or unit[0].geometry.unsupported_footprint:
+        return false
+    let radius = unit[0].base_radius_micrometres()
+    let x = float(anchor.x.value * MICROMETRES_PER_INCH)
+    let y = float(anchor.y.value * MICROMETRES_PER_INCH)
+    if unit[0].is_alive() and (x < radius or y < radius or x + radius > float(BOARD_WIDTH * MICROMETRES_PER_INCH) or y + radius > float(BOARD_HEIGHT * MICROMETRES_PER_INCH)):
+        return false
+    if kind == MovementKind::scout or (kind == MovementKind::normal and !infiltrates):
+        if unit.owned_by_player1:
+            return y + radius <= float(5 * MICROMETRES_PER_INCH)
+        return y - radius >= float((BOARD_HEIGHT - 5) * MICROMETRES_PER_INCH)
+    return true
 
 # No pending corpse can move; ingress locks all further move types until the
 # next Charge phase (pp.69/87). Selection and actual movement are distinct.
@@ -485,13 +510,23 @@ fun arrange_setup_candidate(Board board, Unit candidate, BoardPosition anchor, M
 # than restarting placement or manufacturing strategic-reserve permission.
 # Search the supported whole-grid presets, including every-base restrictions.
 fun deployment_has_position(Board board, Unit unit) -> Bool:
+    let candidate : Unit
+    candidate = unit
+    let valid = deployment_candidate_has_position(board, unit, candidate)
+    return valid
+
+# Search reuses caller-owned staging without constructing an owning loop local;
+# this changes copy cost, not every-base placement legality (pp.14/84).
+fun deployment_candidate_has_position(Board board, Unit unit, Unit candidate) -> Bool:
     let infiltrates = unit.all_have_ability(AbilityKind::infiltrators)
     let valid = false
     let x = 0
     while x < BOARD_WIDTH and !valid:
         let y = 0
         while y < BOARD_HEIGHT and !valid:
-            valid = setup_at_valid(board, unit, make_board_position(x, y), MovementKind::normal, infiltrates)
+            let anchor = make_board_position(x, y)
+            if setup_anchor_possible(unit, anchor, MovementKind::normal, infiltrates):
+                valid = arrange_setup_candidate(board, candidate, anchor, MovementKind::normal, infiltrates)
             y = y + 1
         x = x + 1
     return valid

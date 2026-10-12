@@ -3811,6 +3811,17 @@ fun test_shooting12_conditional_keyword_alternatives() -> Bool:
     board[1][0].keywords.append(Keyword::beasts)
     return info.has_weapon_rule(board, WeaponRuleKind::sustained_hit) and info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit) == 2
 
+# pp.14/84: early anchor rejection is necessary-only; full layout checks remain
+# required, and search staging must not move the original or consume weapon data.
+fun test_shooting12_deployment_prefilter_and_search_preserve_source() -> Bool:
+    let board = shooting12_fixture()
+    let unit = board[0]
+    unit[0].additional_weapon_rules[0].append(conditional_weapon_rule(WeaponRuleKind::sustained_hit, 1, Keyword::monster, Keyword::vehicle))
+    let original = to_string(unit)
+    let result = deployment_has_position(board, unit)
+    let unchanged = to_string(unit) == original
+    return result and unchanged and !setup_at_valid(board, unit, board_position(5, 5), MovementKind::normal, false) and setup_anchor_possible(unit, board_position(5, 5), MovementKind::normal, true)
+
 # p.85: Torrent produces ordinary automatic hits, no hit dice or critical-hit
 # Lethal/Sustained effects, even during Snap Shooting; wound rolls still occur.
 fun test_shooting12_torrent_automatic_hits_without_critical_effects() -> Bool:
