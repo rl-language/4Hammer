@@ -163,7 +163,9 @@ fun vertical_segment_near_terrain(Board board, Model model, GeometryPoint start,
     return false
 
 # Friendly traversal is permitted, enemy traversal is not unless a move's
-# sourced exception supplies it. Every segment checks full base clearance (p.12).
+# sourced exception supplies it. AIRCRAFT may be traversed in every move
+# (p.74); final base overlaps remain forbidden. All other segments check full
+# base clearance (p.12).
 fun model_segment_valid(Board board, Unit unit, Model model, GeometryPoint start, GeometryPoint end, MovementGeometryPolicy policy) -> Bool:
     if !geometry_point_on_grid(start) or !geometry_point_on_grid(end) or !model_inside_battlefield(model, start) or !model_inside_battlefield(model, end):
         return false
@@ -174,7 +176,7 @@ fun model_segment_valid(Board board, Unit unit, Model model, GeometryPoint start
         if board[i].owned_by_player1 != unit.owned_by_player1 and (!policy.traverse_enemies or policy.exclude_titanic):
             let j = 0
             while j < board[i].models.size():
-                if (!policy.exclude_titanic or board[i][j].has_keyword(Keyword::titanic)) and segment_crosses_model(model, start, end, board[i][j]):
+                if !board[i][j].has_keyword(Keyword::aircraft) and (!policy.exclude_titanic or board[i][j].has_keyword(Keyword::titanic)) and segment_crosses_model(model, start, end, board[i][j]):
                     return false
                 j = j + 1
         i = i + 1

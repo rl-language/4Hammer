@@ -11,13 +11,14 @@ import attack_dice
 import attack_declarations
 import damage_rules
 import movement_rules
+import charge_rules
 
 # Wound thresholds use the printed equality boundaries (p.18). The user-
 # supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus
 # reduces the required unmodified result, while protection worsens the roll.
 fun required_wound_roll(Board board, AttackSequenceInfo info) -> Int:
     let modifier = info.total_wound_modifier()
-    # Lance consumes the charge-move flag; task 13 replaces its legacy producer (p.82).
+    # Lance consumes only a completed charge move this turn (pp.37/82).
     if info.target_toughness.value < info.source.strenght() and info.greater_strenght_wound_protection:
         modifier = modifier - 1
     if info.has_weapon_rule(board, WeaponRuleKind::lance) and board[info.source_unit_id].has_charged:
@@ -1089,19 +1090,30 @@ fun overwatch_source_valid(Board board, Bool player, UnitID source) -> Bool:
 fun rapid_ingress_target_valid(Board board, Bool player, UnitID reserve) -> Bool:
     return board.current_round >= 1 and reserve.get() < board.reserve_units.size() and board.reserve_units[reserve.get()].owned_by_player1 == player and !board.reserve_units[reserve.get()].has_keyword(Keyword::aircraft) and board.can_target_strat(player, Stratagem::rapid_ingress, board.reserve_units[reserve.get()])
 
-# Existing Heroic Intervention resolves at end of the opponent's Charge
-# phase, targeting a friendly unengaged unit; VEHICLE targets must be CHARACTER/WALKER (p.57).
-# Leap to Defend enemy eligibility is known here; the full post-roll charge
-# workflow and Into the Fray mode remain tasks 13/15.
-fun heroic_source_valid(Board board, Bool player, UnitID source) -> Bool:
-    if source.get() >= board.units.size() or board[source].owned_by_player1 != player or board.is_in_melee(board[source]) or (board[source].has_keyword(Keyword::vehicle) and !board[source].has_keyword(Keyword::character) and !board[source].has_keyword(Keyword::walker)) or !board.can_target_strat_with_cost(player, Stratagem::heroic_intervention, board[source], heroic_intervention_cost(board[source])):
+# Heroic Intervention's source must be unengaged and eligible for a charge;
+# either mode can be available, including Into the Fray against non-chargers
+# (pp.36/57). Costs are checked per mode before expenditure.
+fun heroic_mode_valid(Board board, Bool player, UnitID source, ChargeKind kind) -> Bool:
+    if kind == ChargeKind::ordinary or !charge_source_valid(board, source, player):
         return false
-    let i = 0
-    while i < board.units.size():
-        if !board[i].empty() and board[i].owned_by_player1 != player and board[i].has_charged and board[source].distance(board[i]) <= 12.0:
+    if board[source].has_keyword(Keyword::vehicle) and !board[source].has_keyword(Keyword::character) and !board[source].has_keyword(Keyword::walker):
+        return false
+    let cost = heroic_intervention_cost(board[source])
+    if kind == ChargeKind::into_the_fray:
+        cost = cost + 1
+    if !board.can_target_strat_with_cost(player, Stratagem::heroic_intervention, board[source], cost):
+        return false
+    for i in range(board.units.size()):
+        let target : UnitID
+        target = i
+        if charge_target_valid(board, source, target, 12, kind):
             return true
-        i = i + 1
     return false
+
+# Expose a source choice only if at least one pre-roll Heroic mode is usable
+# (p.57); never enter a decision with no legal mode.
+fun heroic_source_valid(Board board, Bool player, UnitID source) -> Bool:
+    return heroic_mode_valid(board, player, source, ChargeKind::leap_to_defend) or heroic_mode_valid(board, player, source, ChargeKind::into_the_fray)
 
 # Offer only effects actually available in this window. Owners choose their
 # ordering; the active player's group precedes the opposing group (user's
@@ -1203,20 +1215,17 @@ act timing_overwatch(ctx Board board, frm Bool player) -> TimingOverwatch:
     subaction*(board) board.attack
     board.current_decision_maker = player
 
-# The old per-charge interception prompt is replaced by an end-phase
-# timing choice (p.57). This uses the existing charge engine until task 13.
+# Choose Heroic's mode before rolling, commit its actual cost, then use the
+# same post-roll multi-target movement as normal charges (pp.36–37/57).
 act timing_heroic_intervention(ctx Board board, frm Bool player) -> TimingHeroicIntervention:
     board.current_decision_maker = player
     act select_intervening_unit(frm UnitID source) {heroic_source_valid(board, player, source)}
-    board.commit_stratagem_with_cost(player, Stratagem::heroic_intervention, board[source], heroic_intervention_cost(board[source]))
-    act intervention_target(frm UnitID target) {
-        target.get() < board.units.size(),
-        has_live_attack_recipient(board[target]),
-        board[target].owned_by_player1 != player,
-        board[target].has_charged,
-        board[source].distance(board[target]) <= 12.0
-    }
-    subaction*(board) charge = charge(board, source, target, false)
+    act choose_intervention_mode(frm ChargeKind kind) {heroic_mode_valid(board, player, source, kind)}
+    let cost = heroic_intervention_cost(board[source])
+    if kind == ChargeKind::into_the_fray:
+        cost = cost + 1
+    board.commit_stratagem_with_cost(player, Stratagem::heroic_intervention, board[source], cost)
+    subaction*(board) intervention_charge = charge(board, source, kind)
     board.current_decision_maker = player
 
 # These are existing faction effects, not invented new-edition datasheets.
@@ -1599,22 +1608,96 @@ act fight_phase(ctx Board board) -> FightPhase:
     subaction*(board) fight_first_step = fight_step(board, true)
     subaction*(board) fight_step = fight_step(board, false)
 
-# Charge attempts keep the selected unit’s active/decision roles and restore
-# the caller afterward (p.8); the complete charge procedure remains task 13.
-act charge(ctx Board board, frm UnitID source, frm UnitID target, Bool can_be_overwatched) -> Charge:
-    board[source.get()].has_charged = true
-
-    if board[source.get()].models.size() == 0 or board[target.get()].models.size() == 0:
-        return 
+# Declare once, roll/reroll before choosing targets, and commit only a legal
+# completed move (pp.36–37). All pending numbers/paths remain bounded. Restore
+# caller roles and model-selector context on completion or cancellation (p.8).
+act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
+    if source.get() >= board.units.size():
+        return
+    if !charge_source_valid(board, source, board[source].owned_by_player1):
+        return
     frm previous_owner = board.current_decision_maker
     frm previous_active = board.timing.active_player
+    frm previous_mover = board.moving_unit
+    frm original : Unit
+    original = board[source]
+    frm candidate : Unit
+    candidate = original
+    frm targets : Bool[MAX_UNIT_COUNT]
+    frm target_count : LinearlyDistributedInt<0, MAX_UNIT_COUNT_PLUS1>
+    frm selected_models : Bool[MAX_UNIT_MODELS]
+    frm maximum : ChargeDistance
+    frm skies = false
+    frm cancelled = false
+    frm completed = false
+    board[source].history.declared_charge_phase = board.phase_serial.value + 1
     board.current_decision_maker = board[source].owned_by_player1
     board.timing.active_player = board[source].owned_by_player1
-    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source.get()].can_reroll_charge(), false, true, board[source].owned_by_player1, source)
+    board.moving_unit = source
+    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source].can_reroll_charge(), false, true, board[source].owned_by_player1, source)
     subaction*(board) board.current_pair_roll
-    let vector = board[source.get()].get_shortest_vector_to(board[target.get()])
-    if vector.length() < float(board.current_pair_roll.result.value + board.current_pair_roll.result2.value):
-        board[source.get()].translate(vector * 0.9)
+    if original.has_keyword(Keyword::fly):
+        act charge_take_to_skies(Bool do_it)
+        skies = do_it
+    maximum = charge_distance(original, board.current_pair_roll.result.value + board.current_pair_roll.result2.value, kind, skies)
+    frm target_selection_done = false
+    while !target_selection_done:
+        actions:
+            act cancel_charge()
+                cancelled = true
+                target_selection_done = true
+            act select_charge_target(UnitID target) {charge_target_valid(board, source, target, maximum.value, kind), !targets[target.get()]}
+                targets[target.get()] = true
+                target_count = target_count + 1
+            act finish_charge_targets() {target_count > 0}
+                target_selection_done = true
+    frm movement_done = cancelled
+    while !movement_done:
+        actions:
+            act cancel_charge()
+                movement_done = true
+            act restart_charge_move()
+                candidate = original
+                for i in range(MAX_UNIT_MODELS):
+                    selected_models[i] = false
+            act finish_charge_move() {charge_finish_valid(board, original, candidate, source, targets, maximum.value, skies)}
+                board[source] = candidate
+                completed = true
+                movement_done = true
+            act charge_move_to(BoardPosition position) {charge_translate_valid(board, original, source, position, targets, maximum.value, skies)}
+                candidate = original
+                charge_translate_candidate(board, original, candidate, source, position, targets, maximum.value, skies)
+                board[source] = candidate
+                completed = true
+                movement_done = true
+            act select_charging_model(frm ModelID model) {model.get() < original.models.size(), original[model].is_alive(), !selected_models[model.get()]}
+                frm path : ModelPath
+                path.points.clear()
+                path.model = model
+                path.final_rotation = original[model].geometry.rotation
+                frm model_done = false
+                frm rotated = false
+                while !model_done:
+                    actions:
+                        act finish_charge_model()
+                            if !path.points.empty():
+                                candidate[model].set_geometry_position(path.points.back().as_geometry_point())
+                            candidate[model].geometry.rotation = path.final_rotation
+                            candidate[model].history = original[model].history
+                            record_path_movement(candidate[model].history, original[model], path, skies)
+                            selected_models[model.get()] = true
+                            model_done = true
+                        act charge_waypoint(BoardPosition position) {charge_waypoint_valid(board, original, path, position, maximum.value, skies)}
+                            path.append_point(geometry_point(position.x.value * MICROMETRES_PER_INCH, position.y.value * MICROMETRES_PER_INCH, original[model].geometry_position().z.value))
+                        act rotate_charge_model(MovementRotation rotation) {!rotated}
+                            path.final_rotation = rotation.value * 1000
+                            rotated = true
+    # A candidate snapshot predates declaration. Preserve declaration after
+    # committing it so a success cannot be declared again this phase (p.36).
+    board[source].history.declared_charge_phase = board.phase_serial.value + 1
+    if completed:
+        record_charge_move(board, source)
+    board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
 
@@ -1625,45 +1708,17 @@ fun heroic_intervention_cost(Unit unit) -> Int:
         return 0
     return Stratagem::heroic_intervention.cost()
 
-# core rules charge step
-# Exclude destroyed slots from charging/interception choices
-# (destroyed units p.19; charges pp.36–37). Revised sequence is task 13.
+# The active player chooses a charger, then resolves the entire attempt
+# before selecting another unit. Targets are selected only after rolling
+# (p.36); old target-first faction interception awaits sourced task-17 data.
 act charge_phase(ctx Board board) -> ChargePhase:
-    board.current_decision_maker = board.current_player 
-    frm charge_act : Charge
+    board.current_decision_maker = board.current_player
     while true:
         actions:
             act end_charge()
                 break
-            act select_target(frm UnitID source, frm UnitID target) {
-                source.get() < board.units.size(),
-                has_live_attack_recipient(board[source]),
-                target.get() < board.units.size(),
-                has_live_attack_recipient(board[target]),
-                has_live_attack_recipient(board[target]),
-                has_live_attack_recipient(board[source]),
-                !board.units[source.get()].has_run,
-                board.units[source.get()].can_charge,
-                !board.units[source.get()].has_charged,
-                board.units[source.get()].owned_by_player1 == board.current_player,
-                board.units[target.get()].owned_by_player1 != board.current_player,
-                board[target.get()].get_shortest_vector_to(board[source.get()]).length() < 12.0
-            }
-                charge_act = charge(board, source, target, true)
-                frm charge_reduction : Bool
-                # before charge stratagems
-                board.current_decision_maker = !board.current_player
-                actions:
-                    act skip()
-                    act use_overawing_magnificence() {
-                        board.faction_of_unit(target) == Faction::tristraen_gilded_blade,
-                        board.can_target_strat(!board.current_player, Stratagem::overawing_magnificence, board[target])
-                    }
-                        charge_reduction = true
-                        board.commit_stratagem(!board.current_player, Stratagem::overawing_magnificence, board[target])
-                board.current_decision_maker = board.current_player
-                subaction*(board) charge_act
-
+            act select_charging_unit(frm UnitID source) {charge_source_valid(board, source, board.current_player)}
+                subaction*(board) selected_charge = charge(board, source, ChargeKind::ordinary)
                 board.current_decision_maker = board.current_player
 
 # Ingress setup validates every base before transfer; failed setup remains

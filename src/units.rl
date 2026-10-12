@@ -5,6 +5,7 @@ import machine_learning
 import range
 import state_types
 import geometry
+import modifiers
 
 using Wounds = LinearlyDistributedInt<0, MAX_WOUNDS>
 const MAX_WEAPONS = 8
@@ -199,6 +200,8 @@ fun unit_id(Int id) -> UnitID:
 
 cls PhaseModifiers:
     Bool greater_strenght_wound_protection 
+    # Charge-roll effects are phase-scoped; appendix 02.02.01 supplies their order/cap.
+    RuleModifiers charge_roll
 
 cls Unit:
     ShootingKind shooting_kind

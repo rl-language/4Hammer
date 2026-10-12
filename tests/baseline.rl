@@ -1051,6 +1051,8 @@ fun test_timing_heroic_intervention_boundary() -> Bool:
     let board = timing_fixture()
     board[0][0].position = board_position(10, 5)
     board[0].has_charged = true
+    board[0].history.charge_move_phase = board.phase_serial.value + 1
+    board[1].can_charge = true
     return timing_rule_available(board, TimingWindow::charge_end, true, TimingRule::heroic_intervention) and !timing_rule_available(board, TimingWindow::charge_start, true, TimingRule::heroic_intervention) and !timing_rule_available(board, TimingWindow::charge_end, false, TimingRule::heroic_intervention) and Stratagem::heroic_intervention.cost() == 1
 
 # p.8: an opposing unit's move changes the active role, then restores it.
@@ -1138,13 +1140,16 @@ fun test_timing_neural_disruption_uses_chosen_target_context() -> Bool:
 # p.8: an opposing charger owns its scoped role through dice/reroll input.
 fun test_timing_opponent_charge_restores_roles() -> Bool:
     let board = timing_fixture()
-    let sequence = charge(board, unit_id(1), unit_id(0), false)
+    board[1][0].position.x = 13
+    board[1].can_charge = true
+    let sequence = charge(board, unit_id(1), ChargeKind::ordinary)
     if !board.timing.active_player or !board.current_decision_maker:
         return false
     let one : Dice
     one = 1
     sequence.roll_pair(board, one, one)
     sequence.keep_it(board, true)
+    sequence.cancel_charge(board)
     return sequence.is_done() and !board.timing.active_player and !board.current_decision_maker
 
 # Rule 01.06, p.9. Success against at least one Ld means the lowest threshold.
@@ -3955,3 +3960,428 @@ fun test_storage_rejects_out_of_range_serials_and_movement_history() -> Bool:
     invalid = state
     invalid.board[0].history.last_ranged_attack_turn.value = MAX_TURN_STAMP
     return valid and !set_state(state, to_string(invalid)) and state.board.phase_serial == 0
+
+# Core pp.36–37 fixture: one living circular-base model per army, 8 inches
+# centre separation; IDs/permissions are explicit rather than default data.
+fun charge13_fixture() -> Board:
+    let board = geometry_fixture()
+    let enemy = board[0]
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(13, 5)
+    board.units.append(enemy)
+    board[0].can_charge = true
+    board[1].can_charge = true
+    board.command_points[0] = 3
+    board.command_points[1] = 3
+    board.identify_unit(board[0])
+    board.identify_unit(board[1])
+    return board
+
+# p.36: select a friendly unit, not a target, before neutral chance input.
+fun test_charge13_declaration_precedes_targets() -> Bool:
+    let board = charge13_fixture()
+    let phase = charge_phase(board)
+    if !(can phase.select_charging_unit(board, unit_id(0))) or (can phase.select_charging_unit(board, unit_id(1))):
+        return false
+    phase.select_charging_unit(board, unit_id(0))
+    let four : Dice
+    four = 4
+    return (can phase.roll_pair(board, four, four)) and !(can phase.select_charge_target(board, unit_id(1))) and !board[0].has_charged and board[0].history.declared_charge_phase == board.phase_serial.value + 1
+
+# p.36: engagement, Advance, Fall Back and once-per-phase declaration gates.
+fun test_charge13_source_prohibitions() -> Bool:
+    let board = charge13_fixture()
+    if !charge_source_valid(board, unit_id(0), false):
+        return false
+    board[0].history.advanced_this_turn = true
+    if charge_source_valid(board, unit_id(0), false):
+        return false
+    board[0].history.advanced_this_turn = false
+    board[0].history.fell_back_this_turn = true
+    if charge_source_valid(board, unit_id(0), false):
+        return false
+    board[0].history.fell_back_this_turn = false
+    board[1][0].position.x = 8
+    return !charge_source_valid(board, unit_id(0), false) and !charge_source_valid(board, unit_id(31), false)
+
+# p.36: proximity is <=12 inches base to base, never centre/anchor only.
+fun test_charge13_twelve_inch_declaration_range() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].position.x = 18
+    if !charge_source_valid(board, unit_id(0), false):
+        return false
+    board[1][0].position.x = 19
+    return !charge_source_valid(board, unit_id(0), false)
+
+# p.36: failed double one leaves position/history distance untouched and
+# cannot grant Fights First/Lance or be declared again in the same phase.
+fun test_charge13_failed_attempt_no_success_flags() -> Bool:
+    let board = charge13_fixture()
+    let phase = charge_phase(board)
+    phase.select_charging_unit(board, unit_id(0))
+    let one : Dice
+    one = 1
+    phase.roll_pair(board, one, one)
+    phase.keep_it(board, true)
+    if can phase.select_charge_target(board, unit_id(1)):
+        return false
+    phase.cancel_charge(board)
+    return !board[0].has_charged and board[0].history.charge_move_phase == 0 and board[0][0].position.x == 5 and board[0][0].history.distance_moved_this_turn() == 0.0 and !(can phase.select_charging_unit(board, unit_id(0))) and (can phase.end_charge(board))
+
+# p.37: being able to reach engagement is insufficient if target is beyond
+# the roll's full range. Selection is after the roll, not before.
+fun test_charge13_post_roll_full_target_range() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].position.x = 14
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    let three : Dice
+    let four : Dice
+    three = 3
+    four = 4
+    sequence.roll_pair(board, three, four)
+    sequence.keep_it(board, true)
+    return !(can sequence.select_charge_target(board, unit_id(1))) and !(can sequence.finish_charge_targets(board)) and (can sequence.cancel_charge(board))
+
+# pp.9/36/56: reroll both dice once; target range uses the replacement total.
+fun test_charge13_pair_reroll_replacement_targets() -> Bool:
+    let board = charge13_fixture()
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    let one : Dice
+    let four : Dice
+    one = 1
+    four = 4
+    sequence.roll_pair(board, one, one)
+    sequence.keep_it(board, false)
+    sequence.reroll_pair(board, four, four)
+    return board.command_points[0] == 2 and (can sequence.select_charge_target(board, unit_id(1))) and !(can sequence.reroll_pair(board, four, four))
+
+# p.37: selecting the same enemy twice is illegal; multiple distinct targets
+# remain selectable, and moving begins only after explicit finalization.
+fun test_charge13_multi_target_selection() -> Bool:
+    let board = charge13_fixture()
+    let other = board[1]
+    other[0].position = board_position(13, 8)
+    board.units.append(other)
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    let six : Dice
+    six = 6
+    sequence.roll_pair(board, six, six)
+    sequence.keep_it(board, true)
+    sequence.select_charge_target(board, unit_id(1))
+    if can sequence.select_charge_target(board, unit_id(1)):
+        return false
+    sequence.select_charge_target(board, unit_id(2))
+    return sequence.target_count == 2 and (can sequence.finish_charge_targets(board)) and !(can sequence.charge_move_to(board, board_position(11, 5)))
+
+# p.37: cancellation after target selection commits no staged positions.
+fun test_charge13_cancel_movement_is_atomic() -> Bool:
+    let board = charge13_fixture()
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    let four : Dice
+    four = 4
+    sequence.roll_pair(board, four, four)
+    sequence.keep_it(board, true)
+    sequence.select_charge_target(board, unit_id(1))
+    sequence.finish_charge_targets(board)
+    let model : ModelID
+    model = 0
+    sequence.select_charging_model(board, model)
+    sequence.charge_waypoint(board, board_position(11, 5))
+    sequence.finish_charge_model(board)
+    sequence.cancel_charge(board)
+    return sequence.is_done() and board[0][0].position.x == 5 and !board[0].has_charged and board[0][0].history.distance_moved_this_turn() == 0.0 and !charge_source_valid(board, unit_id(0), false)
+
+# p.37: a completed move, even beyond M, grants charge-only history and the
+# legacy Fights First consumer/Lance, and restores the caller's input context.
+fun test_charge13_success_uses_roll_not_m() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].position.x = 14
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    let four : Dice
+    four = 4
+    sequence.roll_pair(board, four, four)
+    sequence.keep_it(board, true)
+    sequence.select_charge_target(board, unit_id(1))
+    sequence.finish_charge_targets(board)
+    if !(can sequence.charge_move_to(board, board_position(12, 5))):
+        return false
+    sequence.charge_move_to(board, board_position(12, 5))
+    return sequence.is_done() and board[0].has_charged and board[0].history.charge_move_phase == board.phase_serial.value + 1 and board[0].history.declared_charge_phase == board.phase_serial.value + 1 and board[0][0].history.distance_moved_this_turn() == 7.0 and !charge_source_valid(board, unit_id(0), false)
+
+# p.37: an engaged endpoint is illegal if a legal within-1 endpoint exists.
+fun test_charge13_within_one_obligation() -> Bool:
+    let board = charge13_fixture()
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    return !charge_translate_valid(board, board[0], unit_id(0), board_position(10, 5), targets, 8, false) and charge_translate_valid(board, board[0], unit_id(0), board_position(11, 5), targets, 8, false) and board[0][0].position.x == 5
+
+# p.37: never incidentally engage an unselected enemy at the final endpoint.
+fun test_charge13_incidental_enemy_rejected() -> Bool:
+    let board = charge13_fixture()
+    let other = board[1]
+    other[0].position = board_position(11, 7)
+    board.units.append(other)
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    return !charge_translate_valid(board, board[0], unit_id(0), board_position(11, 5), targets, 8, false)
+
+# p.37: every selected target must be engaged by the complete final unit.
+fun test_charge13_all_selected_targets_engaged() -> Bool:
+    let board = charge13_fixture()
+    let other = board[1]
+    other[0].position = board_position(13, 10)
+    board.units.append(other)
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    targets[2] = true
+    return !charge_translate_valid(board, board[0], unit_id(0), board_position(11, 5), targets, 12, false)
+
+# p.37: each model must become closer to the nearest base of some target,
+# not merely closer to a distant model while moving away from the unit.
+fun test_charge13_closer_uses_nearest_target_base() -> Bool:
+    let board = charge13_fixture()
+    let far = board[1][0]
+    far.position = board_position(5, 20)
+    board[1].models.append(far)
+    let finish = board[0][0]
+    finish.position = board_position(4, 6)
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    return !charge_model_closer(board, board[0][0], finish, targets)
+
+# pp.12/37: full base sweep and complete path distance cannot be bypassed by
+# several individually short waypoints; failed probes leave shared state alone.
+fun test_charge13_waypoint_total_and_collision() -> Bool:
+    let board = charge13_fixture()
+    let path : ModelPath
+    path.model = 0
+    if charge_waypoint_valid(board, board[0], path, board_position(14, 5), 12, false):
+        return false
+    path.append_point(geometry_point(8 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0))
+    path.append_point(geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0))
+    return !charge_waypoint_valid(board, board[0], path, board_position(8, 5), 8, false) and board[0][0].position.x == 5
+
+# Appendix 02.02.01 and pp.57/71/82: ordered modifiers, 12/6 caps and
+# whole-unit flight reduction; Hover exempts that reduction.
+fun test_charge13_modifiers_mode_caps_and_hover() -> Bool:
+    let board = charge13_fixture()
+    board[0].phase_modifiers.charge_roll.append(rule_modifier(ModifierOperation::add, 20))
+    if charge_distance(board[0], 2, ChargeKind::ordinary, false) != 12 or charge_distance(board[0], 2, ChargeKind::into_the_fray, false) != 6 or charge_distance(board[0], 2, ChargeKind::ordinary, true) != 10:
+        return false
+    board[0][0].abilities.append(AbilityKind::hover)
+    return charge_distance(board[0], 2, ChargeKind::ordinary, true) == 12
+
+# p.71: traversal belongs only to FLY bearers when flight is chosen; grounded
+# charge paths cannot cross enemies, and shared maximum distance remains capped.
+fun test_charge13_flying_traversal_only_when_chosen() -> Bool:
+    let board = charge13_fixture()
+    board[0][0].keywords.append(Keyword::fly)
+    let path : ModelPath
+    path.model = 0
+    return charge_waypoint_valid(board, board[0], path, board_position(14, 5), 10, true) and !charge_waypoint_valid(board, board[0], path, board_position(14, 5), 10, false)
+
+# p.57: Leap to Defend requires actual movement this phase, not a declaration
+# or a successful charge from an earlier phase. Fray permits non-chargers.
+fun test_charge13_heroic_target_modes() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].position.x = 11
+    board[1].has_charged = true
+    if charge_target_valid(board, unit_id(0), unit_id(1), 12, ChargeKind::leap_to_defend):
+        return false
+    board[1].history.charge_move_phase = board.phase_serial.value + 1
+    if !charge_target_valid(board, unit_id(0), unit_id(1), 12, ChargeKind::leap_to_defend) or !charge_target_valid(board, unit_id(0), unit_id(1), 6, ChargeKind::into_the_fray):
+        return false
+    board[1][0].position.x = 13
+    return !charge_target_valid(board, unit_id(0), unit_id(1), 12, ChargeKind::into_the_fray)
+
+# p.57: Into the Fray costs one additional CP and is chosen before rolling;
+# failed/cancelled charge retains the committed expenditure and targeting limit.
+fun test_charge13_heroic_fray_cost_before_roll() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].position.x = 11
+    board.current_player = true
+    let sequence = timing_heroic_intervention(board, false)
+    sequence.select_intervening_unit(board, unit_id(0))
+    if can sequence.choose_intervention_mode(board, ChargeKind::leap_to_defend):
+        return false
+    sequence.choose_intervention_mode(board, ChargeKind::into_the_fray)
+    if board.command_points[0] != 1 or !board.has_used_strat(Stratagem::heroic_intervention, 0):
+        return false
+    let six : Dice
+    six = 6
+    sequence.roll_pair(board, six, six)
+    sequence.cancel_charge(board)
+    return sequence.is_done() and board.command_points[0] == 1 and !board[0].has_charged and !heroic_source_valid(board, false, unit_id(0))
+
+# p.57: VEHICLE intervention sources require CHARACTER or WALKER, and
+# insufficient CP cannot open an unusable mode decision.
+fun test_charge13_heroic_source_cost_and_vehicle() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].position.x = 11
+    board[0][0].keywords.append(Keyword::vehicle)
+    if heroic_source_valid(board, false, unit_id(0)):
+        return false
+    board[0][0].keywords.append(Keyword::walker)
+    if !heroic_source_valid(board, false, unit_id(0)):
+        return false
+    board.command_points[0] = 1
+    return !heroic_source_valid(board, false, unit_id(0))
+
+# pp.36–37/82: Lance uses only completed moves, and charge-only Fights First
+# expires at either player's turn boundary; an old declaration is phase-local.
+fun test_charge13_success_expires_at_turn_boundary() -> Bool:
+    let board = charge13_fixture()
+    record_charge_move(board, unit_id(0))
+    board[0].history.declared_charge_phase = board.phase_serial.value + 1
+    board.start_turn_history()
+    board.begin_phase(BattlePhase::charge)
+    return !board[0].has_charged and charge_source_valid(board, unit_id(0), false) and board[0].history.charge_move_phase != board.phase_serial.value + 1
+
+# p.36 infrastructure: declaration and successful-move stamps are bounded
+# save metadata; malformed stamps must not bypass once-per-phase eligibility.
+fun test_charge13_malformed_stamp_rejected() -> Bool:
+    let state = play()
+    state.board.units.append(charge13_fixture()[0])
+    state.board.identify_unit(state.board[0])
+    state.board[0].history.declared_charge_phase.value = MAX_PHASE_STAMP
+    let text = to_string(state)
+    let restored = play()
+    return !set_state(restored, text)
+
+# pp.12/37: the same charge may engage several declared units when its final
+# bases meet all targets and the per-model approach obligations.
+fun test_charge13_multiple_targets_success() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].position.y = 4
+    let other = board[1]
+    other[0].position.y = 6
+    board.units.append(other)
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    targets[2] = true
+    return charge_translate_valid(board, board[0], unit_id(0), board_position(11, 5), targets, 8, false)
+
+# pp.12/37: independent paths can detour around an unselected enemy; accepted
+# waypoints stage privately, and final charge history records the whole route.
+fun test_charge13_independent_detour_commits_whole_path() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].position.x = 15
+    let obstacle = board[1]
+    obstacle[0].position.x = 9
+    board.units.append(obstacle)
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    let five : Dice
+    five = 5
+    sequence.roll_pair(board, five, five)
+    sequence.keep_it(board, true)
+    sequence.select_charge_target(board, unit_id(1))
+    sequence.finish_charge_targets(board)
+    let model : ModelID
+    model = 0
+    sequence.select_charging_model(board, model)
+    sequence.charge_waypoint(board, board_position(8, 3))
+    sequence.charge_waypoint(board, board_position(12, 3))
+    sequence.charge_waypoint(board, board_position(13, 5))
+    sequence.finish_charge_model(board)
+    if board[0][0].position.x != 5 or !(can sequence.finish_charge_move(board)):
+        return false
+    sequence.finish_charge_move(board)
+    let distance = board[0][0].history.distance_moved_this_turn()
+    return board[0].has_charged and board[0][0].position.x == 13 and distance > 9.8 and distance < 10.0 and !board[0].is_engaged_with(board[2])
+
+# p.37: the within-1 obligation includes reachable detours, not only clear
+# straight-line approaches; legality probing restores the staged endpoint.
+fun test_charge13_reachable_detour_goal_required() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].position.x = 15
+    let obstacle = board[1]
+    obstacle[0].position.x = 9
+    board.units.append(obstacle)
+    let candidate = board[0]
+    candidate[0].position.x = 12
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    return !charge_finish_valid(board, board[0], candidate, unit_id(0), targets, 10, false) and candidate[0].position.x == 12 and board[0][0].position.x == 5
+
+# pp.12/37: coherent placement alone is insufficient if a model moves away
+# from every selected target; all live models have their own obligation.
+fun test_charge13_every_model_must_approach() -> Bool:
+    let board = charge13_fixture()
+    board[0][0].position = board_position(9, 5)
+    let extra = board[0][0]
+    extra.position = board_position(10, 7)
+    board[0].models.append(extra)
+    let candidate = board[0]
+    candidate[0].position = board_position(11, 5)
+    candidate[1].position = board_position(10, 8)
+    let targets : Bool[MAX_UNIT_COUNT]
+    targets[1] = true
+    return charge_source_valid(board, unit_id(0), false) and charge_placement_valid(board, candidate, unit_id(0), targets) and !charge_finish_valid(board, board[0], candidate, unit_id(0), targets, 8, false)
+
+# p.36: on-battlefield membership/eligibility is necessary even when a
+# low-level constructor is invoked directly; invalid construction changes nothing.
+fun test_charge13_invalid_source_constructor_no_effect() -> Bool:
+    let board = charge13_fixture()
+    board[0].history.advanced_this_turn = true
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    return sequence.is_done() and board[0].history.declared_charge_phase == 0 and !board[0].has_charged
+
+# p.36 infrastructure: cancellation consumes the declaration, but source,
+# target and independent-path state survive a serialized pending charge.
+fun test_charge13_pending_path_round_trip() -> Bool:
+    let board = charge13_fixture()
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    let four : Dice
+    four = 4
+    sequence.roll_pair(board, four, four)
+    sequence.keep_it(board, true)
+    sequence.select_charge_target(board, unit_id(1))
+    sequence.finish_charge_targets(board)
+    let model : ModelID
+    model = 0
+    sequence.select_charging_model(board, model)
+    sequence.charge_waypoint(board, board_position(11, 5))
+    let serialized = to_string(sequence)
+    let restored : Charge
+    let index = 0
+    if !from_string(restored, serialized, index):
+        return false
+    restored.finish_charge_model(board)
+    restored.finish_charge_move(board)
+    return restored.is_done() and board[0].has_charged and board[0][0].position.x == 11
+
+# p.85: Super-heavy Walker's Normal/Advance/Fall Back traversal exception
+# cannot leak into charges merely because their paths share geometry helpers.
+fun test_charge13_super_heavy_walker_cannot_cross_enemy() -> Bool:
+    let board = charge13_fixture()
+    board[0][0].abilities.append(AbilityKind::super_heavy_walker)
+    let path : ModelPath
+    path.model = 0
+    return !charge_waypoint_valid(board, board[0], path, board_position(14, 5), 12, false)
+
+# p.74: AIRCRAFT cannot charge; only FLYING units may select them, but
+# every model can cross an Aircraft's base en route to another selected target.
+fun test_charge13_aircraft_source_target_and_traversal() -> Bool:
+    let board = charge13_fixture()
+    board[1][0].keywords.append(Keyword::aircraft)
+    if charge_source_valid(board, unit_id(1), true) or charge_target_valid(board, unit_id(0), unit_id(1), 12, ChargeKind::ordinary):
+        return false
+    let path : ModelPath
+    path.model = 0
+    if !charge_waypoint_valid(board, board[0], path, board_position(14, 5), 12, false):
+        return false
+    board[0][0].keywords.append(Keyword::fly)
+    return charge_target_valid(board, unit_id(0), unit_id(1), 12, ChargeKind::ordinary)
+
+# p.36 / appendix 02.02.01 storage: reject out-of-domain charge modifiers
+# atomically rather than accepting corrupt bounded fields in a saved game.
+fun test_charge13_malformed_modifier_rejected() -> Bool:
+    let state = play()
+    let board = charge13_fixture()
+    state.board.units.append(board[0])
+    state.board.identify_unit(state.board[0])
+    state.board[0].phase_modifiers.charge_roll.append(rule_modifier(ModifierOperation::add, 1))
+    state.board[0].phase_modifiers.charge_roll[0].amount.value = MAX_RULE_MODIFIER
+    let serialized = to_string(state)
+    let restored = play()
+    return !set_state(restored, serialized)

@@ -770,7 +770,11 @@ fun valid_model_numeric_history(Model model) -> Bool:
 # Timestamps remain within configured serial ranges, including zero sentinel.
 # Live and archived bearers must both retain bounded numeric history (pp.19/88).
 fun valid_unit_numeric_history(Unit unit) -> Bool:
-    if unit.history.last_move_phase.value < 0 or unit.history.last_move_phase.value >= MAX_PHASE_STAMP or unit.history.selected_move_phase.value < 0 or unit.history.selected_move_phase.value >= MAX_PHASE_STAMP or unit.history.last_ranged_attack_turn.value < 0 or unit.history.last_ranged_attack_turn.value >= MAX_TURN_STAMP:
+    for i in range(unit.phase_modifiers.charge_roll.size()):
+        ref modifier = unit.phase_modifiers.charge_roll[i]
+        if modifier.amount.value < 0 or modifier.amount.value >= MAX_RULE_MODIFIER or modifier.operation.value < 0 or modifier.operation.value > ModifierOperation::subtract.value:
+            return false
+    if unit.history.last_move_phase.value < 0 or unit.history.last_move_phase.value >= MAX_PHASE_STAMP or unit.history.selected_move_phase.value < 0 or unit.history.selected_move_phase.value >= MAX_PHASE_STAMP or unit.history.last_ranged_attack_turn.value < 0 or unit.history.last_ranged_attack_turn.value >= MAX_TURN_STAMP or unit.history.declared_charge_phase.value < 0 or unit.history.declared_charge_phase.value >= MAX_PHASE_STAMP or unit.history.charge_move_phase.value < 0 or unit.history.charge_move_phase.value >= MAX_PHASE_STAMP:
         return false
     for i in range(unit.models.size()):
         if !valid_model_numeric_history(unit.models[i]):
