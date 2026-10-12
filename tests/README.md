@@ -21,7 +21,7 @@ For another virtual environment, activate it first; if CMake cached a different 
 
 `ctest -N --test-dir build-tests` lists the tests. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` runs a selected case. Labels `baseline`, `discrepancies` and `expected-failure` allow filtering with `-L`. CTest automatically includes the matching compilation fixture even for a single selected test. Each suite compiles once per invocation with precondition/bounds checks; each assertion runs in its own process. A failed compilation blocks its cases rather than using an old library.
 
-The current discovery lists **245 entries**: 243 supported assertions and 2 compilation fixtures. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
+The current discovery lists **278 entries**: 276 supported assertions and 2 compilation fixtures. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
 
 CTest is also available in a normal game configuration (`BUILD_GAME=ON`, the default), and Make/Ninja support `cmake --build build-tests --target test`. CMake itself has no `--test` command. Reconfigure after changing test declarations or the manifest; CMake also tracks these files for regeneration during a build. Generated libraries stay in the chosen build directory. The original Python runner below remains available.
 
@@ -47,7 +47,7 @@ The gym check exercises JIT/wrappers, legal masks and finite observations for 20
 
 ## Sanitized fuzzer
 
-The prepared Debian 13 amd64 environment has GCC 14, libc headers, binutils and the runtime dependencies. RLC 0.4.13 needs Clang 21.1.8 and matching sanitizer/fuzzer runtimes, extracted into writable workspace storage. Recreate that local toolchain from checksum-pinned LLVM packages with:
+The prepared Debian 13 amd64 environment has GCC 14, libc headers, binutils and the runtime dependencies. RLC 0.4.14 needs Clang 21.1.8 and matching sanitizer/fuzzer runtimes, extracted into writable workspace storage. Recreate that local toolchain from checksum-pinned LLVM packages with:
 
 ```bash
 python tools/prepare_validation_clang21.py
@@ -56,8 +56,8 @@ mkdir -p /workspace/4hammer-validation/corpus /workspace/4hammer-validation/arti
 rlc src/full_game.rl -O2 -g --fuzzer --sanitize \
   --emit-precondition-checks --emit-bound-checks \
   --clang=/workspace/4hammer-validation/toolchain21/usr/lib/llvm-21/bin/clang \
-  -o /workspace/4hammer-validation/rules_fuzzer-0.4.13
-test -x /workspace/4hammer-validation/rules_fuzzer-0.4.13
+  -o /workspace/4hammer-validation/rules_fuzzer-0.4.14
+test -x /workspace/4hammer-validation/rules_fuzzer-0.4.14
 ```
 
 This matches the repository's fuzzer instrumentation without requiring the Godot CMake build. It does not install a complete general-purpose LLVM development environment. On other machines use an appropriate installed Clang/sanitizer runtime instead.
@@ -79,7 +79,7 @@ inputs = {
 for name, choices in inputs.items():
     (root / name).write_bytes(b''.join(struct.pack('<q', value) for value in choices) + b'\0')
 PY
-/workspace/4hammer-validation/rules_fuzzer-0.4.13 \
+/workspace/4hammer-validation/rules_fuzzer-0.4.14 \
   /workspace/4hammer-validation/corpus -seed=40000 \
   -max_total_time=60 -max_len=4096 \
   -artifact_prefix=/workspace/4hammer-validation/artifacts/
@@ -184,3 +184,9 @@ The expanded headless regression passes labelled save-group buttons, model click
 The final instrumented executable is `/workspace/4hammer-validation/task10-final-fuzzer`; keep leak/precondition/bounds checks enabled. Replay completed `task10-replays/*.bin` and the original geometry leak input before mutation fuzzing. The fresh campaign completes **25 runs in 78 seconds**, coverage **10,184**, features **23,383**, without reported sanitizer failures or crash artifacts. A slow-unit artifact retains the complete full-game seed; it is a performance diagnostic, not a sanitizer failure. Keep it and the campaign log outside the checkout for later comparison. The 60-second requested campaign duration can be exceeded by a slow individual replay.
 
 Seed 40000 completes full/shooting games in **625/9 actions**. Gym checks **20** legal steps, **12,744** action candidates and **1,595,388** finite observations. The larger bounded destruction work stack materially expands inferred ML layout; saves and policies from previous schemas are incompatible. Actual interactive integration and complete downstream rules remain owned by ROADMAP.md.
+
+## Compiler 0.4.14
+
+The user requested the new compiler with duplicate-variable diagnostics. Use `rl_language==0.4.14` and matching `rl_language_core==0.4.14`. Regenerate native libraries, wrappers and Godot headers together after the upgrade. Earlier version-specific results above describe historical checks.
+
+Task-12 validation under 0.4.14: 276 supported assertions, 278 passing CTest entries, empty discrepancy manifest, fresh native/Godot bindings, and sanitized full-game/shooting replay and mutation checks. The enlarged Godot harness needs `--timeout 300`; consult ROADMAP.md for paths and scope. Replay `deployment-search-lifetime.bin` as well as the original geometry input with leak detection enabled. A shooting `.bin` file requires the fuzzer built from that shooting example, not the full-game root.

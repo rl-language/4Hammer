@@ -384,7 +384,7 @@ These correspond to Part III I-01–I-12 of the reference. Preserve the exact pr
 | D08 | General fight eligibility distinct from overrun availability; new FF switching and phase-wide movement (pp.38–43,87–88). | Task 14: source procedure is available; do not port old per-activation movement or unrestricted passing. |
 | D09 | Mustering/points, complete datasheets, Leader/Support permissions, missions/scoring/duration, faction abilities and playable actions absent (pp.4–5,11,28–30,46,52,58,64,66,72). | Tasks 6/8/11/15/16/17: request respective publications/data when needed. Existing six faction factories and fixed mission are legacy fixtures, not new-edition authority. Boyz/Waaagh! and unusable Deploy Device do not supply missing definitions. |
 | D10 | Not on the Battlefield, Persisting Rules Effects, Regaining Lost Wounds not fully reproduced (pp.31,64–65,68–69,86–88). | Tasks 3/5/6/10/11/16: retain printed passenger/reposition/revival specifics; obtain general offboard/healing/persistence policy before dependent behavior. |
-| D11 | User supplied Target No Longer Eligible or Viable 04.03.03; Multiple Weapon Profiles remains unavailable (pp.17,37,79,83–84). | Task 9 permits unresolved-share replacement. Tasks 12/13/17 still need multiple-profile authority and full targeting/mode integration. |
+| D11 | User supplied Target No Longer Eligible or Viable 04.03.03; Multiple Weapon Profiles subsequently supplied as 04.01.03 (pp.17,37,79,83–84). | Task 9 permits unresolved-share replacement. Task 12 implements per-model physical profile grouping and Hunter predicates; tasks 13/17 retain other targeting/data obligations. |
 | D12 | No reproduced general additional-CP cap or general damage-modification policy (pp.19,30,86). | Tasks 3/5/10: absence proves neither permission nor prohibition; do not silently retain existing extra-CP limit or arbitrary storage cap. |
 
 ## Existing defects and infrastructure risks
@@ -471,3 +471,7 @@ Read [movement/deployment](movement-deployment.md) for implementation and config
 | U19 / U20; p.87 | Pending corpses excluded from live engagement/coherency; each model uses its own M. |
 
 Every-base deployment checks replace anchor-only checks. Whole-grid presets do not enumerate every possible formation; user-directed destruction archives units with no supported placement, rather than restarting deployment. Missing mission/points/datasheet geometry, attachments, revival anchors and terrain-feature definitions remain explicit dependencies, not closed source gates.
+
+## Task 12 implementation overlay
+
+[The shooting report](shooting-weapon-abilities.md) covers pp.34–35/57/62–63 and all 38 printed ability subsections on pp.78–85, distinguishing implemented rules from deferred owners. Supplied appendix 04.01.03 resolves the Multiple Weapon Profiles source gap: physical profiles are exclusive per model, Hunter predicates constrain targeting, and One Shot use is shared. Current evidence is 276 assertions, 278 CTest entries, fresh Godot bindings and both sanitized fuzzer roots under RLC 0.4.14. See ROADMAP.md for exact scope and checks; historical inventory classifications above remain initial findings.
