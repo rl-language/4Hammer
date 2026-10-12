@@ -1,15 +1,18 @@
 import rules
+import game_utils
 
 @classes 
 act play() -> Game:
     # create the board, set player zero as current player
     frm board : Board
     board.current_player = false
+    # This fixture resolves the own Shooting-phase attack rules (pp.34/82).
+    board.begin_phase(BattlePhase::shooting)
 
     # create enemy unit
     board.units.append(make_infernus_squad())
     board.units[0].owned_by_player1 = true
-    board.units[0].move_to(make_board_position(10, 10))
+    board.units[0].move_to(make_board_position(24, 10))
     board.units[0].arrange()
 
     # select the unit to spawn, and spawn it
@@ -32,18 +35,9 @@ act play() -> Game:
     subaction*(board) board.attack
 
 # use the same decision making as a normal game
+# Shared classification covers every chance payload, including pair rolls (pp.8/18).
 fun get_current_player(Game g) -> Int:
-    if g.is_done():
-        return -4
-    let d : Dice
-    d.value = 1
-    if can g.roll(d):
-        return -1
-    if can g.reroll(d):
-        return -1
-    if can g.quantity(d):
-        return -1
-    return int(g.board.current_decision_maker)
+    return default_get_current_player(g)
 
 
 fun score(Game g, Int player_id) -> Float:
