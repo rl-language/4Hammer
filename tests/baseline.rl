@@ -3,6 +3,231 @@ import full_game
 # ANTI grants in the temporary attack list must obey their source exclusion,
 # just as selected/intrinsic instances do (p.79; appendix02.05.01).
 # Appendix02.02.01: modifications are cumulative, ordered and bearer-scoped.
+# Fixed weapon consumers: appendix02.02.01, targeting p.16, grouping p.17,
+# wound/hit p.18, saves p.19. Fixtures do not grant new Orks abilities.
+fun orks17c2b_info(Board board, Int slot) -> AttackSequenceInfo:
+    let declaration = make_declared_weapon(board, unit_id(0), 0, slot)
+    return declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+
+# A weapon-specific increment affects its slot, not its neighbour or other bearer.
+fun test_orks17c2b_strength_slot_and_bearer_scope() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 3, 0))
+    let first = orks17c2b_info(board, 0)
+    let second = orks17c2b_info(board, 1)
+    return first.attack_strength() == 7 and second.attack_strength() == 4 and first.target_toughness.value == 4
+
+# Bearer BS affects all ranged profiles; WS applies to melee instead (02.02.01).
+fun test_orks17c2b_all_weapon_skills_and_melee_scope() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    board[0][0].weapons.append(Weapon::close_combat_weapon)
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::add, 1))
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::weapon_skill, ModifierOperation::subtract, 1))
+    let first = orks17c2b_info(board, 0)
+    let second = orks17c2b_info(board, 1)
+    let melee = orks17c2b_info(board, 2)
+    return effective_attack_skill(board, first) == 3 and effective_attack_skill(board, second) == 4 and effective_attack_skill(board, melee) == 2
+
+# Cover's BS increment is before division and final rounding, not added later.
+fun test_orks17c2b_cover_uses_modifier_operation_order() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::slugga
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::divide, 2))
+    board.attack_info.target_has_cover = true
+    let info = orks17c2b_info(board, 0)
+    return effective_attack_skill(board, info) == 3
+
+# A later chosen Ignores Cover still cancels the core increment before arithmetic.
+fun test_orks17c2b_late_ignore_cover_recomputes_skill() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::cultist_bolt_pistol
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::divide, 2))
+    board.attack_info.target_has_cover = true
+    let info = orks17c2b_info(board, 0)
+    if effective_attack_skill(board, info) != 3:
+        return false
+    info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::ignore_cover))
+    return effective_attack_skill(board, info) == 2
+
+# Effective S changes both the wound table and the greater-S protection gate.
+fun test_orks17c2b_strength_drives_wound_threshold() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 5))
+    board[1][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 4))
+    let info = orks17c2b_info(board, 0)
+    if required_wound_roll(board, info) != 3:
+        return false
+    info.greater_strenght_wound_protection = true
+    return required_wound_roll(board, info) == 4
+
+# Effective AP participates in the actual save predicate (p.19).
+fun test_orks17c2b_armour_penetration_changes_save() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::armour_penetration, ModifierOperation::subtract, 1))
+    let info = orks17c2b_info(board, 0)
+    let group : AllocationGroup
+    group.save = 3
+    group.invulnerable = 10
+    let face : Dice
+    face = 3
+    return info.attack_penetration() == -1 and !attack_save_succeeds(group, face, info.attack_penetration()) and attack_save_succeeds(group, face, 0)
+
+# Legacy explicit AP increments obey the same order; do not subtract after rounding.
+fun test_orks17c2b_ap_increment_precedes_division() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::plasma_pistol_standard
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::armour_penetration, ModifierOperation::divide, 2))
+    let info = orks17c2b_info(board, 0)
+    info.penetration_bonus = true
+    return info.attack_penetration() == -1
+
+# Zero replacements lock core increments, and worsened AP never becomes positive.
+fun test_orks17c2b_ap_zero_lock_and_worsening_limit() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::armour_penetration, ModifierOperation::add, 20))
+    let worsened = orks17c2b_info(board, 0)
+    if worsened.attack_penetration() != 0:
+        return false
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::armour_penetration, ModifierOperation::replace, 0))
+    let locked = orks17c2b_info(board, 0)
+    locked.penetration_bonus = true
+    return locked.attack_penetration() == 0
+
+# Different raw BS profiles may group when their effective characteristics agree.
+fun test_orks17c2b_group_identity_uses_effective_skill() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::subtract, 1, 1))
+    let left = orks17c2b_info(board, 0)
+    let right = orks17c2b_info(board, 1)
+    if !attacks_are_identical(board, left, right):
+        return false
+    # Same effective AP from different records must still group (p.17).
+    left.penetration_bonus = true
+    right.ap_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
+    return attacks_are_identical(board, left, right)
+
+# Same raw profile with different effective S must resolve as separate groups.
+fun test_orks17c2b_group_identity_splits_effective_strength() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::captain_storm_bolter)
+    board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 1, 1))
+    let left = orks17c2b_info(board, 0)
+    let right = orks17c2b_info(board, 1)
+    return !attacks_are_identical(board, left, right)
+
+# Current T for a new group replaces the enclosing target's stale initial snapshot.
+fun test_orks17c2b_target_toughness_refresh_after_casualty() -> Bool:
+    let board = damage_test_fixture()
+    board[1][1].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 4))
+    configure_attack_info(board, 0, 1, false, false)
+    let first = orks17c2b_info(board, 0)
+    board[1].remove_model(1)
+    let next = orks17c2b_info(board, 0)
+    return first.target_toughness.value == 8 and next.target_toughness.value == 4 and board.attack_info.target_toughness.value == 8
+
+# Newly active target arithmetic also affects subsequent groups (02.02.01/05.02.01).
+fun test_orks17c2b_target_toughness_refresh_after_modifier() -> Bool:
+    let board = attack_declaration_fixture()
+    configure_attack_info(board, 0, 1, false, false)
+    board[1][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 2))
+    let next = orks17c2b_info(board, 0)
+    return next.target_toughness.value == 6 and board.attack_info.target_toughness.value == 4
+
+# The new group's explicit identities control target-dependent rules, even
+# when a neutral/stale enclosing context was supplied (pp.17/79;02.05.01).
+fun test_orks17c2b_group_identity_refreshes_target_keyword_subject() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1][0].keywords.append(Keyword::monster)
+    board[2].owned_by_player1 = false
+    board[2][0].position = board_position(5, 10)
+    let declaration = make_declared_weapon(board, unit_id(2), 0, 0)
+    declaration.current_target_rules.append(conditional_weapon_rule(WeaponRuleKind::anti_monster, 3, Keyword::monster))
+    let neutral : AttackSequenceInfo
+    let info = declared_attack_info(board, unit_id(2), unit_id(1), declaration, neutral)
+    return info.source_unit_id.get() == 2 and info.target_unit_id.get() == 1 and critical_wound_threshold(board, info) == 3
+
+# Actual target legality and replacement eligibility use effective Range (p.16/04.03.03).
+fun test_orks17c2b_effective_range_changes_target_legality() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::bolt_pistol
+    board[1][0].position = board_position(25, 5)
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    if declaration_target_valid(board, unit_id(0), declaration, unit_id(1), false):
+        return false
+    board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::range, ModifierOperation::add, 10, 0))
+    return declaration_target_valid(board, unit_id(0), declaration, unit_id(1), false)
+
+# Rapid Fire/Melta half-range is measured from the effective declaration Range.
+fun test_orks17c2b_half_range_snapshot_uses_effective_range() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::bolt_pistol
+    board[1][0].position = board_position(16, 5)
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    snapshot_weapon_target(board, unit_id(0), declaration, unit_id(1))
+    if declaration.half_range[1]:
+        return false
+    board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::range, ModifierOperation::multiply, 2, 0))
+    snapshot_weapon_target(board, unit_id(0), declaration, unit_id(1))
+    return declaration.half_range[1]
+
+# 'Melee' Range and '-' Torrent skill remain special, regardless of arithmetic.
+fun test_orks17c2b_special_melee_range_and_torrent_skill() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::close_combat_weapon
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::range, ModifierOperation::add, 20))
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    if declaration_weapon_range(board, unit_id(0), declaration) != 0:
+        return false
+    board[0][0].weapons[0] = Weapon::pyreblaster
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::add, 3))
+    let info = orks17c2b_info(board, 0)
+    return effective_attack_skill(board, info) == 0
+
+# Firing Deck uses carrier-wide modifiers, never its unrelated equipped slot grant.
+fun test_orks17c2b_borrowed_weapon_modifier_scope() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 1))
+    board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 5, 0))
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let own = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    declaration.borrowed_weapon = true
+    let borrowed = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return own.attack_strength() == 10 and borrowed.attack_strength() == 5
+
+# Invalid scope/kind and nonexistent equipped slots cannot survive saved roots.
+fun test_orks17c2b_invalid_weapon_modifier_scope_rejected() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 1, 7))
+    if valid_state_foundations(board):
+        return false
+    board[0][0].characteristic_modifiers.clear()
+    let malformed = characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 1)
+    malformed.weapon_scope = 1
+    board[0][0].characteristic_modifiers.append(malformed)
+    return !valid_state_foundations(board)
+
+# Stored skill/AP operations need the same invalid-divisor checks before restore.
+fun test_orks17c2b_invalid_attack_snapshot_modifiers_rejected() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.skill_modifiers.append(rule_modifier(ModifierOperation::divide, 0))
+    if valid_state_foundations(board):
+        return false
+    board.attack_info.skill_modifiers.clear()
+    board.attack_info.ap_modifiers.append(rule_modifier(ModifierOperation::divide, -1))
+    return !valid_state_foundations(board)
+
+# Real Game serialization preserves scoped data and gathered bounded S/operations.
+fun test_orks17c2b_saved_weapon_characteristics_round_trip() -> Bool:
+    let state = play()
+    state.board = attack_declaration_fixture()
+    state.board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, 0))
+    state.board.attack_info = orks17c2b_info(state.board, 0)
+    let restored = play()
+    return set_state(restored, to_string(state)) and restored.board.attack_info.attack_strength() == 6 and restored.board[0][0].characteristic_modifiers[0].weapon_scope.value == 1
+
 fun test_orks17c2_model_modifier_order_and_scope() -> Bool:
     let unit = make_infernus_squad()
     ref model = unit[0]
@@ -6706,44 +6931,3 @@ fun test_transport16_firing_deck_action_selection() -> Bool:
     sequence.select_firing_deck_weapon(board, declarations, slot)
     sequence.finish_firing_deck(board, declarations)
     return sequence.is_done() and declarations.size() == 1 and declarations[0].model_identity == board[0][0].identity and board.embarked_units[0].history.deck_shooting_locked and !board.embarked_units[0][0].used_once_per_battle_weapon[0]
-
-# Gathered context identity/T: appendix05.02.01,02.05.01, core pp.17/79.
-fun orks17c2b_info(Board board, Int slot) -> AttackSequenceInfo:
-    let declaration = make_declared_weapon(board, unit_id(0), 0, slot)
-    return declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
-
-# A weapon-specific increment affects its slot, not its neighbour or other bearer.
-# Gathered context identity/T: appendix05.02.01,02.05.01, core pp.17/79.
-fun test_orks17c2b_target_toughness_refresh_after_casualty() -> Bool:
-    let board = damage_test_fixture()
-    board[1][1].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 4))
-    configure_attack_info(board, 0, 1, false, false)
-    let first = orks17c2b_info(board, 0)
-    board[1].remove_model(1)
-    let next = orks17c2b_info(board, 0)
-    return first.target_toughness.value == 8 and next.target_toughness.value == 4 and board.attack_info.target_toughness.value == 8
-
-# Newly active target arithmetic also affects subsequent groups (02.02.01/05.02.01).
-# Gathered context identity/T: appendix05.02.01,02.05.01, core pp.17/79.
-fun test_orks17c2b_target_toughness_refresh_after_modifier() -> Bool:
-    let board = attack_declaration_fixture()
-    configure_attack_info(board, 0, 1, false, false)
-    board[1][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 2))
-    let next = orks17c2b_info(board, 0)
-    return next.target_toughness.value == 6 and board.attack_info.target_toughness.value == 4
-
-# The new group's explicit identities control target-dependent rules, even
-# when a neutral/stale enclosing context was supplied (pp.17/79;02.05.01).
-# Gathered context identity/T: appendix05.02.01,02.05.01, core pp.17/79.
-fun test_orks17c2b_group_identity_refreshes_target_keyword_subject() -> Bool:
-    let board = attack_declaration_fixture()
-    board[1][0].keywords.append(Keyword::monster)
-    board[2].owned_by_player1 = false
-    board[2][0].position = board_position(5, 10)
-    let declaration = make_declared_weapon(board, unit_id(2), 0, 0)
-    declaration.current_target_rules.append(conditional_weapon_rule(WeaponRuleKind::anti_monster, 3, Keyword::monster))
-    let neutral : AttackSequenceInfo
-    let info = declared_attack_info(board, unit_id(2), unit_id(1), declaration, neutral)
-    return info.source_unit_id.get() == 2 and info.target_unit_id.get() == 1 and critical_wound_threshold(board, info) == 3
-
-# Actual target legality and replacement eligibility use effective Range (p.16/04.03.03).

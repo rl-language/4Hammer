@@ -71,8 +71,14 @@ fun friendly_unit_sees_target(Board board, UnitID source, UnitID target) -> Bool
 
 # Ordinary engaged targets are prohibited; the own-Shooting-phase Monster/
 # Vehicle exception does not lift BLAST's prohibition (pp.35/62–63/88).
+# Compatibility fixture entry retains the raw profile range; declarations
+# pass their bearer/slot's effective range (p.16; appendix02.02.01).
 fun ranged_target_valid(Board board, UnitID source, Model bearer, Weapon weapon, WeaponAbilitySet rules, UnitID target) -> Bool:
-    if target.get() >= board.units.size() or !has_shooting_model(board[target]) or board[source].owned_by_player1 == board[target].owned_by_player1 or live_distance_to_model(board[target], bearer) > float(weapon.range()):
+    return ranged_target_valid(board, source, bearer, weapon, rules, target, weapon.range())
+
+# Effective Range participates in ordinary and replacement eligibility (p.16/04.03.03).
+fun ranged_target_valid(Board board, UnitID source, Model bearer, Weapon weapon, WeaponAbilitySet rules, UnitID target, Int maximum) -> Bool:
+    if target.get() >= board.units.size() or !has_shooting_model(board[target]) or board[source].owned_by_player1 == board[target].owned_by_player1 or live_distance_to_model(board[target], bearer) > float(maximum):
         return false
     let kind = board[source].shooting_kind
     let engaged = board.is_in_melee(board[target])

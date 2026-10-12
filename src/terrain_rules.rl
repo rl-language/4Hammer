@@ -104,15 +104,15 @@ fun attack_ignores_cover(Board board, AttackSequenceInfo info) -> Bool:
 # Torrent/no-hit-roll and melee skill remain unchanged; Ignores Cover cancels
 # cover (p.82). Other supplied cover grants may set target_has_cover directly.
 fun effective_attack_skill(Board board, AttackSequenceInfo info) -> Int:
-    let skill = info.source.skill()
-    if skill != 0 and info.source.range() > 0 and info.plunging_fire:
-        skill = skill - 1
-    if skill != 0 and info.source.range() > 0 and info.target_has_cover and !attack_ignores_cover(board, info):
-        skill = skill + 1
-    # User-supplied appendix 02.02.01: modified BS/WS remain 2+ through 6+.
-    if skill != 0:
-        skill = characteristic_limit(ModifiedCharacteristic::ballistic_skill, skill)
-    return skill
+    let extra = 0
+    if info.source.range() > 0 and info.plunging_fire:
+        extra = extra - 1
+    if info.source.range() > 0 and info.target_has_cover and !attack_ignores_cover(board, info):
+        extra = extra + 1
+    let kind = ModifiedCharacteristic::weapon_skill
+    if info.source.range() > 0:
+        kind = ModifiedCharacteristic::ballistic_skill
+    return modified_characteristic(info.source.skill(), kind, info.skill_modifiers, info.source.skill() == 0, extra)
 
 # A natural 1 fails and a natural 6 hits regardless of changed BS/modifiers
 # (p.18). This matters when cover worsens a 6+ BS beyond six; broader hit and

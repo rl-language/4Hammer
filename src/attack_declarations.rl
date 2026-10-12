@@ -14,6 +14,8 @@ cls DeclaredWeapon:
     EntityIdentity model_identity
     BInt<0, MAX_WEAPONS> slot
     Weapon weapon
+    # Borrowed profiles receive carrier-wide grants, not carrier slot grants (p.81).
+    Bool borrowed_weapon
     WeaponRule hunter_condition
     WeaponAbilitySet selected_rules
     WeaponAbilitySet current_target_rules
@@ -114,7 +116,7 @@ fun declaration_target_valid(Board board, UnitID source, DeclaredWeapon weapon, 
     if board[source].shooting_kind == ShootingKind::snap and !allow_snap_replacement:
         if target.get() != board[source].snap_target.get():
             return false
-    return ranged_target_valid(board, source, board[source][model], weapon.weapon, weapon.selected_rules, target)
+    return ranged_target_valid(board, source, board[source][model], weapon.weapon, weapon.selected_rules, target, declaration_weapon_range(board, source, weapon))
 
 # A targetless weapon makes no attacks (p.16); distinguish this from offering
 # a selector with no legal values, which would stall native/editor play.
@@ -187,13 +189,13 @@ fun target_has_unresolved_weapons(DeclaredWeapons declarations, UnitID target) -
 # applicable weapon rules, effective roll modifiers/rerolls, cover and target
 # defenses (p.17). Profile identity alone is not an attack characteristic.
 fun attacks_are_identical(Board board, AttackSequenceInfo left, AttackSequenceInfo right) -> Bool:
-    if effective_attack_skill(board, left) != effective_attack_skill(board, right) or left.source.strenght() != right.source.strenght() or left.source.penetration() != right.source.penetration() or !same_damage_characteristic(left.source.damage(), right.source.damage()):
+    if effective_attack_skill(board, left) != effective_attack_skill(board, right) or left.attack_strength() != right.attack_strength() or left.attack_penetration() != right.attack_penetration() or !same_damage_characteristic(left.source.damage(), right.source.damage()):
         return false
     if !(left.shooting_kind == right.shooting_kind) or left.indirect_stationary_visible != right.indirect_stationary_visible or left.heavy_bonus != right.heavy_bonus or left.engaged_hit_penalties != right.engaged_hit_penalties:
         return false
     if left.total_hit_modifier() != right.total_hit_modifier() or left.total_wound_modifier() != right.total_wound_modifier():
         return false
-    if left.melta_damage_bonus != right.melta_damage_bonus or left.penetration_bonus != right.penetration_bonus or left.only_hits_on_6 != right.only_hits_on_6 or left.reroll_hits != right.reroll_hits or left.reroll1_hits != right.reroll1_hits or left.reroll_wounds != right.reroll_wounds or left.reroll1_wounds != right.reroll1_wounds:
+    if left.melta_damage_bonus != right.melta_damage_bonus or left.only_hits_on_6 != right.only_hits_on_6 or left.reroll_hits != right.reroll_hits or left.reroll1_hits != right.reroll1_hits or left.reroll_wounds != right.reroll_wounds or left.reroll1_wounds != right.reroll1_wounds:
         return false
     if left.target_toughness != right.target_toughness or left.greater_strenght_wound_protection != right.greater_strenght_wound_protection or left.fight_on_death != right.fight_on_death or left.fight_on_death_roll != right.fight_on_death_roll:
         return false
@@ -232,7 +234,7 @@ fun live_model_count(Unit unit) -> Int:
 # supplied retarget rule does not defer this snapshot until casualties (pp.79/83–84).
 fun snapshot_weapon_target(Board board, UnitID source, DeclaredWeapon weapon, UnitID target):
     weapon.target_model_counts[target.get()] = live_model_count(board[target])
-    weapon.half_range[target.get()] = live_distance_to_model(board[target], board[source][declared_model_index(board, source, weapon)]) <= float(weapon.weapon.range()) / 2.0
+    weapon.half_range[target.get()] = live_distance_to_model(board[target], board[source][declared_model_index(board, source, weapon)]) <= float(declaration_weapon_range(board, source, weapon)) / 2.0
     weapon.melta_bonus[target.get()] = 0
     if weapon.half_range[target.get()] and chosen_weapon_has_rule(board, target, weapon.selected_rules, WeaponRuleKind::melta):
         weapon.melta_bonus[target.get()] = chosen_weapon_parameter(board, target, weapon.selected_rules, WeaponRuleKind::melta)
@@ -268,3 +270,10 @@ fun attack_model_allowed(Board board, UnitID source, Int model, Bool melee) -> B
     if board[source][model].is_alive():
         return !board[source].off_battlefield and !board[source][model].off_battlefield
     return melee and board.allow_destroyed_attack and board.destroyed_attack_unit.get() == source.get() and board[source][model].state == ModelState::fight_on_death and !board[source][model].destruction_attack_suppressed
+
+# Source identity survives compaction; actual effective Range is used for
+# declaration/retargeting and the half-range snapshot (pp.16/79/83).
+fun declaration_weapon_range(Board board, UnitID source, DeclaredWeapon declaration) -> Int:
+    let model = declared_model_index(board, source, declaration)
+    assert(model >= 0, "missing declared bearer for Range")
+    return model_weapon_range(board[source][model], declaration.weapon, declaration.slot.value, declaration.borrowed_weapon)

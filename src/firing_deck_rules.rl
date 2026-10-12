@@ -52,6 +52,7 @@ fun deck_weapon_valid(Board board, UnitID source, ModelID carrier, UnitID passen
 fun make_deck_declaration(Board board, UnitID source, ModelID carrier, UnitID passenger, ModelID model, Int slot) -> DeclaredWeapon:
     let result : DeclaredWeapon
     result.model = carrier
+    result.borrowed_weapon = true
     result.model_identity = board[source][carrier].identity
     result.slot = slot
     result.weapon = board.embarked_units[passenger.get()][model].weapons[slot]

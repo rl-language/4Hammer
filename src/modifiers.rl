@@ -38,7 +38,7 @@ fun rule_modifier(ModifierOperation operation, Int amount) -> RuleModifier:
 # Generic arithmetic is computed transiently; stored amounts/collections stay
 # bounded for inferred ML layout. '-'/'*'/'N/A' callers mark unmodifiable.
 # Replacing a value with zero also prevents later modification (02.02.01).
-fun apply_rule_modifiers(Int base, RuleModifiers modifiers, Bool unmodifiable) -> Int:
+fun apply_rule_modifiers(Int base, RuleModifiers modifiers, Bool unmodifiable, Int extra_addition) -> Int:
     let value = float(base)
     let locked = unmodifiable
     for operation in range(5):
@@ -58,11 +58,18 @@ fun apply_rule_modifiers(Int base, RuleModifiers modifiers, Bool unmodifiable) -
                 value = value / float(modifier.amount.value)
             if operation == 4:
                 value = value - float(modifier.signed_amount())
+        # Core cover/Plunging Fire increments share the addition step (02.02.01).
+        if operation == 2 and !locked:
+            value = value + float(extra_addition)
     assert(value > -1000000000.0 and value < 1000000000.0, "modifier calculation capacity exceeded")
     let rounded = int(value)
     if float(rounded) < value:
         rounded = rounded + 1
     return rounded
+
+# Compatibility arithmetic entry without an additional core increment (02.02.01).
+fun apply_rule_modifiers(Int base, RuleModifiers modifiers, Bool unmodifiable) -> Int:
+    return apply_rule_modifiers(base, modifiers, unmodifiable, 0)
 
 enum ModifiedCharacteristic:
     movement
@@ -99,14 +106,18 @@ fun characteristic_limit(ModifiedCharacteristic kind, Int value) -> Int:
 
 # Do not apply minima to special values or a replacement locked to zero;
 # otherwise apply the printed post-modification characteristic bounds.
-fun modified_characteristic(Int base, ModifiedCharacteristic kind, RuleModifiers modifiers, Bool unmodifiable) -> Int:
-    let result = apply_rule_modifiers(base, modifiers, unmodifiable)
+fun modified_characteristic(Int base, ModifiedCharacteristic kind, RuleModifiers modifiers, Bool unmodifiable, Int extra_addition) -> Int:
+    let result = apply_rule_modifiers(base, modifiers, unmodifiable, extra_addition)
     let locked = unmodifiable
     for i in range(modifiers.size()):
         locked = locked or (modifiers[i].operation.value == ModifierOperation::replace.value and modifiers[i].amount.value == 0)
     if locked:
         return result
     return characteristic_limit(kind, result)
+
+# Existing consumers need no extra increment; keep one characteristic policy.
+fun modified_characteristic(Int base, ModifiedCharacteristic kind, RuleModifiers modifiers, Bool unmodifiable) -> Int:
+    return modified_characteristic(base, kind, modifiers, unmodifiable, 0)
 
 # Rolls are modified after rerolls; hit/wound cumulative changes cap at +/-1,
 # all roll results are at least one, and charge totals cap at 12 (02.02.01).
@@ -129,6 +140,9 @@ fun modified_cp_cost(Int original, RuleModifiers modifiers) -> Int:
 cls CharacteristicModifier:
     ModifiedCharacteristic characteristic
     RuleModifier modifier
+    # Zero affects the bearer/all equipped weapons; nonzero is slot+1.
+    # Ordinary bounded storage avoids a separate modifier vector per slot.
+    LinearlyDistributedInt<0, MAX_WEAPON_SCOPES> weapon_scope
 
 using CharacteristicModifiers = CheckedVector<CharacteristicModifier, 16>
 
@@ -142,8 +156,12 @@ fun characteristic_modifier(ModifiedCharacteristic characteristic, ModifierOpera
 # Saved metadata must not introduce invalid enums, amounts or zero/negative
 # divisors before effective queries execute (appendix02.02.01 infrastructure).
 fun valid_characteristic_modifiers(CharacteristicModifiers modifiers) -> Bool:
+    if MAX_WEAPON_SCOPES != MAX_WEAPONS + 1:
+        return false
     for i in range(modifiers.size()):
         ref entry = modifiers[i]
+        if entry.weapon_scope.value < 0 or entry.weapon_scope.value > MAX_WEAPONS or (entry.weapon_scope.value > 0 and !weapon_characteristic_kind(entry.characteristic)):
+            return false
         if entry.characteristic.value < 0 or entry.characteristic.value > ModifiedCharacteristic::detection_range.value:
             return false
         if entry.modifier.operation.value < 0 or entry.modifier.operation.value > ModifierOperation::subtract.value or entry.modifier.amount.value < 0 or entry.modifier.amount.value >= MAX_RULE_MODIFIER:
@@ -161,3 +179,25 @@ fun effective_characteristic_value(Int base, ModifiedCharacteristic characterist
         if modifiers[i].characteristic.value == characteristic.value:
             applicable.append(modifiers[i].modifier)
     return modified_characteristic(base, characteristic, applicable, special)
+
+# Appendix02.02.01: these characteristics belong to equipped weapon profiles.
+fun weapon_characteristic_kind(ModifiedCharacteristic kind) -> Bool:
+    return kind.value >= ModifiedCharacteristic::range.value and kind.value <= ModifiedCharacteristic::damage.value
+
+# Explicit physical-slot grants do not leak to other weapons (p.16/02.02.01).
+# Random A/D consumers follow in17.C2b2; no faction grant is invented here.
+fun weapon_characteristic_modifier(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, Int slot) -> CharacteristicModifier:
+    assert(weapon_characteristic_kind(kind) and slot >= 0 and slot < MAX_WEAPONS, "invalid weapon modifier scope")
+    let result = characteristic_modifier(kind, operation, amount)
+    result.weapon_scope = slot + 1
+    return result
+
+# Snapshotted raw operations cannot contain invalid enums/divisors on load
+# (appendix02.02.01; saved-state infrastructure).
+fun valid_rule_modifiers(RuleModifiers modifiers) -> Bool:
+    for i in range(modifiers.size()):
+        if modifiers[i].operation.value < 0 or modifiers[i].operation.value > ModifierOperation::subtract.value or modifiers[i].amount.value < 0 or modifiers[i].amount.value >= MAX_RULE_MODIFIER:
+            return false
+        if modifiers[i].operation.value == ModifierOperation::divide.value and (modifiers[i].amount.value == 0 or modifiers[i].negative):
+            return false
+    return true

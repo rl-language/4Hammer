@@ -54,8 +54,26 @@ cls AttackSequenceInfo:
     Dice fight_on_death_roll
     Toughness target_toughness
     Weapon source
+    # Gathered weapon snapshots (pp.17–19/appendix02.02.01); skill/AP
+    # retain operations so later core increments enter the right arithmetic step.
+    Bool characteristics_known
+    FixedStat weapon_strength
+    RuleModifiers skill_modifiers
+    RuleModifiers ap_modifiers
     Profile source_profile
     BInt<0, MAX_ROUNDS> current_round
+
+    # Wound consumers use gathered effective S; legacy direct fixtures use
+    # the raw profile until configured (p.18; appendix02.02.01).
+    fun attack_strength() -> Int:
+        if self.characteristics_known:
+            return self.weapon_strength.value
+        return self.source.strenght()
+
+    # AP improvements are negative increments before division/subtraction,
+    # not additions to the save roll (p.19; appendix02.02.01).
+    fun attack_penetration() -> Int:
+        return modified_characteristic(self.source.penetration(), ModifiedCharacteristic::armour_penetration, self.ap_modifiers, false, -int(self.penetration_bonus))
 
     fun add_letal_hits():
         self.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::letal_hits))
@@ -784,6 +802,8 @@ fun valid_weapon_condition(WeaponRule rule) -> Bool:
 # Compatibility/integrity gate: configurations cannot bypass their bounded
 # policies; identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
+    if !valid_rule_modifiers(board.attack_info.skill_modifiers) or !valid_rule_modifiers(board.attack_info.ap_modifiers):
+        return false
     for configured_player in range(2):
         if !army_configuration_valid(board.armies[configured_player]):
             return false
@@ -858,6 +878,9 @@ fun valid_model_numeric_history(Model model) -> Bool:
         return false
     if model.transport_capacity.value < 0 or model.transport_capacity.value > MAX_UNIT_MODELS or model.transport_space.value < 1 or model.transport_space.value > MAX_UNIT_MODELS or model.firing_deck.value < 0 or model.firing_deck.value > MAX_UNIT_MODELS:
         return false
+    for modifier_slot in range(model.characteristic_modifiers.size()):
+        if model.characteristic_modifiers[modifier_slot].weapon_scope.value > model.weapons.size():
+            return false
     for condition_slot in range(MAX_WEAPONS):
         if !valid_weapon_condition(model.hunter_profile_conditions[condition_slot]):
             return false

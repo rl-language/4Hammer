@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 19
+const STATE_SCHEMA_VERSION = 20
 const ACTION_SCHEMA_VERSION = 14
-const OBSERVATION_SCHEMA_VERSION = 19
+const OBSERVATION_SCHEMA_VERSION = 20
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -24,6 +24,10 @@ fun get_observation_schema_version() -> Int:
 # These are configurable supported ranges, not tabletop restrictions.
 const MAX_CP = 257
 const MAX_SCORE = 201
+const MAX_WEAPONS = 8
+
+# RLC const declarations require literals; keep this at MAX_WEAPONS+1.
+const MAX_WEAPON_SCOPES = 9
 const MAX_CHARACTERISTIC = 257
 const MAX_STAT_MODIFIER = 257
 const MAX_RANDOM_STAT_RESULT = 513
@@ -114,7 +118,7 @@ fun<T, Int capacity> size_as_observation_tensor(CheckedVector<T, capacity> obj) 
 # Nonnegative bounds keep generated Python/Godot names valid in RLC 0.4.14.
 const MAX_ENTITY_IDENTITIES = 16384
 const MAX_IDENTITY_SEQUENCE = 16385
-const NEXT_STATE_SCHEMA_VERSION = 20
+const NEXT_STATE_SCHEMA_VERSION = 21
 const MAX_PHASE_SERIAL = 64
 const MAX_TURN_SERIAL = 16
 const MAX_PHASE_STAMP = 65

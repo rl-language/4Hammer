@@ -8,7 +8,6 @@ import geometry
 import modifiers
 
 using Wounds = LinearlyDistributedInt<0, MAX_WOUNDS>
-const MAX_WEAPONS = 8
 using WeaponsVector = CheckedVector<Weapon, MAX_WEAPONS>
 using Abilities = CheckedVector<AbilityKind, 16>
 using Keywords = CheckedVector<Keyword, 32>
@@ -895,6 +894,24 @@ fun unit_matches_keywords(Unit unit, KeywordPredicate predicate) -> Bool:
 # merely because both models share a unit (appendix02.05.01).
 fun model_matches_keywords(Model model, KeywordPredicate predicate) -> Bool:
     return matches_keyword_predicate(model, predicate)
+
+# Appendix02.02.01: bearer WS/BS modifies every equipped weapon; specific
+# weapon grants affect only their slot. Firing Deck uses the carrier's grants,
+# not an unrelated equipped slot with the same index (24.14 p.81).
+fun model_weapon_modifiers(Model model, Int slot, ModifiedCharacteristic kind, Bool borrowed) -> RuleModifiers:
+    assert(valid_characteristic_modifiers(model.characteristic_modifiers), "invalid weapon characteristic modifiers")
+    let result : RuleModifiers
+    for i in range(model.characteristic_modifiers.size()):
+        ref entry = model.characteristic_modifiers[i]
+        if entry.characteristic.value == kind.value and (entry.weapon_scope.value == 0 or (!borrowed and entry.weapon_scope.value == slot + 1)):
+            result.append(entry.modifier)
+    return result
+
+# Range modifiers cannot turn the 'Melee' sentinel into a ranged profile
+# (p.16; appendix02.02.01). Range legality uses the actual effective value.
+fun model_weapon_range(Model model, Weapon weapon, Int slot, Bool borrowed) -> Int:
+    let modifiers = model_weapon_modifiers(model, slot, ModifiedCharacteristic::range, borrowed)
+    return modified_characteristic(weapon.range(), ModifiedCharacteristic::range, modifiers, weapon.range() == 0)
 
 fun make_tantus() -> Unit:
     let profile : Unit 

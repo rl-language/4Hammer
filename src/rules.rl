@@ -23,11 +23,11 @@ import firing_deck_rules
 fun required_wound_roll(Board board, AttackSequenceInfo info) -> Int:
     let modifier = info.total_wound_modifier()
     # Lance consumes only a completed charge move this turn (pp.37/82).
-    if info.target_toughness.value < info.source.strenght() and info.greater_strenght_wound_protection:
+    if info.target_toughness.value < info.attack_strength() and info.greater_strenght_wound_protection:
         modifier = modifier - 1
     if info.has_weapon_rule(board, WeaponRuleKind::lance) and board[info.source_unit_id].has_charged:
         modifier = modifier + 1
-    return base_wound_threshold(info.source.strenght(), info.target_toughness.value) - min(1, max(-1, modifier))
+    return base_wound_threshold(info.attack_strength(), info.target_toughness.value) - min(1, max(-1, modifier))
 
 
 using StatModifier = LinearlyDistributedInt<0, MAX_STAT_MODIFIER>
@@ -492,7 +492,7 @@ act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit
             frm die : Dice
             die = face.value
             saves.pool.faces[face.value - 1] = saves.pool.faces[face.value - 1] - 1
-            if attack_save_succeeds(groups[active_group.value], die, board.attack_info.source.penetration() - int(board.attack_info.penetration_bonus)):
+            if attack_save_succeeds(groups[active_group.value], die, board.attack_info.attack_penetration()):
                 continue
             board.current_state = CurrentStateDescription::damage_roll
             subaction*(board) normal_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id)
@@ -905,6 +905,15 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     let live_toughness = board[target].get_unit_toughtness()
     assert(live_toughness >= 0 and live_toughness < MAX_CHARACTERISTIC, "group Toughness snapshot capacity exceeded")
     info.target_toughness = live_toughness
+    info.skill_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::weapon_skill, weapon.borrowed_weapon)
+    if weapon.weapon.range() > 0:
+        info.skill_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::ballistic_skill, weapon.borrowed_weapon)
+    info.ap_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::armour_penetration, weapon.borrowed_weapon)
+    let strength_modifiers = model_weapon_modifiers(board[source][model], weapon.slot.value, ModifiedCharacteristic::strength, weapon.borrowed_weapon)
+    let strength = modified_characteristic(weapon.weapon.strenght(), ModifiedCharacteristic::strength, strength_modifiers, false)
+    assert(strength >= 0 and strength < MAX_CHARACTERISTIC, "weapon Strength snapshot capacity exceeded")
+    info.weapon_strength = strength
+    info.characteristics_known = true
     info.engaged_hit_penalties = 0
     info.plunging_fire = plunging_fire_applies(board, source, model, target, info.source.range() > 0)
     info.target_has_cover = info.source.range() > 0 and (target_info.target_has_cover or smoke_cover_applies(board, board[source][model], target) or unit_has_benefit_of_cover(board, board[source][model], board[target]) or (info.shooting_kind == ShootingKind::indirect and info.has_weapon_rule(board, WeaponRuleKind::indirect_fire)))
