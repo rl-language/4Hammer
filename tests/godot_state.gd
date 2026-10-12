@@ -33,9 +33,9 @@ func check_bindings():
 	interaction.models = Node.new()
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
-	assert(rules.library.get_state_schema_version() == 14)
-	assert(rules.library.get_action_schema_version() == 10)
-	assert(rules.library.get_observation_schema_version() == 14)
+	assert(rules.library.get_state_schema_version() == 15)
+	assert(rules.library.get_action_schema_version() == 11)
+	assert(rules.library.get_observation_schema_version() == 15)
 	assert(rules.valid_actions.size() == 6)
 	var choose = RLCGamePickInsidiousInfiltrators.make()
 	rules.apply_action(choose)
@@ -300,6 +300,35 @@ func check_bindings():
 		else:
 			rules.apply_action(advance)
 	assert(board.get_timing().get_phase().get_value() == 3 and rules.can_apply(shoot))
+	# Task 15: explicit keyword fixture selects Explosives by source button,
+	# then its bearer/target through the production model/unit click controls.
+	var explosives_unit = rules.library.get(board.get_units(), 0)
+	var explosives_model = rules.library.get(explosives_unit.get_models(), 0)
+	append_core_keyword(rules.library, explosives_model, 56, "grenades")
+	rules.library.command_points_for_player(board, true).set_value(6)
+	rules.valid_actions = rules._valid_actions()
+	rules.on_state_changed.emit()
+	press_first_choice(choices, "explosives")
+	interaction.on_state_change()
+	assert(interaction.current_select_model_action is RLCGameChooseExplosivesModel)
+	assert(source_node.marked and not target_node.marked)
+	interaction.select(source_node)
+	interaction.on_state_change()
+	assert(interaction.current_select_unit_action is RLCGameChooseExplosivesTarget)
+	interaction.select(target_node)
+	var explosives_roll = RLCGameRoll.make()
+	explosives_roll.get_member(0).set_value(1)
+	for die in range(6):
+		assert(rules.library.get_current_player(rules.state) == -1)
+		rules.apply_action(explosives_roll)
+	assert(not explosives_unit.get_has_shoot())
+	assert(explosives_unit.get_history().get_used_stratagem_this_phase())
+	print("CHECK: Godot Explosives source button, bearer/target clicks and six dice completed")
+	# Separate fixture: the existing hit/save regression needs an unused
+	# per-unit stratagem allowance. Do not treat this reset as legal gameplay.
+	rules.library.clear_phase_modifiers(board)
+	rules.valid_actions = rules._valid_actions()
+	rules.on_state_changed.emit()
 	rules.apply_action(shoot)
 	var shooting_kind = RLCGameChooseShootingKind.make()
 	shooting_kind.get_member(0).set_value(0)
@@ -470,6 +499,9 @@ func check_bindings():
 	charger_model.get_position().get_x().set_value(5)
 	charger_model.get_position().get_y().set_value(5)
 	charger.set_can_charge(true)
+	append_core_keyword(rules.library, charger_model, 46, "vehicle")
+	rules.library.command_points_for_player(board, false).set_value(3)
+	rules.library.command_points_for_player(board, true).set_value(3)
 	charger.get_history().set_advanced_this_turn(false)
 	charger.get_history().set_fell_back_this_turn(false)
 	var charge_enemy = rules.library.make_infernus_squad()
@@ -539,7 +571,26 @@ func check_bindings():
 	assert(charger.get_has_charged())
 	assert(charger.get_history().get_charge_move_phase().get_value() == board.get_phase_serial().get_value() + 1)
 	assert(rules.library.get(charger.get_models(), 0).get_position().get_x().get_value() == 11)
+	assert(rules.can_apply(RLCGameCrushingImpact.make()))
+	press_choice(choices, "crushing impact")
+	interaction.on_state_change()
+	assert(interaction.current_select_unit_action is RLCGameChooseImpactTarget)
+	interaction.select(target_node)
+	interaction.on_state_change()
+	assert(interaction.current_select_model_action is RLCGameChooseImpactModel)
+	assert(source_node.marked and not target_node.marked)
+	interaction.select(source_node)
+	var impact_roll = RLCGameRoll.make()
+	impact_roll.get_member(0).set_value(2)
+	var impact_dice = 0
+	while rules.can_apply(impact_roll):
+		assert(rules.library.get_current_player(rules.state) == -1)
+		rules.apply_action(impact_roll)
+		impact_dice += 1
+		assert(impact_dice < 257)
+	assert(impact_dice == rules.library.thoughness(rules.library.get(charger.get_models(), 0).get_profile()))
 	assert(rules.can_apply(RLCGameEndCharge.make()))
+	print("CHECK: Godot Crushing Impact target/bearer clicks and Toughness dice completed")
 	print("CHECK: Godot post-roll multi-target charge clicks and staged path restoration completed")
 	# Task 14: phase-wide Pile In precedes unit fighting. Exercise the same
 	# controller's closest-target tie choice and save a pending melee path.
@@ -588,6 +639,13 @@ func check_bindings():
 	assert(interaction.current_select_unit_action is RLCGameSelectFightingUnit)
 	assert(source_node.marked and not target_node.marked)
 	interaction.select(source_node)
+	assert(rules.can_apply(RLCGameEpicChallenge.make()))
+	press_choice(choices, "epic challenge")
+	interaction.on_state_change()
+	assert(interaction.current_select_model_action is RLCGameChooseEpicCharacter)
+	assert(source_node.marked and not target_node.marked)
+	interaction.select(source_node)
+	assert(rules.library.get(charger.get_models(), 0).get_history().get_epic_challenge())
 	press_choice(choices, "normal fight")
 	press_choice(choices, "close combact weapon")
 	rules.apply_action(RLCGameSkip.make())
@@ -610,8 +668,11 @@ func check_bindings():
 		rules.apply_action(RLCGameKeepBatch.make())
 	assert(charger.get_has_fought())
 	assert(rules.library.get_current_player(rules.state) == 0)
+	press_first_choice(choices, "counteroffensive")
+	assert(rules.library.get(board.get_units(), 1).get_phase_modifiers().get_counteroffensive())
 	interaction.on_state_change()
 	assert(target_node.marked and not source_node.marked)
+	print("CHECK: Godot Epic Challenge bearer and Counteroffensive next-unit selection completed")
 	# Supplied Fight on Death: this enemy remains physically present, and is
 	# selected with its unit rather than retaliating during the previous attack.
 	var retained_unit = rules.library.get(board.get_units(), 1)
@@ -684,3 +745,10 @@ func press_first_choice(panel, prefix):
 			button.button_down.emit()
 			return
 	assert(false, "Missing choice prefix: " + prefix)
+
+# Explicit core fixtures assert the generated enum name before using its ID.
+func append_core_keyword(library, model, value, expected_name):
+	var keyword = RLCKeyword.make()
+	keyword.set_value(value)
+	assert(str(library.as_string_literal(keyword)) == expected_name)
+	library.append(model.get_keywords(), keyword)

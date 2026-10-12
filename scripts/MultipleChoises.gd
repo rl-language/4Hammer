@@ -52,6 +52,17 @@ func on_state_change():
 				label = "Advance" if unwrapped.get_member(0) else "Normal move"
 			make_choise(label, action)
 			added += 1
+		# Core effects coexist with ordinary one-UnitID phase selectors; explicit
+		# source buttons let players choose the effect before clicking its bearer.
+		if unwrapped is RLCGameUseExplosives or unwrapped is RLCGameCounteroffensive or unwrapped is RLCGameSmokescreen:
+			var source_id = unwrapped.get_member(0).get_id().get_value()
+			var source_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_units(), source_id)
+			var source_name = RLCLib.convert_string(source_unit.get_name().get_value())
+			var effect = "Explosives (1 CP)" if unwrapped is RLCGameUseExplosives else "Smokescreen (1 CP)"
+			if unwrapped is RLCGameCounteroffensive:
+				effect = "Counteroffensive (2 CP)"
+			make_choise(effect + ": " + source_name, action)
+			added += 1
 		# Deployment IDs refer to reserves, not the battlefield models used by
 		# the click selector. Offer the actual legal reserve action as a button.
 		if unwrapped is RLCGameSelectUnit or unwrapped is RLCGameSelectReserveUnit or unwrapped is RLCGameSelectIngressUnit or unwrapped is RLCGameSelectScoutReserve or unwrapped is RLCGameChooseStrategicReserve:

@@ -328,6 +328,12 @@ cls Board:
     fun get_current_player_faction() -> Faction:
         return self.players_faction[int(self.current_player)]
 
+    # Editor infrastructure: fixed arrays have no generated Godot getter.
+    # Expose one bounded CP entry for displays/fixtures supporting spending
+    # and affordability (p.54), without changing storage or action domains.
+    fun command_points_for_player(Bool player) -> ref CommandPoints:
+        return self.command_points[int(player)]
+
     fun add_extra_cp(Int player_id):
         if self.obtained_extra_cp_this_round[player_id]:
             return
