@@ -5580,6 +5580,8 @@ fun test_aircraft16_plunging_fire_exclusions_and_bounds() -> Bool:
 
 # Task16 metadata/movement regressions: core pp.64–65/68–69/73–74/84;
 # supplied appendix01.02.02/01.02.04 and user no-nesting assumption.
+# Explicit metadata fixtures do not assert any actual faction transport grant
+# (datasheets task17); capacities/types belong to each carrier model (p.64).
 fun transport16_fixture() -> Board:
     let board : Board
     board.units.append(make_octavius())
@@ -5599,11 +5601,14 @@ fun transport16_fixture() -> Board:
     record_move(board, unit_id(1), MovementKind::normal)
     return board
 
+# Bounded fixture constructor for supplied explicit values (pp.64/81/84);
+# this encodes test metadata, not a claim about any faction datasheet.
 fun transport16_fixed_stat(Int number) -> FixedStat:
     let value : FixedStat
     value = number
     return value
 
+# p.64: whole-unit permission and exact per-model seats, including weighted models.
 fun test_transport16_capacity_permissions_and_seat_bounds() -> Bool:
     let board = transport16_fixture()
     if !transport_can_carry(board, board[1], board[0], 0):
@@ -5622,6 +5627,7 @@ fun test_transport16_capacity_permissions_and_seat_bounds() -> Bool:
     board[0][0].transport_permissions_known = false
     return !transport_can_carry(board, board[1], board[0], 0)
 
+# p.64: only permitted moves, every base within3, no setup this turn.
 fun test_transport16_embark_move_and_setup_gates() -> Bool:
     let board = transport16_fixture()
     let passenger = unit_id(1)
@@ -5640,6 +5646,8 @@ fun test_transport16_embark_move_and_setup_gates() -> Bool:
     board[1][1].position = board_position(20, 20)
     return !embark_after_move_valid(board, passenger, carrier, model)
 
+# pp.58/64 and appendix01.02.02: embarking fails actions, preserves identity,
+# shock/effects and weapon usage, and retires its slot without duplicating IDs.
 fun test_transport16_embark_preserves_identity_and_effects() -> Bool:
     let board = transport16_fixture()
     if !begin_unit_action(board, unit_id(1), false):
@@ -5651,6 +5659,7 @@ fun test_transport16_embark_preserves_identity_and_effects() -> Bool:
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
     return board[1].empty() and board[1].retired and board.embarked_units.size() == 1 and board.embarked_units[0].identity == identity and board.embarked_units[0][0].identity == bearer and board.embarked_units[0].battle_socked and board.embarked_units[0][0].used_once_per_battle_weapon[0] and board.embarked_units[0].history.action_failed and passenger_space_used(board, board[0][0].identity) == 2 and valid_state_foundations(board)
 
+# p.64: carrier MODEL identities survive compaction within a multi-model unit.
 fun test_transport16_carrier_identity_survives_model_compaction() -> Bool:
     let board = transport16_fixture()
     let second_carrier = board[0][0]
@@ -5664,11 +5673,14 @@ fun test_transport16_carrier_identity_survives_model_compaction() -> Bool:
     let location = find_passenger_carrier(board, carrier_identity)
     return location.found and location.model.get() == 0 and board.embarked_units[0].embarked_transport == carrier_identity and valid_state_foundations(board)
 
+# Supplied appendix01.02.04: passengers have no foreign visibility/ranges,
+# but retain self visibility/own ability range. Their old bases block no setup.
 fun test_transport16_offboard_visibility_distance_and_collision() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
     return !unit_visible_to_unit(board, board[0], board.embarked_units[0]) and !unit_visible_to_unit(board, board.embarked_units[0], board[0]) and unit_visible_to_unit(board, board.embarked_units[0], board.embarked_units[0]) and board.embarked_units[0][0].distance(board[0][0]) > 100.0 and board.embarked_units[0][0].distance(board.embarked_units[0][0]) == 0.0
 
+# Appendix01.02.04 / p.30: embarked units test and recover in Command.
 fun test_transport16_embarked_command_recovery() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5680,6 +5692,8 @@ fun test_transport16_embarked_command_recovery() -> Bool:
     step.roll_pair(board, three, three)
     return step.is_done() and !board.embarked_units[0].battle_socked
 
+# Appendix01.02.02: phase effects expire offboard; shock/turn restrictions
+# survive phase changes and One Shot survives both phase and turn resets.
 fun test_transport16_offboard_expiry_uses_original_duration() -> Bool:
     let board = transport16_fixture()
     board[1].battle_socked = true
@@ -5693,6 +5707,7 @@ fun test_transport16_offboard_expiry_uses_original_duration() -> Bool:
     board.start_turn_history()
     return !board.embarked_units[0].history.deck_shooting_locked and board.embarked_units[0].battle_socked and board.embarked_units[0][0].used_once_per_battle_weapon[0]
 
+# p.65: same-phase embark/Advance/Fall Back forbid exit; reserved carrier does too.
 fun test_transport16_disembark_phase_and_carrier_gates() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5708,6 +5723,7 @@ fun test_transport16_disembark_phase_and_carrier_gates() -> Bool:
         return false
     return !passenger_can_disembark(board, unit_id(0)) and board.embarked_units.size() == 1
 
+# p.65: wholly within tests the farthest base point, not minimal base distance.
 fun test_transport16_wholly_within_full_base_boundary() -> Bool:
     let board = transport16_fixture()
     board[1][0].profile = board[0][0].profile
@@ -5717,6 +5733,7 @@ fun test_transport16_wholly_within_full_base_boundary() -> Bool:
     board[1][0].position = board_position(14, 10)
     return board[1][0].distance(board[0][0]) < 3.0 and !passenger_wholly_within(board[1][0], board[0][0], 3)
 
+# p.65: mandatory modes choose Rapid after Normal, otherwise Tactical if legal.
 fun test_transport16_mode_priority_and_exact_grid_search() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5727,6 +5744,7 @@ fun test_transport16_mode_priority_and_exact_grid_search() -> Bool:
     record_move(board, unit_id(0), MovementKind::normal)
     return required_disembark_mode(board, board.embarked_units[0], carrier) == DisembarkMode::rapid and transport_has_setup(board, board.embarked_units[0], carrier, DisembarkMode::rapid, -1)
 
+# p.65: Rapid copies actual carrier ingress restrictions, not passenger Deep Strike.
 fun test_transport16_rapid_inherits_carrier_ingress_rules() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5745,6 +5763,7 @@ fun test_transport16_rapid_inherits_carrier_ingress_rules() -> Bool:
     board[0].history.ingress_used_deep_strike = true
     return transport_setup_valid(board, candidate, carrier, DisembarkMode::rapid, -1)
 
+# p.65: Tactical requires Normal/Advance afterwards; Stationary is forbidden.
 fun test_transport16_tactical_requires_followup_move() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5758,6 +5777,7 @@ fun test_transport16_tactical_requires_followup_move() -> Bool:
     sequence.finish_move(board)
     return sequence.is_done() and board.embarked_units.size() == 0 and board[1].history.disembarked_this_turn and board[1].history.move_kind == MovementKind::normal and valid_state_foundations(board)
 
+# p.65: Rapid completes setup, forbids charge, and preserves original slot.
 fun test_transport16_rapid_action_reuses_passenger_slot() -> Bool:
     let board = transport16_fixture()
     let identity = board[1].identity
@@ -5771,6 +5791,7 @@ fun test_transport16_rapid_action_reuses_passenger_slot() -> Bool:
     sequence.use_legal_disembark_setup(board)
     return sequence.is_done() and board[1].identity == identity and !board[1].can_charge and board[1].history.was_set_up_this_turn and !board[1].off_battlefield and board.units.size() == 2 and valid_state_foundations(board)
 
+# p.68: passengers add to reserve points and share carrier deadline.
 fun test_transport16_reserve_points_include_passengers() -> Bool:
     let board = transport16_fixture()
     board.battle_points_limit = 400
@@ -5790,6 +5811,7 @@ fun test_transport16_reserve_points_include_passengers() -> Bool:
     board.embarked_units[0].points_known = false
     return !strategic_reserve_valid(board, false, unit_id(0))
 
+# p.68–69: undeployed reserved passengers perish with their carrier, without ingress.
 fun test_transport16_passengers_share_reserve_deadline() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5800,6 +5822,7 @@ fun test_transport16_passengers_share_reserve_deadline() -> Bool:
     expire_unused_reserves(board)
     return board.reserve_units.empty() and board.embarked_units.empty() and board.expired_reserves.value.size() == 2
 
+# p.84: Dedicated Transport Scouts require every passenger and uniform values.
 fun test_transport16_dedicated_transport_scouts_permission() -> Bool:
     let board = transport16_fixture()
     board[0][0].keywords.append(Keyword::dedicated_transport)
@@ -5814,6 +5837,7 @@ fun test_transport16_dedicated_transport_scouts_permission() -> Bool:
     board.embarked_units[0][1].scout_distances.clear()
     return transport_scouts_distance(board, board[0]) == 0
 
+# Save infrastructure p.64: dangling/overfilled/foreign passenger links are rejected.
 fun test_transport16_invalid_passenger_links_rejected() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5828,6 +5852,8 @@ fun test_transport16_invalid_passenger_links_rejected() -> Bool:
     board.embarked_units[0].embarked_transport = 16000
     return !valid_state_foundations(board)
 
+# p.64: qualifying out-of-phase moves can embark too, with source-controller
+# decisions, caller restoration, and no prebattle Scouts embark exception.
 fun test_transport16_out_of_phase_embark_owner_and_prebattle_gate() -> Bool:
     let board = transport16_fixture()
     board.current_player = true
@@ -5844,6 +5870,7 @@ fun test_transport16_out_of_phase_embark_owner_and_prebattle_gate() -> Bool:
     board.prebattle_scouts = true
     return !has_embark_choice(board, unit_id(1))
 
+# p.64: prebattle formation choices are whole-unit decisions and preserve IDs.
 fun test_transport16_formation_action_starts_embarked() -> Bool:
     let board = transport16_fixture()
     board.reserve_units.append(board[0])
@@ -5859,6 +5886,8 @@ fun test_transport16_formation_action_starts_embarked() -> Bool:
     sequence.finish_transport_formations(board)
     return sequence.is_done() and board.embarked_units.size() == 1 and board.embarked_units[0].identity == identity and board.reserve_units.size() == 1 and valid_state_foundations(board)
 
+# p.65: Combat becomes compulsory when enemy engagement blocks all Tactical
+# placements; only enemies actually engaged with the carrier are allowed.
 fun test_transport16_combat_priority_and_enemy_permissions() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5882,6 +5911,8 @@ fun test_transport16_combat_priority_and_enemy_permissions() -> Bool:
     sequence.use_legal_disembark_setup(board)
     return sequence.is_done() and board[1].battle_socked and !board[1].can_charge and board.is_in_melee(board[1]) and valid_state_foundations(board)
 
+# p.64 datasheet permissions must reject forbidden transport passengers before
+# the user-directed no-nested-transports assertion can fire during enumeration.
 fun test_transport16_type_rejection_precedes_nesting_assertion() -> Bool:
     let board = transport16_fixture()
     let outer = board[0]
@@ -5892,6 +5923,8 @@ fun test_transport16_type_rejection_precedes_nesting_assertion() -> Bool:
     board.units.append(outer)
     board.identify_units()
     return !transport_can_carry(board, board[0], board[2], 0) and valid_state_foundations(board)
+# pp.73–74: TOWERING range is inclusive12 and skill improvements coexist
+# with cover; Aircraft exclusions are checked before grouping attack profiles.
 fun test_aircraft16_towering_plunging_range_and_skill() -> Bool:
     let board = shooting12_fixture()
     board[0][0].position = board_position(5, 5)
@@ -5911,6 +5944,7 @@ fun test_aircraft16_towering_plunging_range_and_skill() -> Bool:
 
 # Emergency lifecycle regressions: hazards/setup before carrier demise/removal
 # (core pp.64–65/80/87; supplied offboard appendix01.02.04).
+# p.65: emergency precedes carrier Deadly Demise, including hazard choices.
 fun test_transport16_emergency_before_deadly_demise() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5938,6 +5972,7 @@ fun test_transport16_emergency_before_deadly_demise() -> Bool:
     sequence.roll(board, one)
     return sequence.is_done() and board[0].empty() and board[1].models.size() == 2 and valid_state_foundations(board)
 
+# p.64–65: even a carrier without Deadly Demise is retained for emergency exit.
 fun test_transport16_emergency_retains_plain_carrier() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5945,6 +5980,7 @@ fun test_transport16_emergency_retains_plain_carrier() -> Bool:
     commit_wound_loss(board, job, damage_test_model(0), 6, false)
     return board[0][0].destruction_pending and carrier_has_passengers(board, board[0][0].identity)
 
+# p.65: no legal supported placement destroys passengers instead of stalling.
 fun test_transport16_emergency_unplaceable_models_destroyed() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5955,6 +5991,8 @@ fun test_transport16_emergency_unplaceable_models_destroyed() -> Bool:
     arrange_emergency_survivors(board, original, candidate, carrier, -1)
     return candidate.empty()
 
+# p.65: hazards allocate before placing passengers; one failed infantry roll
+# inflicts one mortal, then survivors are shocked with the charge ban.
 fun test_transport16_emergency_hazard_damage_before_setup() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5972,6 +6010,8 @@ fun test_transport16_emergency_hazard_damage_before_setup() -> Bool:
     sequence.select_mortal_model(board, damage_test_model(0))
     return sequence.is_done() and !board[1].off_battlefield and board[1][0].suffered_wounds == 1 and board[1].battle_socked and !board[1].can_charge and valid_state_foundations(board)
 
+# p.65: actual emergency resolution archives every unplaceable survivor and
+# completes the carrier's removal, rather than hanging at a setup choice.
 fun test_transport16_emergency_unplaceable_resolution_archives() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -5989,6 +6029,7 @@ fun test_transport16_emergency_unplaceable_resolution_archives() -> Bool:
 
 # Firing Deck regressions: per-model X, weapon attribution and passenger
 # turn-long shooting restrictions (24.14 p.81).
+# p.81: Firing Deck counts chosen models per carrier and excludes already-shot units.
 fun test_transport16_firing_deck_model_limits() -> Bool:
     let board = transport16_fixture()
     board[0][0].firing_deck = 1
@@ -6006,6 +6047,8 @@ fun test_transport16_firing_deck_model_limits() -> Bool:
     board.embarked_units[0].history.shot_this_phase = true
     return !deck_passenger_valid(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), selected)
 
+# p.81: ONE SHOT is excluded, weapons are attributed to the carrier, and
+# physical passenger/carrier weapon slots and One Shot usage stay untouched.
 fun test_transport16_firing_deck_weapon_provenance() -> Bool:
     let board = transport16_fixture()
     board[0][0].firing_deck = 1
@@ -6019,6 +6062,7 @@ fun test_transport16_firing_deck_weapon_provenance() -> Bool:
     board.embarked_units[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::one_shot))
     return !deck_weapon_valid(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 0, declarations) and !board.embarked_units[0][0].used_once_per_battle_weapon[0]
 
+# p.81: even unselected passengers are locked until turn end, including after exit.
 fun test_transport16_firing_deck_locks_all_passengers() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
@@ -6033,6 +6077,8 @@ fun test_transport16_firing_deck_locks_all_passengers() -> Bool:
     board.start_turn_history()
     return !board[slot].history.deck_shooting_locked
 
+# p.81: deck selection appends temporary declarations through explicit
+# passenger/model/weapon decisions and consumes X without consuming One Shot.
 fun test_transport16_firing_deck_action_selection() -> Bool:
     let board = transport16_fixture()
     board[0][0].firing_deck = 1
