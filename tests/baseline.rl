@@ -5410,3 +5410,21 @@ fun test_core15_counteroffensive_decline() -> Bool:
     core15_miss_attacks(sequence, board, unit_id(0), unit_id(1))
     sequence.decline_counteroffensive(board)
     return board.command_points[1] == 3 and (can sequence.select_fighting_unit(board, unit_id(1))) and !board[1].phase_modifiers.counteroffensive
+
+# pp.33/57–58: Advance alone does not prohibit Snap, but Fall Back and an
+# action's general shooting ban still apply. TITANIC is explicitly excluded.
+fun test_core15_overwatch_printed_source_eligibility() -> Bool:
+    let board = core15_fixture()
+    board[1].history.advanced_this_turn = true
+    if !overwatch_source_valid(board, true, unit_id(1)):
+        return false
+    board[1].history.fell_back_this_turn = true
+    if overwatch_source_valid(board, true, unit_id(1)):
+        return false
+    board[1].history.fell_back_this_turn = false
+    board[1].history.action_started = true
+    if overwatch_source_valid(board, true, unit_id(1)):
+        return false
+    board[1].history.action_started = false
+    board[1][0].keywords.append(Keyword::titanic)
+    return !overwatch_source_valid(board, true, unit_id(1))

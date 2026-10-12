@@ -1062,7 +1062,7 @@ fun overwatch_target_valid(Board board, UnitID source, UnitID target) -> Bool:
 # Check a source before offering the timing rule: accepting an option with
 # no eligible target would otherwise stall the phase (p.57).
 fun overwatch_source_valid(Board board, Bool player, UnitID source) -> Bool:
-    if source.get() >= board.units.size() or board[source].owned_by_player1 != player or !board.can_target_strat(player, Stratagem::overwatch, board[source]) or board.is_in_melee(board[source]) or board[source].has_keyword(Keyword::titanic) or !board[source].can_shoot or board[source].history.fell_back_this_turn or board[source].history.action_started:
+    if source.get() >= board.units.size() or board[source].owned_by_player1 != player or !board.can_target_strat(player, Stratagem::overwatch, board[source]) or board.is_in_melee(board[source]) or board[source].has_keyword(Keyword::titanic) or !has_live_model(board[source]) or !board[source].can_shoot or board[source].history.fell_back_this_turn or board[source].history.action_started or board[source].history.shot_this_phase:
         return false
     let i = 0
     while i < board.units.size():
