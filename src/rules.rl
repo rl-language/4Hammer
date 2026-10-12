@@ -1197,6 +1197,79 @@ act timing_rapid_ingress(ctx Board board, frm Bool player) -> TimingRapidIngress
         act ingress_at(BoardPosition position) {board.units.has_capacity(), setup_at_valid(board, board.reserve_units[reserve.get()], position, MovementKind::ingress, false)}
             enter_from_reserves(board, reserve, position, MovementKind::ingress)
 
+# p.57: select and spend before the phase-long cover grant; the enclosing
+# start window supplies exact timing and controller ordering.
+act timing_smokescreen(ctx Board board, frm Bool player) -> TimingSmokescreen:
+    frm previous_owner = board.current_decision_maker
+    board.current_decision_maker = player
+    act smokescreen(UnitID source) {smoke_source_valid(board, player, source)}
+    board.commit_stratagem(player, Stratagem::smokescreen, board[source])
+    board[source].phase_modifiers.smokescreen = true
+    board.current_decision_maker = previous_owner
+
+# p.56: choose bearer then visible unengaged target, roll exactly six dice,
+# and use the common mortal/FNP/destruction pipeline (pp.24/81/87).
+act resolve_explosives(ctx Board board, frm UnitID source) -> Explosives:
+    if !explosives_source_valid(board, source):
+        return
+    frm previous_owner = board.current_decision_maker
+    frm previous_active = board.timing.active_player
+    frm previous_mover = board.moving_unit
+    board.current_decision_maker = board[source].owned_by_player1
+    board.timing.active_player = board[source].owned_by_player1
+    board.moving_unit = source
+    board.commit_stratagem(board[source].owned_by_player1, Stratagem::explosives, board[source])
+    act choose_explosives_model(frm ModelID model) {explosives_model_has_target(board, source, model)}
+    act choose_explosives_target(frm UnitID target) {explosives_target_valid(board, source, model, target)}
+    frm amount : CombatCounter
+    frm index : BInt<0, 7>
+    while index < 6:
+        act roll(Dice face)
+        if face.value >= 4:
+            amount = amount + 1
+        index = index + 1
+    subaction*(board) damage = resolve_mortal_wounds(board, target, source, true, amount)
+    board.moving_unit = previous_mover
+    board.timing.active_player = previous_active
+    board.current_decision_maker = previous_owner
+
+# p.56: choose engaged enemy then engaged source model, roll T dice, cap both
+# mortal totals at six and apply both even if the source is destroyed. No
+# Command Re-roll is allowed for this stratagem-specific roll (p.56 list).
+act resolve_crushing_impact(ctx Board board, frm UnitID source) -> CrushingImpact:
+    if !crushing_source_valid(board, source):
+        return
+    frm previous_owner = board.current_decision_maker
+    frm previous_active = board.timing.active_player
+    frm previous_mover = board.moving_unit
+    board.current_decision_maker = board[source].owned_by_player1
+    board.timing.active_player = board[source].owned_by_player1
+    board.commit_stratagem(board[source].owned_by_player1, Stratagem::crushing_impact, board[source])
+    act choose_impact_target(frm UnitID target) {crushing_target_valid(board, source, target)}
+    board.moving_unit = source
+    act choose_impact_model(frm ModelID model) {crushing_model_valid(board, source, target, model)}
+    frm total : Toughness
+    total = board[source][model].profile.thoughness()
+    frm index : Toughness
+    frm self_amount : CombatCounter
+    frm enemy_amount : CombatCounter
+    while index < total:
+        act roll(Dice face)
+        if face.value == 1:
+            self_amount = min(6, self_amount.value + 1)
+        if face.value >= 5:
+            enemy_amount = min(6, enemy_amount.value + 1)
+        index = index + 1
+    frm jobs : DamageJobs
+    # Stack order applies current-player losses first; all destruction effects
+    # use the common Rules Sequencing engine, not bespoke casualty deletion.
+    jobs.append(damage_job(DamageKind::mortal, target, source, true, false, enemy_amount.value, invalid_entity_identity()))
+    jobs.append(damage_job(DamageKind::mortal, source, source, false, false, self_amount.value, invalid_entity_identity()))
+    subaction*(board) damage = resolve_damage_jobs(board, jobs, false, source)
+    board.moving_unit = previous_mover
+    board.timing.active_player = previous_active
+    board.current_decision_maker = previous_owner
+
 # Fire Overwatch is a choice at the end of the opponent's Movement phase,
 # rather than after every individual move/charge (p.57). Full snap-shooting
 # declaration/visibility/attack semantics remain with tasks 8/9/12/15.
@@ -2008,7 +2081,7 @@ act movement_phase(ctx Board board) -> MovementPhase:
     board.current_decision_maker = board.current_player
 
 # Select the shooting type before weapons, even for a unit with no ranged
-# weapons; selecting to shoot prohibits phase-local action starts (pp.34–35/88).
+# weapons; shooting prohibits phase-local action starts (pp.34–35/57/88).
 act selected_shooting(ctx Board board, frm UnitID source, frm UnitID initial_target) -> SelectedShooting:
     board[source].has_shoot = true
     board[source].history.shot_this_phase = true
@@ -2302,76 +2375,3 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
 
 
     board.identify_units()
-
-# p.56: choose bearer then visible unengaged target, roll exactly six dice,
-# and use the common mortal/FNP/destruction pipeline (pp.24/81/87).
-act resolve_explosives(ctx Board board, frm UnitID source) -> Explosives:
-    if !explosives_source_valid(board, source):
-        return
-    frm previous_owner = board.current_decision_maker
-    frm previous_active = board.timing.active_player
-    frm previous_mover = board.moving_unit
-    board.current_decision_maker = board[source].owned_by_player1
-    board.timing.active_player = board[source].owned_by_player1
-    board.moving_unit = source
-    board.commit_stratagem(board[source].owned_by_player1, Stratagem::explosives, board[source])
-    act choose_explosives_model(frm ModelID model) {explosives_model_has_target(board, source, model)}
-    act choose_explosives_target(frm UnitID target) {explosives_target_valid(board, source, model, target)}
-    frm amount : CombatCounter
-    frm index : BInt<0, 7>
-    while index < 6:
-        act roll(Dice face)
-        if face.value >= 4:
-            amount = amount + 1
-        index = index + 1
-    subaction*(board) damage = resolve_mortal_wounds(board, target, source, true, amount)
-    board.moving_unit = previous_mover
-    board.timing.active_player = previous_active
-    board.current_decision_maker = previous_owner
-
-# p.56: choose engaged enemy then engaged source model, roll T dice, cap both
-# mortal totals at six and apply both even if the source is destroyed. No
-# Command Re-roll is allowed for this stratagem-specific roll (p.56 list).
-act resolve_crushing_impact(ctx Board board, frm UnitID source) -> CrushingImpact:
-    if !crushing_source_valid(board, source):
-        return
-    frm previous_owner = board.current_decision_maker
-    frm previous_active = board.timing.active_player
-    frm previous_mover = board.moving_unit
-    board.current_decision_maker = board[source].owned_by_player1
-    board.timing.active_player = board[source].owned_by_player1
-    board.commit_stratagem(board[source].owned_by_player1, Stratagem::crushing_impact, board[source])
-    act choose_impact_target(frm UnitID target) {crushing_target_valid(board, source, target)}
-    board.moving_unit = source
-    act choose_impact_model(frm ModelID model) {crushing_model_valid(board, source, target, model)}
-    frm total : Toughness
-    total = board[source][model].profile.thoughness()
-    frm index : Toughness
-    frm self_amount : CombatCounter
-    frm enemy_amount : CombatCounter
-    while index < total:
-        act roll(Dice face)
-        if face.value == 1:
-            self_amount = min(6, self_amount.value + 1)
-        if face.value >= 5:
-            enemy_amount = min(6, enemy_amount.value + 1)
-        index = index + 1
-    frm jobs : DamageJobs
-    # Stack order applies current-player losses first; all destruction effects
-    # use the common Rules Sequencing engine, not bespoke casualty deletion.
-    jobs.append(damage_job(DamageKind::mortal, target, source, true, false, enemy_amount.value, invalid_entity_identity()))
-    jobs.append(damage_job(DamageKind::mortal, source, source, false, false, self_amount.value, invalid_entity_identity()))
-    subaction*(board) damage = resolve_damage_jobs(board, jobs, false, source)
-    board.moving_unit = previous_mover
-    board.timing.active_player = previous_active
-    board.current_decision_maker = previous_owner
-
-# p.57: select and spend before the phase-long cover grant; the enclosing
-# start window supplies exact timing and controller ordering.
-act timing_smokescreen(ctx Board board, frm Bool player) -> TimingSmokescreen:
-    frm previous_owner = board.current_decision_maker
-    board.current_decision_maker = player
-    act smokescreen(UnitID source) {smoke_source_valid(board, player, source)}
-    board.commit_stratagem(player, Stratagem::smokescreen, board[source])
-    board[source].phase_modifiers.smokescreen = true
-    board.current_decision_maker = previous_owner

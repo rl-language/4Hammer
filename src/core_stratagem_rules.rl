@@ -75,22 +75,6 @@ fun complete_unit_action(Board board, UnitID source) -> Bool:
         return false
     return complete_unit_action(board, source, board[source].history.action_records.back().started_turn)
 
-# p.56: retained authorised CHARACTER fighters remain eligible (supplied Fight
-# on Death); ordinary corpses cannot receive a new melee-weapon grant.
-fun epic_model_valid(Board board, UnitID source, ModelID model) -> Bool:
-    return source.get() < board.units.size() and model.get() < board[source].models.size() and fight_model_present(board[source][model]) and board[source][model].has_keyword(Keyword::character)
-
-# p.56: just-selected friendly CHARACTER unit, with a selectable bearer and CP.
-fun epic_source_valid(Board board, UnitID source) -> Bool:
-    if source.get() >= board.units.size() or !(board.timing.phase == BattlePhase::fight) or !board.can_target_strat(board[source].owned_by_player1, Stratagem::epic_challenge, board[source]):
-        return false
-    for i in range(board[source].models.size()):
-        let model : ModelID
-        model = i
-        if epic_model_valid(board, source, model):
-            return true
-    return false
-
 # p.56: keyword belongs to the selected living bearer, not a mixed unit's ally.
 fun explosives_model_valid(Board board, UnitID source, ModelID model) -> Bool:
     return source.get() < board.units.size() and model.get() < board[source].models.size() and board[source][model].is_alive() and (board[source][model].has_keyword(Keyword::explosives) or board[source][model].has_keyword(Keyword::grenades))
@@ -146,6 +130,22 @@ fun crushing_source_valid(Board board, UnitID source) -> Bool:
         let target : UnitID
         target = i
         if crushing_target_valid(board, source, target):
+            return true
+    return false
+
+# p.56: retained authorised CHARACTER fighters remain eligible (supplied Fight
+# on Death); ordinary corpses cannot receive a new melee-weapon grant.
+fun epic_model_valid(Board board, UnitID source, ModelID model) -> Bool:
+    return source.get() < board.units.size() and model.get() < board[source].models.size() and fight_model_present(board[source][model]) and board[source][model].has_keyword(Keyword::character)
+
+# p.56: just-selected friendly CHARACTER unit, with a selectable bearer and CP.
+fun epic_source_valid(Board board, UnitID source) -> Bool:
+    if source.get() >= board.units.size() or !(board.timing.phase == BattlePhase::fight) or !board.can_target_strat(board[source].owned_by_player1, Stratagem::epic_challenge, board[source]):
+        return false
+    for i in range(board[source].models.size()):
+        let model : ModelID
+        model = i
+        if epic_model_valid(board, source, model):
             return true
     return false
 

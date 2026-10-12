@@ -293,7 +293,6 @@ enum TimingRule:
     heroic_intervention
     smokescreen
 
-
     fun equal(TimingRule other) -> Bool:
         return self.value == other.value
 

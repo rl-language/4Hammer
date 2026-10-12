@@ -287,14 +287,14 @@ fun test_15_01_own_player_usage() -> Bool:
     return !board.can_use_strat(false, Stratagem::reroll)
 
 
-# Existing Overwatch expenditure defects exposed by checked CP (p.55).
-# Its new-edition timing/eligibility remains task 15.
+# pp.54/57: no affordable Overwatch source leaves no optional timing decision.
 fun test_overwatch_with_no_cp_cannot_spend() -> Bool:
     let board = core15_fixture()
     board.command_points[1] = 0
     let sequence = resolve_timing_window(board, TimingWindow::movement_end)
     return sequence.is_done() and board.command_points[1] == 0 and !board.has_used_strat(Stratagem::overwatch, 1)
 
+# pp.54/57: declining at the actual Movement-end boundary preserves CP/usage.
 fun test_declining_overwatch_preserves_cp_and_usage() -> Bool:
     let board = core15_fixture()
     board.command_points[1] = 1
@@ -4772,6 +4772,20 @@ fun fight14_miss_attacks(FightStep sequence, Board board, UnitID source, UnitID 
     if can sequence.decline_counteroffensive(board):
         sequence.decline_counteroffensive(board)
 
+fun core15_miss_attacks(FightStep sequence, Board board, UnitID source, UnitID target):
+    sequence.select_weapon(board, attack_test_slot(2))
+    sequence.skip(board)
+    sequence.declare_target(board, source, target)
+    sequence.assign_attacks(board, attack_test_share(3))
+    sequence.choose_attack_target(board, target)
+    sequence.no_defensive_stratagem(board)
+    sequence.no_offensive_stratagem(board)
+    sequence.choose_attack_weapon(board, attack_test_weapon(0))
+    for i in range(3):
+        sequence.roll(board, attack_test_die(1))
+    if can sequence.keep_batch(board):
+        sequence.keep_batch(board)
+
 fun fight14_miss_attacks(MeleeMoveStep sequence, Board board, UnitID source, UnitID target):
     sequence.select_weapon(board, attack_test_slot(2))
     sequence.skip(board)
@@ -4919,187 +4933,9 @@ fun core15_fixture() -> Board:
     board[0][0].keywords.append(Keyword::grenades)
     return board
 
-# p.58: battlefield, owner, live OC, shock/keywords and engagement gates.
-fun test_core15_action_start_membership_and_keywords() -> Bool:
-    let board = core15_fixture()
-    if !action_start_valid(board, unit_id(0), false) or action_start_valid(board, unit_id(0), true) or action_start_valid(board, unit_id(31), false):
-        return false
-    board[0][0].keywords.append(Keyword::fortification)
-    if action_start_valid(board, unit_id(0), false):
-        return false
-    board[0][0].keywords.clear()
-    board[0][0].keywords.append(Keyword::aircraft)
-    return !action_start_valid(board, unit_id(0), false)
-
-# p.58: start commits no CP, locks another start/charge and non-TITANIC shooting.
-fun test_core15_action_start_locks_and_completion() -> Bool:
-    let board = core15_fixture()
-    if !begin_unit_action(board, unit_id(0), false) or begin_unit_action(board, unit_id(0), false):
-        return false
-    if shooting_unit_valid(board, unit_id(0)) or charge_source_valid(board, unit_id(0), false):
-        return false
-    if !complete_unit_action(board, unit_id(0)) or complete_unit_action(board, unit_id(0)):
-        return false
-    return board[0].history.action_completed and board[0].history.action_started and !board[0].history.action_pending and board.command_points[0] == 3
-
-# p.58: TITANIC bypasses engaged/action-start shooting bans, but not charge ban.
-fun test_core15_action_titanic_exceptions() -> Bool:
-    let board = fight14_fixture()
-    board[0].can_shoot = true
-    board[0][0].keywords.append(Keyword::titanic)
-    board[0][0].keywords.append(Keyword::vehicle)
-    if !begin_unit_action(board, unit_id(0), false):
-        return false
-    return shooting_kind_valid(board, unit_id(0), ShootingKind::close_quarters) and !charge_source_valid(board, unit_id(0), false)
-
-# p.58: generic non-melee movement, even zero distance, fails pending action;
-# Remain Stationary explicitly does not trigger movement (p.33).
-fun test_core15_action_move_interrupt_and_stationary_exception() -> Bool:
-    let board = core15_fixture()
-    begin_unit_action(board, unit_id(0), false)
-    record_move(board, unit_id(0), MovementKind::stationary)
-    if !action_completion_valid(board, unit_id(0)):
-        return false
-    record_move(board, unit_id(0), MovementKind::normal)
-    return !complete_unit_action(board, unit_id(0)) and board[0].history.action_failed and !board[0].history.action_completed
-
-# pp.9/58: Battle-shock at completion blocks the effect; earlier shock that
-# has recovered does not permanently fail an otherwise uninterrupted action.
-fun test_core15_action_shock_completion_and_recovery() -> Bool:
-    let board = core15_fixture()
-    begin_unit_action(board, unit_id(0), false)
-    board[0].battle_socked = true
-    if action_completion_valid(board, unit_id(0)):
-        return false
-    board[0].battle_socked = false
-    return complete_unit_action(board, unit_id(0))
-
-# p.58: turn start unlocks a new start but keeps unfinished cross-turn actions.
-fun test_core15_action_cross_turn_pending_and_departure() -> Bool:
-    let board = core15_fixture()
-    begin_unit_action(board, unit_id(0), false)
-    board.start_turn_history()
-    if board[0].history.action_started or !board[0].history.action_pending or !action_completion_valid(board, unit_id(0)):
-        return false
-    if !reposition_unit(board, unit_id(0)):
-        return false
-    return !complete_unit_action(board, unit_id(0)) and board.reserve_units[0].history.action_pending and board.reserve_units[0].history.action_failed
-
-# pp.34–35/57: all printed shooting types prohibit action starts until phase
-# end; the restriction is independent of whether any weapon was selected.
-fun test_core15_all_shooting_phase_action_lock() -> Bool:
-    let board = core15_fixture()
-    board[0].history.shot_this_phase = true
-    if action_start_valid(board, unit_id(0), false):
-        return false
-    board.begin_phase(BattlePhase::charge)
-    return action_start_valid(board, unit_id(0), false)
-
-# p.58: Pile In/consolidation are explicitly exempt from action interruption.
-fun test_core15_action_pile_in_exempt_and_pending_round_trip() -> Bool:
-    let board = fight14_fixture()
-    board[0][0].keywords.append(Keyword::titanic)
-    if !begin_unit_action(board, unit_id(0), false):
-        return false
-    let moving = melee_move(board, unit_id(0), false, false)
-    moving.select_melee_model(board, damage_test_model(0))
-    moving.choose_melee_approach(board, unit_id(1))
-    moving.melee_waypoint(board, board_position(6, 5))
-    moving.finish_melee_model(board)
-    moving.finish_melee_move(board)
-    let text = to_string(board)
-    let restored : Board
-    let offset = 0
-    if !from_string(restored, text, offset):
-        return false
-    return moving.completed and action_completion_valid(restored, unit_id(0)) and complete_unit_action(restored, unit_id(0)) and restored[0].history.action_completed
-
-# p.58: the lower-level out-of-phase Move entry also fails pending actions,
-# even when the ordinary Movement-phase record_move caller is absent.
-fun test_core15_action_direct_move_interrupt() -> Bool:
-    let board = core15_fixture()
-    begin_unit_action(board, unit_id(0), false)
-    let moving = move(board, unit_id(0), 0)
-    moving.move_to(board, unit_id(0), board_position(6, 5))
-    return moving.completed and board[0].history.action_failed and !complete_unit_action(board, unit_id(0))
-
-# p.58: one start per turn permits another action in a later turn while an
-# earlier mission action is still pending. Complete each by its own turn stamp.
-fun test_core15_actions_overlap_across_turns_without_aliasing() -> Bool:
-    let board = core15_fixture()
-    begin_unit_action(board, unit_id(0), false)
-    let first = board[0].history.action_records[0].started_turn
-    board.start_turn_history()
-    if !action_start_valid(board, unit_id(0), false) or !begin_unit_action(board, unit_id(0), false):
-        return false
-    let second = board[0].history.action_records[1].started_turn
-    if first == second or !complete_unit_action(board, unit_id(0), first) or !board[0].history.action_pending or complete_unit_action(board, unit_id(0), first):
-        return false
-    return complete_unit_action(board, unit_id(0), second) and !board[0].history.action_pending
-
-# p.58 bounded save infrastructure: zero/duplicate action handles and conflicting
-# completion flags are rejected rather than redirecting a mission's effect.
-fun test_core15_malformed_action_history_rejected() -> Bool:
-    let board = core15_fixture()
-    begin_unit_action(board, unit_id(0), false)
-    if !valid_state_foundations(board):
-        return false
-    board[0].history.action_records[0].started_turn = 0
-    if valid_state_foundations(board):
-        return false
-    board[0].history.action_records[0].started_turn = 1
-    board[0].history.action_records[0].completed = true
-    return !valid_state_foundations(board)
-
-# p.56: Epic Challenge chooses one CHARACTER, at selection rather than per
-# attack target; ordinary living models do not inherit its Precision grant.
-fun test_core15_epic_selected_character_only_melee() -> Bool:
-    let board = fight14_fixture()
-    board[0][0].keywords.append(Keyword::character)
-    let ordinary = board[0][0]
-    ordinary.keywords.clear()
-    board[0].models.append(ordinary)
-    let sequence = selected_fight(board, unit_id(0))
-    if !(can sequence.epic_challenge(board)) or (can sequence.choose_fight_kind(board, FightKind::normal)):
-        return false
-    sequence.epic_challenge(board)
-    if (can sequence.choose_epic_character(board, damage_test_model(1))):
-        return false
-    sequence.choose_epic_character(board, damage_test_model(0))
-    let melee = make_declared_weapon(board, unit_id(0), 0, 2)
-    let ranged = make_declared_weapon(board, unit_id(0), 0, 0)
-    let other = make_declared_weapon(board, unit_id(0), 1, 2)
-    return board.command_points[0] == 2 and declared_weapon_has_kind(melee, WeaponRuleKind::precision) and !declared_weapon_has_kind(ranged, WeaponRuleKind::precision) and !declared_weapon_has_kind(other, WeaponRuleKind::precision)
-
-# pp.54/56: decline spends nothing; shock/used-unit restrictions remove it.
-fun test_core15_epic_decline_and_stratagem_limits() -> Bool:
-    let board = fight14_fixture()
-    board[0][0].keywords.append(Keyword::character)
-    let sequence = selected_fight(board, unit_id(0))
-    sequence.decline_epic_challenge(board)
-    if board.command_points[0] != 3 or !(can sequence.choose_fight_kind(board, FightKind::normal)):
-        return false
-    board[0].battle_socked = true
-    return !epic_source_valid(board, unit_id(0))
-
-# p.56: Precision expires at phase end, including retained model metadata.
-fun test_core15_epic_phase_expiry() -> Bool:
-    let board = fight14_fixture()
-    board[0][0].history.epic_challenge = true
-    board.begin_phase(BattlePhase::command)
-    return !board[0][0].history.epic_challenge
-
-# Supplied Fight on Death plus p.56: retained CHARACTER models remain valid
-# Epic Challenge recipients when selected with their own unit.
-fun test_core15_epic_retained_character() -> Bool:
-    let board = fight14_fixture()
-    board[0][0].keywords.append(Keyword::character)
-    board[0][0].state = ModelState::fight_on_death
-    board[0][0].suffered_wounds = 2
-    board[0][0].destruction_pending = true
-    let sequence = selected_fight(board, unit_id(0))
-    sequence.epic_challenge(board)
-    return can sequence.choose_epic_character(board, damage_test_model(0))
+# p.56: all four added 1CP stratagems and Counteroffensive's 2CP cost.
+fun test_core15_printed_costs() -> Bool:
+    return Stratagem::explosives.cost() == 1 and Stratagem::crushing_impact.cost() == 1 and Stratagem::epic_challenge.cost() == 1 and Stratagem::smokescreen.cost() == 1 and Stratagem::counteroffensive.cost() == 2
 
 # p.56: friendly source in own Shooting phase, not Advance/shock/engagement.
 fun test_core15_explosives_source_gates() -> Bool:
@@ -5188,22 +5024,6 @@ fun test_core15_explosives_shooting_phase_entry() -> Bool:
     phase.end_shooting_phase(board)
     return phase.is_done() and board.command_points[0] == 3 and !board.has_used_strat(Stratagem::explosives, 0)
 
-# pp.56/81: Explosives mortals allow the common per-wound Feel No Pain roll;
-# the stratagem's six initial dice are not Command Re-roll eligible.
-fun test_core15_explosives_feel_no_pain() -> Bool:
-    let board = core15_fixture()
-    board[1][0].profile = Profile::squighog_boyz
-    let sequence = resolve_explosives(board, unit_id(0))
-    sequence.choose_explosives_model(board, damage_test_model(0))
-    sequence.choose_explosives_target(board, unit_id(1))
-    for i in range(6):
-        sequence.roll(board, attack_test_die(1 + 3 * int(i == 0)))
-    sequence.select_mortal_model(board, damage_test_model(0))
-    if !(can sequence.roll(board, attack_test_die(5))):
-        return false
-    sequence.roll(board, attack_test_die(5))
-    return sequence.is_done() and board[1][0].suffered_wounds == 0 and board.command_points[1] == 3
-
 # p.56: a successful own Charge-phase move and keyword are mandatory.
 fun test_core15_crushing_success_phase_and_keyword_gates() -> Bool:
     let board = fight14_fixture()
@@ -5278,38 +5098,43 @@ fun test_core15_crushing_after_real_charge_and_decline() -> Bool:
     sequence.decline_crushing_impact(board)
     return sequence.is_done() and board[0].has_charged and board.command_points[0] == 3
 
-# p.56: simultaneous generated impact amounts both resolve even when source
-# losses destroy the charger before the opposing losses are allocated.
-fun test_core15_crushing_source_death_does_not_cancel_enemy_mortals() -> Bool:
+# p.56: Epic Challenge chooses one CHARACTER, at selection rather than per
+# attack target; ordinary living models do not inherit its Precision grant.
+fun test_core15_epic_selected_character_only_melee() -> Bool:
     let board = fight14_fixture()
-    board.begin_phase(BattlePhase::charge)
-    board[0][0].keywords.append(Keyword::vehicle)
-    record_charge_move(board, unit_id(0))
-    let sequence = resolve_crushing_impact(board, unit_id(0))
-    sequence.choose_impact_target(board, unit_id(1))
-    sequence.choose_impact_model(board, damage_test_model(0))
-    sequence.roll(board, attack_test_die(1))
-    sequence.roll(board, attack_test_die(1))
-    sequence.roll(board, attack_test_die(5))
-    sequence.roll(board, attack_test_die(5))
-    sequence.select_mortal_model(board, damage_test_model(0))
-    sequence.select_mortal_model(board, damage_test_model(0))
-    if !board[0].models.empty() or !(can sequence.select_mortal_model(board, damage_test_model(0))):
+    board[0][0].keywords.append(Keyword::character)
+    let ordinary = board[0][0]
+    ordinary.keywords.clear()
+    board[0].models.append(ordinary)
+    let sequence = selected_fight(board, unit_id(0))
+    if !(can sequence.epic_challenge(board)) or (can sequence.choose_fight_kind(board, FightKind::normal)):
         return false
-    sequence.select_mortal_model(board, damage_test_model(0))
-    sequence.select_mortal_model(board, damage_test_model(0))
-    return sequence.is_done() and board[1].models.empty() and board[0].destroyed_models.value.size() == 1 and board[1].destroyed_models.value.size() == 1
+    sequence.epic_challenge(board)
+    if (can sequence.choose_epic_character(board, damage_test_model(1))):
+        return false
+    sequence.choose_epic_character(board, damage_test_model(0))
+    let melee = make_declared_weapon(board, unit_id(0), 0, 2)
+    let ranged = make_declared_weapon(board, unit_id(0), 0, 0)
+    let other = make_declared_weapon(board, unit_id(0), 1, 2)
+    return board.command_points[0] == 2 and declared_weapon_has_kind(melee, WeaponRuleKind::precision) and !declared_weapon_has_kind(ranged, WeaponRuleKind::precision) and !declared_weapon_has_kind(other, WeaponRuleKind::precision)
 
-# p.56: failed or cancelled charge declarations never expose Crushing Impact.
-fun test_core15_crushing_failed_charge_has_no_option() -> Bool:
-    let board = charge13_fixture()
-    board.begin_phase(BattlePhase::charge)
-    board[0][0].keywords.append(Keyword::monster)
-    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
-    sequence.roll_pair(board, attack_test_die(1), attack_test_die(1))
-    sequence.keep_it(board, true)
-    sequence.cancel_charge(board)
-    return sequence.is_done() and !crushing_source_valid(board, unit_id(0)) and board.command_points[0] == 3
+# pp.54/56: decline spends nothing; shock/used-unit restrictions remove it.
+fun test_core15_epic_decline_and_stratagem_limits() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::character)
+    let sequence = selected_fight(board, unit_id(0))
+    sequence.decline_epic_challenge(board)
+    if board.command_points[0] != 3 or !(can sequence.choose_fight_kind(board, FightKind::normal)):
+        return false
+    board[0].battle_socked = true
+    return !epic_source_valid(board, unit_id(0))
+
+# p.56: Precision expires at phase end, including retained model metadata.
+fun test_core15_epic_phase_expiry() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].history.epic_challenge = true
+    board.begin_phase(BattlePhase::command)
+    return !board[0][0].history.epic_challenge
 
 # p.57: Smokescreen is only a start-of-opponent-Shooting window option.
 fun test_core15_smoke_window_target_and_expiry() -> Bool:
@@ -5348,24 +5173,6 @@ fun test_core15_smoke_attack_cover_snapshot() -> Bool:
     let melee = make_declared_weapon(board, unit_id(0), 0, 2)
     let close = declared_attack_info(board, unit_id(0), unit_id(1), melee, info)
     return ranged.target_has_cover and !close.target_has_cover
-
-fun core15_miss_attacks(FightStep sequence, Board board, UnitID source, UnitID target):
-    sequence.select_weapon(board, attack_test_slot(2))
-    sequence.skip(board)
-    sequence.declare_target(board, source, target)
-    sequence.assign_attacks(board, attack_test_share(3))
-    sequence.choose_attack_target(board, target)
-    sequence.no_defensive_stratagem(board)
-    sequence.no_offensive_stratagem(board)
-    sequence.choose_attack_weapon(board, attack_test_weapon(0))
-    for i in range(3):
-        sequence.roll(board, attack_test_die(1))
-    if can sequence.keep_batch(board):
-        sequence.keep_batch(board)
-
-# p.56: all four added 1CP stratagems and Counteroffensive's 2CP cost.
-fun test_core15_printed_costs() -> Bool:
-    return Stratagem::explosives.cost() == 1 and Stratagem::crushing_impact.cost() == 1 and Stratagem::epic_challenge.cost() == 1 and Stratagem::smokescreen.cost() == 1 and Stratagem::counteroffensive.cost() == 2
 
 # p.57: Counteroffensive needs two CP, opposing Fight phase and eligible unit.
 fun test_core15_counteroffensive_target_gates() -> Bool:
@@ -5411,6 +5218,72 @@ fun test_core15_counteroffensive_decline() -> Bool:
     sequence.decline_counteroffensive(board)
     return board.command_points[1] == 3 and (can sequence.select_fighting_unit(board, unit_id(1))) and !board[1].phase_modifiers.counteroffensive
 
+# p.58: battlefield, owner, live OC, shock/keywords and engagement gates.
+fun test_core15_action_start_membership_and_keywords() -> Bool:
+    let board = core15_fixture()
+    if !action_start_valid(board, unit_id(0), false) or action_start_valid(board, unit_id(0), true) or action_start_valid(board, unit_id(31), false):
+        return false
+    board[0][0].keywords.append(Keyword::fortification)
+    if action_start_valid(board, unit_id(0), false):
+        return false
+    board[0][0].keywords.clear()
+    board[0][0].keywords.append(Keyword::aircraft)
+    return !action_start_valid(board, unit_id(0), false)
+
+# p.58: start commits no CP, locks another start/charge and non-TITANIC shooting.
+fun test_core15_action_start_locks_and_completion() -> Bool:
+    let board = core15_fixture()
+    if !begin_unit_action(board, unit_id(0), false) or begin_unit_action(board, unit_id(0), false):
+        return false
+    if shooting_unit_valid(board, unit_id(0)) or charge_source_valid(board, unit_id(0), false):
+        return false
+    if !complete_unit_action(board, unit_id(0)) or complete_unit_action(board, unit_id(0)):
+        return false
+    return board[0].history.action_completed and board[0].history.action_started and !board[0].history.action_pending and board.command_points[0] == 3
+
+# p.58: TITANIC bypasses engaged/action-start shooting bans, but not charge ban.
+fun test_core15_action_titanic_exceptions() -> Bool:
+    let board = fight14_fixture()
+    board[0].can_shoot = true
+    board[0][0].keywords.append(Keyword::titanic)
+    board[0][0].keywords.append(Keyword::vehicle)
+    if !begin_unit_action(board, unit_id(0), false):
+        return false
+    return shooting_kind_valid(board, unit_id(0), ShootingKind::close_quarters) and !charge_source_valid(board, unit_id(0), false)
+
+# p.58: generic non-melee movement, even zero distance, fails pending action;
+# Remain Stationary explicitly does not trigger movement (p.33).
+fun test_core15_action_move_interrupt_and_stationary_exception() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    record_move(board, unit_id(0), MovementKind::stationary)
+    if !action_completion_valid(board, unit_id(0)):
+        return false
+    record_move(board, unit_id(0), MovementKind::normal)
+    return !complete_unit_action(board, unit_id(0)) and board[0].history.action_failed and !board[0].history.action_completed
+
+# pp.9/58: Battle-shock at completion blocks the effect; earlier shock that
+# has recovered does not permanently fail an otherwise uninterrupted action.
+fun test_core15_action_shock_completion_and_recovery() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    board[0].battle_socked = true
+    if action_completion_valid(board, unit_id(0)):
+        return false
+    board[0].battle_socked = false
+    return complete_unit_action(board, unit_id(0))
+
+# p.58: turn start unlocks a new start but keeps unfinished cross-turn actions.
+fun test_core15_action_cross_turn_pending_and_departure() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    board.start_turn_history()
+    if board[0].history.action_started or !board[0].history.action_pending or !action_completion_valid(board, unit_id(0)):
+        return false
+    if !reposition_unit(board, unit_id(0)):
+        return false
+    return !complete_unit_action(board, unit_id(0)) and board.reserve_units[0].history.action_pending and board.reserve_units[0].history.action_failed
+
 # pp.33/57–58: Advance alone does not prohibit Snap, but Fall Back and an
 # action's general shooting ban still apply. TITANIC is explicitly excluded.
 fun test_core15_overwatch_printed_source_eligibility() -> Bool:
@@ -5428,3 +5301,130 @@ fun test_core15_overwatch_printed_source_eligibility() -> Bool:
     board[1].history.action_started = false
     board[1][0].keywords.append(Keyword::titanic)
     return !overwatch_source_valid(board, true, unit_id(1))
+
+# pp.34–35/57: all printed shooting types prohibit action starts until phase
+# end; the restriction is independent of whether any weapon was selected.
+fun test_core15_all_shooting_phase_action_lock() -> Bool:
+    let board = core15_fixture()
+    board[0].history.shot_this_phase = true
+    if action_start_valid(board, unit_id(0), false):
+        return false
+    board.begin_phase(BattlePhase::charge)
+    return action_start_valid(board, unit_id(0), false)
+
+# pp.56/81: Explosives mortals allow the common per-wound Feel No Pain roll;
+# the stratagem's six initial dice are not Command Re-roll eligible.
+fun test_core15_explosives_feel_no_pain() -> Bool:
+    let board = core15_fixture()
+    board[1][0].profile = Profile::squighog_boyz
+    let sequence = resolve_explosives(board, unit_id(0))
+    sequence.choose_explosives_model(board, damage_test_model(0))
+    sequence.choose_explosives_target(board, unit_id(1))
+    for i in range(6):
+        sequence.roll(board, attack_test_die(1 + 3 * int(i == 0)))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    if !(can sequence.roll(board, attack_test_die(5))):
+        return false
+    sequence.roll(board, attack_test_die(5))
+    return sequence.is_done() and board[1][0].suffered_wounds == 0 and board.command_points[1] == 3
+
+# p.56: simultaneous generated impact amounts both resolve even when source
+# losses destroy the charger before the opposing losses are allocated.
+fun test_core15_crushing_source_death_does_not_cancel_enemy_mortals() -> Bool:
+    let board = fight14_fixture()
+    board.begin_phase(BattlePhase::charge)
+    board[0][0].keywords.append(Keyword::vehicle)
+    record_charge_move(board, unit_id(0))
+    let sequence = resolve_crushing_impact(board, unit_id(0))
+    sequence.choose_impact_target(board, unit_id(1))
+    sequence.choose_impact_model(board, damage_test_model(0))
+    sequence.roll(board, attack_test_die(1))
+    sequence.roll(board, attack_test_die(1))
+    sequence.roll(board, attack_test_die(5))
+    sequence.roll(board, attack_test_die(5))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    if !board[0].models.empty() or !(can sequence.select_mortal_model(board, damage_test_model(0))):
+        return false
+    sequence.select_mortal_model(board, damage_test_model(0))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    return sequence.is_done() and board[1].models.empty() and board[0].destroyed_models.value.size() == 1 and board[1].destroyed_models.value.size() == 1
+
+# p.56: failed or cancelled charge declarations never expose Crushing Impact.
+fun test_core15_crushing_failed_charge_has_no_option() -> Bool:
+    let board = charge13_fixture()
+    board.begin_phase(BattlePhase::charge)
+    board[0][0].keywords.append(Keyword::monster)
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    sequence.roll_pair(board, attack_test_die(1), attack_test_die(1))
+    sequence.keep_it(board, true)
+    sequence.cancel_charge(board)
+    return sequence.is_done() and !crushing_source_valid(board, unit_id(0)) and board.command_points[0] == 3
+
+# p.58: Pile In/consolidation are explicitly exempt from action interruption.
+fun test_core15_action_pile_in_exempt_and_pending_round_trip() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::titanic)
+    if !begin_unit_action(board, unit_id(0), false):
+        return false
+    let moving = melee_move(board, unit_id(0), false, false)
+    moving.select_melee_model(board, damage_test_model(0))
+    moving.choose_melee_approach(board, unit_id(1))
+    moving.melee_waypoint(board, board_position(6, 5))
+    moving.finish_melee_model(board)
+    moving.finish_melee_move(board)
+    let text = to_string(board)
+    let restored : Board
+    let offset = 0
+    if !from_string(restored, text, offset):
+        return false
+    return moving.completed and action_completion_valid(restored, unit_id(0)) and complete_unit_action(restored, unit_id(0)) and restored[0].history.action_completed
+
+# p.58: the lower-level out-of-phase Move entry also fails pending actions,
+# even when the ordinary Movement-phase record_move caller is absent.
+fun test_core15_action_direct_move_interrupt() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    let moving = move(board, unit_id(0), 0)
+    moving.move_to(board, unit_id(0), board_position(6, 5))
+    return moving.completed and board[0].history.action_failed and !complete_unit_action(board, unit_id(0))
+
+# Supplied Fight on Death plus p.56: retained CHARACTER models remain valid
+# Epic Challenge recipients when selected with their own unit.
+fun test_core15_epic_retained_character() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::character)
+    board[0][0].state = ModelState::fight_on_death
+    board[0][0].suffered_wounds = 2
+    board[0][0].destruction_pending = true
+    let sequence = selected_fight(board, unit_id(0))
+    sequence.epic_challenge(board)
+    return can sequence.choose_epic_character(board, damage_test_model(0))
+
+# p.58: one start per turn permits another action in a later turn while an
+# earlier mission action is still pending. Complete each by its own turn stamp.
+fun test_core15_actions_overlap_across_turns_without_aliasing() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    let first = board[0].history.action_records[0].started_turn
+    board.start_turn_history()
+    if !action_start_valid(board, unit_id(0), false) or !begin_unit_action(board, unit_id(0), false):
+        return false
+    let second = board[0].history.action_records[1].started_turn
+    if first == second or !complete_unit_action(board, unit_id(0), first) or !board[0].history.action_pending or complete_unit_action(board, unit_id(0), first):
+        return false
+    return complete_unit_action(board, unit_id(0), second) and !board[0].history.action_pending
+
+# p.58 bounded save infrastructure: zero/duplicate action handles and conflicting
+# completion flags are rejected rather than redirecting a mission's effect.
+fun test_core15_malformed_action_history_rejected() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    if !valid_state_foundations(board):
+        return false
+    board[0].history.action_records[0].started_turn = 0
+    if valid_state_foundations(board):
+        return false
+    board[0].history.action_records[0].started_turn = 1
+    board[0].history.action_records[0].completed = true
+    return !valid_state_foundations(board)
