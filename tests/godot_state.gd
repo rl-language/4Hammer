@@ -563,6 +563,10 @@ func check_bindings():
 	var second_target_slot = rules.library.size(board.get_units())
 	rules.library.append(board.get_units(), charge_enemy)
 	rules.library.identify_unit(board, rules.library.get(board.get_units(), second_target_slot))
+	# Appending can relocate the unit vector. Refresh borrowed wrappers before
+	# checking that the forthcoming charge path only changes its staged copy.
+	charger = rules.library.get(board.get_units(), 0)
+	charger_model = rules.library.get(charger.get_models(), 0)
 	var second_target_node = ModelClickFixture.new()
 	second_target_node.unit_id = second_target_slot
 	interaction.models.add_child(second_target_node)
