@@ -610,7 +610,11 @@ fun configure_attack_info(Board board, Int source, Int target, Bool overwatch, B
         attack.only_hits_on_6 = true 
 
     attack.shooting_kind = board[source].shooting_kind
-    attack.target_toughness = board[target].get_unit_toughtness()
+    # p.18 / appendix05.02.01: snapshot effective T without bounded clamping.
+    # The storage capacity is engine infrastructure, not a tabletop maximum.
+    let target_toughness = board[target].get_unit_toughtness()
+    assert(target_toughness >= 0 and target_toughness < MAX_CHARACTERISTIC, "target Toughness snapshot capacity exceeded")
+    attack.target_toughness = target_toughness
     attack.greater_strenght_wound_protection = board[target].has_greater_strenght_wound_protection()
 
 
@@ -1304,7 +1308,10 @@ act resolve_crushing_impact(ctx Board board, frm UnitID source) -> CrushingImpac
     board.moving_unit = source
     act choose_impact_model(frm ModelID model) {crushing_model_valid(board, source, target, model)}
     frm total : Toughness
-    total = board[source][model].profile.thoughness()
+    # p.56 requires the bearer's effective T dice; do not clamp that count.
+    let impact_toughness = board[source][model].effective_toughness()
+    assert(impact_toughness >= 0 and impact_toughness < MAX_CHARACTERISTIC, "Crushing Impact Toughness capacity exceeded")
+    total = impact_toughness
     frm index : Toughness
     frm self_amount : CombatCounter
     frm enemy_amount : CombatCounter

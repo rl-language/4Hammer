@@ -122,3 +122,42 @@ fun modified_dice_result(Int original, RuleModifiers modifiers, Bool hit_or_woun
 # cost policy, separate from the player's bounded CP balance and spending.
 fun modified_cp_cost(Int original, RuleModifiers modifiers) -> Int:
     return min(original + 1, max(0, apply_rule_modifiers(original, modifiers, false)))
+
+# Sparse per-bearer arithmetic metadata (appendix02.02.01). Source abilities
+# install only their affected models; expiry/source-instance policy belongs to17.E.
+# This shares one bounded list rather than sixteen slots for every characteristic.
+cls CharacteristicModifier:
+    ModifiedCharacteristic characteristic
+    RuleModifier modifier
+
+using CharacteristicModifiers = CheckedVector<CharacteristicModifier, 16>
+
+# Construct model-scoped arithmetic without inventing a unit-wide grant (02.02.01).
+fun characteristic_modifier(ModifiedCharacteristic characteristic, ModifierOperation operation, Int amount) -> CharacteristicModifier:
+    let result : CharacteristicModifier
+    result.characteristic = characteristic
+    result.modifier = rule_modifier(operation, amount)
+    return result
+
+# Saved metadata must not introduce invalid enums, amounts or zero/negative
+# divisors before effective queries execute (appendix02.02.01 infrastructure).
+fun valid_characteristic_modifiers(CharacteristicModifiers modifiers) -> Bool:
+    for i in range(modifiers.size()):
+        ref entry = modifiers[i]
+        if entry.characteristic.value < 0 or entry.characteristic.value > ModifiedCharacteristic::detection_range.value:
+            return false
+        if entry.modifier.operation.value < 0 or entry.modifier.operation.value > ModifierOperation::subtract.value or entry.modifier.amount.value < 0 or entry.modifier.amount.value >= MAX_RULE_MODIFIER:
+            return false
+        if entry.modifier.operation.value == ModifierOperation::divide.value and (entry.modifier.amount.value == 0 or entry.modifier.negative):
+            return false
+    return true
+
+# Filter before arithmetic; replacement/order/rounding/floors are shared with
+# the supplied appendix. One exit lets generated cleanup release owning locals.
+fun effective_characteristic_value(Int base, ModifiedCharacteristic characteristic, CharacteristicModifiers modifiers, Bool special) -> Int:
+    assert(valid_characteristic_modifiers(modifiers), "invalid characteristic modifiers")
+    let applicable : RuleModifiers
+    for i in range(modifiers.size()):
+        if modifiers[i].characteristic.value == characteristic.value:
+            applicable.append(modifiers[i].modifier)
+    return modified_characteristic(base, characteristic, applicable, special)

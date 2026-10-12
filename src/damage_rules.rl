@@ -6,7 +6,7 @@ using AllocationGroupCounter = LinearlyDistributedInt<0, 33>
 # CHARACTER models each form their own group; other models combine exactly
 # when W/Sv/InSv agree, including no-invulnerable sentinels (p.19).
 fun allocation_group_matches(AllocationGroup group, Model model) -> Bool:
-    return !group.character and !model.is_character() and group.wounds.value == model.profile.wounds() and group.save.value == characteristic_limit(ModifiedCharacteristic::save, model.profile.save()) and group.invulnerable.value == model.profile.invuln_save()
+    return !group.character and !model.is_character() and group.wounds.value == model.profile.wounds() and group.save.value == model.effective_save() and group.invulnerable.value == model.effective_invulnerable_save()
 
 # PRECISION needs a CHARACTER visible to a bearer in the gathered attack
 # group, not any model from an unrelated weapon (p.84; visibility pp.24–25).
@@ -33,8 +33,8 @@ fun make_allocation_groups(Board board, Unit target, AttackSequenceInfo info) ->
         if group_index < 0:
             let group : AllocationGroup
             group.wounds = target[i].profile.wounds()
-            group.save = characteristic_limit(ModifiedCharacteristic::save, target[i].profile.save())
-            group.invulnerable = target[i].profile.invuln_save()
+            group.save = target[i].effective_save()
+            group.invulnerable = target[i].effective_invulnerable_save()
             group.character = target[i].is_character()
             groups.append(group)
             group_index = groups.size() - 1

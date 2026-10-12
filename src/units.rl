@@ -40,6 +40,8 @@ cls Model:
     BoardPosition position # required
     ModelGeometry geometry
     Profile profile
+    # Model-scoped arithmetic, not implicit unit-wide grants (appendix02.02.01).
+    CharacteristicModifiers characteristic_modifiers
     Wounds suffered_wounds
     WeaponsVector weapons
     # Explicit rule data for supplied datasheets/fixtures, by weapon slot (pp.78–85).
@@ -176,6 +178,32 @@ cls Model:
         let horizontal = self.horizontal_distance_micrometres(model)
         let vertical = float(self.vertical_distance_micrometres(model))
         return sqrt(horizontal * horizontal + vertical * vertical) / float(MICROMETRES_PER_INCH)
+
+    # Effective model characteristics retain one printed arithmetic policy
+    # (appendix02.02.01); source selection and expiry are separate consumers.
+    fun effective_movement(Int base) -> Int:
+        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, false)
+
+    # Multiple Toughness uses each model's effective value (appendix05.02.01).
+    fun effective_toughness() -> Int:
+        return effective_characteristic_value(self.profile.thoughness(), ModifiedCharacteristic::toughness, self.characteristic_modifiers, false)
+
+    # Save groups compare modified Sv/InSv before allocating dice (p.19).
+    fun effective_save() -> Int:
+        return effective_characteristic_value(self.profile.save(), ModifiedCharacteristic::save, self.characteristic_modifiers, false)
+
+    # Legacy profiles use >6 for no InSv. This is '-', not a modifiable save
+    # that a bonus can turn into an invulnerable permission (appendix02.02.01).
+    fun effective_invulnerable_save() -> Int:
+        return effective_characteristic_value(self.profile.invuln_save(), ModifiedCharacteristic::invulnerable_save, self.characteristic_modifiers, self.profile.invuln_save() > 6)
+
+    # Leadership and OC consumers use the bearer scope (p.9; appendix02.02.01).
+    fun effective_leadership() -> Int:
+        return effective_characteristic_value(self.profile.leadership(), ModifiedCharacteristic::leadership, self.characteristic_modifiers, false)
+
+    # Battle-shocked '-' OC is handled by the unit before this query (p.9).
+    fun effective_objective_control() -> Int:
+        return effective_characteristic_value(self.profile.control(), ModifiedCharacteristic::objective_control, self.characteristic_modifiers, false)
 
     fun wounds_left() -> Int:
         return self.profile.wounds() - self.suffered_wounds.value
@@ -384,10 +412,10 @@ cls Unit:
     fun get_leadership() -> Int:
         if self.models.empty():
             return 0
-        let best_leadership = self.models[0].profile.leadership()
+        let best_leadership = self.models[0].effective_leadership()
         let i = 1
         while i != self.models.size():
-            best_leadership = min(best_leadership, self.models[i].profile.leadership())
+            best_leadership = min(best_leadership, self.models[i].effective_leadership())
             i = i + 1
 
         return best_leadership
@@ -408,7 +436,7 @@ cls Unit:
         assert(model >= 0 and model < self.models.size(), "invalid control model")
         if self.battle_socked or !self.models[model].is_alive():
             return 0
-        return self.models[model].profile.control()
+        return self.models[model].effective_objective_control()
 
     # Generic unit gates (pp.9/34–35/57–58), including every shooting type's
     # phase-local after-shooting ban. Board checks engagement/membership.
@@ -504,15 +532,16 @@ cls Unit:
             i = i + 1
         return false
 
+    # Appendix05.02.01: highest battlefield T for an unattached unit.
+    # Bodyguard-only selection for attached units belongs to17.G's provenance.
+    # Do not shadow the running maximum or count offboard models. Retained
+    # Fight on Death models stay on the battlefield until removal (appendix).
     fun get_unit_toughtness() -> Int:
-        if self.models.size() == 0:
-            return 0
-        let max_toughness = self.models[0].profile.thoughness()
-        let i = 1
-        while i != self.models.size():
-            let max_toughness = max(self.models[i].profile.thoughness(), max_toughness)
-            i = i + 1
-        return max_toughness 
+        let maximum_toughness = 0
+        for model_index in range(self.models.size()):
+            if !self.models[model_index].off_battlefield:
+                maximum_toughness = max(maximum_toughness, self.models[model_index].effective_toughness())
+        return maximum_toughness
 
     fun translate(Int x, Int y):
         let v : Vector2D

@@ -854,6 +854,8 @@ fun valid_state_foundations(Board board) -> Bool:
 # Reject malformed bounded history on load before it can change range/Heavy
 # decisions or inferred observations (p.82 / user numeric-storage requirement).
 fun valid_model_numeric_history(Model model) -> Bool:
+    if !valid_characteristic_modifiers(model.characteristic_modifiers):
+        return false
     if model.transport_capacity.value < 0 or model.transport_capacity.value > MAX_UNIT_MODELS or model.transport_space.value < 1 or model.transport_space.value > MAX_UNIT_MODELS or model.firing_deck.value < 0 or model.firing_deck.value > MAX_UNIT_MODELS:
         return false
     for condition_slot in range(MAX_WEAPONS):

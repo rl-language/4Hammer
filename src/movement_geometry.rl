@@ -231,7 +231,7 @@ fun validate_movement_candidate(Board board, UnitID slot, Unit candidate, Vector
             record_geometry_movement(model.history, start, end, false)
             start = end
             j = j + 1
-        if distance > float((model.profile.movement() + extra_distance) * MICROMETRES_PER_INCH):
+        if distance > float((model.effective_movement(model.profile.movement()) + extra_distance) * MICROMETRES_PER_INCH):
             return false
         model.set_geometry_position(start)
         model.geometry.rotation = path.final_rotation

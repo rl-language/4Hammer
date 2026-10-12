@@ -306,7 +306,7 @@ fun model_move_budget(Model model, MovementKind kind, Int extra, Int override_m,
         budget = override_m - 1
     if kind == MovementKind::scout or kind == MovementKind::surge:
         return max(0, extra)
-    budget = budget + extra
+    budget = model.effective_movement(budget) + extra
     if skies and !model.has_ability(AbilityKind::hover):
         budget = budget - 2
     return max(0, budget)

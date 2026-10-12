@@ -2,6 +2,118 @@ import full_game
 
 # ANTI grants in the temporary attack list must obey their source exclusion,
 # just as selected/intrinsic instances do (p.79; appendix02.05.01).
+# Appendix02.02.01: modifications are cumulative, ordered and bearer-scoped.
+fun test_orks17c2_model_modifier_order_and_scope() -> Bool:
+    let unit = make_infernus_squad()
+    ref model = unit[0]
+    model.characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::subtract, 1))
+    model.characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::divide, 2))
+    model.characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 1))
+    model.characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::multiply, 2))
+    model.characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::replace, 7))
+    model.characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::save, ModifierOperation::add, 1))
+    return model.effective_toughness() == 7 and unit[1].effective_toughness() == 4 and model.effective_save() == 4
+
+# Appendix05.02.01: strongest T can occur after the first model and can change.
+fun test_orks17c2_mixed_toughness_highest_and_casualty() -> Bool:
+    let unit = make_infernus_squad()
+    unit[1].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 3))
+    if unit.get_unit_toughtness() != 7:
+        return false
+    unit.remove_model(1)
+    return unit.get_unit_toughtness() == 4
+
+# Offboard models do not provide T; Fight on Death models remain on the
+# battlefield and in their unit until removal (05.02.01/supplied Fight on Death).
+fun test_orks17c2_toughness_ignores_unavailable_models() -> Bool:
+    let unit = make_infernus_squad()
+    unit[1].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 20))
+    unit[1].off_battlefield = true
+    if unit.get_unit_toughtness() != 4:
+        return false
+    unit[1].off_battlefield = false
+    unit[1].suffered_wounds = unit[1].profile.wounds()
+    unit[1].state = ModelState::fight_on_death
+    if unit.get_unit_toughtness() != 24:
+        return false
+    unit.remove_model(1)
+    return unit.get_unit_toughtness() == 4
+
+# Real attack preparation reads the mixed effective T, not static enum data (p.18).
+fun test_orks17c2_attack_snapshots_effective_toughness() -> Bool:
+    let board = damage_test_fixture()
+    board[1][1].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 4))
+    configure_attack_info(board, 0, 1, false, false)
+    return board.attack_info.target_toughness.value == 8
+
+# M modifiers apply to the determined random M, before Advance extras (02.02.03/p.33).
+fun test_orks17c2_movement_fixed_and_random_budget() -> Bool:
+    let unit = make_infernus_squad()
+    unit[0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 2))
+    unit[0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::subtract, 1))
+    return model_move_budget(unit[0], MovementKind::normal, 3, 0, false) == 10 and model_move_budget(unit[0], MovementKind::normal, 3, 5, false) == 8 and model_move_budget(unit[0], MovementKind::scout, 4, 0, false) == 4
+
+# Replacement zero locks further arithmetic, including characteristic minima (02.02.01).
+fun test_orks17c2_zero_replacement_locks_model_characteristic() -> Bool:
+    let unit = make_infernus_squad()
+    unit[0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::replace, 0))
+    unit[0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 9))
+    return model_move_budget(unit[0], MovementKind::normal, 0, 0, false) == 0
+
+# p.19: per-model modified Sv splits otherwise identical allocation groups.
+fun test_orks17c2_save_group_effective_characteristics() -> Bool:
+    let board = damage_test_fixture()
+    board[1][1].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::save, ModifierOperation::subtract, 1))
+    let groups = make_allocation_groups(board, board[1], board.attack_info)
+    let face : Dice
+    face = 2
+    return groups.size() == 2 and groups[0].save.value == 3 and groups[1].save.value == 2 and !attack_save_succeeds(groups[0], face, 0) and attack_save_succeeds(groups[1], face, 0)
+
+# '-' InSv cannot acquire a save by arithmetic; valid InSv is bounded at2+ (02.02.01).
+fun test_orks17c2_invulnerable_special_and_floor() -> Bool:
+    let unit = make_infernus_squad()
+    unit[0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::invulnerable_save, ModifierOperation::subtract, 9))
+    let captain = make_octavius()
+    captain[0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::invulnerable_save, ModifierOperation::subtract, 9))
+    return unit[0].effective_invulnerable_save() == unit[0].profile.invuln_save() and captain[0].effective_invulnerable_save() == 2
+
+# Leadership takes the best modified bearer value, within5+..8+ (p.9/02.02.01).
+fun test_orks17c2_leadership_effective_limits() -> Bool:
+    let unit = make_infernus_squad()
+    for i in range(unit.models.size()):
+        unit[i].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::leadership, ModifierOperation::add, 9))
+    if unit.get_leadership() != 8:
+        return false
+    unit[1].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::leadership, ModifierOperation::subtract, 20))
+    return unit.get_leadership() == 5 and unit.leadership_roll_succeeds(5) and !unit.leadership_roll_succeeds(4)
+
+# OC bonuses are bearer-scoped; Battle-shock's '-' defeats all of them (p.9).
+fun test_orks17c2_objective_control_scope_and_shock() -> Bool:
+    let unit = make_infernus_squad()
+    unit[0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::objective_control, ModifierOperation::add, 3))
+    if unit.model_objective_control(0) != 4 or unit.model_objective_control(1) != 1:
+        return false
+    unit.battle_socked = true
+    return unit.model_objective_control(0) == 0 and unit.model_objective_control(1) == 0
+
+# Save roots/archives reject invalid divisors before arithmetic (02.02.01 infrastructure).
+fun test_orks17c2_invalid_modifier_metadata_rejected() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::save, ModifierOperation::divide, 0))
+    if valid_state_foundations(board):
+        return false
+    board[1].remove_model(0)
+    return !valid_state_foundations(board)
+
+# Persisted modifiers survive the real atomic Game snapshot restore (02.02.01).
+fun test_orks17c2_modifier_saved_state_round_trip() -> Bool:
+    let state = play()
+    state.board.units.append(make_infernus_squad())
+    state.board.identify_units()
+    state.board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 2))
+    let restored = play()
+    return set_state(restored, to_string(state)) and restored.board[0].get_unit_toughtness() == 6
+
 fun test_orks17c_temporary_anti_obeys_exclusion() -> Bool:
     let board = orks17c_mixed_keyword_fixture()
     board[1][0].keywords.append(Keyword::monster)
