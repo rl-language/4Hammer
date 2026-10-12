@@ -15,6 +15,7 @@ import charge_rules
 import fight_rules
 import core_stratagem_rules
 import transport_rules
+import firing_deck_rules
 
 # Wound thresholds use the printed equality boundaries (p.18). The user-
 # supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus
@@ -1032,6 +1033,8 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
         id = model.value
         subaction*(board, declarations) selection = declare_model_weapons(board, declarations, source, id, melee)
         model = model + 1
+    if !melee and !overwatch and board.timing.phase == BattlePhase::shooting and board[source].owned_by_player1 == board.current_player:
+        subaction*(board, declarations) deck_selection = select_firing_deck(board, declarations, source)
     frm declaration_index : LinearlyDistributedInt<0, MAX_SELECTED_WEAPONS_PLUS1>
     while declaration_index.value < declarations.size():
         subaction*(board) targets = declare_weapon_targets(board, declarations[declaration_index.value], source, melee)

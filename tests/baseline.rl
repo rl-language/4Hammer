@@ -5986,3 +5986,63 @@ fun test_transport16_emergency_unplaceable_resolution_archives() -> Bool:
     sequence.roll(board, attack_test_die(3))
     sequence.roll(board, attack_test_die(3))
     return sequence.is_done() and board[0].empty() and board[1].empty() and board[1].destroyed_models.value.size() == 2 and board.embarked_units.empty() and valid_state_foundations(board)
+
+# Firing Deck regressions: per-model X, weapon attribution and passenger
+# turn-long shooting restrictions (24.14 p.81).
+fun test_transport16_firing_deck_model_limits() -> Bool:
+    let board = transport16_fixture()
+    board[0][0].firing_deck = 1
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    let selected : DeckSelections
+    if !deck_passenger_valid(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), selected):
+        return false
+    let choice : DeckSelection
+    choice.carrier = board[0][0].identity
+    choice.passenger_model = board.embarked_units[0][0].identity
+    selected.append(choice)
+    if deck_passenger_valid(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(1), selected):
+        return false
+    selected.clear()
+    board.embarked_units[0].history.shot_this_phase = true
+    return !deck_passenger_valid(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), selected)
+
+fun test_transport16_firing_deck_weapon_provenance() -> Bool:
+    let board = transport16_fixture()
+    board[0][0].firing_deck = 1
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    let declarations : DeclaredWeapons
+    if !deck_weapon_valid(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 0, declarations):
+        return false
+    let weapon = make_deck_declaration(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 0)
+    if weapon.model_identity != board[0][0].identity or weapon.weapon.value != board.embarked_units[0][0].weapons[0].value:
+        return false
+    board.embarked_units[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::one_shot))
+    return !deck_weapon_valid(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 0, declarations) and !board.embarked_units[0][0].used_once_per_battle_weapon[0]
+
+fun test_transport16_firing_deck_locks_all_passengers() -> Bool:
+    let board = transport16_fixture()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    lock_deck_passengers(board, board[0][0].identity)
+    let slot = stage_disembarking_passenger(board, unit_id(0))
+    finish_disembark(board, slot, DisembarkMode::rapid)
+    if shooting_unit_valid(board, slot) or !board[slot].history.deck_shooting_locked:
+        return false
+    board.begin_phase(BattlePhase::fight)
+    if !board[slot].history.deck_shooting_locked:
+        return false
+    board.start_turn_history()
+    return !board[slot].history.deck_shooting_locked
+
+fun test_transport16_firing_deck_action_selection() -> Bool:
+    let board = transport16_fixture()
+    board[0][0].firing_deck = 1
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    let declarations : DeclaredWeapons
+    let sequence = select_firing_deck(board, declarations, unit_id(0))
+    sequence.select_firing_deck_passenger(board, declarations, unit_id(0))
+    sequence.select_firing_deck_model(board, declarations, damage_test_model(0))
+    let slot : BInt<0, MAX_WEAPONS>
+    slot = 0
+    sequence.select_firing_deck_weapon(board, declarations, slot)
+    sequence.finish_firing_deck(board, declarations)
+    return sequence.is_done() and declarations.size() == 1 and declarations[0].model_identity == board[0][0].identity and board.embarked_units[0].history.deck_shooting_locked and !board.embarked_units[0][0].used_once_per_battle_weapon[0]

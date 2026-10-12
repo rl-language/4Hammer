@@ -29,11 +29,11 @@ fun shooting_kind_valid(Board board, UnitID source, ShootingKind kind) -> Bool:
     if kind == ShootingKind::normal:
         return !engaged and !advanced
     if kind == ShootingKind::assault:
-        return !engaged and advanced and unit_has_ranged_rule(board[source], WeaponRuleKind::assault)
+        return !engaged and advanced and carrier_has_ranged_rule(board, source, WeaponRuleKind::assault)
     if kind == ShootingKind::close_quarters:
-        return engaged and !advanced and (board[source].has_keyword(Keyword::monster) or board[source].has_keyword(Keyword::vehicle) or unit_has_ranged_rule(board[source], WeaponRuleKind::pistol) or unit_has_ranged_rule(board[source], WeaponRuleKind::close_quarters))
+        return engaged and !advanced and (board[source].has_keyword(Keyword::monster) or board[source].has_keyword(Keyword::vehicle) or carrier_has_ranged_rule(board, source, WeaponRuleKind::pistol) or carrier_has_ranged_rule(board, source, WeaponRuleKind::close_quarters))
     if kind == ShootingKind::indirect:
-        return !engaged and !advanced and unit_has_ranged_rule(board[source], WeaponRuleKind::indirect_fire)
+        return !engaged and !advanced and carrier_has_ranged_rule(board, source, WeaponRuleKind::indirect_fire)
     return false
 
 # Battlefield membership is represented by a nonempty live unit slot (pp.34/87).
