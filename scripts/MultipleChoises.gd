@@ -132,10 +132,29 @@ func on_state_change():
 			var label = str(GlobalRules.library.as_string_literal(ability.get_kind())).replace("_", " ")
 			if ability.get_parameter().get_value() > 0:
 				label += " " + str(ability.get_parameter().get_value())
-			if ability.get_target_restricted():
-				label += " against " + str(GlobalRules.library.as_string_literal(GlobalRules.library.weapon_ability_target_keyword(ability))).replace("_", " ")
-				for index in range(GlobalRules.library.weapon_ability_other_target_count(ability)):
-					label += " or " + str(GlobalRules.library.as_string_literal(GlobalRules.library.weapon_ability_other_target_keyword(ability, index))).replace("_", " ")
+			# Appendix02.05.01: preserve AND, OR and exclusions in condition labels.
+			var required: PackedStringArray = []
+			var alternatives: PackedStringArray = []
+			var excluded: PackedStringArray = []
+			for entry in range(GlobalRules.library.weapon_ability_condition_count(ability)):
+				var keyword = str(GlobalRules.library.as_string_literal(GlobalRules.library.weapon_ability_condition_keyword(ability, entry))).replace("_", " ")
+				var clause = GlobalRules.library.weapon_ability_condition_clause(ability, entry).get_value()
+				if clause == 0:
+					required.append(keyword)
+				elif clause == 1:
+					alternatives.append(keyword)
+				else:
+					excluded.append(keyword)
+			var conditions: PackedStringArray = []
+			if not required.is_empty():
+				conditions.append(" and ".join(required))
+			if not alternatives.is_empty():
+				var either = " or ".join(alternatives)
+				conditions.append("(" + either + ")" if alternatives.size() > 1 else either)
+			if not conditions.is_empty():
+				label += " against " + " and ".join(conditions)
+			if not excluded.is_empty():
+				label += "; excluding " + " or ".join(excluded)
 			make_choise(label, action)
 			added += 1
 		if unwrapped is RLCGameSelectWeapon:

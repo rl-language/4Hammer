@@ -64,6 +64,7 @@ fun base_wound_threshold(Int strength, Int toughness) -> Int:
 # while the mandatory natural-one failure still comes first (p.18).
 # Multiple ANTI thresholds use the lowest positive value; unlike Sustained
 # Hits magnitude, a higher threshold is not the stronger permission (p.79).
+# Every grant path must honour its target predicate (appendix02.05.01).
 fun best_anti_parameter(Board board, AttackSequenceInfo info, WeaponRuleKind kind) -> Int:
     let threshold = 7
     let intrinsic = info.source.rules()
@@ -78,10 +79,10 @@ fun best_anti_parameter(Board board, AttackSequenceInfo info, WeaponRuleKind kin
         if intrinsic[i].kind == kind and intrinsic[i].parameter > 0 and info.rule_applies(board, intrinsic[i]):
             threshold = min(threshold, intrinsic[i].parameter.value)
     for i in range(granted.size()):
-        if granted[i].kind == kind and granted[i].parameter > 0:
+        if granted[i].kind == kind and granted[i].parameter > 0 and info.rule_applies(board, granted[i]):
             threshold = min(threshold, granted[i].parameter.value)
     for i in range(info.temporary_weapon_abilities.size()):
-        if info.temporary_weapon_abilities[i].kind == kind and info.temporary_weapon_abilities[i].parameter > 0:
+        if info.temporary_weapon_abilities[i].kind == kind and info.temporary_weapon_abilities[i].parameter > 0 and info.rule_applies(board, info.temporary_weapon_abilities[i]):
             threshold = min(threshold, info.temporary_weapon_abilities[i].parameter.value)
     return threshold
 

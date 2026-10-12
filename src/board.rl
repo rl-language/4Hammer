@@ -775,11 +775,26 @@ fun destroyed_stratagem_target(Unit target) -> Bool:
             return false
     return true
 
+# Keyword conditions are source metadata, not arbitrary numeric permissions.
+# Check saved roots before restoring editor choices (appendix02.05.01/p.78).
+fun valid_weapon_condition(WeaponRule rule) -> Bool:
+    let keyword : Keyword
+    return rule.target_condition.valid(max(keyword))
+
 # Compatibility/integrity gate: configurations cannot bypass their bounded
 # policies; identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
     for configured_player in range(2):
         if !army_configuration_valid(board.armies[configured_player]):
+            return false
+    for pending_rule in range(board.pending_weapon_abilities.size()):
+        if !valid_weapon_condition(board.pending_weapon_abilities[pending_rule]):
+            return false
+    for selected_rule in range(board.attack_info.selected_weapon_rules.size()):
+        if !valid_weapon_condition(board.attack_info.selected_weapon_rules[selected_rule]):
+            return false
+    for granted_rule in range(board.attack_info.temporary_weapon_abilities.size()):
+        if !valid_weapon_condition(board.attack_info.temporary_weapon_abilities[granted_rule]):
             return false
     if !valid_passenger_links(board):
         return false
@@ -841,6 +856,12 @@ fun valid_state_foundations(Board board) -> Bool:
 fun valid_model_numeric_history(Model model) -> Bool:
     if model.transport_capacity.value < 0 or model.transport_capacity.value > MAX_UNIT_MODELS or model.transport_space.value < 1 or model.transport_space.value > MAX_UNIT_MODELS or model.firing_deck.value < 0 or model.firing_deck.value > MAX_UNIT_MODELS:
         return false
+    for condition_slot in range(MAX_WEAPONS):
+        if !valid_weapon_condition(model.hunter_profile_conditions[condition_slot]):
+            return false
+        for granted_condition in range(model.additional_weapon_rules[condition_slot].size()):
+            if !valid_weapon_condition(model.additional_weapon_rules[condition_slot][granted_condition]):
+                return false
     if model.history.vertical_distance.value < 0 or model.history.vertical_distance.value >= MAX_VERTICAL_DISTANCE:
         return false
     if model.history.horizontal_segments.size() > MAX_MOVEMENT_SEGMENTS:

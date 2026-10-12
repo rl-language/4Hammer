@@ -327,16 +327,11 @@ cls Unit:
         let mod : PhaseModifiers
         self.phase_modifiers = mod
 
-    # A slash-separated keyword condition means any listed keyword in the
-    # target unit, not every keyword on an individual recipient (p.78).
+    # Attacks and Hunter profiles target a unit's complete keyword union,
+    # while model-specific grants must use the explicit model query below
+    # (p.78; appendix02.05.01 and Hunter appendix04.01.03).
     fun weapon_rule_applies(WeaponRule rule) -> Bool:
-        let keyword : Keyword
-        keyword.value = rule.target_keyword.value
-        let applies = !rule.target_restricted or self.has_keyword(keyword)
-        for i in range(rule.other_target_count.value):
-            keyword.value = rule.other_target_keywords[i].value
-            applies = applies or self.has_keyword(keyword)
-        return applies
+        return matches_keyword_predicate(self, rule.target_condition)
 
     # Attached units do not retain Lone Operative targeting protection (p.83).
     fun is_lone_operative() -> Bool:
@@ -832,6 +827,45 @@ cls Unit:
 
 using UnitVector = CheckedVector<Unit, MAX_UNIT_COUNT>
 
+
+# Typed data bridge keeps raw bounded keyword codes out of game consumers;
+# construction follows appendix02.05.01, with no faction grant inferred.
+fun append_keyword_condition(KeywordPredicate predicate, KeywordClause clause, Keyword keyword) -> Bool:
+    return predicate.append(clause, keyword.value, max(keyword))
+
+# A unit has the union of its constituent models' keywords; a model has only
+# its own. T is explicitly Unit or Model at the wrappers below (appendix02.05.01).
+# Empty clauses impose no condition; an ANY clause needs at least one match.
+fun<T> matches_keyword_predicate(T subject, KeywordPredicate predicate) -> Bool:
+    let keyword : Keyword
+    if !predicate.valid(max(keyword)):
+        return false
+    let has_any = false
+    let matches_any = false
+    for term in range(predicate.size()):
+        keyword.value = predicate.keywords[term].value
+        let present = false
+        if subject is Unit:
+            present = subject.has_keyword(keyword)
+        if subject is Model:
+            present = subject.has_keyword(keyword)
+        if predicate.clause(term) == KeywordClause::all and !present:
+            return false
+        if predicate.clause(term) == KeywordClause::none and present:
+            return false
+        if predicate.clause(term) == KeywordClause::any:
+            has_any = true
+            matches_any = matches_any or present
+    return !has_any or matches_any
+
+# Use for unit conditions, including mixed/attached keywords (appendix02.05.01).
+fun unit_matches_keywords(Unit unit, KeywordPredicate predicate) -> Bool:
+    return matches_keyword_predicate(unit, predicate)
+
+# Use for model conditions; do not inherit a different bearer's keywords
+# merely because both models share a unit (appendix02.05.01).
+fun model_matches_keywords(Model model, KeywordPredicate predicate) -> Bool:
+    return matches_keyword_predicate(model, predicate)
 
 fun make_tantus() -> Unit:
     let profile : Unit 

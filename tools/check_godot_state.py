@@ -12,6 +12,8 @@ def main():
     parser.add_argument('--build-path', type=Path, required=True,
                         help='Directory containing matching librules.so and librlcrules.so')
     parser.add_argument('--godot', default='godot')
+    parser.add_argument('--script', type=Path, default=Path('tests/godot_state.gd'),
+                        help='Regression script, relative to the repository or absolute')
     parser.add_argument('--timeout', type=float, default=30,
                         help='Seconds allowed for the headless regression; increase for larger schemas')
     args = parser.parse_args()
@@ -23,7 +25,7 @@ def main():
         shutil.copy2(root / 'scripts/Rules.gd', project / 'Rules.gd')
         shutil.copy2(root / 'scripts/MultipleChoises.gd', project / 'MultipleChoises.gd')
         shutil.copy2(root / 'scripts/InteractionManager.gd', project / 'InteractionManager.gd')
-        shutil.copy2(root / 'tests/godot_state.gd', project / 'validate.gd')
+        shutil.copy2(root / args.script, project / 'validate.gd')
         (project / 'project.godot').write_text(
             'config_version=5\n[application]\nconfig/name="State regression"\n'
             '[autoload]\nGlobalRules="*res://Rules.gd"\n')

@@ -1,6 +1,7 @@
 import bounded_arg
 import vector2d
 import state_types
+import keyword_predicates
 
 using Dice = BInt<1, 7>
 using Stat = FixedStat | Dice
@@ -61,12 +62,9 @@ fun size_as_observation_tensor(WeaponRuleKind kind) -> Int:
 cls WeaponRule:
     WeaponRuleKind kind
     LinearlyDistributedInt<0, MAX_CHARACTERISTIC> parameter
-    # Conditional weapon abilities apply only to the supplied target keyword (p.78).
-    Bool target_restricted
-    LinearlyDistributedInt<0, 128> target_keyword
-    # Primitive bounded arrays avoid eager heap construction inside empty rule vectors.
-    LinearlyDistributedInt<0, 9> other_target_count
-    LinearlyDistributedInt<0, 128>[8] other_target_keywords
+    # Target predicates preserve adjacent/slash/excluded keyword meaning
+    # (p.78; appendix02.05.01). Empty means no additional keyword condition.
+    KeywordPredicate target_condition
 
 # Bounded numeric ability metadata supports inferred ML layout; reject unsupported magnitudes (p.78).
 fun weapon_rule(WeaponRuleKind kind, Int parameter) -> WeaponRule:

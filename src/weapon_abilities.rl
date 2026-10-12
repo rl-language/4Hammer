@@ -36,18 +36,14 @@ fun model_weapon_has_rule(Model model, Int slot, WeaponRuleKind kind) -> Bool:
 
 # Selected rules are immutable through resolution; applicability is target-specific (p.78).
 fun chosen_weapon_has_rule(Board board, UnitID target, WeaponAbilitySet rules, WeaponRuleKind kind) -> Bool:
-    let keyword : Keyword
     for i in range(rules.size()):
-        keyword.value = rules[i].target_keyword.value
         if rules[i].kind == kind and board[target].weapon_rule_applies(rules[i]):
             return true
     return false
 
 # Numeric abilities select one instance, never sum/max duplicate instances (p.78).
 fun chosen_weapon_parameter(Board board, UnitID target, WeaponAbilitySet rules, WeaponRuleKind kind) -> Int:
-    let keyword : Keyword
     for i in range(rules.size()):
-        keyword.value = rules[i].target_keyword.value
         if rules[i].kind == kind and board[target].weapon_rule_applies(rules[i]):
             return rules[i].parameter.value
     return 0
@@ -85,18 +81,41 @@ act choose_weapon_abilities(ctx Board board, frm WeaponAbilitySet available) -> 
 fun model_weapon_close_quarters(Model model, Int slot) -> Bool:
     return model_weapon_has_rule(model, slot, WeaponRuleKind::pistol) or model_weapon_has_rule(model, slot, WeaponRuleKind::close_quarters)
 
-# Keyword conditions are explicit source data, not inferred faction permissions (p.78).
+# A single or slash-separated keyword condition is ANY, not an implicit
+# conjunction (p.78; appendix02.05.01). More complex data uses the predicate
+# overload, without making a new freely selectable rule-grant action.
 fun conditional_weapon_rule(WeaponRuleKind kind, Int amount, Keyword target_keyword) -> WeaponRule:
+    let predicate : KeywordPredicate
+    let added = append_keyword_condition(predicate, KeywordClause::any, target_keyword)
+    assert(added, "invalid weapon keyword condition")
+    return conditional_weapon_rule(kind, amount, predicate)
+
+# Preserve the supplied ALL/ANY/NONE predicate in the selected rule snapshot
+# until the target is known (p.78; appendix02.05.01).
+fun conditional_weapon_rule(WeaponRuleKind kind, Int amount, KeywordPredicate predicate) -> WeaponRule:
+    let keyword : Keyword
+    assert(predicate.valid(max(keyword)), "invalid weapon keyword predicate")
     let result = weapon_rule(kind, amount)
-    result.target_restricted = true
-    result.target_keyword = target_keyword.value
+    result.target_condition = predicate
     return result
 
-# Editor-facing keyword enum for readable conditional-ability buttons (p.78).
-fun weapon_ability_target_keyword(WeaponRule rule) -> Keyword:
+# Editor bridge for fixed-array conditions; preserve each term's conjunction
+# or exclusion in the label rather than presenting every term as OR.
+fun weapon_ability_condition_count(WeaponRule rule) -> Int:
+    return rule.target_condition.size()
+
+# Keyword enum keeps source condition labels readable in Godot (appendix02.05.01).
+fun weapon_ability_condition_keyword(WeaponRule rule, Int entry) -> Keyword:
     let keyword : Keyword
-    keyword.value = rule.target_keyword.value
+    assert(rule.target_condition.valid(max(keyword)) and entry >= 0 and entry < rule.target_condition.size(), "invalid keyword condition entry")
+    keyword.value = rule.target_condition.keywords[entry].value
     return keyword
+
+# Expose the corresponding logical clause, not a raw numeric condition code.
+# This is editor metadata for the appendix02.05.01 condition.
+fun weapon_ability_condition_clause(WeaponRule rule, Int entry) -> KeywordClause:
+    assert(entry >= 0 and entry < rule.target_condition.size() and entry < MAX_KEYWORD_TERMS, "invalid keyword clause entry")
+    return rule.target_condition.clause(entry)
 
 # Unit-granted abilities affect every equipped weapon as well (p.78).
 fun available_weapon_has_rule(Board board, UnitID source, Int model, Int slot, WeaponRuleKind kind) -> Bool:
@@ -113,21 +132,12 @@ fun live_distance_to_model(Unit unit, Model observer) -> Float:
                 shortest = separation
     return shortest
 
-# Alternative target keywords within one ability are OR conditions (p.78).
+# Slash-separated alternatives share one ANY clause (appendix02.05.01; p.78).
 fun conditional_weapon_rule(WeaponRuleKind kind, Int amount, Keyword first, Keyword second) -> WeaponRule:
     let result = conditional_weapon_rule(kind, amount, first)
-    let extra : LinearlyDistributedInt<0, 128>
-    extra = second.value
-    result.other_target_keywords[0] = extra
-    result.other_target_count = 1
+    let added = append_keyword_condition(result.target_condition, KeywordClause::any, second)
+    assert(added, "invalid alternative weapon keyword condition")
     return result
-
-# Editor label for additional alternatives in a bounded keyword condition (p.78).
-fun weapon_ability_other_target_keyword(WeaponRule rule, Int index) -> Keyword:
-    let keyword : Keyword
-    assert(index >= 0 and index < rule.other_target_count.value and index < 8, "invalid keyword alternative")
-    keyword.value = rule.other_target_keywords[index].value
-    return keyword
 
 # Fixture/datasheet loading infrastructure: Godot's generated bindings do not
 # expose fixed arrays of owning vectors. Validate selectors before appending
@@ -135,10 +145,6 @@ fun weapon_ability_other_target_keyword(WeaponRule rule, Int index) -> Keyword:
 fun grant_model_weapon_rule(Board board, UnitID source, ModelID model, BInt<0, MAX_WEAPONS> slot, WeaponRule rule):
     assert(source.get() < board.units.size() and model.get() < board[source].models.size() and slot.value < board[source][model].weapons.size(), "invalid weapon-rule data slot")
     board[source][model].additional_weapon_rules[slot.value].append(rule)
-
-# Editor bridge for the bounded fixed-array keyword alternatives (p.78).
-fun weapon_ability_other_target_count(WeaponRule rule) -> Int:
-    return rule.other_target_count.value
 
 # p.83 and supplied appendix 04.01.03: One Shot belongs to the physical
 # weapon; changing its selected profile cannot restore a spent weapon.

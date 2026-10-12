@@ -33,9 +33,9 @@ func check_bindings():
 	interaction.models = Node.new()
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
-	assert(rules.library.get_state_schema_version() == 17)
-	assert(rules.library.get_action_schema_version() == 13)
-	assert(rules.library.get_observation_schema_version() == 17)
+	assert(rules.library.get_state_schema_version() == 18)
+	assert(rules.library.get_action_schema_version() == 14)
+	assert(rules.library.get_observation_schema_version() == 18)
 	assert(rules.valid_actions.size() == 6)
 	# User-directed configuration: actual enum buttons, unique picks, saved
 	# pending selection and automatic handoff after the third package.
@@ -405,6 +405,22 @@ func check_bindings():
 	grant.get_parameter().set_value(1)
 	rules.library.grant_model_weapon_rule(board, shooter_id, bearer, slot, grant)
 	grant.get_parameter().set_value(2)
+	# Appendix02.05.01: the duplicate button must display a conjunction,
+	# slash alternatives and an exclusion distinctly. Keyword IDs retain the
+	# existing stats.rl enum order; these are fixture metadata, not actions.
+	var predicate_clause = RLCKeywordClause.make()
+	var condition_keyword = RLCKeyword.make()
+	predicate_clause.set_value(0) # ALL
+	condition_keyword.set_value(0) # INFANTRY
+	assert(rules.library.append_keyword_condition(grant.get_target_condition(), predicate_clause, condition_keyword))
+	predicate_clause.set_value(1) # ANY
+	condition_keyword.set_value(45) # MONSTER
+	assert(rules.library.append_keyword_condition(grant.get_target_condition(), predicate_clause, condition_keyword))
+	condition_keyword.set_value(46) # VEHICLE
+	assert(rules.library.append_keyword_condition(grant.get_target_condition(), predicate_clause, condition_keyword))
+	predicate_clause.set_value(2) # NONE
+	condition_keyword.set_value(48) # TITANIC
+	assert(rules.library.append_keyword_condition(grant.get_target_condition(), predicate_clause, condition_keyword))
 	rules.library.grant_model_weapon_rule(board, shooter_id, bearer, slot, grant)
 	var weapon_choice = RLCGameSelectWeapon.make()
 	weapon_choice.get_member(0).set_value(0)
@@ -415,6 +431,12 @@ func check_bindings():
 			weapon_button = button
 	assert(weapon_button != null)
 	weapon_button.button_down.emit()
+	var compound_condition_button = null
+	for candidate_button in choices.get_node("ChoiseList").get_children():
+		if not candidate_button.is_queued_for_deletion() and candidate_button.text == rules.strip_symbols("sustained hit 2 against infantry and (monster or vehicle); excluding titanic"):
+			compound_condition_button = candidate_button
+	assert(compound_condition_button != null)
+	print("CHECK: Godot ALL/ANY/NONE duplicate-ability label completed")
 	var weapon_ability_button = null
 	for button in choices.get_node("ChoiseList").get_children():
 		if not button.is_queued_for_deletion() and button.text == rules.strip_symbols("sustained hit 1"):

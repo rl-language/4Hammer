@@ -1,5 +1,279 @@
 import full_game
 
+# ANTI grants in the temporary attack list must obey their source exclusion,
+# just as selected/intrinsic instances do (p.79; appendix02.05.01).
+fun test_orks17c_temporary_anti_obeys_exclusion() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    board[1][0].keywords.append(Keyword::monster)
+    let info = board.attack_info
+    info.temporary_weapon_abilities.append(conditional_weapon_rule(WeaponRuleKind::anti_monster, 3, orks17c_combined_predicate()))
+    if critical_wound_threshold(board, info) != 3:
+        return false
+    board[1][0].keywords.append(Keyword::titanic)
+    return critical_wound_threshold(board, info) == 6
+
+# A matching ANTI family cannot override a missing ALL keyword. Keep VEHICLE
+# present to prove this is the condition gate, not the family gate (p.79).
+fun test_orks17c_temporary_anti_requires_all_keywords() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate : KeywordPredicate
+    assert(append_keyword_condition(predicate, KeywordClause::all, Keyword::character), "fixture condition")
+    let info = board.attack_info
+    info.temporary_weapon_abilities.append(conditional_weapon_rule(WeaponRuleKind::anti_vehichle, 3, predicate))
+    if critical_wound_threshold(board, info) != 3:
+        return false
+    board[1][1].keywords.clear()
+    board[1][1].keywords.append(Keyword::vehicle)
+    return critical_wound_threshold(board, info) == 6
+
+
+# Clause groups must remain correct when datasheet fields are loaded in any
+# order; inserting ALL before existing ANY/NONE terms must not change meaning.
+fun test_orks17c_keyword_group_insertion_order() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate : KeywordPredicate
+    assert(append_keyword_condition(predicate, KeywordClause::none, Keyword::titanic), "fixture condition")
+    assert(append_keyword_condition(predicate, KeywordClause::any, Keyword::vehicle), "fixture condition")
+    assert(append_keyword_condition(predicate, KeywordClause::all, Keyword::infantry), "fixture condition")
+    assert(append_keyword_condition(predicate, KeywordClause::any, Keyword::monster), "fixture condition")
+    let rule = conditional_weapon_rule(WeaponRuleKind::sustained_hit, 2, predicate)
+    return unit_matches_keywords(board[1], predicate) and predicate.size() == 4 and predicate.required_count.value == 1 and predicate.alternative_count.value == 2 and predicate.excluded_count.value == 1 and weapon_ability_condition_keyword(rule, 0) == Keyword::infantry and weapon_ability_condition_clause(rule, 1) == KeywordClause::any and weapon_ability_condition_keyword(rule, 3) == Keyword::titanic
+
+# Each scalar count can be individually in bounds while their sum exceeds the
+# fixed array. Saved metadata must reject this before lookup/editor rendering.
+fun test_orks17c_keyword_group_total_rejects_invalid_save() -> Bool:
+    let state = play()
+    state.board = orks17c_mixed_keyword_fixture()
+    state.board.pending_weapon_abilities.append(conditional_weapon_rule(WeaponRuleKind::sustained_hit, 2, orks17c_combined_predicate()))
+    let before = to_string(state)
+    let corrupt = state
+    corrupt.board.pending_weapon_abilities[0].target_condition.required_count = 4
+    corrupt.board.pending_weapon_abilities[0].target_condition.alternative_count = 4
+    corrupt.board.pending_weapon_abilities[0].target_condition.excluded_count = 4
+    return !unit_matches_keywords(corrupt.board[1], corrupt.board.pending_weapon_abilities[0].target_condition) and !set_state(state, to_string(corrupt)) and to_string(state) == before
+
+
+# Appendix02.05.01, https://wahapedia.ru/wh40k11ed/the-rules/rules-appendix/:
+# an explicit fixture isolates keyword logic from old faction data.
+fun orks17c_mixed_keyword_fixture() -> Board:
+    let board = shooting12_fixture()
+    board[1].models.resize(2)
+    board[1][0].keywords.clear()
+    board[1][1].keywords.clear()
+    board[1][0].keywords.append(Keyword::infantry)
+    board[1][1].keywords.append(Keyword::character)
+    board[1][1].keywords.append(Keyword::vehicle)
+    return board
+
+# Adjacent INFANTRY plus slash MONSTER/VEHICLE excluding TITANIC: the source
+# list means ALL AND ANY AND NONE, not a positive OR across every term.
+fun orks17c_combined_predicate() -> KeywordPredicate:
+    let predicate : KeywordPredicate
+    assert(append_keyword_condition(predicate, KeywordClause::all, Keyword::infantry), "fixture condition")
+    assert(append_keyword_condition(predicate, KeywordClause::any, Keyword::monster), "fixture condition")
+    assert(append_keyword_condition(predicate, KeywordClause::any, Keyword::vehicle), "fixture condition")
+    assert(append_keyword_condition(predicate, KeywordClause::none, Keyword::titanic), "fixture condition")
+    return predicate
+
+# Empty conditions do not add an artificial keyword requirement (p.78).
+fun test_orks17c_empty_keyword_condition() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate : KeywordPredicate
+    return unit_matches_keywords(board[1], predicate) and model_matches_keywords(board[1][0], predicate)
+
+# Appendix02.05.01: different models can supply adjacent UNIT keywords;
+# neither individual MODEL inherits a keyword from the other bearer.
+fun test_orks17c_all_keywords_unit_union_and_model_scope() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate : KeywordPredicate
+    assert(append_keyword_condition(predicate, KeywordClause::all, Keyword::infantry), "fixture condition")
+    assert(append_keyword_condition(predicate, KeywordClause::all, Keyword::character), "fixture condition")
+    return unit_matches_keywords(board[1], predicate) and !model_matches_keywords(board[1][0], predicate) and !model_matches_keywords(board[1][1], predicate)
+
+# Appendix02.05.01: slashes/or mean any one listed keyword.
+fun test_orks17c_any_keyword_alternatives() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate : KeywordPredicate
+    assert(append_keyword_condition(predicate, KeywordClause::any, Keyword::monster), "fixture condition")
+    assert(append_keyword_condition(predicate, KeywordClause::any, Keyword::vehicle), "fixture condition")
+    return unit_matches_keywords(board[1], predicate) and !model_matches_keywords(board[1][0], predicate) and model_matches_keywords(board[1][1], predicate)
+
+# Appendix02.05.01: one VEHICLE bearer excludes the entire non-VEHICLE unit,
+# but does not turn the other individual model into a VEHICLE model.
+fun test_orks17c_none_keywords_mixed_unit_exclusion() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate : KeywordPredicate
+    assert(append_keyword_condition(predicate, KeywordClause::none, Keyword::vehicle), "fixture condition")
+    return !unit_matches_keywords(board[1], predicate) and model_matches_keywords(board[1][0], predicate) and !model_matches_keywords(board[1][1], predicate)
+
+# Combine ALL/ANY/NONE as conjunctions of clauses (appendix02.05.01).
+fun test_orks17c_combined_keyword_clauses() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate = orks17c_combined_predicate()
+    if !unit_matches_keywords(board[1], predicate) or model_matches_keywords(board[1][0], predicate):
+        return false
+    board[1][0].keywords.append(Keyword::titanic)
+    return !unit_matches_keywords(board[1], predicate)
+
+# Adjacent required keywords must not be weakened by a matching ANY clause.
+fun test_orks17c_any_does_not_override_missing_all() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate = orks17c_combined_predicate()
+    board[1][0].keywords.clear()
+    return !unit_matches_keywords(board[1], predicate)
+
+# ALL X plus NONE X is a contradiction, not an implicit exception.
+fun test_orks17c_contradictory_keyword_condition() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate : KeywordPredicate
+    assert(append_keyword_condition(predicate, KeywordClause::all, Keyword::infantry), "fixture condition")
+    assert(append_keyword_condition(predicate, KeywordClause::none, Keyword::infantry), "fixture condition")
+    return !unit_matches_keywords(board[1], predicate) and !model_matches_keywords(board[1][0], predicate)
+
+# Duplicate identical metadata terms must not consume finite storage.
+fun test_orks17c_duplicate_condition_is_idempotent() -> Bool:
+    let predicate : KeywordPredicate
+    if !append_keyword_condition(predicate, KeywordClause::all, Keyword::infantry):
+        return false
+    let before = to_string(predicate)
+    return append_keyword_condition(predicate, KeywordClause::all, Keyword::infantry) and to_string(predicate) == before
+
+# Preserve the old nine-keyword capacity; overflow is explicit and atomic.
+fun test_orks17c_keyword_condition_capacity() -> Bool:
+    let predicate : KeywordPredicate
+    let keyword : Keyword
+    for index in range(MAX_KEYWORD_TERMS):
+        keyword.value = index
+        if !append_keyword_condition(predicate, KeywordClause::any, keyword):
+            return false
+    if !append_keyword_condition(predicate, KeywordClause::any, keyword):
+        return false
+    let before = to_string(predicate)
+    keyword.value = MAX_KEYWORD_TERMS
+    return !append_keyword_condition(predicate, KeywordClause::any, keyword) and to_string(predicate) == before and predicate.size() == MAX_KEYWORD_TERMS
+
+# Unknown numeric keywords cannot make a non-keyword condition accidentally
+# true; malformed clause/count inputs are rejected before array indexing.
+fun test_orks17c_invalid_condition_inputs_are_atomic() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate : KeywordPredicate
+    let invalid : Keyword
+    invalid.value = -1
+    if append_keyword_condition(predicate, KeywordClause::none, invalid):
+        return false
+    invalid.value = 127
+    if append_keyword_condition(predicate, KeywordClause::none, invalid):
+        return false
+    let clause : KeywordClause
+    clause.value = 3
+    return !append_keyword_condition(predicate, clause, Keyword::infantry) and predicate.size() == 0 and unit_matches_keywords(board[1], predicate)
+
+# Raw field corruption is recoverable and cannot cause an unsafe lookup.
+fun test_orks17c_invalid_condition_queries_fail_closed() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate = orks17c_combined_predicate()
+    predicate.keywords[3].value = 127
+    if unit_matches_keywords(board[1], predicate):
+        return false
+    predicate = orks17c_combined_predicate()
+    predicate.required_count.value = -1
+    if model_matches_keywords(board[1][0], predicate):
+        return false
+    predicate.required_count.value = 10
+    return !unit_matches_keywords(board[1], predicate)
+
+# Existing slash metadata constructors retain their ANY meaning (p.78).
+fun test_orks17c_legacy_or_constructor_preserves_semantics() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let rule = conditional_weapon_rule(WeaponRuleKind::sustained_hit, 2, Keyword::monster, Keyword::vehicle)
+    return board[1].weapon_rule_applies(rule) and rule.target_condition.size() == 2 and weapon_ability_condition_clause(rule, 0) == KeywordClause::any
+
+# p.78: applicability gates both presence and magnitude of the selected rule.
+fun test_orks17c_selected_weapon_condition_presence_and_parameter() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let rules : WeaponAbilitySet
+    rules.append(conditional_weapon_rule(WeaponRuleKind::sustained_hit, 2, orks17c_combined_predicate()))
+    if !chosen_weapon_has_rule(board, unit_id(1), rules, WeaponRuleKind::sustained_hit) or chosen_weapon_parameter(board, unit_id(1), rules, WeaponRuleKind::sustained_hit) != 2:
+        return false
+    board[1][0].keywords.append(Keyword::titanic)
+    return !chosen_weapon_has_rule(board, unit_id(1), rules, WeaponRuleKind::sustained_hit) and chosen_weapon_parameter(board, unit_id(1), rules, WeaponRuleKind::sustained_hit) == 0
+
+# ANTI's unmodified threshold also honours the whole condition (p.79).
+fun test_orks17c_anti_uses_conjunctive_target_condition() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let info = board.attack_info
+    info.weapon_rules_known = true
+    info.selected_weapon_rules.append(conditional_weapon_rule(WeaponRuleKind::anti, 3, orks17c_combined_predicate()))
+    if critical_wound_threshold(board, info) != 3:
+        return false
+    board[1][1].keywords.append(Keyword::titanic)
+    return critical_wound_threshold(board, info) == 6
+
+# Hunter profiles use the same unit condition at declaration/revalidation
+# (appendix04.01.03/04.03.03), rather than accepting any one positive keyword.
+fun test_orks17c_hunter_all_any_none_targeting() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    board[0][0].hunter_profile_conditions[0] = conditional_weapon_rule(WeaponRuleKind::anti, 0, orks17c_combined_predicate())
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    if !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    board[1][0].keywords.append(Keyword::titanic)
+    return !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false)
+
+# Keyword-union conditions change when a bearer actually leaves the unit
+# (appendix02.05.01; destruction p.87), not when another model is inspected.
+fun test_orks17c_keyword_union_after_casualty_removal() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let predicate = orks17c_combined_predicate()
+    if !unit_matches_keywords(board[1], predicate):
+        return false
+    board[1].remove_model(1)
+    return !unit_matches_keywords(board[1], predicate)
+
+# Duplicate selection copies the selected source condition through save/restore
+# and does not merge a different duplicate's restriction (p.78).
+fun test_orks17c_pending_ability_choice_condition_round_trip() -> Bool:
+    let board = orks17c_mixed_keyword_fixture()
+    let rules : WeaponAbilitySet
+    rules.append(weapon_rule(WeaponRuleKind::sustained_hit, 1))
+    rules.append(conditional_weapon_rule(WeaponRuleKind::sustained_hit, 2, orks17c_combined_predicate()))
+    let pending = choose_weapon_abilities(board, rules)
+    let restored = choose_weapon_abilities(board, rules)
+    if !from_string(restored, to_string(pending)):
+        return false
+    let selected : WeaponAbilityChoice
+    selected = 1
+    restored.choose_weapon_ability(board, selected)
+    return restored.is_done() and restored.chosen.size() == 1 and restored.chosen[0].target_condition.size() == 4 and chosen_weapon_parameter(board, unit_id(1), restored.chosen, WeaponRuleKind::sustained_hit) == 2
+
+# Save infrastructure preserves model grants, Hunter filters and chosen/pending
+# attack metadata (p.78; appendix02.05.01), with atomic rejection on corruption.
+fun test_orks17c_condition_save_and_invalid_metadata_rejection() -> Bool:
+    let state = play()
+    state.board = orks17c_mixed_keyword_fixture()
+    let rule = conditional_weapon_rule(WeaponRuleKind::sustained_hit, 2, orks17c_combined_predicate())
+    state.board[0][0].additional_weapon_rules[0].append(rule)
+    state.board[0][0].hunter_profile_conditions[0] = rule
+    state.board.pending_weapon_abilities.append(rule)
+    state.board.attack_info.selected_weapon_rules.append(rule)
+    let restored = play()
+    if !set_state(restored, to_string(state)) or !restored.board[1].weapon_rule_applies(restored.board[0][0].additional_weapon_rules[0][0]):
+        return false
+    let before = to_string(restored)
+    let corrupt = state
+    corrupt.board.pending_weapon_abilities[0].target_condition.keywords[0].value = 127
+    return !set_state(restored, to_string(corrupt)) and to_string(restored) == before
+
+# Archived metadata must remain valid for later lifecycle consumers (p.88).
+fun test_orks17c_archived_hunter_condition_rejects_corruption() -> Bool:
+    let state = play()
+    state.board = orks17c_mixed_keyword_fixture()
+    state.board[0][0].hunter_profile_conditions[0] = conditional_weapon_rule(WeaponRuleKind::anti, 0, orks17c_combined_predicate())
+    state.board[0].remove_model(0)
+    state.board[0].destroyed_models.value[0].hunter_profile_conditions[0].target_condition.keywords[0].value = 127
+    return !valid_state_foundations(state.board)
+
+
 # User point-free/three-detachment scope; Orks faction source and core p.8.
 fun test_orks17b_roster_identities_and_armies() -> Bool:
     let chaos : UnitVector
@@ -3918,7 +4192,7 @@ fun test_shooting12_bounded_ability_metadata_round_trip() -> Bool:
     if !set_state(restored, to_string(state)):
         return false
     let rule = restored.board[0][0].additional_weapon_rules[0][0]
-    return rule.parameter == 2 and rule.target_restricted and rule.target_keyword.value == Keyword::vehicle.value and restored.board[0][0].weapons.size() == 1
+    return rule.parameter == 2 and rule.target_condition.size() == 1 and weapon_ability_condition_keyword(rule, 0) == Keyword::vehicle and restored.board[0][0].weapons.size() == 1
 
 # p.82: each original critical hit can independently use/decline Lethal Hits.
 fun test_shooting12_mixed_lethal_hits_choices() -> Bool:
