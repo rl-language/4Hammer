@@ -3898,3 +3898,13 @@ fun test_shooting12_sidearm_alias_duplicates_and_attack_grouping() -> Bool:
         return false
     right.selected_weapon_rules.clear()
     return !attacks_are_identical(board, left, right)
+
+# User-requested minimal coordinate choices, preserving the existing 44x30
+# grid and x/y editor payload; zero-edge centres never fit a positive base.
+fun test_geometry_action_positions_enumerate_only_interior_quads() -> Bool:
+    let position : BoardPosition
+    let candidates = enumerate(position)
+    let valid = candidates.size() == (BOARD_WIDTH - 1) * (BOARD_HEIGHT - 1)
+    for i in range(candidates.size()):
+        valid = valid and candidates[i].x.value == 1 + i / (BOARD_HEIGHT - 1) and candidates[i].y.value == 1 + i % (BOARD_HEIGHT - 1)
+    return valid

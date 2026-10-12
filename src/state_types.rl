@@ -5,7 +5,7 @@ import bounded_arg
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
 const STATE_SCHEMA_VERSION = 11
-const ACTION_SCHEMA_VERSION = 7
+const ACTION_SCHEMA_VERSION = 8
 const OBSERVATION_SCHEMA_VERSION = 11
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.

@@ -34,7 +34,7 @@ func check_bindings():
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
 	assert(rules.library.get_state_schema_version() == 11)
-	assert(rules.library.get_action_schema_version() == 7)
+	assert(rules.library.get_action_schema_version() == 8)
 	assert(rules.library.get_observation_schema_version() == 11)
 	assert(rules.valid_actions.size() == 6)
 	var choose = RLCGamePickInsidiousInfiltrators.make()

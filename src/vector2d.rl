@@ -123,3 +123,18 @@ fun make_board_position(CoordinateX x, CoordinateY y) -> BoardPosition:
     b.y = y
     return b
 
+
+# Action candidates use only interior whole-inch quads: positive-size bases
+# cannot fit with centres on x=0 or y=0 (core pp.12/14). Keep BoardPosition's
+# storage/getters unchanged for editor compatibility and off-table fixtures;
+# geometry precision values and z are not player coordinate choices.
+fun enumerate(BoardPosition position, Vector<BoardPosition> output):
+    let x = 1
+    while x < BOARD_WIDTH:
+        let y = 1
+        while y < BOARD_HEIGHT:
+            position.x = x
+            position.y = y
+            output.append(position)
+            y = y + 1
+        x = x + 1
