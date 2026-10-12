@@ -3869,3 +3869,32 @@ fun test_shooting12_legacy_plasma_profile_groups() -> Bool:
     let legionaries = make_legionaries()
     let hellblasters = make_hellblaster_squad()
     return legionaries[0].weapon_profile_groups[0].value == 1 and legionaries[0].weapon_profile_groups[1].value == 1 and legionaries[1].weapon_profile_groups[0].value == 0 and hellblasters[0].weapon_profile_groups[1].value == 1 and hellblasters[0].weapon_profile_groups[2].value == 1
+
+# pp.17/78/83: spelling aliases require one duplicate choice and cannot split
+# identical attacks, while the selected instance retains its target condition.
+fun test_shooting12_sidearm_alias_duplicates_and_attack_grouping() -> Bool:
+    let board = shooting12_fixture()
+    let rules : WeaponAbilitySet
+    rules.append(weapon_rule(WeaponRuleKind::pistol))
+    rules.append(conditional_weapon_rule(WeaponRuleKind::close_quarters, 0, Keyword::vehicle))
+    let choice = choose_weapon_abilities(board, rules)
+    if choice.is_done():
+        return false
+    let index : WeaponAbilityChoice
+    index = 1
+    choice.choose_weapon_ability(board, index)
+    if !choice.is_done() or choice.chosen.size() != 1 or chosen_weapon_has_rule(board, unit_id(1), choice.chosen, WeaponRuleKind::close_quarters):
+        return false
+    board[1][0].keywords.append(Keyword::vehicle)
+    if !chosen_weapon_has_rule(board, unit_id(1), choice.chosen, WeaponRuleKind::close_quarters):
+        return false
+    let left = board.attack_info
+    left.weapon_rules_known = true
+    left.selected_weapon_rules.append(weapon_rule(WeaponRuleKind::pistol))
+    let right = left
+    right.selected_weapon_rules.clear()
+    right.selected_weapon_rules.append(weapon_rule(WeaponRuleKind::close_quarters))
+    if !attacks_are_identical(board, left, right):
+        return false
+    right.selected_weapon_rules.clear()
+    return !attacks_are_identical(board, left, right)

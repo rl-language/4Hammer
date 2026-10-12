@@ -3,11 +3,14 @@ import board
 using WeaponAbilitySet = CheckedVector<WeaponRule, 32>
 using WeaponAbilityChoice = BInt<0, 32>
 
-# All ANTI variants are duplicates of ANTI, even with different keywords (p.78).
+# All ANTI variants share one family (p.78); PISTOL and CLOSE-QUARTERS
+# are identical for all rules purposes, including duplicate choices (p.83).
 fun same_weapon_ability(WeaponRuleKind left, WeaponRuleKind right) -> Bool:
     let left_anti = left == WeaponRuleKind::anti or left == WeaponRuleKind::anti_monster or left == WeaponRuleKind::anti_vehichle or left == WeaponRuleKind::anti_psychic
     let right_anti = right == WeaponRuleKind::anti or right == WeaponRuleKind::anti_monster or right == WeaponRuleKind::anti_vehichle or right == WeaponRuleKind::anti_psychic
-    return left == right or (left_anti and right_anti)
+    let left_sidearm = left == WeaponRuleKind::pistol or left == WeaponRuleKind::close_quarters
+    let right_sidearm = right == WeaponRuleKind::pistol or right == WeaponRuleKind::close_quarters
+    return left == right or (left_anti and right_anti) or (left_sidearm and right_sidearm)
 
 # Bounded rule snapshots allow fixtures/future data without inventing profiles (p.78).
 fun model_weapon_rules(Board board, UnitID source, Int model, Int slot) -> WeaponAbilitySet:

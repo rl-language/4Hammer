@@ -188,8 +188,16 @@ fun attacks_are_identical(Board board, AttackSequenceInfo left, AttackSequenceIn
     let kind : WeaponRuleKind
     for i in range(max(kind) + 1):
         kind.value = i
-        if left.has_weapon_rule(board, kind) != right.has_weapon_rule(board, kind) or left.max_weapon_parameter(board, kind) != right.max_weapon_parameter(board, kind):
-            return false
+        # PISTOL and CLOSE-QUARTERS are the same parameterless ability (p.83),
+        # so spelling alone cannot split otherwise identical attacks (p.17).
+        if kind == WeaponRuleKind::pistol or kind == WeaponRuleKind::close_quarters:
+            let left_sidearm = left.has_weapon_rule(board, WeaponRuleKind::pistol) or left.has_weapon_rule(board, WeaponRuleKind::close_quarters)
+            let right_sidearm = right.has_weapon_rule(board, WeaponRuleKind::pistol) or right.has_weapon_rule(board, WeaponRuleKind::close_quarters)
+            if left_sidearm != right_sidearm:
+                return false
+        else:
+            if left.has_weapon_rule(board, kind) != right.has_weapon_rule(board, kind) or left.max_weapon_parameter(board, kind) != right.max_weapon_parameter(board, kind):
+                return false
     return true
 
 # Selected weapon rules retain keyword restrictions until the target is known (p.78).
