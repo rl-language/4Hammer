@@ -39,6 +39,8 @@ fun classify_attack_hit(Board board, AttackSequenceInfo info, Dice roll, Int mod
         return AttackRollResult::failed
     if roll == 6:
         return AttackRollResult::critical
+    if info.shooting_kind == ShootingKind::indirect and info.has_weapon_rule(board, WeaponRuleKind::indirect_fire) and roll.value < (6 - 2 * int(info.indirect_stationary_visible)):
+        return AttackRollResult::failed
     if info.only_hits_on_6:
         return AttackRollResult::failed
     if roll.value + modifier >= effective_attack_skill(board, info):
@@ -65,16 +67,22 @@ fun base_wound_threshold(Int strength, Int toughness) -> Int:
 fun best_anti_parameter(Board board, AttackSequenceInfo info, WeaponRuleKind kind) -> Int:
     let threshold = 7
     let intrinsic = info.source.rules()
+    if info.weapon_rules_known:
+        intrinsic.clear()
+        for i in range(info.selected_weapon_rules.size()):
+            intrinsic.append(info.selected_weapon_rules[i])
     let granted = board[info.source_unit_id].get_temporary_weapon_rules()
+    if info.weapon_rules_known:
+        granted.clear()
     for i in range(intrinsic.size()):
-        if intrinsic[i].kind == kind and intrinsic[i].parameter > 0:
-            threshold = min(threshold, intrinsic[i].parameter)
+        if intrinsic[i].kind == kind and intrinsic[i].parameter > 0 and info.rule_applies(board, intrinsic[i]):
+            threshold = min(threshold, intrinsic[i].parameter.value)
     for i in range(granted.size()):
         if granted[i].kind == kind and granted[i].parameter > 0:
-            threshold = min(threshold, granted[i].parameter)
+            threshold = min(threshold, granted[i].parameter.value)
     for i in range(info.temporary_weapon_abilities.size()):
         if info.temporary_weapon_abilities[i].kind == kind and info.temporary_weapon_abilities[i].parameter > 0:
-            threshold = min(threshold, info.temporary_weapon_abilities[i].parameter)
+            threshold = min(threshold, info.temporary_weapon_abilities[i].parameter.value)
     return threshold
 
 # Natural six is critical; applicable ANTI thresholds can improve it by
@@ -93,6 +101,10 @@ fun critical_wound_threshold(Board board, AttackSequenceInfo info) -> Int:
         let anti = best_anti_parameter(board, info, WeaponRuleKind::anti_psychic)
         if anti > 0:
             threshold = min(threshold, anti)
+    if info.has_weapon_rule(board, WeaponRuleKind::anti):
+        let generic = info.max_weapon_parameter(board, WeaponRuleKind::anti)
+        if generic > 0:
+            threshold = min(threshold, generic)
     return threshold
 
 # Reject an unsupported number of generated hits/wounds rather than silently

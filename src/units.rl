@@ -32,6 +32,8 @@ cls Model:
     Profile profile
     Wounds suffered_wounds
     WeaponsVector weapons
+    # Explicit rule data for supplied datasheets/fixtures, by weapon slot (pp.78–85).
+    CheckedVector<WeaponRule, 8>[MAX_WEAPONS] additional_weapon_rules
     Abilities abilities 
     Keywords keywords 
     ModelState state
@@ -195,6 +197,9 @@ cls PhaseModifiers:
     Bool greater_strenght_wound_protection 
 
 cls Unit:
+    ShootingKind shooting_kind
+    UnitID snap_target
+    FixedStat lone_operative_range
     ModelVector models # required
     Bool owned_by_player1 # required
     Hidden<String> name # required
@@ -257,6 +262,7 @@ cls Unit:
     # usage (turn pp.28–30; movement pp.32–33; One Shot p.83).
     fun reset_turn_history():
         self.history.was_set_up_this_turn = false
+        self.history.made_move_this_turn = false
         self.history.advanced_this_turn = false
         self.history.fell_back_this_turn = false
         let i = 0
@@ -274,11 +280,25 @@ cls Unit:
         return self.phase_modifiers.greater_strenght_wound_protection 
 
     fun clear_phase_modifiers():
+        # Phase-local shooting restrictions also expire while in reserves (pp.34–35/68).
+        self.history.shot_this_phase = false
         let mod : PhaseModifiers
         self.phase_modifiers = mod
 
+    # A slash-separated keyword condition means any listed keyword in the
+    # target unit, not every keyword on an individual recipient (p.78).
+    fun weapon_rule_applies(WeaponRule rule) -> Bool:
+        let keyword : Keyword
+        keyword.value = rule.target_keyword.value
+        let applies = !rule.target_restricted or self.has_keyword(keyword)
+        for i in range(rule.other_target_count.value):
+            keyword.value = rule.other_target_keywords[i].value
+            applies = applies or self.has_keyword(keyword)
+        return applies
+
+    # Attached units do not retain Lone Operative targeting protection (p.83).
     fun is_lone_operative() -> Bool:
-        return self.has_ability(AbilityKind::lone_operative)
+        return self.attached_units.value.empty() and self.has_ability(AbilityKind::lone_operative)
 
     # Finish deferred removals including index zero and preserve archive history
     # (destroyed models pp.19/87); enabling Fight on Death still needs ability data.
@@ -353,24 +373,23 @@ cls Unit:
             return 0
         return self.models[model].profile.control()
 
-    # Shock/advance/fall-back prohibit starting an action (pp.9/33).
+    # Shock/advance/fall-back and phase-local shooting prohibit action starts (pp.9/33–35/57).
     # Task 15 supplies the remaining generic and mission requirements.
     fun allows_action_start() -> Bool:
-        return !self.battle_socked and !self.history.advanced_this_turn and !self.history.fell_back_this_turn
+        return !self.battle_socked and !self.history.advanced_this_turn and !self.history.fell_back_this_turn and !self.history.shot_this_phase
 
     # An already started action cannot complete while shocked (p.9).
     # Recovery removes this prohibition, not any other completion condition.
     fun allows_action_completion() -> Bool:
         return !self.battle_socked
 
-    fun has_temporary_wepon_rule(WeaponRuleKind rule) -> Bool: 
+    # One exit cleans up the owning temporary, including presence-only rules (p.78).
+    fun has_temporary_wepon_rule(WeaponRuleKind rule) -> Bool:
         let temp_rules = self.get_temporary_weapon_rules()
-        let i = 0
-        while i != temp_rules.size():
-            if temp_rules[i].kind == rule:
-                return true
-            i = i + 1
-        return false
+        let found = false
+        for i in range(temp_rules.size()):
+            found = found or temp_rules[i].kind == rule
+        return found
 
     # Compare doubled counts without rounding odd starting strengths (p.86).
     # Strict below-half is distinct from Command phase at-or-below eligibility.
@@ -395,7 +414,7 @@ cls Unit:
         let i = 0
         while i != temp_rules.size():
             if temp_rules[i].kind == rule:
-                return temp_rules[i].parameter
+                return temp_rules[i].parameter.value
             i = i + 1
         return 0
 

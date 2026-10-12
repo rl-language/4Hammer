@@ -842,6 +842,8 @@ fun timing_fixture() -> Board:
     board.identify_unit(board[1])
     board.command_points[0] = 3
     board.command_points[1] = 3
+    board[0].can_shoot = true
+    board[1].can_shoot = true
     return board
 
 # p.54: a player's second stratagem on the same unit is forbidden, even
@@ -888,12 +890,14 @@ fun test_timing_phase_reset_includes_reserves() -> Bool:
     return board.timing.phase == BattlePhase::shooting and board.can_target_strat(false, Stratagem::reroll, board[0]) and !board.reserve_units[0].history.stratagem_targeted_by_player[1] and board[0].has_moved and !board[1].has_fought
 
 # pp.28–30: the turn owner's flags reset without erasing enemy turn choices.
-fun test_timing_turn_flags_reset_only_active_army() -> Bool:
+fun test_timing_turn_movement_flags_expire_for_both_armies() -> Bool:
     let board = timing_fixture()
     board[0].has_moved = true
     board[1].has_moved = true
+    board[0].has_shoot = true
+    board[1].has_shoot = true
     board.start_turn_history()
-    return !board[0].has_moved and board[1].has_moved
+    return !board[0].has_moved and !board[1].has_moved and !board[0].has_shoot and board[1].has_shoot
 
 # pp.9/54/56: accept CP reroll -> spend -> chance; restore caller afterward.
 fun test_timing_pair_reroll_owner_spend_and_restore() -> Bool:
@@ -1822,6 +1826,7 @@ fun test_skipped_shooting_does_not_record_ranged_attacks() -> Bool:
     board[0].can_shoot = true
     let shooting = shooting_phase(board)
     shooting.select_target(board, unit_id(0), unit_id(1))
+    shooting.choose_shooting_kind(board, ShootingKind::normal)
     shooting.skip(board)
     return board[0].has_shoot and board[0].history.last_ranged_attack_turn == -1 and (can shooting.end_shooting_phase(board))
 
@@ -2109,6 +2114,7 @@ fun test_attack_critical_lethal_and_sustained_group_pipeline() -> Bool:
     if group.generated_hits != 0 or group.generated_wounds != 0:
         return false
     group.roll(board, board[1], board[0], attack_test_die(3))
+    group.use_lethal_hits(board, board[1], board[0], true)
     if group.generated_hits != 3 or group.generated_wounds != 1:
         return false
     group.roll(board, board[1], board[0], attack_test_die(1))
@@ -2620,8 +2626,8 @@ fun test_damage_destruction_current_player_priority() -> Bool:
 # after declaration when a model/target changes its position.
 fun test_damage_melta_declaration_snapshot() -> Bool:
     let board = damage_test_fixture()
+    board[0][0].weapons[0] = Weapon::meltagun
     let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
-    weapon.weapon = Weapon::meltagun
     let declaration = declare_weapon_targets(board, weapon, unit_id(0), false)
     declaration.declare_target(board, unit_id(0), unit_id(1))
     let bonus = declaration.weapon.melta_bonus[1].value
@@ -3368,3 +3374,455 @@ fun test_movement11_unplaceable_unit_destroyed_and_archived() -> Bool:
         return false
     sequence.destroy_unplaceable_unit(board)
     return board.reserve_units.empty() and board.expired_reserves.value.size() == 1 and board.expired_reserves.value[0].identity == identity and board.expired_reserves.value[0].destroyed_models.value.size() == 1
+
+# Task-12 fixtures supply explicit rules, not invented faction datasheets (pp.78–85).
+fun shooting12_fixture() -> Board:
+    let board = attack_declaration_fixture()
+    board.begin_phase(BattlePhase::shooting)
+    board[0].can_shoot = true
+    board.command_points[0] = 3
+    return board
+
+# pp.34–35: modes depend on engagement and advance, not a single can_shoot flag.
+fun test_shooting12_mode_eligibility_and_advance_assault() -> Bool:
+    let board = shooting12_fixture()
+    if !shooting_kind_valid(board, unit_id(0), ShootingKind::normal) or shooting_kind_valid(board, unit_id(0), ShootingKind::snap):
+        return false
+    board[0].history.advanced_this_turn = true
+    if shooting_unit_valid(board, unit_id(0)):
+        return false
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::assault))
+    return shooting_kind_valid(board, unit_id(0), ShootingKind::assault) and !shooting_kind_valid(board, unit_id(0), ShootingKind::normal) and !shooting_kind_valid(board, unit_id(0), ShootingKind::indirect)
+
+# pp.34/58/88: no ranged weapon still permits selecting; shooting locks action
+# starts only until phase end, and the unit cannot select twice in that phase.
+fun test_shooting12_no_weapon_unit_selection_and_phase_action_lock() -> Bool:
+    let board = shooting12_fixture()
+    board[0][0].weapons.clear()
+    let phase = shooting_phase(board)
+    phase.select_shooting_unit(board, unit_id(0))
+    phase.choose_shooting_kind(board, ShootingKind::normal)
+    phase.skip(board)
+    if !board[0].has_shoot or board[0].allows_action_start() or (can phase.select_shooting_unit(board, unit_id(0))):
+        return false
+    board.begin_phase(BattlePhase::charge)
+    return board[0].allows_action_start()
+
+# pp.33–35/58/87: fallback/actions/retired units and the wrong owner cannot shoot.
+fun test_shooting12_source_restrictions() -> Bool:
+    let board = shooting12_fixture()
+    if shooting_unit_valid(board, unit_id(1)):
+        return false
+    board[0].history.fell_back_this_turn = true
+    if shooting_unit_valid(board, unit_id(0)):
+        return false
+    board[0].history.fell_back_this_turn = false
+    board[0].history.action_started = true
+    if shooting_unit_valid(board, unit_id(0)):
+        return false
+    board[0].history.action_started = false
+    board[0][0].state = ModelState::pending_destruction
+    return !shooting_unit_valid(board, unit_id(0))
+
+# pp.80/83: multiple pistols can be selected; ordinary models cannot mix the
+# sidearm categories, while a Monster/Vehicle bearer can select both.
+fun test_shooting12_pistol_alias_exclusive_categories_and_vehicle_exception() -> Bool:
+    let board = shooting12_fixture()
+    board[0][0].weapons.append(Weapon::bolt_pistol)
+    board[0][0].weapons.append(Weapon::captain_storm_bolter)
+    board[0][0].additional_weapon_rules[2].append(weapon_rule(WeaponRuleKind::close_quarters))
+    let sequence = attack(board, unit_id(0), unit_id(1), false, false)
+    sequence.select_weapon(board, attack_test_slot(1))
+    if (can sequence.select_weapon(board, attack_test_slot(0))) or !(can sequence.select_weapon(board, attack_test_slot(2))):
+        return false
+    sequence.select_weapon(board, attack_test_slot(2))
+    if sequence.declarations.size() != 2:
+        return false
+    board[0][0].keywords.append(Keyword::vehicle)
+    return can sequence.select_weapon(board, attack_test_slot(0))
+
+# pp.35/62–63/88: engaged non-vehicles are prohibited; engaged vehicles are
+# targets only in the firing player's Shooting phase, and Blast still fails.
+fun test_shooting12_engaged_target_vehicle_and_blast_gates() -> Bool:
+    let board = shooting12_fixture()
+    let friendly = board[0]
+    friendly[0].position = board_position(11, 5)
+    friendly.identity = -1
+    friendly[0].identity = -1
+    board.units.append(friendly)
+    board.identify_units()
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    if declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    board[1][0].keywords.append(Keyword::vehicle)
+    if !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), weapon, board.attack_info)
+    if info.engaged_hit_penalties != 1:
+        return false
+    weapon.selected_rules.append(weapon_rule(WeaponRuleKind::blast))
+    if declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    weapon.selected_rules.clear()
+    board.current_player = true
+    return !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false)
+
+# p.35: engaged ordinary bearers use only sidearms against their engaged
+# enemies; the Monster/Vehicle bearer has a penalty for other ranged attacks.
+fun test_shooting12_close_quarters_permissions_and_penalty_exception() -> Bool:
+    let board = shooting12_fixture()
+    board[1][0].position = board_position(7, 5)
+    board[0].shooting_kind = ShootingKind::close_quarters
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::close_quarters))
+    if !shooting_kind_valid(board, unit_id(0), ShootingKind::close_quarters):
+        return false
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    if !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false) or declaration_target_valid(board, unit_id(0), weapon, unit_id(2), false):
+        return false
+    board[0][0].keywords.append(Keyword::monster)
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), weapon, board.attack_info)
+    if info.engaged_hit_penalties != 0:
+        return false
+    weapon.selected_rules.clear()
+    weapon.current_target_rules.clear()
+    info = declared_attack_info(board, unit_id(0), unit_id(2), weapon, board.attack_info)
+    return declaration_target_valid(board, unit_id(0), weapon, unit_id(2), false) and info.engaged_hit_penalties == 1
+
+# p.83 / supplied modifier appendix: Lone Operative uses bearer-to-target
+# distance; a nearby unit-mate cannot give a distant bearer visibility.
+fun test_shooting12_lone_operative_per_bearer_and_custom_range() -> Bool:
+    let board = shooting12_fixture()
+    board[1][0].abilities.append(AbilityKind::lone_operative)
+    board[1][0].position = board_position(20, 5)
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    if declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    let nearby = board[0][0]
+    nearby.position = board_position(10, 5)
+    board[0].models.append(nearby)
+    if !unit_visible_to_unit(board, board[0], board[1]) or declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    board[1].lone_operative_range = 15
+    return declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false)
+
+# pp.35/50/82–83: indirect permits Hidden targets but still respects per-bearer
+# Lone Operative. Cover is forced even when the target is ordinarily visible.
+fun test_shooting12_indirect_visibility_lone_operative_and_cover() -> Bool:
+    let board = shooting12_fixture()
+    board[1][0].position = board_position(27, 5)
+    board.terrain_areas.append(terrain_area(26, 4, 28, 6, true))
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::indirect_fire))
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    if declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    board[0].shooting_kind = ShootingKind::indirect
+    if !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false):
+        return false
+    board.terrain_areas.clear()
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), weapon, board.attack_info)
+    if !info.target_has_cover:
+        return false
+    board[1][0].abilities.append(AbilityKind::lone_operative)
+    return !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false)
+
+# p.35: indirect fails natural 1–5, or 1–3 when stationary and a friendly unit
+# sees the target. Positive hit modifiers cannot bypass these natural-face gates.
+fun test_shooting12_indirect_unmodified_faces_and_stationary_tracking() -> Bool:
+    let board = shooting12_fixture()
+    board[0].shooting_kind = ShootingKind::indirect
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::indirect_fire))
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    board[0].history.made_move_this_turn = true
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), weapon, board.attack_info)
+    if !(classify_attack_hit(board, info, attack_test_die(5), 10) == AttackRollResult::failed):
+        return false
+    board[0].history.made_move_this_turn = false
+    record_move(board, unit_id(0), MovementKind::stationary)
+    info = declared_attack_info(board, unit_id(0), unit_id(1), weapon, board.attack_info)
+    if !info.indirect_stationary_visible or !(classify_attack_hit(board, info, attack_test_die(3), 10) == AttackRollResult::failed) or !(classify_attack_hit(board, info, attack_test_die(4), 0) == AttackRollResult::success):
+        return false
+    board[0][0].history.was_set_up_this_turn = true
+    return !stationary_this_turn(board[0])
+
+# pp.35/57: snap and indirect prohibit every hit reroll, including paid CP.
+fun test_shooting12_snap_hit_rerolls_forbidden_and_single_target() -> Bool:
+    let board = shooting12_fixture()
+    board.attack_info.only_hits_on_6 = true
+    board.attack_info.reroll_hits = true
+    let dice = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
+    dice.roll(board, board[1], board[0], attack_test_die(3))
+    if !dice.is_done() or dice.generated_hits != 0 or board.command_points[0] != 3:
+        return false
+    board[0].shooting_kind = ShootingKind::snap
+    board.attack_info.target_unit_id = 1
+    board[0].snap_target = 1
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    return declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false) and !declaration_target_valid(board, unit_id(0), weapon, unit_id(2), false)
+
+# p.35: even an ordinary visible indirect target prohibits hit rerolls.
+fun test_shooting12_indirect_hit_rerolls_forbidden() -> Bool:
+    let board = shooting12_fixture()
+    board.attack_info.shooting_kind = ShootingKind::indirect
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::indirect_fire))
+    board.attack_info.reroll_hits = true
+    let dice = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
+    dice.roll(board, board[1], board[0], attack_test_die(5))
+    return dice.is_done() and dice.generated_hits == 0 and board.command_points[0] == 3
+
+# p.82: Heavy allows an actual <=3in move, but no setup, engagement, opponent
+# turn, or larger movement by any live member, including another model.
+fun test_shooting12_heavy_complete_conditions() -> Bool:
+    let board = shooting12_fixture()
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::heavy))
+    board[0].has_moved = true
+    board[0][0].history.distance_moved_this_turn = 3.0
+    if get_hit_roll_bonus(board) != 1:
+        return false
+    board[0][0].history.distance_moved_this_turn = 3.01
+    if get_hit_roll_bonus(board) != 0:
+        return false
+    board[0][0].history.distance_moved_this_turn = 0.0
+    board[0].history.was_set_up_this_turn = true
+    if get_hit_roll_bonus(board) != 0:
+        return false
+    board[0].history.was_set_up_this_turn = false
+    board.current_player = true
+    return get_hit_roll_bonus(board) == 0
+
+# pp.79/84: Blast X and Rapid Fire snapshot target-selection count/range and
+# ignore later casualties/reposition; pending corpses are not counted.
+fun test_shooting12_blast_and_rapid_fire_declaration_snapshots() -> Bool:
+    let board = shooting12_fixture()
+    let model = board[1][0]
+    board[1].models.resize(11)
+    for i in range(11):
+        board[1][i] = model
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::blast, 2))
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    snapshot_weapon_target(board, unit_id(0), weapon, unit_id(1))
+    let before = gathering_extra_attacks(board, unit_id(0), unit_id(1), weapon)
+    board[1].models.resize(1)
+    board[1][0].position = board_position(30, 5)
+    return before == 6 and gathering_extra_attacks(board, unit_id(0), unit_id(1), weapon) == before
+
+# p.79: Cleave adds X per five models only when a weapon's attacks all target
+# one unit; a split must not receive that addition.
+fun test_shooting12_cleave_unsplit_and_split() -> Bool:
+    let board = shooting12_fixture()
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    weapon.selected_rules.clear()
+    weapon.selected_rules.append(weapon_rule(WeaponRuleKind::cleave, 3))
+    weapon.current_target_rules = weapon.selected_rules
+    weapon.targeted[1] = true
+    weapon.target_model_counts[1] = 12
+    if gathering_extra_attacks(board, unit_id(0), unit_id(1), weapon) != 6:
+        return false
+    weapon.targeted[2] = true
+    return gathering_extra_attacks(board, unit_id(0), unit_id(1), weapon) == 0
+
+# p.83: One Shot is spent at Select Weapons, even when attacks are declined.
+# The model archive retains slot usage rather than granting a revived weapon.
+fun test_shooting12_one_shot_selection_and_archive() -> Bool:
+    let board = shooting12_fixture()
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::one_shot))
+    let sequence = attack(board, unit_id(0), unit_id(1), false, false)
+    sequence.select_weapon(board, attack_test_slot(0))
+    if !board[0][0].used_once_per_battle_weapon[0]:
+        return false
+    sequence.skip(board)
+    sequence.skip_target(board)
+    board[0].remove_model(0)
+    let revived = board[0].destroyed_models.value[0]
+    board[0].models.append(revived)
+    let selected : Bool[MAX_WEAPONS]
+    return !weapon_selection_valid(board, unit_id(0), 0, 0, false, selected, false)
+
+# p.78: duplicate numeric abilities are alternatives, not max/sum; different
+# ANTI keywords are the same duplicate family and require one selected instance.
+fun test_shooting12_duplicate_ability_choice_and_anti_family() -> Bool:
+    let board = shooting12_fixture()
+    let rules : WeaponAbilitySet
+    rules.append(weapon_rule(WeaponRuleKind::sustained_hit, 1))
+    rules.append(weapon_rule(WeaponRuleKind::sustained_hit, 2))
+    rules.append(weapon_rule(WeaponRuleKind::anti_monster, 4))
+    rules.append(weapon_rule(WeaponRuleKind::anti_vehichle, 2))
+    let choice = choose_weapon_abilities(board, rules)
+    let index : WeaponAbilityChoice
+    index = 0
+    choice.choose_weapon_ability(board, index)
+    index = 2
+    choice.choose_weapon_ability(board, index)
+    return choice.is_done() and choice.chosen.size() == 2 and choice.chosen[0].parameter == 1 and choice.chosen[1].kind == WeaponRuleKind::anti_monster
+
+# pp.78–79: chosen conditional abilities apply to the unit keyword union only.
+fun test_shooting12_conditional_generic_anti_and_sustained() -> Bool:
+    let board = shooting12_fixture()
+    let info = board.attack_info
+    info.weapon_rules_known = true
+    info.selected_weapon_rules.append(conditional_weapon_rule(WeaponRuleKind::anti, 2, Keyword::vehicle))
+    info.selected_weapon_rules.append(conditional_weapon_rule(WeaponRuleKind::sustained_hit, 3, Keyword::vehicle))
+    if info.has_weapon_rule(board, WeaponRuleKind::sustained_hit) or critical_wound_threshold(board, info) != 6:
+        return false
+    board[1][0].keywords.append(Keyword::vehicle)
+    return info.has_weapon_rule(board, WeaponRuleKind::sustained_hit) and info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit) == 3 and critical_wound_threshold(board, info) == 2
+
+# p.85: Twin-linked is an optional free wound reroll, never a second reroll.
+fun test_shooting12_twin_linked_wound_reroll() -> Bool:
+    let board = shooting12_fixture()
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::twin_linked))
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::devastating_wounds))
+    board.command_points[0] = 0
+    let dice = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
+    dice.roll(board, board[1], board[0], attack_test_die(6))
+    dice.roll(board, board[1], board[0], attack_test_die(1))
+    if !(can dice.select_reroll(board, board[1], board[0], attack_test_die(1))):
+        return false
+    dice.select_reroll(board, board[1], board[0], attack_test_die(1))
+    dice.reroll(board, board[1], board[0], attack_test_die(6))
+    return dice.is_done() and dice.generated_critical_wounds == 1 and board.command_points[0] == 0
+
+# p.82: decline automatic Lethal wounding to retain a critical wound opportunity.
+fun test_shooting12_lethal_hits_optional_decline() -> Bool:
+    let board = shooting12_fixture()
+    board.attack_info.add_letal_hits()
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::devastating_wounds))
+    board.command_points[0] = 0
+    let dice = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
+    dice.roll(board, board[1], board[0], attack_test_die(6))
+    dice.use_lethal_hits(board, board[1], board[0], false)
+    dice.roll(board, board[1], board[0], attack_test_die(6))
+    return dice.is_done() and dice.generated_critical_wounds == 1 and dice.generated_wounds == 0
+
+# User lifecycle instruction: preserve generated owning-field initialization;
+# ability magnitudes/conditions are bounded and survive save round trips (p.78).
+fun test_shooting12_bounded_ability_metadata_round_trip() -> Bool:
+    let state = play()
+    state.board = shooting12_fixture()
+    state.board[0][0].additional_weapon_rules[0].append(conditional_weapon_rule(WeaponRuleKind::sustained_hit, 2, Keyword::vehicle))
+    let restored = play()
+    if !set_state(restored, to_string(state)):
+        return false
+    let rule = restored.board[0][0].additional_weapon_rules[0][0]
+    return rule.parameter == 2 and rule.target_restricted and rule.target_keyword.value == Keyword::vehicle.value and restored.board[0][0].weapons.size() == 1
+
+# p.82: each original critical hit can independently use/decline Lethal Hits.
+fun test_shooting12_mixed_lethal_hits_choices() -> Bool:
+    let board = shooting12_fixture()
+    board.command_points[0] = 0
+    board.attack_info.add_letal_hits()
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::devastating_wounds))
+    let dice = resolve_attack_dice(board, board[1], board[0], attack_test_count(2))
+    dice.roll(board, board[1], board[0], attack_test_die(6))
+    dice.roll(board, board[1], board[0], attack_test_die(6))
+    dice.use_lethal_hits(board, board[1], board[0], true)
+    dice.use_lethal_hits(board, board[1], board[0], false)
+    dice.roll(board, board[1], board[0], attack_test_die(6))
+    return dice.is_done() and dice.generated_wounds == 1 and dice.generated_critical_wounds == 1
+
+# p.78: granting another duplicate cannot silently override/maximize the
+# original choice; each target's original rules remain available separately.
+fun test_shooting12_new_grant_duplicate_choice_preserves_original() -> Bool:
+    let board = shooting12_fixture()
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::sustained_hit, 1))
+    let declarations : DeclaredWeapons
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    weapon.targeted[1] = true
+    declarations.append(weapon)
+    let info = board.attack_info
+    info.add_sustained_hits(2)
+    let sequence = prepare_target_weapon_abilities(board, declarations, unit_id(0), unit_id(1), info)
+    let first_sustained : WeaponAbilityChoice
+    first_sustained = 1
+    sequence.choose_weapon_ability(board, declarations, first_sustained)
+    return sequence.is_done() and chosen_weapon_parameter(board, unit_id(1), declarations[0].current_target_rules, WeaponRuleKind::sustained_hit) == 1 and declarations[0].selected_rules.size() == 2
+
+# pp.33/57/82: Advance/Fall Back/Lance effects expire before the opposing turn;
+# already-selected shooting history is retained until its proper own turn reset.
+fun test_shooting12_opponent_turn_clears_movement_shooting_restrictions() -> Bool:
+    let board = shooting12_fixture()
+    board[0].has_run = true
+    board[0].has_charged = true
+    board[0].can_shoot = false
+    board[0].history.fell_back_this_turn = true
+    board[0].has_shoot = true
+    board.current_player = true
+    board.start_turn_history()
+    return !board[0].has_run and !board[0].has_charged and board[0].can_shoot and !board[0].history.fell_back_this_turn and board[0].has_shoot
+
+# p.81: every Extra Attacks weapon must be selected in the shared fight
+# declaration engine; finishing after just the ordinary melee weapon is illegal.
+fun test_shooting12_extra_attacks_selection_is_mandatory() -> Bool:
+    let board = shooting12_fixture()
+    board[0][0].weapons[0] = Weapon::relic_weapon
+    board[0][0].weapons.append(Weapon::force_weapon)
+    board[0][0].additional_weapon_rules[1].append(weapon_rule(WeaponRuleKind::extra_attacks))
+    let declarations : DeclaredWeapons
+    let sequence = declare_model_weapons(board, declarations, unit_id(0), damage_test_model(0), true)
+    sequence.select_weapon(board, declarations, attack_test_slot(0))
+    if can sequence.skip(board, declarations):
+        return false
+    sequence.select_weapon(board, declarations, attack_test_slot(1))
+    return can sequence.skip(board, declarations)
+
+# pp.9/87: a nearer retained corpse cannot extend a ranged weapon's reach.
+fun test_shooting12_range_ignores_nearer_retained_corpses() -> Bool:
+    let board = shooting12_fixture()
+    let corpse = board[1][0]
+    corpse.position = board_position(10, 5)
+    corpse.state = ModelState::pending_destruction
+    board[1].models.append(corpse)
+    board[1][0].position = board_position(35, 5)
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    return live_distance_to_model(board[1], board[0][0]) > 24.0 and !declaration_target_valid(board, unit_id(0), weapon, unit_id(1), false)
+
+# pp.57 / supplied appendix 04.03.03: a vanished Snap target can be replaced,
+# retaining a single shared visible target for the remaining declarations.
+fun test_shooting12_snap_ineligible_target_replacement() -> Bool:
+    let board = shooting12_fixture()
+    board[0].shooting_kind = ShootingKind::snap
+    board[0].snap_target = 1
+    let declarations : DeclaredWeapons
+    let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
+    weapon.targeted[1] = true
+    declarations.append(weapon)
+    board[1].models.clear()
+    let correction = revalidate_attack_targets(board, declarations, unit_id(0), false)
+    if !(can correction.retarget_weapon(board, declarations, unit_id(0), unit_id(2))):
+        return false
+    correction.retarget_weapon(board, declarations, unit_id(0), unit_id(2))
+    return correction.is_done() and board[0].snap_target.get() == 2 and declarations[0].targeted[2] and declaration_target_valid(board, unit_id(0), declarations[0], unit_id(2), false)
+
+# p.82 / modifier appendix: Lance's +1 and a -1 wound effect cancel before the cap.
+fun test_shooting12_lance_modifiers_cumulative_before_cap() -> Bool:
+    let board = shooting12_fixture()
+    board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::lance))
+    board.attack_info.wound_roll_malus = true
+    board[0].has_charged = true
+    return required_wound_roll(board, board.attack_info) == base_wound_threshold(board.attack_info.source.strenght(), board.attack_info.target_toughness.value)
+
+# p.78: INFANTRY/BEASTS is one OR condition, not two accumulating instances.
+fun test_shooting12_conditional_keyword_alternatives() -> Bool:
+    let board = shooting12_fixture()
+    let info = board.attack_info
+    info.weapon_rules_known = true
+    info.selected_weapon_rules.append(conditional_weapon_rule(WeaponRuleKind::sustained_hit, 2, Keyword::monster, Keyword::beasts))
+    if info.has_weapon_rule(board, WeaponRuleKind::sustained_hit):
+        return false
+    board[1][0].keywords.append(Keyword::beasts)
+    return info.has_weapon_rule(board, WeaponRuleKind::sustained_hit) and info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit) == 2
+
+# p.85: Torrent produces ordinary automatic hits, no hit dice or critical-hit
+# Lethal/Sustained effects, even during Snap Shooting; wound rolls still occur.
+fun test_shooting12_torrent_automatic_hits_without_critical_effects() -> Bool:
+    let board = shooting12_fixture()
+    board.attack_info.source = Weapon::pyreblaster
+    board.attack_info.only_hits_on_6 = true
+    board.attack_info.add_letal_hits()
+    board.attack_info.add_sustained_hits(2)
+    board.command_points[0] = 0
+    let dice = resolve_attack_dice(board, board[1], board[0], attack_test_count(2))
+    if dice.generated_hits != 2 or dice.generated_wounds != 0 or board.current_state.value != CurrentStateDescription::wound_roll.value:
+        return false
+    dice.roll(board, board[1], board[0], attack_test_die(1))
+    dice.roll(board, board[1], board[0], attack_test_die(1))
+    return dice.is_done() and dice.generated_wounds == 0

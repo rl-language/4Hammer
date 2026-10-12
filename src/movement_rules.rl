@@ -111,6 +111,7 @@ fun record_move(Board board, UnitID id, MovementKind kind):
     board[id].has_moved = true
     if !(kind == MovementKind::stationary):
         board[id].history.last_move_phase = board.phase_serial
+        board[id].history.made_move_this_turn = true
     if kind == MovementKind::advance:
         board[id].history.advanced_this_turn = true
         board[id].has_run = true

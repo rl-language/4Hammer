@@ -41,6 +41,12 @@ enum WeaponRuleKind:
     assault
     heavy
     melta
+    close_quarters
+    indirect_fire
+    twin_linked
+    one_shot
+    cleave
+    anti
 
     fun equal(WeaponRuleKind other) -> Bool:
         return self.value == other.value
@@ -54,14 +60,23 @@ fun size_as_observation_tensor(WeaponRuleKind kind) -> Int:
 
 cls WeaponRule:
     WeaponRuleKind kind
-    Int parameter
+    LinearlyDistributedInt<0, MAX_CHARACTERISTIC> parameter
+    # Conditional weapon abilities apply only to the supplied target keyword (p.78).
+    Bool target_restricted
+    LinearlyDistributedInt<0, 128> target_keyword
+    # Primitive bounded arrays avoid eager heap construction inside empty rule vectors.
+    LinearlyDistributedInt<0, 9> other_target_count
+    LinearlyDistributedInt<0, 128>[8] other_target_keywords
 
+# Bounded numeric ability metadata supports inferred ML layout; reject unsupported magnitudes (p.78).
 fun weapon_rule(WeaponRuleKind kind, Int parameter) -> WeaponRule:
     let rule : WeaponRule
     rule.kind = kind
+    assert(parameter >= 0 and parameter < MAX_CHARACTERISTIC, "weapon ability parameter capacity exceeded")
     rule.parameter = parameter
     return rule
 
+# Presence-only abilities have parameter zero and still apply (pp.78–85).
 fun weapon_rule(WeaponRuleKind kind) -> WeaponRule:
     let rule : WeaponRule
     rule.kind = kind
@@ -680,7 +695,7 @@ enum Weapon:
         let found = false
         for i in range(rules.size()):
             if !found and rules[i].kind == rule:
-                result = rules[i].parameter
+                result = rules[i].parameter.value
                 found = true
         return result
 

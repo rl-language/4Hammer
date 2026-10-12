@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 10
-const ACTION_SCHEMA_VERSION = 6
-const OBSERVATION_SCHEMA_VERSION = 10
+const STATE_SCHEMA_VERSION = 11
+const ACTION_SCHEMA_VERSION = 7
+const OBSERVATION_SCHEMA_VERSION = 11
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -125,10 +125,22 @@ cls EntityIdentity:
         assert(value >= -1, "invalid entity identity")
         self.value = value
 
+# Shooting types have distinct eligibility and attack restrictions (pp.34–35/57).
+enum ShootingKind:
+    normal
+    assault
+    close_quarters
+    indirect
+    snap
+
+    fun equal(ShootingKind other) -> Bool:
+        return self.value == other.value
+
 cls UnitHistory:
     Int last_move_phase
     Int selected_move_phase
     MovementKind move_kind
+    Bool made_move_this_turn
     Bool advanced_this_turn
     Bool fell_back_this_turn
     Bool ingress_locked
@@ -140,6 +152,7 @@ cls UnitHistory:
     Bool was_set_up_this_turn
     Bool used_stratagem_this_phase
     Bool[2] stratagem_targeted_by_player
+    Bool shot_this_phase
     Bool action_started
     Bool action_completed
 
@@ -148,6 +161,7 @@ cls UnitHistory:
         self.last_move_phase = -1
         self.selected_move_phase = -1
         self.move_kind = MovementKind::stationary
+        self.made_move_this_turn = false
         self.advanced_this_turn = false
         self.fell_back_this_turn = false
         self.ingress_locked = false
@@ -160,6 +174,7 @@ cls UnitHistory:
         self.used_stratagem_this_phase = false
         self.stratagem_targeted_by_player[0] = false
         self.stratagem_targeted_by_player[1] = false
+        self.shot_this_phase = false
         self.action_started = false
         self.action_completed = false
 

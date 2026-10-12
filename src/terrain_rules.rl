@@ -1,4 +1,4 @@
-import board
+import weapon_abilities
 import modifiers
 
 # Cover/Hidden area eligibility belongs to each model, not inherited keywords
@@ -23,7 +23,10 @@ fun model_is_hidden(Board board, Unit unit, Model model) -> Bool:
 # rules may call the override with their actual range, without invented data.
 fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model target, Int detection_range) -> Bool:
     # User-supplied appendix 02.02.01 clamps modified detection to 9–30in.
-    return detection_range >= 0 and (!model_is_hidden(board, target_unit, target) or observer.distance(target) <= float(characteristic_limit(ModifiedCharacteristic::detection_range, detection_range)))
+    let lone_range = 12
+    if target_unit.lone_operative_range.value > 0:
+        lone_range = characteristic_limit(ModifiedCharacteristic::detection_range, target_unit.lone_operative_range.value)
+    return (!target_unit.is_lone_operative() or observer.distance(target) <= float(lone_range)) and detection_range >= 0 and (!model_is_hidden(board, target_unit, target) or observer.distance(target) <= float(characteristic_limit(ModifiedCharacteristic::detection_range, detection_range)))
 
 # Printed default detection is inclusive 15in; this is not model-silhouette LOS.
 fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model target) -> Bool:
@@ -33,7 +36,7 @@ fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model 
 # geometric occlusion is replaced by the user-approved area-only abstraction.
 fun model_can_see_unit(Board board, Model observer, Unit target) -> Bool:
     for i in range(target.models.size()):
-        if model_visible_to_model(board, observer, target, target[i]):
+        if observer.is_alive() and target[i].is_alive() and model_visible_to_model(board, observer, target, target[i]):
             return true
     return false
 
@@ -88,13 +91,7 @@ fun unit_has_benefit_of_cover(Board board, Model observer, Unit target) -> Bool:
 # Legacy parameter lookups cannot detect parameterless weapon rules. Check
 # intrinsic, unit-granted and attack-granted rules without inventing a value.
 fun attack_ignores_cover(Board board, AttackSequenceInfo info) -> Bool:
-    let result = info.source.has_rule(WeaponRuleKind::ignore_cover)
-    let granted = board[info.source_unit_id].get_temporary_weapon_rules()
-    for i in range(granted.size()):
-        result = result or granted[i].kind == WeaponRuleKind::ignore_cover
-    for i in range(info.temporary_weapon_abilities.size()):
-        result = result or info.temporary_weapon_abilities[i].kind == WeaponRuleKind::ignore_cover
-    return result
+    return info.has_weapon_rule(board, WeaponRuleKind::ignore_cover)
 
 # Cover worsens ranged BS by one (p.50), not saves or hit-roll modifiers.
 # Torrent/no-hit-roll and melee skill remain unchanged; Ignores Cover cancels

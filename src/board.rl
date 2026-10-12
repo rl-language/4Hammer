@@ -21,6 +21,12 @@ enum CurrentStateDescription:
     overwatch 
 
 cls AttackSequenceInfo:
+    ShootingKind shooting_kind
+    Bool weapon_rules_known
+    CheckedVector<WeaponRule, 32> selected_weapon_rules
+    Bool indirect_stationary_visible
+    Bool heavy_bonus
+    LinearlyDistributedInt<0, 3> engaged_hit_penalties
     UnitID source_unit_id # required
     UnitID target_unit_id # required
     Bool penetration_bonus
@@ -56,24 +62,32 @@ cls AttackSequenceInfo:
         self.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::sustained_hit, parameter))
 
 
+    # A chosen duplicate is used alone, with its target-keyword condition (p.78).
+    fun rule_applies(Board board, WeaponRule rule) -> Bool:
+        return board[self.target_unit_id].weapon_rule_applies(rule)
+
     fun max_weapon_parameter(Board board, WeaponRuleKind kind) -> Int:
-        return max(board[self.source_unit_id].max_weapon_parameter(self.source, kind), self._get_weapon_rule_parameter(kind))
-
-    # Parameterless abilities such as Lethal Hits/Torrent are present even
-    # with parameter zero (pp.81–82). Parameters encode magnitude, not presence.
-    fun has_weapon_rule(Board board, WeaponRuleKind kind) -> Bool:
-        let found = self.source.has_rule(kind) or board[self.source_unit_id].has_temporary_wepon_rule(kind)
+        let result = 0
+        if !self.weapon_rules_known:
+            result = board[self.source_unit_id].max_weapon_parameter(self.source, kind)
+        for i in range(self.selected_weapon_rules.size()):
+            if self.selected_weapon_rules[i].kind == kind and self.rule_applies(board, self.selected_weapon_rules[i]):
+                result = max(result, self.selected_weapon_rules[i].parameter.value)
         for i in range(self.temporary_weapon_abilities.size()):
-            found = found or self.temporary_weapon_abilities[i].kind == kind
-        return found
+            if self.temporary_weapon_abilities[i].kind == kind and self.rule_applies(board, self.temporary_weapon_abilities[i]):
+                result = max(result, self.temporary_weapon_abilities[i].parameter.value)
+        return result
 
-    fun _get_weapon_rule_parameter(WeaponRuleKind kind) -> Int:
-        let i = 0
-        while i != self.temporary_weapon_abilities.size():
-            if self.temporary_weapon_abilities[i].kind == kind:
-                return self.temporary_weapon_abilities[i].parameter
-            i = i + 1
-        return 0
+    # Presence is independent of parameter magnitude (pp.78–85).
+    fun has_weapon_rule(Board board, WeaponRuleKind kind) -> Bool:
+        let found = false
+        if !self.weapon_rules_known:
+            found = self.source.has_rule(kind) or board[self.source_unit_id].has_temporary_wepon_rule(kind)
+        for i in range(self.selected_weapon_rules.size()):
+            found = found or (self.selected_weapon_rules[i].kind == kind and self.rule_applies(board, self.selected_weapon_rules[i]))
+        for i in range(self.temporary_weapon_abilities.size()):
+            found = found or (self.temporary_weapon_abilities[i].kind == kind and self.rule_applies(board, self.temporary_weapon_abilities[i]))
+        return found
 
     fun total_hit_modifier() -> Int:
         let result = int(self.hit_roll_bonus) - int(self.hit_roll_malus)
@@ -130,6 +144,8 @@ cls PhaseInfo:
     AlreadyUsedStratagems[2] already_used_stratagems
     
 cls Board:
+    # Editor labels for the suspended duplicate-ability selector (p.78).
+    CheckedVector<WeaponRule, 32> pending_weapon_abilities
     StateSchema schema_version
     Int next_identity
     Int phase_serial
@@ -221,27 +237,29 @@ cls Board:
         let i = 0
         while i < self.units.size():
             self.units[i].reset_turn_history()
+            # Advance/Fall Back and charge-move effects expire at every turn boundary,
+            # including before the opponent's Snap Shooting/Fight opportunities (pp.33/57/82).
+            self.units[i].has_run = false
+            self.units[i].has_moved = false
+            self.units[i].has_charged = false
+            self.units[i].can_shoot = true
+            self.units[i].can_charge = true
             if self.units[i].owned_by_player1 == self.current_player:
-                self.units[i].has_run = false
                 self.units[i].has_fought = false
                 self.units[i].has_shoot = false
-                self.units[i].has_moved = false
-                self.units[i].has_charged = false
-                self.units[i].can_shoot = true
-                self.units[i].can_charge = true
             i = i + 1
         i = 0
         while i < self.reserve_units.size():
             self.reserve_units[i].reset_turn_history()
+            self.reserve_units[i].has_run = false
+            self.reserve_units[i].has_moved = false
+            self.reserve_units[i].has_charged = false
+            self.reserve_units[i].can_shoot = true
+            self.reserve_units[i].can_charge = true
             # Turn-limited compatibility gates expire off-table too (p.68).
             if self.reserve_units[i].owned_by_player1 == self.current_player:
-                self.reserve_units[i].has_run = false
                 self.reserve_units[i].has_fought = false
                 self.reserve_units[i].has_shoot = false
-                self.reserve_units[i].has_moved = false
-                self.reserve_units[i].has_charged = false
-                self.reserve_units[i].can_shoot = true
-                self.reserve_units[i].can_charge = true
             i = i + 1
 
     # Freeze combined model counts after attachments, before casualties change
