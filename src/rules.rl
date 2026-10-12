@@ -1998,6 +1998,8 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
         actions:
             act end_shooting_phase()
                 break
+            act use_explosives(frm UnitID explosives_source) {explosives_source_valid(board, explosives_source)}
+                subaction*(board) explosives = resolve_explosives(board, explosives_source)
             act select_shooting_unit(frm UnitID shooting_unit) {shooting_unit_valid(board, shooting_unit)}
                 subaction*(board) firing_unit = selected_shooting(board, shooting_unit, shooting_unit)
             act select_target(frm UnitID source, frm UnitID target) {
@@ -2273,3 +2275,29 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
 
 
     board.identify_units()
+
+# p.56: choose bearer then visible unengaged target, roll exactly six dice,
+# and use the common mortal/FNP/destruction pipeline (pp.24/81/87).
+act resolve_explosives(ctx Board board, frm UnitID source) -> Explosives:
+    if !explosives_source_valid(board, source):
+        return
+    frm previous_owner = board.current_decision_maker
+    frm previous_active = board.timing.active_player
+    frm previous_mover = board.moving_unit
+    board.current_decision_maker = board[source].owned_by_player1
+    board.timing.active_player = board[source].owned_by_player1
+    board.moving_unit = source
+    board.commit_stratagem(board[source].owned_by_player1, Stratagem::explosives, board[source])
+    act choose_explosives_model(frm ModelID model) {explosives_model_has_target(board, source, model)}
+    act choose_explosives_target(frm UnitID target) {explosives_target_valid(board, source, model, target)}
+    frm amount : CombatCounter
+    frm index : BInt<0, 7>
+    while index < 6:
+        act roll(Dice face)
+        if face.value >= 4:
+            amount = amount + 1
+        index = index + 1
+    subaction*(board) damage = resolve_mortal_wounds(board, target, source, true, amount)
+    board.moving_unit = previous_mover
+    board.timing.active_player = previous_active
+    board.current_decision_maker = previous_owner

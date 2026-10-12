@@ -110,6 +110,9 @@ enum Keyword:
     fly
     fortification
     mobile
+    explosives
+    grenades
+
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value
@@ -411,6 +414,8 @@ enum Stratagem:
     unyielding:
         Int cost = 1
     epic_challenge:
+        Int cost = 1
+    explosives:
         Int cost = 1
 
 

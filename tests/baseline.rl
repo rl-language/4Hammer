@@ -4907,11 +4907,13 @@ fun test_fight14_selected_opponent_roles_and_invalid_constructor() -> Bool:
         sequence.keep_batch(board)
     return sequence.is_done() and !board.current_decision_maker and !board.timing.active_player and board[1].has_fought
 
+# Task 15 fixtures use explicit core keywords, not guessed faction datasheets.
 fun core15_fixture() -> Board:
     let board = charge13_fixture()
     board.begin_phase(BattlePhase::shooting)
     board[0].can_shoot = true
     board[1].can_shoot = true
+    board[0][0].keywords.append(Keyword::grenades)
     return board
 
 # p.58: battlefield, owner, live OC, shock/keywords and engagement gates.
@@ -5095,3 +5097,106 @@ fun test_core15_epic_retained_character() -> Bool:
     let sequence = selected_fight(board, unit_id(0))
     sequence.epic_challenge(board)
     return can sequence.choose_epic_character(board, damage_test_model(0))
+
+# p.56: friendly source in own Shooting phase, not Advance/shock/engagement.
+fun test_core15_explosives_source_gates() -> Bool:
+    let board = core15_fixture()
+    if !explosives_source_valid(board, unit_id(0)) or explosives_source_valid(board, unit_id(1)):
+        return false
+    board[0].history.advanced_this_turn = true
+    if explosives_source_valid(board, unit_id(0)):
+        return false
+    board[0].history.advanced_this_turn = false
+    board[0].battle_socked = true
+    if explosives_source_valid(board, unit_id(0)):
+        return false
+    board[0].battle_socked = false
+    board.begin_phase(BattlePhase::charge)
+    return !explosives_source_valid(board, unit_id(0))
+
+# p.56: an unengaged target in range of the actual keyword bearer is required.
+fun test_core15_explosives_bearer_range_and_enemy_engagement() -> Bool:
+    let board = core15_fixture()
+    board[1][0].position.x = 14
+    if !explosives_target_valid(board, unit_id(0), damage_test_model(0), unit_id(1)):
+        return false
+    board[1][0].position.x = 15
+    if explosives_source_valid(board, unit_id(0)):
+        return false
+    board[1][0].position.x = 13
+    let friend = board[0]
+    friend[0].position.x = 11
+    board.units.append(friend)
+    return !explosives_target_valid(board, unit_id(0), damage_test_model(0), unit_id(1)) and !explosives_model_valid(board, unit_id(0), damage_test_model(1))
+
+# p.56: choose a keyword bearer, not another model in its mixed unit.
+fun test_core15_explosives_per_model_keyword() -> Bool:
+    let board = core15_fixture()
+    let ordinary = board[0][0]
+    ordinary.keywords.clear()
+    board[0].models.append(ordinary)
+    return explosives_model_valid(board, unit_id(0), damage_test_model(0)) and !explosives_model_valid(board, unit_id(0), damage_test_model(1))
+
+# pp.54/56: choose source, bearer, target; six neutral dice precede common
+# mortal allocation. Selecting Explosives does not consume normal shooting.
+fun test_core15_explosives_six_dice_and_one_mortal() -> Bool:
+    let board = core15_fixture()
+    let sequence = resolve_explosives(board, unit_id(0))
+    if board.command_points[0] != 2 or board.moving_unit.get() != 0 or !(can sequence.choose_explosives_model(board, damage_test_model(0))):
+        return false
+    sequence.choose_explosives_model(board, damage_test_model(0))
+    sequence.choose_explosives_target(board, unit_id(1))
+    sequence.roll(board, attack_test_die(4))
+    for i in range(5):
+        sequence.roll(board, attack_test_die(1))
+    if (can sequence.roll(board, attack_test_die(6))) or !(can sequence.select_mortal_model(board, damage_test_model(0))):
+        return false
+    sequence.select_mortal_model(board, damage_test_model(0))
+    return sequence.is_done() and board[1][0].suffered_wounds == 1 and board[0].history.stratagem_targeted_by_player[0] and !board[0].has_shoot and shooting_unit_valid(board, unit_id(0)) and !explosives_source_valid(board, unit_id(0))
+
+# pp.24/56/87: Explosives deaths use actual delayed destruction/archival,
+# not low-level damage or a bespoke casualty deletion helper.
+fun test_core15_explosives_common_destruction() -> Bool:
+    let board = core15_fixture()
+    board[1][0].has_deadly_demise = true
+    board[1][0].deadly_demise = raw_stat(1)
+    let sequence = resolve_explosives(board, unit_id(0))
+    sequence.choose_explosives_model(board, damage_test_model(0))
+    sequence.choose_explosives_target(board, unit_id(1))
+    for i in range(6):
+        sequence.roll(board, attack_test_die(4))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    if board[1].models.empty() or !(can sequence.choose_destruction_unit(board, unit_id(1))):
+        return false
+    sequence.choose_destruction_unit(board, unit_id(1))
+    sequence.resolve_destruction_model(board, damage_test_model(0))
+    sequence.roll(board, attack_test_die(1))
+    return sequence.is_done() and board[1].models.empty() and board[1].destroyed_models.value.size() == 1
+
+# p.56: decline before a source is selected spends nothing; own Shooting
+# phase exposes Explosives without requiring a normal ranged weapon.
+fun test_core15_explosives_shooting_phase_entry() -> Bool:
+    let board = core15_fixture()
+    board[0][0].weapons.clear()
+    let phase = shooting_phase(board)
+    if !(can phase.use_explosives(board, unit_id(0))):
+        return false
+    phase.end_shooting_phase(board)
+    return phase.is_done() and board.command_points[0] == 3 and !board.has_used_strat(Stratagem::explosives, 0)
+
+# pp.56/81: Explosives mortals allow the common per-wound Feel No Pain roll;
+# the stratagem's six initial dice are not Command Re-roll eligible.
+fun test_core15_explosives_feel_no_pain() -> Bool:
+    let board = core15_fixture()
+    board[1][0].profile = Profile::squighog_boyz
+    let sequence = resolve_explosives(board, unit_id(0))
+    sequence.choose_explosives_model(board, damage_test_model(0))
+    sequence.choose_explosives_target(board, unit_id(1))
+    for i in range(6):
+        sequence.roll(board, attack_test_die(1 + 3 * int(i == 0)))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    if !(can sequence.roll(board, attack_test_die(5))):
+        return false
+    sequence.roll(board, attack_test_die(5))
+    return sequence.is_done() and board[1][0].suffered_wounds == 0 and board.command_points[1] == 3

@@ -90,3 +90,33 @@ fun epic_source_valid(Board board, UnitID source) -> Bool:
         if epic_model_valid(board, source, model):
             return true
     return false
+
+# p.56: keyword belongs to the selected living bearer, not a mixed unit's ally.
+fun explosives_model_valid(Board board, UnitID source, ModelID model) -> Bool:
+    return source.get() < board.units.size() and model.get() < board[source].models.size() and board[source][model].is_alive() and (board[source][model].has_keyword(Keyword::explosives) or board[source][model].has_keyword(Keyword::grenades))
+
+# p.56: target is unengaged and within 8 inches of the selected bearer, visible
+# under the user's area-only approximation. No weapon range is substituted.
+fun explosives_target_valid(Board board, UnitID source, ModelID model, UnitID target) -> Bool:
+    return explosives_model_valid(board, source, model) and target.get() < board.units.size() and has_live_model(board[target]) and board[target].owned_by_player1 != board[source].owned_by_player1 and !board.is_in_melee(board[target]) and live_distance_to_model(board[target], board[source][model]) <= 8.0 and model_can_see_unit(board, board[source][model], board[target])
+
+# p.56: never accept a source/bearer with no legal target and strand its selector.
+fun explosives_model_has_target(Board board, UnitID source, ModelID model) -> Bool:
+    for i in range(board.units.size()):
+        let target : UnitID
+        target = i
+        if explosives_target_valid(board, source, model, target):
+            return true
+    return false
+
+# p.56: own Shooting phase, unengaged, eligible to shoot, no Advance; CP/unit
+# limits apply to the friendly source. Explosives does not consume shooting.
+fun explosives_source_valid(Board board, UnitID source) -> Bool:
+    if !(board.timing.phase == BattlePhase::shooting) or !shooting_unit_valid(board, source) or board.is_in_melee(board[source]) or board[source].history.advanced_this_turn or board[source].has_run or !board.can_target_strat(board.current_player, Stratagem::explosives, board[source]):
+        return false
+    for i in range(board[source].models.size()):
+        let model : ModelID
+        model = i
+        if explosives_model_has_target(board, source, model):
+            return true
+    return false
