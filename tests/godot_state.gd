@@ -33,9 +33,9 @@ func check_bindings():
 	interaction.models = Node.new()
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
-	assert(rules.library.get_state_schema_version() == 13)
-	assert(rules.library.get_action_schema_version() == 9)
-	assert(rules.library.get_observation_schema_version() == 13)
+	assert(rules.library.get_state_schema_version() == 14)
+	assert(rules.library.get_action_schema_version() == 10)
+	assert(rules.library.get_observation_schema_version() == 14)
 	assert(rules.valid_actions.size() == 6)
 	var choose = RLCGamePickInsidiousInfiltrators.make()
 	rules.apply_action(choose)
@@ -541,6 +541,117 @@ func check_bindings():
 	assert(rules.library.get(charger.get_models(), 0).get_position().get_x().get_value() == 11)
 	assert(rules.can_apply(RLCGameEndCharge.make()))
 	print("CHECK: Godot post-roll multi-target charge clicks and staged path restoration completed")
+	# Task 14: phase-wide Pile In precedes unit fighting. Exercise the same
+	# controller's closest-target tie choice and save a pending melee path.
+	rules.apply_action(RLCGameEndCharge.make())
+	for step in range(8):
+		if rules.get_current_select_unit_action() is RLCGameSelectMeleeUnit:
+			break
+		assert(rules.can_apply(RLCGameFinishTimingRules.make()))
+		rules.apply_action(RLCGameFinishTimingRules.make())
+	interaction.on_state_change()
+	assert(interaction.current_select_unit_action is RLCGameSelectMeleeUnit)
+	assert(source_node.marked and not target_node.marked)
+	interaction.select(source_node)
+	interaction.on_state_change()
+	assert(interaction.current_select_model_action is RLCGameSelectMeleeModel)
+	assert(source_node.marked and not target_node.marked)
+	interaction.select(source_node)
+	interaction.on_state_change()
+	assert(interaction.current_select_unit_action is RLCGameChooseMeleeApproach)
+	assert(target_node.marked and second_target_node.marked)
+	interaction.select(target_node)
+	var melee_waypoint = rules.get_location_saction()
+	assert(melee_waypoint is RLCGameMeleeWaypoint)
+	melee_waypoint.get_member(0).get_x().set_value(11)
+	melee_waypoint.get_member(0).get_y().set_value(5)
+	rules.apply_action(melee_waypoint)
+	var melee_snapshot = rules.as_indented_str(rules.state)
+	var melee_restored = rules.library.play()
+	assert(rules.library.set_state(melee_restored, RLCLib.godot_string_to_rlc_string(melee_snapshot)))
+	rules.set_state(melee_restored)
+	board = rules.state.get_board()
+	rules.apply_action(RLCGameFinishMeleeModel.make())
+	assert(rules.can_apply(RLCGameFinishMeleeMove.make()))
+	rules.apply_action(RLCGameFinishMeleeMove.make())
+	charger = rules.library.get(board.get_units(), 0)
+	assert(charger.get_history().get_pile_in_phase().get_value() == board.get_phase_serial().get_value() + 1)
+	rules.apply_action(RLCGameFinishMeleeStep.make())
+	assert(rules.library.get_current_player(rules.state) == 0)
+	rules.apply_action(RLCGameFinishMeleeStep.make())
+	assert(rules.library.get_current_player(rules.state) == 1)
+	# A fixture melee loadout keeps this UI test independent of old Captain
+	# weapons; the actual unit/faction permission data still belongs to task 17.
+	charger_model = rules.library.get(charger.get_models(), 0)
+	rules.library.assign(charger_model.get_weapons(), rules.library.get(charge_enemy.get_models(), 0).get_weapons())
+	interaction.on_state_change()
+	assert(interaction.current_select_unit_action is RLCGameSelectFightingUnit)
+	assert(source_node.marked and not target_node.marked)
+	interaction.select(source_node)
+	press_choice(choices, "normal fight")
+	press_choice(choices, "close combact weapon")
+	rules.apply_action(RLCGameSkip.make())
+	interaction.on_state_change()
+	interaction.select(source_node)
+	interaction.select(target_node)
+	var share = RLCGameAssignAttacks.make()
+	share.get_member(0).set_value(3)
+	rules.apply_action(share)
+	interaction.on_state_change()
+	interaction.select(target_node)
+	rules.apply_action(RLCGameNoDefensiveStratagem.make())
+	rules.apply_action(RLCGameNoOffensiveStratagem.make())
+	press_first_choice(choices, "resolve ")
+	hit.get_member(0).set_value(1)
+	for die in range(3):
+		assert(rules.library.get_current_player(rules.state) == -1)
+		rules.apply_action(hit)
+	if rules.can_apply(RLCGameKeepBatch.make()):
+		rules.apply_action(RLCGameKeepBatch.make())
+	assert(charger.get_has_fought())
+	assert(rules.library.get_current_player(rules.state) == 0)
+	interaction.on_state_change()
+	assert(target_node.marked and not source_node.marked)
+	# Supplied Fight on Death: this enemy remains physically present, and is
+	# selected with its unit rather than retaliating during the previous attack.
+	var retained_unit = rules.library.get(board.get_units(), 1)
+	var retained_model = rules.library.get(retained_unit.get_models(), 0)
+	retained_model.get_state().set_value(1)
+	retained_model.get_suffered_wounds().set_value(2)
+	retained_model.set_destruction_pending(true)
+	retained_model.set_destroyed_by_attack(true)
+	retained_model.set_destroying_unit_known(true)
+	retained_model.get_destroying_unit().get_id().set_value(0)
+	retained_model.get_destruction_fight_roll().set_value(1)
+	interaction.on_state_change()
+	interaction.select(target_node)
+	press_choice(choices, "normal fight")
+	press_choice(choices, "close combact weapon")
+	rules.apply_action(RLCGameSkip.make())
+	interaction.on_state_change()
+	interaction.select(target_node)
+	interaction.select(source_node)
+	rules.apply_action(share)
+	interaction.on_state_change()
+	interaction.select(source_node)
+	rules.apply_action(RLCGameNoDefensiveStratagem.make())
+	rules.apply_action(RLCGameNoOffensiveStratagem.make())
+	press_first_choice(choices, "resolve ")
+	for die in range(3):
+		rules.apply_action(hit)
+	if rules.can_apply(RLCGameKeepBatch.make()):
+		rules.apply_action(RLCGameKeepBatch.make())
+	interaction.on_state_change()
+	assert(interaction.current_select_unit_action is RLCGameChooseDestructionUnit)
+	interaction.select(target_node)
+	interaction.on_state_change()
+	assert(interaction.current_select_model_action is RLCGameResolveDestructionModel)
+	assert(target_node.marked and not source_node.marked)
+	interaction.select(target_node)
+	assert(rules.library.size(retained_unit.get_models()) == 0)
+	assert(rules.library.size(retained_unit.get_destroyed_models().get_value()) == 2)
+	assert(not board.get_allow_destroyed_attack())
+	print("CHECK: Godot Pile In/closest-target/path restoration, alternating melee and retained-unit Fight on Death completed")
 	print("PASS: Godot schema exports, deployment, Command recovery, terrain/objective saves, weapon/target/group buttons and clicks, batch chance ownership, pending-attack/save restoration, allocation group/model controls, per-wound FNP and independent movement clicks/waypoints/save restoration")
 	# Clean up the test-owned library; production ownership changes are out of scope.
 	rules.library.free()
@@ -557,3 +668,19 @@ func mark_remaining_reserves(rules, owner):
 func finish_reserve_choices(rules):
 	while rules.can_apply(RLCGameFinishReserveSelection.make()):
 		rules.apply_action(RLCGameFinishReserveSelection.make())
+
+# Buttons are production controls; reject a missing required choice rather
+# than invoking the underlying action directly for weapon/fight decisions.
+func press_choice(panel, label):
+	for button in panel.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text == label:
+			button.button_down.emit()
+			return
+	assert(false, "Missing choice: " + label)
+
+func press_first_choice(panel, prefix):
+	for button in panel.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text.begins_with(prefix):
+			button.button_down.emit()
+			return
+	assert(false, "Missing choice prefix: " + prefix)

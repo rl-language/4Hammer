@@ -36,6 +36,8 @@ func on_state_change():
 			var label = str(GlobalRules.library.as_string_literal(unwrapped.get_member(0))).replace("_", " ")
 			if unwrapped is RLCGameChooseShootingKind:
 				label += " shooting"
+			if unwrapped is RLCGameChooseFightKind:
+				label += " fight"
 			make_choise(label, action)
 			added += 1
 		if unwrapped.members_count() == 1 and unwrapped.get_member(0) is bool:
@@ -97,8 +99,11 @@ func on_state_change():
 			var kind = "Character " if group.get_character() else "Non-character "
 			make_choise(prefix + str(group_id + 1) + ": " + kind + characteristics, action)
 			added += 1
-		if (unwrapped is RLCGameRotateModel or unwrapped is RLCGameRotateChargeModel) and unwrapped.get_member(0).get_value() % 90 == 0:
+		if (unwrapped is RLCGameRotateModel or unwrapped is RLCGameRotateChargeModel or unwrapped is RLCGameRotateMeleeModel) and unwrapped.get_member(0).get_value() % 90 == 0:
 			make_choise("Rotate " + str(unwrapped.get_member(0).get_value()) + " degrees", action)
+			added += 1
+		if unwrapped is RLCGameChooseMeleeObjective:
+			make_choise("Consolidate to objective " + str(unwrapped.get_member(0).get_value() + 1), action)
 			added += 1
 		if unwrapped is RLCGameSelectReroll:
 			make_choise("Re-roll a " + str(unwrapped.get_member(0).get_value()), action)
