@@ -560,10 +560,11 @@ func check_bindings():
 	rules.library.append(rules.library.get(board.get_units(), 1).get_models(), charge_enemy_model)
 	rules.library.identify_unit(board, rules.library.get(board.get_units(), 1))
 	charge_enemy_model.get_position().get_y().set_value(7)
+	var second_target_slot = rules.library.size(board.get_units())
 	rules.library.append(board.get_units(), charge_enemy)
-	rules.library.identify_unit(board, rules.library.get(board.get_units(), 2))
+	rules.library.identify_unit(board, rules.library.get(board.get_units(), second_target_slot))
 	var second_target_node = ModelClickFixture.new()
-	second_target_node.unit_id = 2
+	second_target_node.unit_id = second_target_slot
 	interaction.models.add_child(second_target_node)
 	rules.apply_action(RLCGameEndShootingPhase.make())
 	for step in range(8):
