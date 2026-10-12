@@ -521,3 +521,7 @@ Read [the transport/Aircraft report](transports-aircraft.md) for 18.01–18.05 (
 ## Task17.C2b2 Attacks/Damage overlay
 
 [The A/D report](weapon-attacks-damage.md) integrates scoped A into fixed melee declaration/shares and per-weapon ranged gathering, and scoped D into post-allocation normal/Devastating damage. Original random dice/re-rolls precede arithmetic; grouping compares effective fixed D or every same-domain random face. Zero-A declarations do not stall. O02 remains partial: named selectors, Damaged, incoming reductions, live sources and actual datasource grants remain pending. ROADMAP.md contains509 assertions /511 entries and final sanitizer/binding/game/replay/fuzzer evidence. No current datasheet is certified.
+
+## Task17.C2c named-selector overlay
+
+[The named-selector report](named-selectors.md) and [source identity crosswalk](orks-named-identities.tsv) add67 datasheet identities and139 families/176 profile identities, including distinct same-name ranged/melee profiles. Compact conjunctive selectors reach actual characteristic/weapon-rule consumers; mixed unit/model scope, archives, saves and Firing Deck identity are covered.534 assertions /536 entries,25 native sanitizer cases and final binding/ML/game/replay/fuzzer checks pass.17.C2 is complete; O02 remains partial pending Damaged, incoming reductions, selective ignoring, live source effects and actual datasheet grants. No current datasheet is certified by these generic fixtures.

@@ -409,12 +409,12 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
 - [x] **17.A:** Read the faction page, all 67 datasheets and relevant appendix definitions; classify per-unit engine/data requirements, source variants, geometry gaps and CP cards. Verify complete coverage without modifying game code.
 - [x] **17.B:** Separate army identity, select up to three unique detachments, support point-free reserve configuration and retain correct CP eligibility/payment, discounts, surcharges and explicit target exceptions.
 - [x] **17.C1:** ALL/ANY/NONE keyword predicates, explicit unit/model scope, actual weapon/Hunter target consumers, saved metadata validation and editor labels. Retire obsolete Orks runtime cards under the user's new instruction.
-- [ ] **17.C2 (in progress):** Effective characteristic consumers and named weapon/unit selectors, preserving source scope, random-characteristic timing, arithmetic order and special values.
+- [x] **17.C2:** Effective characteristic consumers and named weapon/unit selectors, preserving source scope, random-characteristic timing, arithmetic order and special values.
   - [x] **17.C2a:** Sparse bearer-scoped M/T/Sv/InSv/Ld/OC arithmetic, actual movement/attack/save/Leadership/objective consumers and mixed-Toughness maximum fix.
   - [x] **17.C2b:** Weapon characteristic consumers.
     - [x] **17.C2b1:** Effective fixed Range/WS/BS/S/AP, slot/bearer scope, ordered core increments, group identity/T refresh and actual targeting/hit/wound/save consumers.
     - [x] **17.C2b2:** Effective A/D, fixed melee shares, random-characteristic timing/re-rolls and complete damage grouping. Preserve the user-required assertion for nonexistent random-A melee weapons.
-  - [ ] **17.C2c:** Named physical-weapon/profile and datasheet selectors, with actual source consumers; live aura/conditional grants retain their later batch owners.
+  - [x] **17.C2c:** Named physical-weapon/profile and datasheet selectors, with actual source consumers; live aura/conditional grants retain their later batch owners.
 - [ ] **17.C3:** Damaged remaining-wounds metadata and the hit-roll consumer, applied before the cumulative +/-1 cap.
 - [ ] **17.C4:** Incoming AP/damage reductions and selective modifier ignoring, with actual save/damage consumers and grouping boundaries.
 - [ ] **17.D–E:** Physical weapon capacity/profile selection, compound dice and source-instance event/use/effect records. These are distinct batches/commits, not one framework rewrite.
@@ -489,3 +489,16 @@ The final fuzzer passes both preserved lifetime inputs and fixed zero input (`ta
 Current-schema seed40000 completes **878 actions**, terminal owner-4 (`task17c2b2-gameplay.log`, `task17c2b2-replays/full_game-seed-40000.{json,trace,bin}`). The final sanitized replay passes in **32.115s** (`task17c2b2-replay-game.log`). These scaffold-roster integration checks do not certify current Orks data.
 
 **17.C2b2 and17.C2b are complete. Next:17.C2c**, named physical-weapon/profile and datasheet selectors, followed by17.C3/C4. Source instances, compound profiles, attachments and datasheets retain their later owners.17.C2/task17 remain in progress. All identified errors must still be fixed by their owning batches.
+
+
+## Batch17.C2c completion
+
+[Named-selector report](doc/named-selectors.md) and [source crosswalk](doc/orks-named-identities.tsv):67 datasheets,139 physical weapon families,176 named profiles and330 source rows, including separately marked referenced enhancement/ability profiles. All standard datasheet row counts match the audit. Correct identical printed names with distinct ranged/melee identities for Stikka, Grabba Dragga and Snagga Klaw; validate actual attack-kind consistency. This catalog imports identities, not stats/loadouts or active faction grants.
+
+Conjunctive slot/physical/family/profile modifiers now feed actual Range/skill/S/AP/A/D consumers. Named/physical rule grants feed selected per-slot declarations. Unit/model named scope remains distinct; archives and saves preserve compact tags. Firing Deck snapshots passenger identity while using carrier numerical grants and excluding carrier equipped-instance grants. Generated lifecycle, quads and production Rules.gd/TraceManager.gd remain intact.
+
+Final CTest passes **534 assertions /536 entries**, empty discrepancies, **280.40s** (`/workspace/4hammer-validation/task17c2c-final-ctest.log`). All **25** focused native cases pass ASAN/UBSAN/leak detection (`task17c2c-final-sanitized.log`). Matching header/native/C++ in `task17c2c-final-godot` passes named and prior weapon scripts; full rendered/interaction journeys were not rerun. Earlier non-final builds predate the catalog correction and are superseded.
+
+Schemas: state/observation22, action14, next-state23. Gym passes20 steps with **22,379 candidates /17,523,864 finite observations**, about2.8% growth (`task17c2c-final-gym.log`). Current-schema seed40000 completes **878 actions**, terminal owner-4 (`task17c2c-final-gameplay.log`, `task17c2c-final-replays`); the final sanitized game replay passes in **32.531s** (`task17c2c-final-replay-game.log`). Both lifetime inputs and fixed zero pass separately. Fresh short-seed mutation fuzzing completes **50 runs /62s**, coverage8,331 /features14,019, without failures/artifacts (`task17c2c-final-fuzz.log`).
+
+**17.C2c and17.C2 are complete. Next:17.C3**, Damaged remaining-wounds metadata and hit penalty before cumulative +/-1, then17.C4 incoming reductions/selective ignoring. O02/task17 remain partial; source installation/expiry17.E, compound/capacity17.D, attachment17.G and actual current datasheets17.H and subsequent families remain mandatory. Every identified error, including the17.Q wrapper bottleneck, retains its fixing owner.

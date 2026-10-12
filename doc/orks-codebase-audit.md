@@ -55,7 +55,7 @@ Each row is a separately reviewable batch, usually with smaller function/rule co
 | 17.A | Complete source inventory, all-unit requirements, CP-card inventory and user-adjusted scope. | Complete: audit only |
 | 17.B | Separate army/detachment configuration, select up to three unique packages, explicit point-free reserve mode, and shared CP exception policy. No roster/DP/enhancement pricing. | Complete: [implementation/validation](orks-configuration.md); effects remain later batches |
 | 17.C1 | ALL/ANY/NONE keyword predicates, unit versus model queries, weapon/Hunter consumers and editor labels. | Complete; see predicate report |
-| 17.C2 | Effective characteristic consumers and named weapon/unit selectors; retain modifier arithmetic, source scope and random/special values. | In progress:17.C2a and weapon17.C2b complete; named selectors17.C2c pending |
+| 17.C2 | Effective characteristic consumers and named weapon/unit selectors; retain modifier arithmetic, source scope and random/special values. | Complete:17.C2a/b/c engine consumers and named selectors; actual source effects/data remain later owners |
 | 17.C3 | Damaged remaining-wounds metadata and hit penalties before the cumulative cap. | Pending |
 | 17.C4 | Incoming AP/damage reductions and selective modifier ignoring in saves/damage/grouping. | Pending |
 | 17.D1 | Physical weapon copies/profile groups, loadout bounds and Nazdreg's sourced profile-selection exception. | Pending |
@@ -103,3 +103,7 @@ Configuration, explicit point-free reserves and shared CP policies are implement
 ## Batch17.C2b2 completion
 
 [The A/D report](weapon-attacks-damage.md) completes bearer/profile A and D consumers, modified fixed melee shares, random timing/re-roll order and effective fixed/random damage grouping.509 assertions /511 CTest entries,12 final sanitizer cases, focused Godot, completed878-action game, sanitized replay and short mutation fuzzing pass; ROADMAP.md records evidence. O02 remains partial: named selectors17.C2c, Damaged17.C3, incoming reductions17.C4 and live sources17.E remain. Current profiles and grants are not installed or certified. Next is17.C2c.
+
+## Batch17.C2c completion
+
+[The named-selector report](named-selectors.md) completes source-backed compact identities, family/profile/physical-instance characteristic and weapon-rule consumers, model/unit datasheet scope and borrowed declaration identity. Identical printed ranged/melee names have distinct tags; standard source-row counts match every audited datasheet.534 assertions /536 CTest entries,25 sanitizer cases, focused Godot,878-action game, sanitized replay and short mutation fuzzing pass; ROADMAP.md records evidence.17.C2 is complete, but O02 remains partial: Damaged17.C3, incoming reductions/ignoring17.C4 and live source effects17.E remain. Actual stats/loadouts/grants are pending. Next is17.C3.
