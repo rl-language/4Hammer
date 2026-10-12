@@ -275,6 +275,9 @@ cls Unit:
         self.history.made_move_this_turn = false
         self.history.advanced_this_turn = false
         self.history.fell_back_this_turn = false
+        # p.58: starting another action is a turn-local restriction; pending
+        # cross-turn mission actions keep their completion/failure state.
+        self.history.action_started = false
         let i = 0
         while i < self.models.size():
             self.models[i].history.was_set_up_this_turn = false
@@ -383,10 +386,19 @@ cls Unit:
             return 0
         return self.models[model].profile.control()
 
-    # Shock/advance/fall-back and phase-local shooting prohibit action starts (pp.9/33–35/57).
-    # Task 15 supplies the remaining generic and mission requirements.
+    # Generic unit gates (pp.9/34–35/57–58), including every shooting type's
+    # phase-local after-shooting ban. Board checks engagement/membership.
     fun allows_action_start() -> Bool:
-        return !self.battle_socked and !self.history.advanced_this_turn and !self.history.fell_back_this_turn and !self.history.shot_this_phase
+        return !self.battle_socked and !self.has_keyword(Keyword::aircraft) and !self.has_keyword(Keyword::fortification) and !self.history.advanced_this_turn and !self.history.fell_back_this_turn and !self.history.action_started and !self.history.shot_this_phase
+
+    # p.58: a non-exempt move/departure interrupts every unresolved action,
+    # including one started in an earlier turn. Mission effects remain separate.
+    fun interrupt_actions():
+        for i in range(self.history.action_records.size()):
+            if !self.history.action_records[i].resolved:
+                self.history.action_records[i].failed = true
+        if self.history.action_pending:
+            self.history.action_failed = true
 
     # An already started action cannot complete while shocked (p.9).
     # Recovery removes this prohibition, not any other completion condition.

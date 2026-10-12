@@ -19,7 +19,7 @@ fun charge_source_valid(Board board, UnitID source, Bool player) -> Bool:
     if source.get() >= board.units.size():
         return false
     ref unit = board[source]
-    if unit.owned_by_player1 != player or unit.has_keyword(Keyword::aircraft) or !has_live_model(unit) or !unit.can_charge or board.is_in_melee(unit) or unit.has_run or unit.history.advanced_this_turn or unit.history.fell_back_this_turn or unit.history.ingress_locked or unit.history.declared_charge_phase == board.phase_serial.value + 1:
+    if unit.owned_by_player1 != player or unit.has_keyword(Keyword::aircraft) or !has_live_model(unit) or !unit.can_charge or board.is_in_melee(unit) or unit.has_run or unit.history.advanced_this_turn or unit.history.fell_back_this_turn or unit.history.action_started or unit.history.ingress_locked or unit.history.declared_charge_phase == board.phase_serial.value + 1:
         return false
     for i in range(board.units.size()):
         if board[i].owned_by_player1 != player and has_live_model(board[i]) and live_unit_distance(unit, board[i]) <= 12.0:
@@ -241,6 +241,8 @@ fun charge_translate_valid(Board board, Unit original, UnitID source, BoardPosit
 # Only a completed charge move grants Fights First and Lance. Phase stamps
 # also distinguish successful charges this phase for Leap to Defend (pp.37/57/82).
 fun record_charge_move(Board board, UnitID source):
+    # p.58: any charge move interrupts a pending action, even out of phase.
+    board[source].interrupt_actions()
     board[source].has_charged = true
     board[source].has_moved = true
     board[source].history.made_move_this_turn = true

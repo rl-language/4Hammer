@@ -290,21 +290,18 @@ fun test_15_01_own_player_usage() -> Bool:
 # Existing Overwatch expenditure defects exposed by checked CP (p.55).
 # Its new-edition timing/eligibility remains task 15.
 fun test_overwatch_with_no_cp_cannot_spend() -> Bool:
-    let board = attack_fixture()
-    board[1].can_shoot = true
-    let moved = unit_id(0)
-    let sequence = overwatch(board, moved)
+    let board = core15_fixture()
+    board.command_points[1] = 0
+    let sequence = resolve_timing_window(board, TimingWindow::movement_end)
     return sequence.is_done() and board.command_points[1] == 0 and !board.has_used_strat(Stratagem::overwatch, 1)
 
 fun test_declining_overwatch_preserves_cp_and_usage() -> Bool:
-    let board = attack_fixture()
+    let board = core15_fixture()
     board.command_points[1] = 1
-    board[1].can_shoot = true
-    let moved = unit_id(0)
-    let sequence = overwatch(board, moved)
-    if !(can sequence.skip(board)):
+    let sequence = resolve_timing_window(board, TimingWindow::movement_end)
+    if !(can sequence.finish_timing_rules(board)):
         return false
-    sequence.skip(board)
+    sequence.finish_timing_rules(board)
     return sequence.is_done() and board.command_points[1] == 1 and !board.has_used_strat(Stratagem::overwatch, 1)
 
 fun test_oversized_collection_decode_is_rejected() -> Bool:
@@ -365,12 +362,11 @@ fun test_bestial_bellow_rejects_missing_target_and_charges_correct_player() -> B
     return board.command_points[0] == 0 and board.command_points[1] == 0 and board.has_used_strat(Stratagem::bestial_bellow, 0) and !board.has_used_strat(Stratagem::heroic_intervention, 1)
 
 fun test_accepting_overwatch_charges_only_opponent() -> Bool:
-    let board = attack_fixture()
+    let board = core15_fixture()
+    board.command_points[0] = 0
     board.command_points[1] = 1
-    board[1].can_shoot = true
-    let moved = unit_id(0)
     let source = unit_id(1)
-    let sequence = overwatch(board, moved)
+    let sequence = timing_overwatch(board, true)
     if !(can sequence.overwatch(board, source)):
         return false
     sequence.overwatch(board, source)
@@ -1386,7 +1382,7 @@ fun test_01_07_shock_removes_objective_control() -> Bool:
 fun test_shock_model_control_and_action_restrictions() -> Bool:
     let unit = make_infernus_squad()
     unit.history.action_started = true
-    if !unit.allows_action_start() or !unit.allows_action_completion():
+    if unit.allows_action_start() or !unit.allows_action_completion():
         return false
     unit.battle_socked = true
     for i in range(unit.models.size()):
@@ -1395,7 +1391,7 @@ fun test_shock_model_control_and_action_restrictions() -> Bool:
     if unit.allows_action_start() or unit.allows_action_completion():
         return false
     unit.battle_socked = false
-    return unit.allows_action_start() and unit.allows_action_completion() and !unit.model_is_battle_shocked(0) and unit.model_objective_control(0) == 1 and unit.history.action_started
+    return !unit.allows_action_start() and unit.allows_action_completion() and !unit.model_is_battle_shocked(0) and unit.model_objective_control(0) == 1 and unit.history.action_started
 
 # p.9: a shocked friendly unit cannot erase a healthy unit's contribution.
 # This tests the shock exclusion, not task 8's unfinished aggregation formula.
@@ -4910,3 +4906,142 @@ fun test_fight14_selected_opponent_roles_and_invalid_constructor() -> Bool:
     if can sequence.keep_batch(board):
         sequence.keep_batch(board)
     return sequence.is_done() and !board.current_decision_maker and !board.timing.active_player and board[1].has_fought
+
+fun core15_fixture() -> Board:
+    let board = charge13_fixture()
+    board.begin_phase(BattlePhase::shooting)
+    board[0].can_shoot = true
+    board[1].can_shoot = true
+    return board
+
+# p.58: battlefield, owner, live OC, shock/keywords and engagement gates.
+fun test_core15_action_start_membership_and_keywords() -> Bool:
+    let board = core15_fixture()
+    if !action_start_valid(board, unit_id(0), false) or action_start_valid(board, unit_id(0), true) or action_start_valid(board, unit_id(31), false):
+        return false
+    board[0][0].keywords.append(Keyword::fortification)
+    if action_start_valid(board, unit_id(0), false):
+        return false
+    board[0][0].keywords.clear()
+    board[0][0].keywords.append(Keyword::aircraft)
+    return !action_start_valid(board, unit_id(0), false)
+
+# p.58: start commits no CP, locks another start/charge and non-TITANIC shooting.
+fun test_core15_action_start_locks_and_completion() -> Bool:
+    let board = core15_fixture()
+    if !begin_unit_action(board, unit_id(0), false) or begin_unit_action(board, unit_id(0), false):
+        return false
+    if shooting_unit_valid(board, unit_id(0)) or charge_source_valid(board, unit_id(0), false):
+        return false
+    if !complete_unit_action(board, unit_id(0)) or complete_unit_action(board, unit_id(0)):
+        return false
+    return board[0].history.action_completed and board[0].history.action_started and !board[0].history.action_pending and board.command_points[0] == 3
+
+# p.58: TITANIC bypasses engaged/action-start shooting bans, but not charge ban.
+fun test_core15_action_titanic_exceptions() -> Bool:
+    let board = fight14_fixture()
+    board[0].can_shoot = true
+    board[0][0].keywords.append(Keyword::titanic)
+    board[0][0].keywords.append(Keyword::vehicle)
+    if !begin_unit_action(board, unit_id(0), false):
+        return false
+    return shooting_kind_valid(board, unit_id(0), ShootingKind::close_quarters) and !charge_source_valid(board, unit_id(0), false)
+
+# p.58: generic non-melee movement, even zero distance, fails pending action;
+# Remain Stationary explicitly does not trigger movement (p.33).
+fun test_core15_action_move_interrupt_and_stationary_exception() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    record_move(board, unit_id(0), MovementKind::stationary)
+    if !action_completion_valid(board, unit_id(0)):
+        return false
+    record_move(board, unit_id(0), MovementKind::normal)
+    return !complete_unit_action(board, unit_id(0)) and board[0].history.action_failed and !board[0].history.action_completed
+
+# pp.9/58: Battle-shock at completion blocks the effect; earlier shock that
+# has recovered does not permanently fail an otherwise uninterrupted action.
+fun test_core15_action_shock_completion_and_recovery() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    board[0].battle_socked = true
+    if action_completion_valid(board, unit_id(0)):
+        return false
+    board[0].battle_socked = false
+    return complete_unit_action(board, unit_id(0))
+
+# p.58: turn start unlocks a new start but keeps unfinished cross-turn actions.
+fun test_core15_action_cross_turn_pending_and_departure() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    board.start_turn_history()
+    if board[0].history.action_started or !board[0].history.action_pending or !action_completion_valid(board, unit_id(0)):
+        return false
+    if !reposition_unit(board, unit_id(0)):
+        return false
+    return !complete_unit_action(board, unit_id(0)) and board.reserve_units[0].history.action_pending and board.reserve_units[0].history.action_failed
+
+# pp.34–35/57: all printed shooting types prohibit action starts until phase
+# end; the restriction is independent of whether any weapon was selected.
+fun test_core15_all_shooting_phase_action_lock() -> Bool:
+    let board = core15_fixture()
+    board[0].history.shot_this_phase = true
+    if action_start_valid(board, unit_id(0), false):
+        return false
+    board.begin_phase(BattlePhase::charge)
+    return action_start_valid(board, unit_id(0), false)
+
+# p.58: Pile In/consolidation are explicitly exempt from action interruption.
+fun test_core15_action_pile_in_exempt_and_pending_round_trip() -> Bool:
+    let board = fight14_fixture()
+    board[0][0].keywords.append(Keyword::titanic)
+    if !begin_unit_action(board, unit_id(0), false):
+        return false
+    let moving = melee_move(board, unit_id(0), false, false)
+    moving.select_melee_model(board, damage_test_model(0))
+    moving.choose_melee_approach(board, unit_id(1))
+    moving.melee_waypoint(board, board_position(6, 5))
+    moving.finish_melee_model(board)
+    moving.finish_melee_move(board)
+    let text = to_string(board)
+    let restored : Board
+    let offset = 0
+    if !from_string(restored, text, offset):
+        return false
+    return moving.completed and action_completion_valid(restored, unit_id(0)) and complete_unit_action(restored, unit_id(0)) and restored[0].history.action_completed
+
+# p.58: the lower-level out-of-phase Move entry also fails pending actions,
+# even when the ordinary Movement-phase record_move caller is absent.
+fun test_core15_action_direct_move_interrupt() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    let moving = move(board, unit_id(0), 0)
+    moving.move_to(board, unit_id(0), board_position(6, 5))
+    return moving.completed and board[0].history.action_failed and !complete_unit_action(board, unit_id(0))
+
+# p.58: one start per turn permits another action in a later turn while an
+# earlier mission action is still pending. Complete each by its own turn stamp.
+fun test_core15_actions_overlap_across_turns_without_aliasing() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    let first = board[0].history.action_records[0].started_turn
+    board.start_turn_history()
+    if !action_start_valid(board, unit_id(0), false) or !begin_unit_action(board, unit_id(0), false):
+        return false
+    let second = board[0].history.action_records[1].started_turn
+    if first == second or !complete_unit_action(board, unit_id(0), first) or !board[0].history.action_pending or complete_unit_action(board, unit_id(0), first):
+        return false
+    return complete_unit_action(board, unit_id(0), second) and !board[0].history.action_pending
+
+# p.58 bounded save infrastructure: zero/duplicate action handles and conflicting
+# completion flags are rejected rather than redirecting a mission's effect.
+fun test_core15_malformed_action_history_rejected() -> Bool:
+    let board = core15_fixture()
+    begin_unit_action(board, unit_id(0), false)
+    if !valid_state_foundations(board):
+        return false
+    board[0].history.action_records[0].started_turn = 0
+    if valid_state_foundations(board):
+        return false
+    board[0].history.action_records[0].started_turn = 1
+    board[0].history.action_records[0].completed = true
+    return !valid_state_foundations(board)

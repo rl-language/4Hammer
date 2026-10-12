@@ -135,6 +135,8 @@ fun record_move(Board board, UnitID id, MovementKind kind):
     board[id].history.move_kind = kind
     board[id].has_moved = true
     if !(kind == MovementKind::stationary):
+        # p.58 exempts only Pile In/consolidation, not these battlefield moves.
+        board[id].interrupt_actions()
         board[id].history.last_move_phase = board.phase_serial.value + 1
         board[id].history.made_move_this_turn = true
     if kind == MovementKind::advance:
@@ -179,6 +181,8 @@ fun reposition_unit(Board board, UnitID id) -> Bool:
     for i in range(board[id].models.size()):
         if board[id][i].destruction_pending:
             return false
+    # p.58: leaving the battlefield permanently fails this pending action.
+    board[id].interrupt_actions()
     board[id].history.repositioned = true
     board[id].history.strategic_reserve = true
     board.reserve_units.append(board[id])

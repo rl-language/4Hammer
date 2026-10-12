@@ -188,7 +188,6 @@ cls Board:
     PhaseInfo phase_info
 
     Attack attack
-    Overwatch overwatch
     RerollableDice current_roll
     RerollableDicePair current_pair_roll
 
@@ -775,7 +774,7 @@ fun valid_model_numeric_history(Model model) -> Bool:
 # Timestamps remain within configured serial ranges, including zero sentinel.
 # Live and archived bearers must both retain bounded numeric history (pp.19/88).
 fun valid_unit_numeric_history(Unit unit) -> Bool:
-    if !valid_fight_history(unit.history):
+    if !valid_fight_history(unit.history) or !valid_action_history(unit.history):
         return false
     for i in range(unit.phase_modifiers.charge_roll.size()):
         ref modifier = unit.phase_modifiers.charge_roll[i]
@@ -795,3 +794,17 @@ fun valid_unit_numeric_history(Unit unit) -> Bool:
 # supporting pp.38–42; no invalid stamp may bypass eligibility on load.
 fun valid_fight_history(UnitHistory history) -> Bool:
     return history.pile_in_phase.value >= 0 and history.pile_in_phase.value < MAX_PHASE_STAMP and history.consolidation_phase.value >= 0 and history.consolidation_phase.value < MAX_PHASE_STAMP and history.engaged_fight_start_phase.value >= 0 and history.engaged_fight_start_phase.value < MAX_PHASE_STAMP and history.fight_eligible_phase.value >= 0 and history.fight_eligible_phase.value < MAX_PHASE_STAMP and history.consolidation_fight_pending.value >= 0 and history.consolidation_fight_pending.value < MAX_PHASE_STAMP
+
+
+# p.58 infrastructure: action handles must be unique, ordered bounded turn
+# stamps; contradictory completion state must not survive a saved-game load.
+fun valid_action_history(UnitHistory history) -> Bool:
+    let previous = 0
+    let pending = false
+    for i in range(history.action_records.size()):
+        ref progress = history.action_records[i]
+        if progress.started_turn.value <= previous or progress.started_turn.value >= MAX_TURN_STAMP or (progress.completed and (!progress.resolved or progress.failed)):
+            return false
+        previous = progress.started_turn.value
+        pending = pending or !progress.resolved
+    return pending == history.action_pending

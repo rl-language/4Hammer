@@ -13,6 +13,7 @@ import damage_rules
 import movement_rules
 import charge_rules
 import fight_rules
+import core_stratagem_rules
 
 # Wound thresholds use the printed equality boundaries (p.18). The user-
 # supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus
@@ -1430,36 +1431,8 @@ act command_phase(ctx Board board) -> CommandPhase:
     subaction*(board) abilities = resolve_timing_window(board, TimingWindow::command_abilities)
     board.current_decision_maker = board.current_player
 
-# core rules overwatch sequence
-# Only spend/record Overwatch when an affordable opponent accepts it
-# (cost/player p.54; Overwatch p.55). New timing/targets remain task 15.
-act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
-    if board[moved_unit].empty() or !board.can_use_strat(!board[moved_unit].owned_by_player1, Stratagem::overwatch):
-        return
-    frm previous_owner = board.current_decision_maker
-    board.current_decision_maker = !board[moved_unit.get()].owned_by_player1
-    board.current_state = CurrentStateDescription::overwatch
-    actions:
-        act skip()
-        act overwatch(frm UnitID source) {
-            source.get() < board.units.size(),
-            has_live_attack_recipient(board[source]),
-            unit_visible_to_unit(board, board[source], board[moved_unit]),
-            24.0 > board[source.get()].distance(board[moved_unit.get()]),
-            board[source.get()].owned_by_player1 == !board[moved_unit].owned_by_player1,
-            board[source].can_shoot,
-            board.can_target_strat(!board[moved_unit].owned_by_player1, Stratagem::overwatch, board[source])
-        }
-            board.commit_stratagem(!board[moved_unit].owned_by_player1, Stratagem::overwatch, board[source])
-            board.attack = attack(board, source, moved_unit, false, true)
-            subaction*(board) board.attack
-    board.current_state = CurrentStateDescription::none
-    board.current_decision_maker = previous_owner
-
-# core rules movement rules, including the possiblity 
-# of advancing and the triggering of overwatches
-# Keep the full Advance increment and record the movement phase
-# (Normal/Advance pp.32–33). Validate each model/path and final coherency (p.12);
+# Independent moves retain full Advance increments and per-model constraints
+# (pp.12/32–33). Overwatch is exclusively an end-of-Movement timing action.
 # Independent model paths share the existing BoardPosition grid and ctx
 # contracts; stage positions until complete final coherency passes (pp.12/87).
 act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement) -> Move:
@@ -1523,6 +1496,8 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
                             path.final_rotation = rotation.value * 1000
                             rotated = true
     if completed:
+        # p.58: direct out-of-phase movement also interrupts pending actions.
+        board[unit].interrupt_actions()
         # Any completed move, including out-of-phase moves, blocks a later
         # surge in this phase (p.70); stationary never enters this action.
         board[unit].history.last_move_phase = board.phase_serial.value + 1
