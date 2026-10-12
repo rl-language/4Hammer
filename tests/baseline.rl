@@ -827,25 +827,20 @@ fun test_insane_bravery_charges_the_units_owner() -> Bool:
     sequence.insane_bravery(board, board[1], true)
     return sequence.is_done() and board.command_points[0] == 0 and board.command_points[1] == 0 and board.has_used_strat(Stratagem::insane_bravery, 1) and !board.has_used_strat(Stratagem::insane_bravery, 0)
 
-# Existing faction data: spending must match the cost/player actually gated.
-# New-edition faction replacement remains dependent on task 17 supplied data.
-fun test_bestial_bellow_rejects_missing_target_and_charges_correct_player() -> Bool:
+# User retires obsolete Orks cards: no pre-Fight bellow and no old defensive
+# payloads remain. Core Pile In starts directly without spending CP (pp.38/54).
+fun test_orks17c_retired_stratagems_are_unavailable() -> Bool:
     let board : Board
     board.units.append(make_beastboss_morgrim())
-    board.units.append(make_infernus_squad())
-    board[1].owned_by_player1 = true
     board.players_faction[0] = Faction::morgrim_butchas
     board.command_points[0] = 1
     let sequence = fight_phase(board)
-    let source = unit_id(0)
-    let target = unit_id(1)
-    let missing = unit_id(MAX_UNIT_COUNT - 1)
-    if can sequence.use_bestial_bellow(board, source, missing):
-        return false
-    if !(can sequence.use_bestial_bellow(board, source, target)):
-        return false
-    sequence.use_bestial_bellow(board, source, target)
-    return board.command_points[0] == 0 and board.command_points[1] == 0 and board.has_used_strat(Stratagem::bestial_bellow, 0) and !board.has_used_strat(Stratagem::heroic_intervention, 1)
+    let obsolete : AnyGameAction
+    let old_defence = s("tough_as_squig_hide {}")
+    let old_bellow = s("use_bestial_bellow {unit: {id: 0}, target: {id: 0}}")
+    let core_payload = s("finish_melee_step {}")
+    return (can sequence.finish_melee_step(board)) and board.command_points[0] == 1 and from_string(obsolete, core_payload) and !from_string(obsolete, old_defence) and !from_string(obsolete, old_bellow)
+
 
 fun test_accepting_overwatch_charges_only_opponent() -> Bool:
     let board = core15_fixture()

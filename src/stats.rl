@@ -418,10 +418,6 @@ enum Stratagem:
         Int cost = 1
     demonic_fervour:
         Int cost = 1
-    tough_as_squig_hide:
-        Int cost = 1
-    bestial_bellow:
-        Int cost = 1
     overawing_magnificence:
         Int cost = 1
     the_gilded_spear:

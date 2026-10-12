@@ -683,12 +683,6 @@ act use_attack_stratagems(ctx Board board,
     board.current_decision_maker = board[target].owned_by_player1
     actions:
         act no_defensive_stratagem()
-        act tough_as_squig_hide() {
-            board.can_target_strat(bool(target_player), Stratagem::tough_as_squig_hide, board[target]),
-            board.players_faction[int(target_player)] == Faction::morgrim_butchas
-        }
-            board[target].phase_modifiers.greater_strenght_wound_protection = true
-            board.commit_stratagem(bool(target_player), Stratagem::tough_as_squig_hide, board[target])
         act use_gene_wrought_resiliance() {
             board.can_target_strat(bool(target_player), Stratagem::gene_wrought_resiliance, board[target]),
             board.players_faction[int(target_player)] == Faction::strike_force_octavius
@@ -1889,16 +1883,10 @@ act melee_move_step(ctx Board board, frm Bool consolidate) -> MeleeMoveStep:
         mover = !mover
     board.current_decision_maker = previous_owner
 
-# Keep the legacy Bestial Bellow grant explicit until faction data arrives.
-# Core fight bodies are phase-wide Pile In, dynamic mandatory fights and
-# phase-wide consolidation (pp.38–43); turn owns start/end windows.
+# Core fight bodies are phase-wide Pile In, mandatory fights and consolidation
+# (pp.38–43). The user retires the previous Orks implementation; its obsolete
+# Bestial Bellow decision must not appear before the new edition's Fight step.
 act fight_phase(ctx Board board) -> FightPhase:
-    if board.players_faction[int(board.current_player)] == Faction::morgrim_butchas:
-        actions:
-            act use_bestial_bellow(frm UnitID unit, frm UnitID target) {target.get() < board.units.size(), has_live_attack_recipient(board[target]), unit.get() < board.units.size(), !board[unit].empty(), board[unit].has_keyword(Keyword::beastboss) or board[unit].has_keyword(Keyword::squighog_boyz), board.can_target_strat(board.current_player, Stratagem::bestial_bellow, board[unit]), board[target].distance(board[unit]) < 3.0}
-                board.commit_stratagem(board.current_player, Stratagem::bestial_bellow, board[unit])
-                subaction*(board, board[target]) shock_test = battle_shock_test(board, board[target], false, false)
-            act skip()
     subaction*(board) pile_in = melee_move_step(board, false)
     subaction*(board) fights = fight_step(board, true)
     subaction*(board) consolidation = melee_move_step(board, true)
