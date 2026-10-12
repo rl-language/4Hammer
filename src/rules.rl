@@ -336,7 +336,7 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
         board.attack_info.target_unit_id = current_job.target
         board.current_decision_maker = board[current_job.target].owned_by_player1
         frm recipient : ModelID
-        if current_job.recipient.value >= 0:
+        if current_job.recipient.value > 0:
             let existing = board[current_job.target].find_model(current_job.recipient)
             if existing < 0 or !board[current_job.target][existing].is_alive():
                 continue
@@ -581,12 +581,6 @@ act resolve_model_attack(ctx Board board,
     ref model = board[source][current_model]
     frm hazardous_uses : HazardousUses
 
-    # cache the distance for performance, mark it hidden so it does
-    # not get delivered to the gpu, since it is implied
-    # by the positions of units anyway
-    frm dist : Hidden<Float>
-    dist = board[target].distance(model)
-
     board.attack_info.source_profile = model.profile
     frm used_weapons : Bool[MAX_WEAPONS] 
     while true:
@@ -594,7 +588,7 @@ act resolve_model_attack(ctx Board board,
             act select_weapon(BInt<0, MAX_WEAPONS> weapon_id) {
                 weapon_id < board[source][current_model].weapons.size(),
                 !melee or board[source][current_model].weapons[weapon_id.value].range() == 0,
-                dist.value <= float(board[source][current_model].weapons[weapon_id.value].range()),
+                board[target].distance(board[source][current_model]) <= float(board[source][current_model].weapons[weapon_id.value].range()),
                 !board[source].has_run or board[source][current_model].weapons[weapon_id.value].has_rule(WeaponRuleKind::assault),
                 !used_weapons[weapon_id.value],
                 melee or model_can_see_unit(board, board[source][current_model], board[target])
@@ -1521,20 +1515,21 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
                     actions:
                         act finish_model()
                             if path.points.size() > 0:
-                                candidate[model].set_geometry_position(path.points.back())
+                                candidate[model].set_geometry_position(path.points.back().as_geometry_point())
                             candidate[model].geometry.rotation = path.final_rotation
-                            candidate[model].history.distance_moved_this_turn = original[model].history.distance_moved_this_turn.value + path_distance(original[model], path, skies) / float(MICROMETRES_PER_INCH)
+                            candidate[model].history = original[model].history
+                            record_path_movement(candidate[model].history, original[model], path, skies)
                             selected[model.get()] = true
                             model_done = true
                         act waypoint(BoardPosition position) {waypoint_valid(board, original, path, position, kind, extra.value, override_m.value, skies)}
-                            path.points.append(geometry_point(position.x.value * MICROMETRES_PER_INCH, position.y.value * MICROMETRES_PER_INCH, original[model].geometry_position().z.value))
+                            path.append_point(geometry_point(position.x.value * MICROMETRES_PER_INCH, position.y.value * MICROMETRES_PER_INCH, original[model].geometry_position().z.value))
                         act rotate_model(MovementRotation rotation) {!rotated}
                             path.final_rotation = rotation.value * 1000
                             rotated = true
     if completed:
         # Any completed move, including out-of-phase moves, blocks a later
         # surge in this phase (p.70); stationary never enters this action.
-        board[unit].history.last_move_phase = board.phase_serial
+        board[unit].history.last_move_phase = board.phase_serial.value + 1
         board[unit].history.made_move_this_turn = true
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
@@ -1679,11 +1674,11 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
     actions:
         act nothing_to_deploy() {movement_selection_complete(board, current_player)}
             done_deploying = true
-        act select_reserve_unit(frm UnitID id) {id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[id.get()]), board.reserve_units[id.get()].owned_by_player1 == current_player, board.reserve_units[id.get()].history.selected_move_phase != board.phase_serial}
+        act select_reserve_unit(frm UnitID id) {id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[id.get()]), board.reserve_units[id.get()].owned_by_player1 == current_player, board.reserve_units[id.get()].history.selected_move_phase != board.phase_serial.value + 1}
             actions:
                 act skip()
                 act reserve_remain_stationary()
-                    board.reserve_units[id.get()].history.selected_move_phase = board.phase_serial
+                    board.reserve_units[id.get()].history.selected_move_phase = board.phase_serial.value + 1
                     board.reserve_units[id.get()].history.move_kind = MovementKind::stationary
                 act place_at(BoardPosition position) {board.current_round >= 1, board.units.has_capacity(), setup_at_valid(board, board.reserve_units[id.get()], position, MovementKind::ingress, false)}
                     enter_from_reserves(board, id, position, MovementKind::ingress)
@@ -1738,7 +1733,7 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
                 kind = MovementKind::desperate_escape
                 subaction*(board) escape = desperate_escape(board, id)
                 selected = true
-    if !(board[id].history.selected_move_phase == board.phase_serial) and has_live_model(board[id]):
+    if !(board[id].history.selected_move_phase == board.phase_serial.value + 1) and has_live_model(board[id]):
         board[id].pending_move_kind = kind
         board[id].move_takes_to_skies = false
         if board[id].has_keyword(Keyword::fly):
@@ -1776,7 +1771,7 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
             # legal stationary/retry path through the phase loop (pp.12/32).
             board[id].history.move_kind = MovementKind::stationary
     if !has_live_model(board[id]):
-        board[id].history.selected_move_phase = board.phase_serial
+        board[id].history.selected_move_phase = board.phase_serial.value + 1
     board[id].movement_override = previous_override
     board[id].move_takes_to_skies = false
     board[id].pending_move_kind = MovementKind::normal
@@ -1789,7 +1784,7 @@ act movement_phase(ctx Board board) -> MovementPhase:
         actions:
             act end_move() {movement_selection_complete(board, board.current_player)}
                 break
-            act move_unit(frm UnitID id) {id.get() < board.units.size(), has_live_model(board[id]), board[id].owned_by_player1 == board.current_player, board[id].history.selected_move_phase != board.phase_serial}
+            act move_unit(frm UnitID id) {id.get() < board.units.size(), has_live_model(board[id]), board[id].owned_by_player1 == board.current_player, board[id].history.selected_move_phase != board.phase_serial.value + 1}
                 frm use_gilded_spear = false
                 # Preserve this legacy supplied-roster hook without inventing
                 # new faction authority; exact faction replacement is task 17.
@@ -1799,11 +1794,11 @@ act movement_phase(ctx Board board) -> MovementPhase:
                     if do_it:
                         board.commit_stratagem(board.current_player, Stratagem::the_gilded_spear, board[id])
                 subaction*(board) chosen_move = movement(board, id, use_gilded_spear)
-            act select_reserve_unit(frm UnitID reserve_id) {reserve_id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[reserve_id.get()]), board.reserve_units[reserve_id.get()].owned_by_player1 == board.current_player, board.reserve_units[reserve_id.get()].history.selected_move_phase != board.phase_serial}
+            act select_reserve_unit(frm UnitID reserve_id) {reserve_id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[reserve_id.get()]), board.reserve_units[reserve_id.get()].owned_by_player1 == board.current_player, board.reserve_units[reserve_id.get()].history.selected_move_phase != board.phase_serial.value + 1}
                 actions:
                     act skip()
                     act reserve_remain_stationary()
-                        board.reserve_units[reserve_id.get()].history.selected_move_phase = board.phase_serial
+                        board.reserve_units[reserve_id.get()].history.selected_move_phase = board.phase_serial.value + 1
                         board.reserve_units[reserve_id.get()].history.move_kind = MovementKind::stationary
                     act place_at(BoardPosition position) {board.current_round >= 1, board.units.has_capacity(), setup_at_valid(board, board.reserve_units[reserve_id.get()], position, MovementKind::ingress, false)}
                         enter_from_reserves(board, reserve_id, position, MovementKind::ingress)
@@ -1971,7 +1966,7 @@ act deploy(ctx Board board) -> Deployment:
 # no illustrative faction trigger is manufactured (pp.70/74). Closest target,
 # per-model obligations and once-per-phase movement are enforced by helpers.
 act surge(ctx Board board, frm UnitID source, frm StatModifier distance, frm Bool triggered) -> Surge:
-    if !triggered or source.get() >= board.units.size() or !has_live_model(board[source]) or board[source].battle_socked or board.is_in_melee(board[source]) or board[source].history.last_move_phase == board.phase_serial or board[source].history.ingress_locked or !has_surge_target(board, source):
+    if !triggered or source.get() >= board.units.size() or !has_live_model(board[source]) or board[source].battle_socked or board.is_in_melee(board[source]) or board[source].history.last_move_phase == board.phase_serial.value + 1 or board[source].history.ingress_locked or !has_surge_target(board, source):
         return
     frm previous_owner = board.current_decision_maker
     frm previous_target = board.surge_target

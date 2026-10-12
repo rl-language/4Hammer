@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 11
+const STATE_SCHEMA_VERSION = 12
 const ACTION_SCHEMA_VERSION = 8
-const OBSERVATION_SCHEMA_VERSION = 11
+const OBSERVATION_SCHEMA_VERSION = 12
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -107,23 +107,22 @@ fun<T, Int capacity> write_in_observation_tensor(CheckedVector<T, capacity> obj,
 fun<T, Int capacity> size_as_observation_tensor(CheckedVector<T, capacity> obj) -> Int:
     return size_as_observation_tensor(obj._data)
 
-# Persistent handles are not positional action arguments. -1 means unassigned.
-# Raw identities deliberately do not appear in observation tensors.
-cls EntityIdentity:
-    Int value
-
-    # Maintain persistent identity invariants for destruction/return references (pp.19/88).
-    fun init():
-        self.value = -1
-
-    # Maintain persistent identity invariants for destruction/return references (pp.19/88).
-    fun equal(EntityIdentity other) -> Bool:
-        return self.value == other.value
-
-    # Maintain persistent identity invariants for destruction/return references (pp.19/88).
-    fun assign(Int value):
-        assert(value >= -1, "invalid entity identity")
-        self.value = value
+# Bounded metadata is observable storage, not a player selector (user requirement).
+# Zero denotes unset; assigned identities and phase/turn stamps use value+1.
+# Nonnegative bounds keep generated Python/Godot names valid in RLC 0.4.14.
+const MAX_ENTITY_IDENTITIES = 16384
+const MAX_IDENTITY_SEQUENCE = 16385
+const NEXT_STATE_SCHEMA_VERSION = 13
+const MAX_PHASE_SERIAL = 64
+const MAX_TURN_SERIAL = 16
+const MAX_PHASE_STAMP = 65
+const MAX_TURN_STAMP = 17
+using EntityIdentity = LinearlyDistributedInt<0, MAX_IDENTITY_SEQUENCE>
+using IdentitySequence = LinearlyDistributedInt<0, MAX_IDENTITY_SEQUENCE>
+using PhaseSerial = LinearlyDistributedInt<0, MAX_PHASE_SERIAL>
+using TurnSerial = LinearlyDistributedInt<0, MAX_TURN_SERIAL>
+using PhaseStamp = LinearlyDistributedInt<0, MAX_PHASE_STAMP>
+using TurnStamp = LinearlyDistributedInt<0, MAX_TURN_STAMP>
 
 # Shooting types have distinct eligibility and attack restrictions (pp.34–35/57).
 enum ShootingKind:
@@ -137,8 +136,8 @@ enum ShootingKind:
         return self.value == other.value
 
 cls UnitHistory:
-    Int last_move_phase
-    Int selected_move_phase
+    PhaseStamp last_move_phase
+    PhaseStamp selected_move_phase
     MovementKind move_kind
     Bool made_move_this_turn
     Bool advanced_this_turn
@@ -148,7 +147,7 @@ cls UnitHistory:
     Bool repositioned
     Bool has_ingressed
     Bool scouts_resolved
-    Int last_ranged_attack_turn
+    TurnStamp last_ranged_attack_turn
     Bool was_set_up_this_turn
     Bool used_stratagem_this_phase
     Bool[2] stratagem_targeted_by_player
@@ -156,38 +155,47 @@ cls UnitHistory:
     Bool action_started
     Bool action_completed
 
-    # Initialize lifecycle history without implying new eligibility rules (turn pp.28–30; setup pp.68–71).
-    fun init():
-        self.last_move_phase = -1
-        self.selected_move_phase = -1
-        self.move_kind = MovementKind::stationary
-        self.made_move_this_turn = false
-        self.advanced_this_turn = false
-        self.fell_back_this_turn = false
-        self.ingress_locked = false
-        self.strategic_reserve = false
-        self.repositioned = false
-        self.has_ingressed = false
-        self.scouts_resolved = false
-        self.last_ranged_attack_turn = -1
-        self.was_set_up_this_turn = false
-        self.used_stratagem_this_phase = false
-        self.stratagem_targeted_by_player[0] = false
-        self.stratagem_targeted_by_player[1] = false
-        self.shot_this_phase = false
-        self.action_started = false
-        self.action_completed = false
+    # Generated initialization sets stamps to 0, enum to stationary and
+    # Booleans to false; no partial lifecycle hook is needed (pp.28–30/68).
+
+# Keep exact grid segment lengths as bounded squared horizontal distances;
+# floats are calculated on demand and are never persisted (user requirement).
+const MAX_MOVEMENT_SEGMENTS = 128
+const MAX_HORIZONTAL_SQUARE = 2691 # 43^2 + 29^2 + 1, the supported grid diagonal.
+const MAX_VERTICAL_DISTANCE = 3841 # 128 supported segments times 30 inches, plus one.
+using HorizontalSquare = LinearlyDistributedInt<0, MAX_HORIZONTAL_SQUARE>
+using VerticalDistance = LinearlyDistributedInt<0, MAX_VERTICAL_DISTANCE>
 
 cls ModelHistory:
-    Hidden<Float> distance_moved_this_turn
+    CheckedVector<HorizontalSquare, MAX_MOVEMENT_SEGMENTS> horizontal_segments
+    VerticalDistance vertical_distance
     Bool was_set_up_this_turn
 
-cls StateSchema:
-    Int value
+    # Every straight segment contributes its length (p.12); rotations do not.
+    # Store integer grid data, not rounded floating totals (user requirement).
+    fun record_movement_segment(Int dx, Int dy, Int dz):
+        assert(abs(dx) < BOARD_WIDTH and abs(dy) < BOARD_HEIGHT and abs(dz) <= BOARD_HEIGHT, "movement segment outside supported grid")
+        if dx != 0 or dy != 0 or dz != 0:
+            let square : HorizontalSquare
+            square = dx * dx + dy * dy
+            self.horizontal_segments.append(square)
+            assert(self.vertical_distance.value + abs(dz) < MAX_VERTICAL_DISTANCE, "vertical movement history capacity exceeded")
+            self.vertical_distance = self.vertical_distance.value + abs(dz)
 
-    # Initialize current save compatibility metadata; no tabletop rule defines the schema.
-    fun init():
-        self.value = STATE_SCHEMA_VERSION
+    # Exact float calculation over bounded integer history (p.12 / Heavy p.82).
+    fun distance_moved_this_turn() -> Float:
+        let distance = float(self.vertical_distance.value)
+        for i in range(self.horizontal_segments.size()):
+            distance = distance + sqrt(float(self.horizontal_segments[i].value))
+        return distance
+
+    # Turn-limited distance history expires for both armies (pp.28–30/82).
+    fun reset_movement_distance():
+        self.horizontal_segments.clear()
+        self.vertical_distance = 0
+
+# Schema is singleton bounded metadata; generated init uses the current value.
+using StateSchema = LinearlyDistributedInt<STATE_SCHEMA_VERSION, NEXT_STATE_SCHEMA_VERSION>
 
 # Decode into a temporary unbounded vector to detect excess entries before mutation.
 # Save infrastructure preserves configured roster counts rather than silently dropping models (p.86).

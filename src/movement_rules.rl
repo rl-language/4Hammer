@@ -131,11 +131,11 @@ fun has_live_model(Unit unit) -> Bool:
 # Record selected type and turn-long restrictions only after a successful
 # move. Repositioning/ingress must not erase advance/fall-back flags (pp.33/68).
 fun record_move(Board board, UnitID id, MovementKind kind):
-    board[id].history.selected_move_phase = board.phase_serial
+    board[id].history.selected_move_phase = board.phase_serial.value + 1
     board[id].history.move_kind = kind
     board[id].has_moved = true
     if !(kind == MovementKind::stationary):
-        board[id].history.last_move_phase = board.phase_serial
+        board[id].history.last_move_phase = board.phase_serial.value + 1
         board[id].history.made_move_this_turn = true
     if kind == MovementKind::advance:
         board[id].history.advanced_this_turn = true
@@ -164,7 +164,7 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
     if kind == MovementKind::ingress:
         board.units.back().history.has_ingressed = true
         board.units.back().history.ingress_locked = true
-        board.units.back().history.selected_move_phase = board.phase_serial
+        board.units.back().history.selected_move_phase = board.phase_serial.value + 1
         board.units.back().history.move_kind = kind
         board.units.back().has_moved = true
     board.reserve_units.erase(reserve.get())
@@ -185,7 +185,7 @@ fun reposition_unit(Board board, UnitID id) -> Bool:
     board[id].models.clear()
     board[id].destroyed_models.value.clear()
     board[id].attached_units.value.clear()
-    board[id].identity = -1
+    board[id].identity = 0
     board[id].retired = true
     return true
 
@@ -280,10 +280,10 @@ fun path_distance(Model model, ModelPath path, Bool skies) -> Float:
     let distance = 0.0
     for i in range(path.points.size()):
         if skies and model.has_keyword(Keyword::fly):
-            distance = distance + horizontal_length(start, path.points[i])
+            distance = distance + horizontal_length(start, path.points[i].as_geometry_point())
         else:
-            distance = distance + segment_length(start, path.points[i])
-        start = path.points[i]
+            distance = distance + segment_length(start, path.points[i].as_geometry_point())
+        start = path.points[i].as_geometry_point()
     return distance
 
 # Probe a waypoint against the original model's whole path, without mutating
@@ -294,7 +294,7 @@ fun waypoint_valid(Board board, Unit original, ModelPath path, BoardPosition pos
     ref model = original[path.model]
     let start = model.geometry_position()
     if path.points.size() > 0:
-        start = path.points.back()
+        start = path.points.back().as_geometry_point()
     let finish = geometry_point(position.x.value * MICROMETRES_PER_INCH, position.y.value * MICROMETRES_PER_INCH, start.z.value)
     let policy = movement_policy(original, model, kind, skies)
     let segment = segment_length(start, finish)
@@ -333,7 +333,7 @@ fun translate_move_candidate(Board board, Unit original, Unit candidate, UnitID 
         if !waypoint_valid(board, original, path, point, kind, extra, override_m, skies):
             return false
         candidate[i].position = point
-        candidate[i].history.distance_moved_this_turn = candidate[i].history.distance_moved_this_turn.value + segment_length(original[i].geometry_position(), candidate[i].geometry_position()) / float(MICROMETRES_PER_INCH)
+        record_geometry_movement(candidate[i].history, original[i].geometry_position(), candidate[i].geometry_position(), false)
     return complete_move_valid(board, original, candidate, slot, kind, extra)
 
 # Candidate owning copy has one exit so repeated action enumeration remains
@@ -349,10 +349,10 @@ fun rigid_move_valid(Board board, Unit original, UnitID slot, BoardPosition posi
 # per phase, including the remain-stationary choice (p.32).
 fun movement_selection_complete(Board board, Bool player) -> Bool:
     for i in range(board.units.size()):
-        if board[i].owned_by_player1 == player and has_live_model(board[i]) and board[i].history.selected_move_phase != board.phase_serial:
+        if board[i].owned_by_player1 == player and has_live_model(board[i]) and board[i].history.selected_move_phase != board.phase_serial.value + 1:
             return false
     for i in range(board.reserve_units.size()):
-        if board.reserve_units[i].owned_by_player1 == player and has_live_model(board.reserve_units[i]) and board.reserve_units[i].history.selected_move_phase != board.phase_serial:
+        if board.reserve_units[i].owned_by_player1 == player and has_live_model(board.reserve_units[i]) and board.reserve_units[i].history.selected_move_phase != board.phase_serial.value + 1:
             return false
     return true
 
@@ -539,3 +539,11 @@ fun destroy_unplaceable_reserve(Board board, UnitID id):
         board.reserve_units[id.get()].remove_model(board.reserve_units[id.get()].models.size() - 1)
     board.expired_reserves.value.append(board.reserve_units[id.get()])
     board.reserve_units.erase(id.get())
+
+# Replay accepted waypoints into bounded segment history, preserving exact
+# diagonal lengths without a stored float total (p.12 / user requirement).
+fun record_path_movement(ModelHistory history, Model original, ModelPath path, Bool skies):
+    let start = original.geometry_position()
+    for i in range(path.points.size()):
+        record_geometry_movement(history, start, path.points[i].as_geometry_point(), skies and original.has_keyword(Keyword::fly))
+        start = path.points[i].as_geometry_point()

@@ -55,7 +55,7 @@ fun heavy_unit_eligible(Board board, UnitID source) -> Bool:
     if !(board.timing.phase == BattlePhase::shooting) or board[source].owned_by_player1 != board.current_player or board.is_in_melee(board[source]) or board[source].history.was_set_up_this_turn:
         return false
     for i in range(board[source].models.size()):
-        if board[source][i].is_alive() and (board[source][i].history.was_set_up_this_turn or board[source][i].history.distance_moved_this_turn.value > 3.0):
+        if board[source][i].is_alive() and (board[source][i].history.was_set_up_this_turn or board[source][i].history.distance_moved_this_turn() > 3.0):
             return false
     return true
 
@@ -103,6 +103,6 @@ fun stationary_this_turn(Unit unit) -> Bool:
     if unit.history.made_move_this_turn or unit.history.was_set_up_this_turn or unit.history.advanced_this_turn or unit.history.fell_back_this_turn:
         return false
     for i in range(unit.models.size()):
-        if unit[i].is_alive() and (unit[i].history.distance_moved_this_turn.value > 0.0 or unit[i].history.was_set_up_this_turn):
+        if unit[i].is_alive() and (unit[i].history.distance_moved_this_turn() > 0.0 or unit[i].history.was_set_up_this_turn):
             return false
     return true

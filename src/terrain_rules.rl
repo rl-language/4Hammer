@@ -11,7 +11,7 @@ fun terrain_cover_model_kind(Model model) -> Bool:
 fun model_is_hidden(Board board, Unit unit, Model model) -> Bool:
     if !terrain_cover_model_kind(model):
         return false
-    if unit.history.last_ranged_attack_turn >= 0 and unit.history.last_ranged_attack_turn >= board.turn_serial - 1:
+    if unit.history.last_ranged_attack_turn > 0 and unit.history.last_ranged_attack_turn >= board.turn_serial.value:
         return false
     for i in range(board.terrain_areas.size()):
         if board.terrain_areas[i].dense and board.model_in_terrain_area(model, i):
@@ -59,10 +59,10 @@ fun sight_crosses_terrain_area(Model observer, Model target, TerrainArea area) -
     let by = float(target.position.y.value * MICROMETRES_PER_INCH)
     if point_area_distance_squared(ax, ay, area) == 0.0 or point_area_distance_squared(bx, by, area) == 0.0:
         return true
-    let left = float(area.lower.x.value)
-    let right = float(area.upper.x.value)
-    let bottom = float(area.lower.y.value)
-    let top = float(area.upper.y.value)
+    let left = float((area.lower.x.value * MICROMETRES_PER_INCH))
+    let right = float((area.upper.x.value * MICROMETRES_PER_INCH))
+    let bottom = float((area.lower.y.value * MICROMETRES_PER_INCH))
+    let top = float((area.upper.y.value * MICROMETRES_PER_INCH))
     return segments_intersect(ax, ay, bx, by, left, bottom, right, bottom) or segments_intersect(ax, ay, bx, by, right, bottom, right, top) or segments_intersect(ax, ay, bx, by, right, top, left, top) or segments_intersect(ax, ay, bx, by, left, top, left, bottom)
 
 # Intervening areas confer partial obscuration under the user's approximation,

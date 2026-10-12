@@ -147,9 +147,9 @@ cls Board:
     # Editor labels for the suspended duplicate-ability selector (p.78).
     CheckedVector<WeaponRule, 32> pending_weapon_abilities
     StateSchema schema_version
-    Int next_identity
-    Int phase_serial
-    Int turn_serial
+    IdentitySequence next_identity
+    PhaseSerial phase_serial
+    TurnSerial turn_serial
     # Explicit mission roster limit and movement editor context (pp.68/12).
     LinearlyDistributedInt<0, 10001> battle_points_limit
     UnitID moving_unit
@@ -194,14 +194,16 @@ cls Board:
     # Implementation identity allocation: removals/returns must keep the same entity
     # behind stored references (destruction p.19; returning models p.88).
     fun identify_unit(Unit unit):
-        if unit.identity.value == -1:
-            unit.identity = self.next_identity
+        if unit.identity.value == 0:
+            assert(self.next_identity.value < MAX_ENTITY_IDENTITIES, "entity identity capacity exceeded")
+            unit.identity = self.next_identity.value + 1
             self.next_identity = self.next_identity + 1
         let i = 0
         while i < unit.models.size():
             ref model = unit.models[i]
-            if model.identity.value == -1:
-                model.identity = self.next_identity
+            if model.identity.value == 0:
+                assert(self.next_identity.value < MAX_ENTITY_IDENTITIES, "entity identity capacity exceeded")
+                model.identity = self.next_identity.value + 1
                 self.next_identity = self.next_identity + 1
                 model.original_unit = unit.identity
             i = i + 1
@@ -221,7 +223,7 @@ cls Board:
     # Resolve an entity rather than reuse a vacated positional target; this is a
     # storage invariant supporting attack targets/destruction (pp.17/19).
     fun find_unit(EntityIdentity identity) -> Int:
-        if identity.value < 0:
+        if identity.value <= 0:
             return -1
         let i = 0
         while i < self.units.size():
@@ -233,6 +235,7 @@ cls Board:
     # Reset turn-local storage without erasing phase-independent usage; supports
     # turn/phase restrictions (pp.28–30, movement pp.32–33).
     fun start_turn_history():
+        assert(self.turn_serial.value + 1 < MAX_TURN_SERIAL, "turn serial capacity exceeded")
         self.turn_serial = self.turn_serial + 1
         let i = 0
         while i < self.units.size():
@@ -273,6 +276,7 @@ cls Board:
     # Expire phase-local effects/usage while retaining turn/battle history
     # (phase sequence pp.28–30; stratagem duration/usage pp.54–57).
     fun clear_phase_modifiers():
+        assert(self.phase_serial.value + 1 < MAX_PHASE_SERIAL, "phase serial capacity exceeded")
         self.phase_serial = self.phase_serial + 1
         self.phase_info.already_used_stratagems[0].clear()
         self.phase_info.already_used_stratagems[1].clear()
@@ -513,7 +517,7 @@ cls Board:
     # history across phase/turn cleanup so the previous turn remains available.
     fun record_ranged_attacks(UnitID source):
         if source.get() < self.units.size() and !self[source].empty():
-            self[source].history.last_ranged_attack_turn = self.turn_serial
+            self[source].history.last_ranged_attack_turn = self.turn_serial.value + 1
 
     # Model membership uses any part of its supported circular base (p.9 and
     # the user's Within definition); terrain areas do not impose a height limit.
@@ -668,9 +672,9 @@ fun parse_string(UnitID result, String buffer, Int index) -> Bool:
 # Save-integrity helper, not a tabletop rule: reject duplicate/out-of-range
 # identities so destruction/return references remain sound (pp.19/88).
 fun register_identity(EntityIdentity identity, Int next_identity, Vector<Int> seen) -> Bool:
-    if identity.value == -1:
+    if identity.value == 0:
         return true
-    if identity.value < 0 or identity.value >= next_identity:
+    if identity.value <= 0 or identity.value > next_identity:
         return false
     let i = 0
     while i < seen.size():
@@ -705,7 +709,7 @@ fun valid_unit_identities(Unit unit, Int next_identity, Vector<Int> seen) -> Boo
 # Compatibility/integrity gate for saved state; versioning is implementation
 # policy, while identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
-    if board.schema_version.value != STATE_SCHEMA_VERSION or board.next_identity < 0 or board.phase_serial < 0 or board.turn_serial < 0:
+    if board.schema_version.value != STATE_SCHEMA_VERSION or board.next_identity < 0 or board.next_identity.value >= MAX_IDENTITY_SEQUENCE or board.phase_serial < 0 or board.phase_serial.value >= MAX_PHASE_SERIAL or board.turn_serial < 0 or board.turn_serial.value >= MAX_TURN_SERIAL:
         return false
     # Terrain storage must preserve the user's quad grid and valid extents;
     # malformed saved geometry cannot become a legal path/placement (p.12).
@@ -741,12 +745,37 @@ fun valid_state_foundations(Board board) -> Bool:
     let seen : Vector<Int>
     let i = 0
     while i < board.units.size():
-        if !valid_unit_identities(board.units[i], board.next_identity, seen):
+        if !valid_unit_numeric_history(board.units[i]) or !valid_unit_identities(board.units[i], board.next_identity.value, seen):
             return false
         i = i + 1
     i = 0
     while i < board.reserve_units.size():
-        if !valid_unit_identities(board.reserve_units[i], board.next_identity, seen):
+        if !valid_unit_numeric_history(board.reserve_units[i]) or !valid_unit_identities(board.reserve_units[i], board.next_identity.value, seen):
             return false
         i = i + 1
+    return true
+
+# Reject malformed bounded history on load before it can change range/Heavy
+# decisions or inferred observations (p.82 / user numeric-storage requirement).
+fun valid_model_numeric_history(Model model) -> Bool:
+    if model.history.vertical_distance.value < 0 or model.history.vertical_distance.value >= MAX_VERTICAL_DISTANCE:
+        return false
+    if model.history.horizontal_segments.size() > MAX_MOVEMENT_SEGMENTS:
+        return false
+    for i in range(model.history.horizontal_segments.size()):
+        if model.history.horizontal_segments[i].value < 0 or model.history.horizontal_segments[i].value >= MAX_HORIZONTAL_SQUARE:
+            return false
+    return true
+
+# Timestamps remain within configured serial ranges, including zero sentinel.
+# Live and archived bearers must both retain bounded numeric history (pp.19/88).
+fun valid_unit_numeric_history(Unit unit) -> Bool:
+    if unit.history.last_move_phase.value < 0 or unit.history.last_move_phase.value >= MAX_PHASE_STAMP or unit.history.selected_move_phase.value < 0 or unit.history.selected_move_phase.value >= MAX_PHASE_STAMP or unit.history.last_ranged_attack_turn.value < 0 or unit.history.last_ranged_attack_turn.value >= MAX_TURN_STAMP:
+        return false
+    for i in range(unit.models.size()):
+        if !valid_model_numeric_history(unit.models[i]):
+            return false
+    for i in range(unit.destroyed_models.value.size()):
+        if !valid_model_numeric_history(unit.destroyed_models.value[i]):
+            return false
     return true

@@ -244,7 +244,7 @@ cls Unit:
     # Resolve a persistent model handle after casualty compaction, avoiding a
     # different model receiving a stored reference (damage p.19; returns p.88).
     fun find_model(EntityIdentity identity) -> Int:
-        if identity.value < 0:
+        if identity.value <= 0:
             return -1
         let i = 0
         while i < self.models.size():
@@ -272,7 +272,7 @@ cls Unit:
         let i = 0
         while i < self.models.size():
             self.models[i].history.was_set_up_this_turn = false
-            self.models[i].history.distance_moved_this_turn = 0.0
+            self.models[i].history.reset_movement_distance()
             i = i + 1
 
     # Starting strength is the initial/combined model count, not a model index
@@ -507,7 +507,7 @@ cls Unit:
             if model.geometry.unsupported_footprint or float(x) < radius or float(y) < radius or float(x) + radius > float(BOARD_WIDTH * MICROMETRES_PER_INCH) or float(y) + radius > float(BOARD_HEIGHT * MICROMETRES_PER_INCH):
                 return false
             model.set_geometry_position(geometry_point(x, y, old.z.value))
-            model.history.distance_moved_this_turn = model.history.distance_moved_this_turn.value + v.length()
+            model.history.record_movement_segment(v.x, v.y, 0)
             i = i + 1
         return true
 

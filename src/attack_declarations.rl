@@ -53,7 +53,7 @@ fun has_unresolved_attacks(DeclaredWeapons declarations) -> Bool:
 # (pp.17/19). Unassigned fixture IDs use their original slot; normal activations
 # assign identities before declaring, so compacted models cannot be retargeted.
 fun declared_model_index(Board board, UnitID source, DeclaredWeapon declaration) -> Int:
-    if declaration.model_identity.value >= 0:
+    if declaration.model_identity.value > 0:
         for i in range(board[source].models.size()):
             if board[source][i].identity == declaration.model_identity:
                 return i

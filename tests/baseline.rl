@@ -248,12 +248,12 @@ fun test_negative_cp_save_decode_is_rejected() -> Bool:
 fun test_history_survives_copy_and_phase_reset() -> Bool:
     let board : Board
     board.units.append(make_tantus())
-    board[0].history.last_ranged_attack_turn = 7
+    board[0].history.last_ranged_attack_turn = 8
     board[0].history.used_stratagem_this_phase = true
     board.has_used_shadow_in_the_warp[0] = true
     let copy = board
     copy.clear_phase_modifiers()
-    return copy[0].history.last_ranged_attack_turn == 7 and !copy[0].history.used_stratagem_this_phase and copy.has_used_shadow_in_the_warp[0] and board[0].history.used_stratagem_this_phase
+    return copy[0].history.last_ranged_attack_turn == 8 and !copy[0].history.used_stratagem_this_phase and copy.has_used_shadow_in_the_warp[0] and board[0].history.used_stratagem_this_phase
 
 fun test_duplicate_identity_save_is_rejected() -> Bool:
     let state = play()
@@ -327,10 +327,10 @@ fun test_phase_movement_and_setup_history() -> Bool:
     board.units.append(make_tantus())
     board[0].mark_set_up()
     board[0].translate(3, 4)
-    if !board[0][0].history.was_set_up_this_turn or board[0][0].history.distance_moved_this_turn.value != 5.0:
+    if !board[0][0].history.was_set_up_this_turn or board[0][0].history.distance_moved_this_turn() != 5.0:
         return false
     board.start_turn_history()
-    return board.turn_serial == 1 and !board[0].history.was_set_up_this_turn and !board[0][0].history.was_set_up_this_turn and board[0][0].history.distance_moved_this_turn.value == 0.0
+    return board.turn_serial == 1 and !board[0].history.was_set_up_this_turn and !board[0][0].history.was_set_up_this_turn and board[0][0].history.distance_moved_this_turn() == 0.0
 
 # pp.54/56: own Command-step Bravery is charged to the active unit's owner.
 fun test_insane_bravery_charges_the_units_owner() -> Bool:
@@ -461,7 +461,7 @@ fun geometry_fixture() -> Board:
 fun geometry_path(Int model, Int x, Int y, Int z) -> ModelPath:
     let path : ModelPath
     path.model = model
-    path.points.append(geometry_point(x * MICROMETRES_PER_INCH, y * MICROMETRES_PER_INCH, z * MICROMETRES_PER_INCH))
+    path.append_point(geometry_point(x * MICROMETRES_PER_INCH, y * MICROMETRES_PER_INCH, z * MICROMETRES_PER_INCH))
     return path
 
 fun geometry_box(Int x1, Int y1, Int z1, Int x2, Int y2, Int z2) -> TerrainGeometry:
@@ -587,14 +587,14 @@ fun test_geometry_path_budget_counts_all_segments() -> Bool:
     let board = geometry_fixture()
     let paths : Vector<ModelPath>
     let path = geometry_path(0, 8, 5, 0)
-    path.points.append(geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0))
+    path.append_point(geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0))
     paths.append(path)
     let slot : UnitID
     let policy : MovementGeometryPolicy
-    if !try_move_models(board, slot, paths, 0, policy, true) or board[0][0].history.distance_moved_this_turn.value != 6.0:
+    if !try_move_models(board, slot, paths, 0, policy, true) or board[0][0].history.distance_moved_this_turn() != 6.0:
         return false
     let before = to_string(board)
-    paths[0].points[1].x = 4 * MICROMETRES_PER_INCH
+    paths[0].points[1].x = 4
     return !try_move_models(board, slot, paths, 0, policy, true) and to_string(board) == before
 
 # p.87: movement characteristics belong to individual models, including mixed units.
@@ -612,13 +612,13 @@ fun test_geometry_mixed_movement_budgets_and_rollback() -> Bool:
     let before = to_string(board)
     if try_move_models(board, slot, paths, 0, policy, true) or to_string(board) != before:
         return false
-    paths[1].points[0].x = 13 * MICROMETRES_PER_INCH
+    paths[1].points[0].x = 13
     if !try_move_models(board, slot, paths, 0, policy, true):
         return false
     board[0][1].position = board_position(7, 5)
     board[0][0].position = board_position(5, 5)
-    paths[0].points[0].x = 13 * MICROMETRES_PER_INCH
-    paths[1].points[0].x = 15 * MICROMETRES_PER_INCH
+    paths[0].points[0].x = 13
+    paths[1].points[0].x = 15
     let mixed_before = to_string(board)
     return !try_move_models(board, slot, paths, 0, policy, true) and to_string(board) == mixed_before
 
@@ -664,10 +664,10 @@ fun test_geometry_invalid_paths_are_atomic() -> Bool:
     let policy : MovementGeometryPolicy
     let paths : Vector<ModelPath>
     paths.append(geometry_path(0, 6, 5, 0))
-    paths[0].points[0].x = 6 * MICROMETRES_PER_INCH + 1
+    paths[0].points[0].x.value = BOARD_WIDTH
     if try_move_models(board, slot, paths, 0, policy, true) or to_string(board) != before:
         return false
-    paths[0].points[0].x = 6 * MICROMETRES_PER_INCH
+    paths[0].points[0].x = 6
     paths.append(paths[0])
     if try_move_models(board, slot, paths, 0, policy, true) or to_string(board) != before:
         return false
@@ -684,7 +684,7 @@ fun test_geometry_rotation_is_free_on_circle_fixture() -> Bool:
     paths.append(path)
     let slot : UnitID
     let policy : MovementGeometryPolicy
-    return try_move_models(board, slot, paths, 0, policy, true) and board[0][0].history.distance_moved_this_turn.value == 0.0 and board[0][0].geometry.rotation.value == 270000 and board[0][0].position.x.value == 5
+    return try_move_models(board, slot, paths, 0, policy, true) and board[0][0].history.distance_moved_this_turn() == 0.0 and board[0][0].geometry.rotation.value == 270000 and board[0][0].position.x.value == 5
 
 # p.12: check swept bases through solid terrain, not just legal endpoints.
 fun test_geometry_wall_crossing_is_rejected() -> Bool:
@@ -764,7 +764,7 @@ fun test_geometry_state_rejects_malformed_terrain() -> Bool:
     board.terrain_geometry.append(geometry_box(7, 3, 0, 9, 7, 2))
     if !valid_state_foundations(board):
         return false
-    board.terrain_geometry[0].lower.x = 7 * MICROMETRES_PER_INCH + 1
+    board.terrain_geometry[0].lower.x.value = MAX_TERRAIN_X
     if valid_state_foundations(board):
         return false
     board.terrain_geometry[0].lower = board.terrain_geometry[0].upper
@@ -1013,7 +1013,7 @@ fun test_timing_rapid_ingress_round_gate_and_payment() -> Bool:
 fun test_timing_end_turn_coherency_mandatory_and_archived() -> Bool:
     let board = timing_fixture()
     let far = board[0][0]
-    far.identity = -1
+    far.identity = 0
     far.position = board_position(40, 5)
     board[0].models.append(far)
     board.identify_unit(board[0])
@@ -1098,7 +1098,7 @@ fun test_timing_opponent_attack_restores_roles() -> Bool:
 fun test_timing_both_armies_regain_coherency_in_order() -> Bool:
     let board = timing_fixture()
     let far = board[0][0]
-    far.identity = -1
+    far.identity = 0
     far.position = board_position(40, 5)
     board[0].models.append(far)
     board[1].models.append(far)
@@ -1811,7 +1811,7 @@ fun test_cover_attack_hit_transition_and_actual_shot_history() -> Bool:
     let two : Dice
     two = 2
     attack.roll(board, board[1], board[0], two)
-    if !attack.is_done() or board[0].history.last_ranged_attack_turn != 4:
+    if !attack.is_done() or board[0].history.last_ranged_attack_turn != 5:
         return false
     attack = single_attack(board, board[1], board[0])
     let three : Dice
@@ -1828,7 +1828,7 @@ fun test_skipped_shooting_does_not_record_ranged_attacks() -> Bool:
     shooting.select_target(board, unit_id(0), unit_id(1))
     shooting.choose_shooting_kind(board, ShootingKind::normal)
     shooting.skip(board)
-    return board[0].has_shoot and board[0].history.last_ranged_attack_turn == -1 and (can shooting.end_shooting_phase(board))
+    return board[0].has_shoot and board[0].history.last_ranged_attack_turn == 0 and (can shooting.end_shooting_phase(board))
 
 # pp.16/50/57: unit selectors, per-model weapons and Overwatch respect Hidden.
 fun test_hidden_target_rejected_by_shooting_and_overwatch() -> Bool:
@@ -1841,7 +1841,7 @@ fun test_hidden_target_rejected_by_shooting_and_overwatch() -> Bool:
         return false
     if overwatch_target_valid(board, unit_id(0), unit_id(1)):
         return false
-    board[1].history.last_ranged_attack_turn = board.turn_serial
+    board[1].history.last_ranged_attack_turn = board.turn_serial.value + 1
     return (can shooting.select_target(board, unit_id(0), unit_id(1))) and overwatch_target_valid(board, unit_id(0), unit_id(1))
 
 # Rules 02.04/04.03, pp.10/17: a fixed A characteristic supplies that many dice.
@@ -1905,8 +1905,8 @@ fun attack_declaration_fixture() -> Board:
     board[0][0].weapons.clear()
     board[0][0].weapons.append(Weapon::captain_storm_bolter)
     let other = board[1]
-    other[0].identity = -1
-    other.identity = -1
+    other[0].identity = 0
+    other.identity = 0
     other[0].position = board_position(10, 8)
     board.units.append(other)
     board.identify_units()
@@ -2057,7 +2057,7 @@ fun test_attack_ineligible_target_can_be_redirected() -> Bool:
 fun test_attack_source_identity_survives_compaction_and_rejects_casualty() -> Bool:
     let board = attack_declaration_fixture()
     let other = board[0][0]
-    other.identity = -1
+    other.identity = 0
     board[0].models.append(other)
     board.identify_unit(board[0])
     let weapon = make_declared_weapon(board, unit_id(0), 1, 0)
@@ -2299,7 +2299,7 @@ fun damage_test_model(Int value) -> ModelID:
 fun damage_test_fixture() -> Board:
     let board = attack_declaration_fixture()
     board[1].models.append(board[1][0])
-    board[1][1].identity = -1
+    board[1][1].identity = 0
     board.identify_units()
     return board
 
@@ -2816,8 +2816,8 @@ fun movement11_fixture() -> Board:
 fun test_movement11_modes_and_shock_legality() -> Bool:
     let board = movement11_fixture()
     let enemy = board[0]
-    enemy.identity = -1
-    enemy[0].identity = -1
+    enemy.identity = 0
+    enemy[0].identity = 0
     enemy.owned_by_player1 = true
     enemy[0].position = board_position(8, 5)
     board.units.append(enemy)
@@ -2836,7 +2836,7 @@ fun test_movement11_mandatory_selection_including_reserves() -> Bool:
     record_move(board, unit_id(0), MovementKind::stationary)
     if movement_selection_complete(board, false):
         return false
-    board.reserve_units[0].history.selected_move_phase = board.phase_serial
+    board.reserve_units[0].history.selected_move_phase = board.phase_serial.value + 1
     return movement_selection_complete(board, false)
 
 # p.33: stationary neither rotates nor records an actual move/charge restriction.
@@ -2845,7 +2845,7 @@ fun test_movement11_stationary_has_no_move_event() -> Bool:
     let before = board[0][0].position
     let selected = movement(board, unit_id(0), false)
     selected.remain_stationary(board)
-    return selected.is_done() and board[0][0].position.x == before.x and board[0][0].position.y == before.y and board[0].history.last_move_phase == -1 and board[0].history.selected_move_phase == board.phase_serial and board[0].can_charge == true
+    return selected.is_done() and board[0][0].position.x == before.x and board[0][0].position.y == before.y and board[0].history.last_move_phase == 0 and board[0].history.selected_move_phase == board.phase_serial.value + 1 and board[0].can_charge == true
 
 # pp.12/87: independently move mixed-M models, permitting intermediate
 # incoherency but requiring coherent final placement and each own distance.
@@ -2899,7 +2899,7 @@ fun test_movement11_free_rotation_and_invalid_model_id() -> Bool:
     sequence.rotate_model(board, id, rotation)
     sequence.finish_model(board, id)
     sequence.finish_move(board, id)
-    return board[0][0].geometry.rotation.value == 90000 and board[0][0].position.x == 5 and board[0][0].history.distance_moved_this_turn.value == 0.0
+    return board[0][0].geometry.rotation.value == 90000 and board[0][0].position.x == 5 and board[0][0].history.distance_moved_this_turn() == 0.0
 
 # p.33: Advance's full D6 allowance persists and forbids charge/action start.
 fun test_movement11_advance_roll_budget_and_flags() -> Bool:
@@ -2989,7 +2989,7 @@ fun test_movement11_flying_vertical_distance() -> Bool:
     board[0][0].keywords.append(Keyword::fly)
     let path : ModelPath
     path.model = 0
-    path.points.append(geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 3 * MICROMETRES_PER_INCH))
+    path.append_point(geometry_point(5 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 3 * MICROMETRES_PER_INCH))
     return path_distance(board[0][0], path, true) == 0.0 and path_distance(board[0][0], path, false) == float(3 * MICROMETRES_PER_INCH)
 
 # p.85: walker traversal cannot cross TITANIC, but can cross ordinary enemies.
@@ -3271,7 +3271,7 @@ fun test_movement11_generic_move_blocks_later_surge() -> Bool:
     let distance : StatModifier
     distance = 3
     let subsequent = surge(board, source, distance, true)
-    return subsequent.is_done() and board[0].history.last_move_phase == board.phase_serial
+    return subsequent.is_done() and board[0].history.last_move_phase == board.phase_serial.value + 1
 
 # p.87: do not strand a pending battlefield trigger by transferring its
 # retained model into reserves. The rejected transfer preserves all state.
@@ -3447,8 +3447,8 @@ fun test_shooting12_engaged_target_vehicle_and_blast_gates() -> Bool:
     let board = shooting12_fixture()
     let friendly = board[0]
     friendly[0].position = board_position(11, 5)
-    friendly.identity = -1
-    friendly[0].identity = -1
+    friendly.identity = 0
+    friendly[0].identity = 0
     board.units.append(friendly)
     board.identify_units()
     let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
@@ -3575,13 +3575,15 @@ fun test_shooting12_heavy_complete_conditions() -> Bool:
     let board = shooting12_fixture()
     board.attack_info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::heavy))
     board[0].has_moved = true
-    board[0][0].history.distance_moved_this_turn = 3.0
+    board[0][0].history.reset_movement_distance()
+    board[0][0].history.record_movement_segment(3, 0, 0)
     if get_hit_roll_bonus(board) != 1:
         return false
-    board[0][0].history.distance_moved_this_turn = 3.01
+    board[0][0].history.reset_movement_distance()
+    board[0][0].history.record_movement_segment(3, 1, 0)
     if get_hit_roll_bonus(board) != 0:
         return false
-    board[0][0].history.distance_moved_this_turn = 0.0
+    board[0][0].history.reset_movement_distance()
     board[0].history.was_set_up_this_turn = true
     if get_hit_roll_bonus(board) != 0:
         return false
@@ -3908,3 +3910,48 @@ fun test_geometry_action_positions_enumerate_only_interior_quads() -> Bool:
     for i in range(candidates.size()):
         valid = valid and candidates[i].x.value == 1 + i / (BOARD_HEIGHT - 1) and candidates[i].y.value == 1 + i % (BOARD_HEIGHT - 1)
     return valid
+
+# User numeric-storage requirement: generated defaults retain the zero sentinel
+# and bounded metadata is visible to the standard ML layout, not ignored Ints.
+fun test_storage_bounded_metadata_defaults_and_observation_layout() -> Bool:
+    let identity : EntityIdentity
+    let history : UnitHistory
+    let schema : StateSchema
+    return identity.value == 0 and history.last_move_phase == 0 and history.selected_move_phase == 0 and history.last_ranged_attack_turn == 0 and history.move_kind == MovementKind::stationary and !history.shot_this_phase and schema.value == STATE_SCHEMA_VERSION and size_as_observation_tensor(identity) == 1 and size_as_observation_tensor(history.last_move_phase) == 1
+
+# p.12 / user requirement: path positions stay in quads; two diagonal segments
+# retain their exact float length across a save without a persisted float total.
+fun test_storage_integer_segments_preserve_diagonal_path_and_save() -> Bool:
+    let board = geometry_fixture()
+    let path = geometry_path(0, 6, 6, 0)
+    path.append_point(geometry_point(7 * MICROMETRES_PER_INCH, 7 * MICROMETRES_PER_INCH, 0))
+    if path.points[0].x.value != 6 or path.points[0].y.value != 6:
+        return false
+    let paths : Vector<ModelPath>
+    paths.append(path)
+    let policy : MovementGeometryPolicy
+    let success = try_move_models(board, unit_id(0), paths, 0, policy, true)
+    let history = board[0][0].history
+    let restored : ModelHistory
+    let parsed = from_string(restored, to_string(history))
+    let error = restored.distance_moved_this_turn() - 2.0 * sqrt(2.0)
+    let valid = success and parsed and restored.horizontal_segments.size() == 2 and error < 0.000000001 and error > -0.000000001
+    restored.record_movement_segment(1, 0, 0)
+    valid = valid and restored.distance_moved_this_turn() > 3.0
+    restored.reset_movement_distance()
+    return valid and restored.distance_moved_this_turn() == 0.0 and restored.horizontal_segments.empty()
+
+# Metadata/history upper bounds cannot be bypassed by a malformed saved value.
+fun test_storage_rejects_out_of_range_serials_and_movement_history() -> Bool:
+    let state = play()
+    state.board = geometry_fixture()
+    state.board.identify_units()
+    let invalid = state
+    invalid.board.phase_serial.value = MAX_PHASE_SERIAL
+    let valid = !set_state(state, to_string(invalid))
+    invalid = state
+    invalid.board[0][0].history.vertical_distance.value = MAX_VERTICAL_DISTANCE
+    valid = valid and !set_state(state, to_string(invalid))
+    invalid = state
+    invalid.board[0].history.last_ranged_attack_turn.value = MAX_TURN_STAMP
+    return valid and !set_state(state, to_string(invalid)) and state.board.phase_serial == 0

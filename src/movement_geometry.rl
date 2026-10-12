@@ -2,8 +2,12 @@ import board
 
 cls ModelPath:
     ModelID model
-    CheckedVector<GeometryPoint, 16> points
+    CheckedVector<StoredGridPoint, 16> points
     Rotation final_rotation
+
+    # Store accepted path inputs as small bounded grid coordinates (p.12).
+    fun append_point(GeometryPoint point):
+        self.points.append(stored_grid_point(point))
 
 cls MovementGeometryPolicy:
     Bool traverse_enemies
@@ -38,7 +42,7 @@ fun model_bases_overlap(Model a, Model b) -> Bool:
 # it. Terrain keyword permissions remain with tasks 8/11 (pp.12/48).
 fun model_supported_by_terrain(Model model, GeometryPoint point, TerrainGeometry terrain) -> Bool:
     let radius = model.base_radius_micrometres()
-    return point.z == terrain.upper.z and float(point.x.value) - radius >= float(terrain.lower.x.value) and float(point.x.value) + radius <= float(terrain.upper.x.value) and float(point.y.value) - radius >= float(terrain.lower.y.value) and float(point.y.value) + radius <= float(terrain.upper.y.value)
+    return point.z.value == (terrain.upper.z.value * MICROMETRES_PER_INCH) and float(point.x.value) - radius >= float((terrain.lower.x.value * MICROMETRES_PER_INCH)) and float(point.x.value) + radius <= float((terrain.upper.x.value * MICROMETRES_PER_INCH)) and float(point.y.value) - radius >= float((terrain.lower.y.value * MICROMETRES_PER_INCH)) and float(point.y.value) + radius <= float((terrain.upper.y.value * MICROMETRES_PER_INCH))
 
 # Validate stable placement and no base partway through a solid terrain volume.
 # Geometry boxes describe actual surfaces, not abstract terrain areas (pp.12/48).
@@ -54,7 +58,7 @@ fun model_placement_valid(Board board, Model model) -> Bool:
             return false
         if model_supported_by_terrain(model, point, terrain):
             supported = true
-        if point.z.value >= terrain.lower.z.value and point.z.value < terrain.upper.z.value:
+        if point.z.value >= (terrain.lower.z.value * MICROMETRES_PER_INCH) and point.z.value < (terrain.upper.z.value * MICROMETRES_PER_INCH):
             let distance = segment_terrain_distance_squared(float(point.x.value), float(point.y.value), float(point.x.value), float(point.y.value), terrain)
             let radius = model.base_radius_micrometres()
             if distance < radius * radius:
@@ -119,11 +123,11 @@ fun segment_crosses_terrain(Model moving, GeometryPoint start, GeometryPoint end
     let first = 0.0
     let last = 1.0
     if start.z == end.z:
-        if start.z.value < terrain.lower.z.value or start.z.value >= terrain.upper.z.value:
+        if start.z.value < (terrain.lower.z.value * MICROMETRES_PER_INCH) or start.z.value >= (terrain.upper.z.value * MICROMETRES_PER_INCH):
             return false
     else:
-        let lower = float(terrain.lower.z.value - start.z.value) / float(end.z.value - start.z.value)
-        let upper = float(terrain.upper.z.value - start.z.value) / float(end.z.value - start.z.value)
+        let lower = float((terrain.lower.z.value * MICROMETRES_PER_INCH) - start.z.value) / float(end.z.value - start.z.value)
+        let upper = float((terrain.upper.z.value * MICROMETRES_PER_INCH) - start.z.value) / float(end.z.value - start.z.value)
         if lower > upper:
             let swap = lower
             lower = upper
@@ -136,7 +140,7 @@ fun segment_crosses_terrain(Model moving, GeometryPoint start, GeometryPoint end
             return false
         # The upper surface is excluded from the solid volume (p.48).
         # A segment touching only that roof must not count as entering terrain.
-        if first == last and float(start.z.value) + float(end.z.value - start.z.value) * first >= float(terrain.upper.z.value):
+        if first == last and float(start.z.value) + float(end.z.value - start.z.value) * first >= float((terrain.upper.z.value * MICROMETRES_PER_INCH)):
             return false
     let ax = float(start.x.value)
     let ay = float(start.y.value)
@@ -214,21 +218,23 @@ fun validate_movement_candidate(Board board, UnitID slot, Unit candidate, Vector
         let distance = 0.0
         let j = 0
         while j < path.points.size():
-            ref end = path.points[j]
+            if !path.points[j].valid():
+                return false
+            let end = path.points[j].as_geometry_point()
             if !model_segment_valid(board, candidate, model, start, end, policy):
                 return false
             distance = distance + segment_length(start, end)
+            record_geometry_movement(model.history, start, end, false)
             start = end
             j = j + 1
         if distance > float((model.profile.movement() + extra_distance) * MICROMETRES_PER_INCH):
             return false
         model.set_geometry_position(start)
         model.geometry.rotation = path.final_rotation
-        model.history.distance_moved_this_turn = model.history.distance_moved_this_turn.value + distance / float(MICROMETRES_PER_INCH)
         i = i + 1
     if !unit_placement_valid(board, candidate, slot.get(), require_unengaged):
         return false
-    candidate.history.last_move_phase = board.phase_serial
+    candidate.history.last_move_phase = board.phase_serial.value + 1
     return true
 
 # Within is any part of any base; Wholly Within is every point of every base
@@ -288,7 +294,7 @@ fun try_translate_unit(Board board, UnitID slot, BoardPosition target, Int extra
         let path : ModelPath
         path.model = i
         path.final_rotation = unit[i].geometry.rotation
-        path.points.append(geometry_point(x, y, start.z.value))
+        path.append_point(geometry_point(x, y, start.z.value))
         paths.append(path)
         i = i + 1
     let policy : MovementGeometryPolicy
