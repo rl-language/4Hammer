@@ -47,7 +47,11 @@ func spawn_model_for(unit_id: int, model_id: int):
 func spawn_needed_models():
 	for unit_id in  range(GlobalRules.get_units_counts()):
 		var unit = GlobalRules.get_unit(unit_id)
+		if unit.get_off_battlefield():
+			continue
 		for model_id in GlobalRules.library.size(unit.get_models()):
+			if GlobalRules.library.get(unit.get_models(), model_id).get_off_battlefield():
+				continue
 			spawn_model_for(unit_id, model_id)
 
 func remove(model):

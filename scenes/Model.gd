@@ -52,7 +52,7 @@ func _process(delta):
 	if being_removed:
 		return
 	var model = get_model() 
-	if model == null:
+	if model == null or get_unit().get_off_battlefield() or model.get_off_battlefield():
 		_fade_out()
 		return
 	if (overed or InteractionManager.source == self) and $Aura.visible:

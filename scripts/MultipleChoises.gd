@@ -65,7 +65,7 @@ func on_state_change():
 			added += 1
 		# Deployment IDs refer to reserves, not the battlefield models used by
 		# the click selector. Offer the actual legal reserve action as a button.
-		if unwrapped is RLCGameSelectUnit or unwrapped is RLCGameSelectReserveUnit or unwrapped is RLCGameSelectIngressUnit or unwrapped is RLCGameSelectScoutReserve or unwrapped is RLCGameChooseStrategicReserve:
+		if unwrapped is RLCGameSelectUnit or unwrapped is RLCGameSelectReserveUnit or unwrapped is RLCGameSelectIngressUnit or unwrapped is RLCGameSelectScoutReserve or unwrapped is RLCGameChooseStrategicReserve or unwrapped is RLCGameChooseFormationPassenger or unwrapped is RLCGameChooseFormationTransport:
 			var reserve_id = unwrapped.get_member(0).get_id().get_value()
 			var reserves = GlobalRules.state.get_board().get_reserve_units()
 			var unit = GlobalRules.library.get(reserves, reserve_id)
@@ -76,8 +76,52 @@ func on_state_change():
 				prefix = "Scout setup"
 			if unwrapped is RLCGameChooseStrategicReserve:
 				prefix = "Hold in reserves"
+			if unwrapped is RLCGameChooseFormationPassenger:
+				prefix = "Embark passenger"
+			if unwrapped is RLCGameChooseFormationTransport:
+				prefix = "Choose carrier"
 			make_choise(prefix + " army " + str(army) + ": " + unit_name, action)
 			added += 1
+		# Embarked selectors address the passenger bank, never battlefield IDs.
+		if unwrapped is RLCGameSelectDisembarkingUnit or unwrapped is RLCGameChooseEmergencyPassenger or unwrapped is RLCGameSelectFiringDeckPassenger:
+			var passenger_id = unwrapped.get_member(0).get_id().get_value()
+			var passenger = GlobalRules.library.get(GlobalRules.state.get_board().get_embarked_units(), passenger_id)
+			var passenger_name = RLCLib.convert_string(passenger.get_name().get_value())
+			var prefix = "Disembark" if unwrapped is RLCGameSelectDisembarkingUnit else "Emergency disembark"
+			if unwrapped is RLCGameSelectFiringDeckPassenger:
+				prefix = "Firing Deck passenger"
+			make_choise(prefix + ": " + passenger_name, action)
+			added += 1
+		# Offboard models cannot be selected by clicking old battlefield bases.
+		if unwrapped is RLCGameChooseFormationCarrierModel or unwrapped is RLCGameSelectFiringDeckModel or unwrapped is RLCGameSelectDisembarkingModel:
+			var selected_model = unwrapped.get_member(0).get_id().get_value()
+			make_choise("Choose model " + str(selected_model + 1), action)
+			added += 1
+		if unwrapped is RLCGameSelectFiringDeckWeapon:
+			var board = GlobalRules.state.get_board()
+			var passenger = GlobalRules.library.get(board.get_embarked_units(), board.get_selected_passenger_bank().get_id().get_value())
+			var model = GlobalRules.library.get(passenger.get_models(), board.get_selected_passenger_model().get_id().get_value())
+			var weapon = GlobalRules.library.get(model.get_weapons(), unwrapped.get_member(0).get_value())
+			make_choise("Firing Deck: " + str(GlobalRules.library.as_string_literal(weapon)).replace("_", " "), action)
+			added += 1
+		if unwrapped is RLCGameChooseDestructionUnit:
+			var dying_id = unwrapped.get_member(0).get_id().get_value()
+			var dying_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_units(), dying_id)
+			var offboard_death = dying_unit.get_off_battlefield()
+			for dying_model_id in range(GlobalRules.library.size(dying_unit.get_models())):
+				offboard_death = offboard_death or GlobalRules.library.get(dying_unit.get_models(), dying_model_id).get_off_battlefield()
+			if offboard_death:
+				make_choise("Resolve offboard destruction: " + RLCLib.convert_string(dying_unit.get_name().get_value()), action)
+				added += 1
+		# Hazard allocation/destruction can occur before passengers are placed.
+		if unwrapped is RLCGameSelectMortalModel or unwrapped is RLCGameResolveDestructionModel:
+			var allocation_board = GlobalRules.state.get_board()
+			var allocation_unit = GlobalRules.library.get(allocation_board.get_units(), allocation_board.get_attack_info().get_target_unit_id().get_id().get_value())
+			var allocation_model_id = unwrapped.get_member(0).get_id().get_value()
+			var allocation_model = GlobalRules.library.get(allocation_unit.get_models(), allocation_model_id)
+			if allocation_unit.get_off_battlefield() or allocation_model.get_off_battlefield():
+				make_choise("Allocate offboard model " + str(allocation_model_id + 1), action)
+				added += 1
 		if unwrapped is RLCGameChooseWeaponAbility:
 			var instance = unwrapped.get_member(0).get_value()
 			var ability = GlobalRules.library.get(GlobalRules.state.get_board().get_pending_weapon_abilities(), instance)

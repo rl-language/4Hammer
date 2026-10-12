@@ -14,8 +14,11 @@ func on_state_change():
 	current_select_unit_action = GlobalRules.get_current_select_unit_action()
 	# Deployment selects reserves through the choice panel. Battlefield model
 	# indices address a different collection and must not select reserve units.
-	if current_select_unit_action is RLCGameSelectUnit or current_select_unit_action is RLCGameSelectReserveUnit or current_select_unit_action is RLCGameSelectIngressUnit or current_select_unit_action is RLCGameSelectScoutReserve or current_select_unit_action is RLCGameChooseStrategicReserve:
+	if current_select_unit_action is RLCGameSelectUnit or current_select_unit_action is RLCGameSelectReserveUnit or current_select_unit_action is RLCGameSelectIngressUnit or current_select_unit_action is RLCGameSelectScoutReserve or current_select_unit_action is RLCGameChooseStrategicReserve or current_select_unit_action is RLCGameChooseFormationPassenger or current_select_unit_action is RLCGameChooseFormationTransport or current_select_unit_action is RLCGameSelectDisembarkingUnit or current_select_unit_action is RLCGameChooseEmergencyPassenger or current_select_unit_action is RLCGameSelectFiringDeckPassenger:
 		current_select_unit_action = null
+	# Passenger/formation model choices use buttons because these models are offboard.
+	if current_select_model_action is RLCGameChooseFormationCarrierModel or current_select_model_action is RLCGameSelectFiringDeckModel or current_select_model_action is RLCGameSelectDisembarkingModel:
+		current_select_model_action = null
 	mark_possible_targets()
 		
 
@@ -52,7 +55,7 @@ func mark_possible_target(node):
 		# attack target (e.g. self hazards); its explicit context identifies it.
 		if current_select_model_action is RLCGameAllocateWound or current_select_model_action is RLCGameAllocateMortal or current_select_model_action is RLCGameSelectMortalModel or current_select_model_action is RLCGameResolveDestructionModel:
 			target_id = GlobalRules.state.get_board().get_attack_info().get_target_unit_id().get_id().get_value()
-		if current_select_model_action is RLCGameSelectMovingModel or current_select_model_action is RLCGameSelectChargingModel or current_select_model_action is RLCGameSelectMeleeModel or current_select_model_action is RLCGameChooseExplosivesModel or current_select_model_action is RLCGameChooseImpactModel or current_select_model_action is RLCGameChooseEpicCharacter:
+		if current_select_model_action is RLCGameSelectMovingModel or current_select_model_action is RLCGameSelectChargingModel or current_select_model_action is RLCGameSelectMeleeModel or current_select_model_action is RLCGameChooseExplosivesModel or current_select_model_action is RLCGameChooseImpactModel or current_select_model_action is RLCGameChooseEpicCharacter or current_select_model_action is RLCGameChooseEmbarkModel:
 			target_id = GlobalRules.state.get_board().get_moving_unit().get_id().get_value()
 		if node.unit_id != target_id:
 			return
