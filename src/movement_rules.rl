@@ -545,6 +545,9 @@ fun arrange_setup_candidate(Board board, Unit candidate, BoardPosition anchor, M
 fun deployment_has_position(Board board, Unit unit) -> Bool:
     let candidate : Unit
     candidate = unit
+    # Search the prospective battlefield geometry, just as setup_at_valid does
+    # (p.14; offboard visibility/distance appendix 01.02.04).
+    mark_unit_offboard(candidate, false)
     let valid = deployment_candidate_has_position(board, unit, candidate)
     return valid
 

@@ -3825,6 +3825,27 @@ fun test_shooting12_deployment_prefilter_and_search_preserve_source() -> Bool:
     let unchanged = to_string(unit) == original
     return result and unchanged and !setup_at_valid(board, unit, board_position(5, 5), MovementKind::normal, false) and setup_anchor_possible(unit, board_position(5, 5), MovementKind::normal, true)
 
+# p.14 and appendix01.02.04: offboard status must not mask collisions in
+# prospective deployment search; a fully blocked home zone is unplaceable.
+fun test_transport16_deployment_search_checks_offboard_geometry() -> Bool:
+    let board : Board
+    let unit = make_infernus_squad()
+    unit.models.resize(1)
+    unit.owned_by_player1 = true
+    mark_unit_offboard(unit, true)
+    # Occupy every interior home-zone quad with a battlefield base. A stored
+    # offboard flag would incorrectly make every overlap check return false.
+    for home_row in range(4):
+        for half_row in range(2):
+            let blockers : Unit
+            for column in range(22 - half_row):
+                let blocker : Model
+                blocker.profile = Profile::infernus_squad
+                blocker.position = board_position(1 + half_row * 22 + column, home_row + 1)
+                blockers.models.append(blocker)
+            board.units.append(blockers)
+    return !deployment_has_position(board, unit) and unit.off_battlefield
+
 # p.85: Torrent produces ordinary automatic hits, no hit dice or critical-hit
 # Lethal/Sustained effects, even during Snap Shooting; wound rolls still occur.
 fun test_shooting12_torrent_automatic_hits_without_critical_effects() -> Bool:
