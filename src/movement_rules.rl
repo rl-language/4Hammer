@@ -479,3 +479,27 @@ fun arrange_setup_candidate(Board board, Unit candidate, BoardPosition anchor, M
             valid = setup_rules_valid(board, candidate, kind, infiltrates)
         columns = columns + 1
     return valid
+
+# User direction: destroy deployment units that cannot be placed, rather
+# than restarting placement or manufacturing strategic-reserve permission.
+# Search the supported whole-grid presets, including every-base restrictions.
+fun deployment_has_position(Board board, Unit unit) -> Bool:
+    let infiltrates = unit.all_have_ability(AbilityKind::infiltrators)
+    let valid = false
+    let x = 0
+    while x < BOARD_WIDTH and !valid:
+        let y = 0
+        while y < BOARD_HEIGHT and !valid:
+            valid = setup_at_valid(board, unit, make_board_position(x, y), MovementKind::normal, infiltrates)
+            y = y + 1
+        x = x + 1
+    return valid
+
+# User-directed setup failure destruction; preserve identities and casualties
+# in the off-table archive. No battlefield death position is fabricated.
+fun destroy_unplaceable_reserve(Board board, UnitID id):
+    assert(id.get() < board.reserve_units.size(), "invalid undeployable reserve")
+    while !board.reserve_units[id.get()].models.empty():
+        board.reserve_units[id.get()].remove_model(board.reserve_units[id.get()].models.size() - 1)
+    board.expired_reserves.value.append(board.reserve_units[id.get()])
+    board.reserve_units.erase(id.get())

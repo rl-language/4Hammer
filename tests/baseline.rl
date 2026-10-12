@@ -3349,3 +3349,22 @@ fun test_movement11_mixed_row_fits_gap_between_deployed_models() -> Bool:
         return false
     enter_from_reserves(board, unit_id(0), position, MovementKind::normal)
     return board[2][3].position.x == 25 and unit_placement_valid(board, board[2], 2, true) and unit_in_home_zone(board[2], true)
+
+# User direction: destroy units with no legal supported deployment. A valid
+# unit cannot take that action; rejected setup must not silently become reserves.
+fun test_movement11_unplaceable_unit_destroyed_and_archived() -> Bool:
+    let board : Board
+    let unit = make_infernus_squad()
+    unit.models.resize(1)
+    board.reserve_units.append(unit)
+    board.identify_units()
+    let identity = board.reserve_units[0].identity
+    let sequence = deploy(board)
+    sequence.select_unit(board, unit_id(0))
+    if can sequence.destroy_unplaceable_unit(board):
+        return false
+    board.reserve_units[0][0].geometry.unsupported_footprint = true
+    if !(can sequence.destroy_unplaceable_unit(board)):
+        return false
+    sequence.destroy_unplaceable_unit(board)
+    return board.reserve_units.empty() and board.expired_reserves.value.size() == 1 and board.expired_reserves.value[0].identity == identity and board.expired_reserves.value[0].destroyed_models.value.size() == 1

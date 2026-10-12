@@ -1881,6 +1881,12 @@ act deploy(ctx Board board) -> Deployment:
                 frm infiltrates = board.reserve_units[unit_id.get()].all_have_ability(AbilityKind::infiltrators)
                 actions:
                     act skip()
+                    # User-directed setup policy: archive units with no legal
+                    # supported placement; do not grant free reserve permission.
+                    act destroy_unplaceable_unit() {!deployment_has_position(board, board.reserve_units[unit_id.get()])}
+                        destroy_unplaceable_reserve(board, unit_id)
+                        if !passed_players[int(!board.current_decision_maker)]:
+                            board.current_decision_maker = !board.current_decision_maker
                     act deploy_at(BoardPosition position) {setup_at_valid(board, board.reserve_units[unit_id.get()], position, MovementKind::normal, infiltrates)}
                         enter_from_reserves(board, unit_id, position, MovementKind::normal)
                         if !passed_players[int(!board.current_decision_maker)]:

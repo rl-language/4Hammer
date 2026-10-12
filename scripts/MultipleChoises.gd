@@ -27,6 +27,8 @@ func on_state_change():
 				# the army that placed the preceding model.
 				var army = GlobalRules.library.get_current_player(GlobalRules.state) + 1
 				make_choise("Done deploying army " + str(army), action)
+			elif unwrapped is RLCGameDestroyUnplaceableUnit:
+				make_choise("Destroy unplaceable unit", action)
 			else:
 				make_choise(unwrapped.get_class().substr(7), action)
 			added += 1
