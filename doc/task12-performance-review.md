@@ -1,0 +1,15 @@
+# Task 12 performance and correctness review
+
+The first completion report increased the Godot timeout without identifying its cost. Follow-up profiling corrects that omission: state serialization is not the bottleneck. Profiling used isolated copies of Rules.gd and the test harness outside the checkout; production Rules.gd and TraceManager.gd remain unchanged.
+
+Under the task-12 RLC 0.4.14 bindings, the full passing Godot regression made 107 action scans, totalling 104.923 seconds; median scan 973.325 ms. Its 95 native action applications totalled 6.41 ms. Eight serializations totalled 37.15 ms (median 4.435 ms), and six restorations totalled 92.92 ms (median 15.406 ms). These measurements cover the instrumented sections, not every part of total test runtime.
+
+A separate initial-state scan of 15,954 candidates measured 992.855 ms fetching action wrappers and 37.866 ms checking legality, total 1,036.979 ms. The preserved task-11 policy bindings show the same issue: 15,883 candidates, 921.527 ms fetching, 37.311 ms checking, total 967.642 ms. Single-run timings are illustrative rather than statistical estimates. The repeated Godot wrapper-fetch loop predates task 12; more decisions and concurrent validation load expose the tight timeout. The large ML observation count does not explain serialization time.
+
+An isolated prototype retained the immutable candidate wrappers and their parent enumeration vector, rebuilding them whenever enumeration was replaced. The same passing regression's 107 scans totalled 12.109 seconds, with median 18.54 ms. Cache rebuilds remain expensive. This is evidence for a future production optimisation, not a change applied to Rules.gd. Task 17 must address this measured performance issue while preserving wrapper ownership, reset invalidation and legal filtering. Native batch filtering is another candidate, not benchmarked here.
+
+The semantic review found a real gap: PISTOL and CLOSE-QUARTERS were aliases for targeting but distinct duplicate families and attack-group characteristics. The correction applies their identity under p.83 to duplicate selection (p.78) and identical attack grouping (p.17). The regression checks mandatory selection of one instance, retained keyword conditions, grouping across spellings, and separation from a weapon without the ability.
+
+Validation of that correction: 277 assertions / 279 CTest entries pass; fresh matching native/header/C++ Godot bindings pass. The shooting replay passes with leak detection outside the sandbox. A sandboxed mutation run reached 1,181 iterations but ended with LeakSanitizer's thread-inspection failure; it is not a passing sanitizer campaign. Earlier completed task-12 campaigns remain evidence for the preceding commit. No claim is made that a passing suite proves every rule or future datasheet combination correct.
+
+Artifacts: /tmp/task12-profiled-godot.log, /tmp/task12-godot-enumeration-bench.log, /tmp/task11-godot-enumeration-bench.log, /tmp/task12-cached-profile-godot.log, /workspace/4hammer-validation/task12-alias-review-tests, and /tmp/task12-alias-review-godot.log.
