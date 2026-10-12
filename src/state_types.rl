@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 9
-const ACTION_SCHEMA_VERSION = 5
-const OBSERVATION_SCHEMA_VERSION = 9
+const STATE_SCHEMA_VERSION = 10
+const ACTION_SCHEMA_VERSION = 6
+const OBSERVATION_SCHEMA_VERSION = 10
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -127,6 +127,15 @@ cls EntityIdentity:
 
 cls UnitHistory:
     Int last_move_phase
+    Int selected_move_phase
+    MovementKind move_kind
+    Bool advanced_this_turn
+    Bool fell_back_this_turn
+    Bool ingress_locked
+    Bool strategic_reserve
+    Bool repositioned
+    Bool has_ingressed
+    Bool scouts_resolved
     Int last_ranged_attack_turn
     Bool was_set_up_this_turn
     Bool used_stratagem_this_phase
@@ -137,6 +146,15 @@ cls UnitHistory:
     # Initialize lifecycle history without implying new eligibility rules (turn pp.28–30; setup pp.68–71).
     fun init():
         self.last_move_phase = -1
+        self.selected_move_phase = -1
+        self.move_kind = MovementKind::stationary
+        self.advanced_this_turn = false
+        self.fell_back_this_turn = false
+        self.ingress_locked = false
+        self.strategic_reserve = false
+        self.repositioned = false
+        self.has_ingressed = false
+        self.scouts_resolved = false
         self.last_ranged_attack_turn = -1
         self.was_set_up_this_turn = false
         self.used_stratagem_this_phase = false
@@ -257,3 +275,24 @@ cls AllocationGroup:
     Bool precision_visible
 
 using AllocationGroups = CheckedVector<AllocationGroup, 32>
+
+# Explicit move types retain restrictions across repositioning (pp.33/68–71).
+enum MovementKind:
+    stationary
+    normal
+    advance
+    ordered_retreat
+    desperate_escape
+    scout
+    surge
+    ingress
+
+    fun equal(MovementKind other) -> Bool:
+        return self.value == other.value
+
+# Zero sentinel preserves generated initialization; random M is encoded M+1.
+const MOVE_M_UNSET = 0
+using MovementOverride = LinearlyDistributedInt<0, 258>
+
+# Degree choices are finite editor inputs for free circular-base rotation (p.12).
+using MovementRotation = LinearlyDistributedInt<0, 360>

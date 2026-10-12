@@ -134,6 +134,12 @@ cls Board:
     Int next_identity
     Int phase_serial
     Int turn_serial
+    # Explicit mission roster limit and movement editor context (pp.68/12).
+    LinearlyDistributedInt<0, 10001> battle_points_limit
+    UnitID moving_unit
+    UnitID surge_target
+    Hidden<Vector<Unit>> expired_reserves
+    Bool prebattle_scouts
     TimingState timing
     UnitVector units # required
     UnitVector reserve_units # required
@@ -227,6 +233,15 @@ cls Board:
         i = 0
         while i < self.reserve_units.size():
             self.reserve_units[i].reset_turn_history()
+            # Turn-limited compatibility gates expire off-table too (p.68).
+            if self.reserve_units[i].owned_by_player1 == self.current_player:
+                self.reserve_units[i].has_run = false
+                self.reserve_units[i].has_fought = false
+                self.reserve_units[i].has_shoot = false
+                self.reserve_units[i].has_moved = false
+                self.reserve_units[i].has_charged = false
+                self.reserve_units[i].can_shoot = true
+                self.reserve_units[i].can_charge = true
             i = i + 1
 
     # Freeze combined model counts after attachments, before casualties change

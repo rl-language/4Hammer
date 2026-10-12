@@ -29,6 +29,8 @@ enum AbilityKind:
     bladeguard              
     swords_of_the_chapter  
     shields_of_the_chapter 
+    hover
+    super_heavy_walker
 
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value
@@ -105,6 +107,9 @@ enum Keyword:
     # Model-level cover/Hidden categories (p.50); no feature traversal added.
     beasts
     swarm
+    fly
+    fortification
+    mobile
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value

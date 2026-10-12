@@ -22,6 +22,11 @@ enum ModelState:
         return self.value == other.value
 
 cls Model:
+    # Supplied future datasheets can encode random M and duplicate Scouts
+    # without changing fixed profile defaults (appendix 02.02.03; pp.78/84).
+    Bool has_random_movement
+    Stat random_movement
+    CheckedVector<FixedStat, 8> scout_distances
     BoardPosition position # required
     ModelGeometry geometry
     Profile profile
@@ -194,6 +199,10 @@ cls Unit:
     Bool owned_by_player1 # required
     Hidden<String> name # required
     Bool has_moved
+    # Per-selection M snapshot and optional flight mode (appendix 02.02.03; p.71).
+    MovementOverride movement_override
+    Bool move_takes_to_skies
+    MovementKind pending_move_kind
     Bool has_run 
     Bool has_fought
     Bool has_shoot
@@ -207,6 +216,10 @@ cls Unit:
     Hidden<Vector<AttachmentComponent>> attached_units
     UnitHistory history
     Bool retired
+    # Points are absent from legacy rosters; enforce reserve caps only when
+    # configured data is explicit, never manufacture faction costs (p.68).
+    Bool points_known
+    LinearlyDistributedInt<0, 10001> points
     PhaseModifiers phase_modifiers
 
     # Archived models retain identity, origin and once-per-battle weapon usage.
@@ -244,6 +257,8 @@ cls Unit:
     # usage (turn pp.28–30; movement pp.32–33; One Shot p.83).
     fun reset_turn_history():
         self.history.was_set_up_this_turn = false
+        self.history.advanced_this_turn = false
+        self.history.fell_back_this_turn = false
         let i = 0
         while i < self.models.size():
             self.models[i].history.was_set_up_this_turn = false
@@ -338,10 +353,10 @@ cls Unit:
             return 0
         return self.models[model].profile.control()
 
-    # Shock prohibits starting an action (p.9). This is only the shock gate;
-    # task 15 must combine it with all action eligibility/mission requirements.
+    # Shock/advance/fall-back prohibit starting an action (pp.9/33).
+    # Task 15 supplies the remaining generic and mission requirements.
     fun allows_action_start() -> Bool:
-        return !self.battle_socked
+        return !self.battle_socked and !self.history.advanced_this_turn and !self.history.fell_back_this_turn
 
     # An already started action cannot complete while shocked (p.9).
     # Recovery removes this prohibition, not any other completion condition.
