@@ -33,7 +33,7 @@ The task-9 implementation permits replacement targets for unresolved weapon shar
 
 ## Remaining sources
 
-Multiple Weapon Profiles was subsequently supplied below. Source gates for healing, off-battlefield rules, extra CP, supplied mission/faction data and other absent app definitions remain open; these definitions do not resolve them. They do not authorize an invented faction ability, profile-switching mechanic or deployment rule.
+Multiple Weapon Profiles was subsequently supplied below. Source gates for healing, extra CP, supplied mission/faction data and other absent app definitions remain open; these definitions do not resolve them. They do not authorize an invented faction ability, profile-switching mechanic or deployment rule.
 
 ## Multiple Weapon Profiles — 04.01.03
 
@@ -49,3 +49,21 @@ Some rules enable models to attack after they have been destroyed. When a model 
 If a rule instructs a destroyed model to fight immediately after the attacking unit, instead that model is not removed from the battlefield until that model’s unit has fought, or until the end of the phase (whichever comes first). This allows the models in the unit to fight all at once, and stratagems that target that unit will also affect that destroyed model.
 
 Authority: user-provided appendix wording, not a PDF quotation. Specific datasheet/faction grants and probability thresholds remain supplied-data obligations.
+
+## Persisting Rules Effects — 01.02.02 (user supplied during task 16)
+
+Some rules apply an effect that lasts until a certain duration has passed (e.g. until the start of your next turn). Such effects are known as persisting effects. If a persisting effect applies to a unit when you place it in strategic reserves or when it embarks within a TRANSPORT, make a note of that effect and its duration; if that unit is set up on the battlefield again, any persisting effects continue to apply to that unit for their full duration.
+
+If you have a rule that specifies when it is triggered (e.g. ‘In the Shooting phase’) and it does not specify how long it is active for, it is only active for the duration of that specified period (e.g. until the end of that Shooting phase). After that period, that effect is no longer applicable/active. If a rule or effect is given to a unit and it does not specify how long it is active for, it is only active for the phase in which it was given.
+
+## Not On The Battlefield — 01.02.04 (user supplied during task 16)
+
+A unit that is embarked within a TRANSPORT or that is in strategic reserves is not on the battlefield. The following applies to such units:
+
+- That unit is not visible to any other units (units are visible to themselves).
+- Any other unit is not visible to that unit.
+- Players cannot measure distances to or from that unit (units are within range of their own abilities).
+
+This means units not on the battlefield cannot be selected or targeted by any attack or rule that requires a unit to be visible or within a certain distance (other than their own abilities). Such units can still use their other rules, and are still units in the controlling player’s army and so can be affected by rules that require a player to select a unit from an army, as well as rules that affect all units in an army. The controlling player must make battle-shock rolls for units that are not on the battlefield in their Command phase if they are battle-shocked, or if they are at or below half-strength.
+
+Authority: user-provided appendix wording, not a PDF quotation. Core transport and reserve references are pp.64–65/68–69.
