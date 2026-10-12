@@ -244,3 +244,15 @@ python tools/check_godot_state.py --build-path /workspace/4hammer-validation/tas
 ```
 
 The existing focused keyword script also passes with this build. The full interaction harness was not rerun for this batch. Use `task17c2-model-final-fuzzer` for preserved inputs and current-schema game replay; the mutation campaign passes51 runs in64 seconds. See [the report](../doc/model-characteristics.md) and ROADMAP.md for provenance and remaining weapon/named selector scope.
+
+## Fixed weapon characteristics (batch17.C2b1)
+
+Schemas are state/observation20, action14. The final suite has **497 assertions /499 CTest entries**, with an empty discrepancy manifest. Reconfigure CMake when adding tests so the new functions register individually; compilation fixtures remain600s and assertions30s. Prepared tests are `/workspace/4hammer-validation/task17c2b1-tests`; the final20-case sanitizer driver is `task17c2b1-sanitized/driver-verified`.
+
+Matching native/header/C++ artifacts are in `task17c2b1-verified-godot`:
+
+```sh
+python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17c2b1-verified-godot --script tests/godot_weapon_characteristics.gd --timeout 120
+```
+
+The prior model script also passes against this build. Full rendered/interaction journeys were not rerun. Use `task17c2b1-verified-fuzzer` for preserved inputs/schema20 game and final mutation checks. See [the report](../doc/weapon-characteristics.md) and ROADMAP.md for measured layout, provenance and pending A/D/named-selector scope.

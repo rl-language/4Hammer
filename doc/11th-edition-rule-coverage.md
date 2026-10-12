@@ -513,3 +513,7 @@ Read [the transport/Aircraft report](transports-aircraft.md) for 18.01–18.05 (
 ## Task17.C2a model characteristic overlay
 
 [The model characteristic report](model-characteristics.md) integrates supplied modifier arithmetic with model M/T/Sv/InSv/Ld/OC consumers, movement pp.12/33, attack configuration p.18, save groups p.19, Leadership/Battle-shock p.9 and objective control p.52. Appendix05.02.01's highest battlefield T now has a correct running maximum; retained Fight on Death models remain constituents until removal. Attached bodyguard-only selection remains17.G. O02 is partially resolved: weapon arithmetic, named selectors, Damaged, incoming reductions/ignoring modifiers and live source-effect consumers retain their pending owners. No current datasheet is certified.
+
+## Task17.C2b1 fixed weapon overlay
+
+[The fixed weapon report](weapon-characteristics.md) integrates effective Range/WS/BS/S/AP into actual targeting/half-range, hit/wound/save and grouping consumers (pp.16–19/50/79/83; supplied modifier appendix). It refreshes group source/target identities and battlefield T (05.02.01/02.05.01), and distinguishes borrowed Firing Deck profiles (p.81). O02 remains partial: A/D arithmetic/random timing/grouping, named selectors, Damaged, incoming reductions and live source effects retain pending owners. No current datasheet is certified; ROADMAP.md contains final evidence.
