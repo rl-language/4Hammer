@@ -33,7 +33,10 @@ func on_state_change():
 				make_choise(unwrapped.get_class().substr(7), action)
 			added += 1
 		if unwrapped.members_count() == 1 and GlobalRules.library.is_enum(unwrapped.get_member(0)):
-			make_choise(GlobalRules.library.as_string_literal(unwrapped.get_member(0)), action)
+			var label = str(GlobalRules.library.as_string_literal(unwrapped.get_member(0))).replace("_", " ")
+			if unwrapped is RLCGameChooseShootingKind:
+				label += " shooting"
+			make_choise(label, action)
 			added += 1
 		if unwrapped.members_count() == 1 and unwrapped.get_member(0) is bool:
 			var label = GlobalRules.as_str(unwrapped.get_member(0))
@@ -41,6 +44,8 @@ func on_state_change():
 				label = "Take to the skies" if unwrapped.get_member(0) else "Stay grounded"
 			if unwrapped is RLCGameWalkerMobile:
 				label = "Gain Mobile for this move" if unwrapped.get_member(0) else "Keep current keywords"
+			if unwrapped is RLCGameUseLethalHits:
+				label = "Automatically wound with this critical hit" if unwrapped.get_member(0) else "Roll to wound with this critical hit"
 			if unwrapped is RLCGameAdvance:
 				label = "Advance" if unwrapped.get_member(0) else "Normal move"
 			make_choise(label, action)
@@ -59,6 +64,18 @@ func on_state_change():
 			if unwrapped is RLCGameChooseStrategicReserve:
 				prefix = "Hold in reserves"
 			make_choise(prefix + " army " + str(army) + ": " + unit_name, action)
+			added += 1
+		if unwrapped is RLCGameChooseWeaponAbility:
+			var instance = unwrapped.get_member(0).get_value()
+			var ability = GlobalRules.library.get(GlobalRules.state.get_board().get_pending_weapon_abilities(), instance)
+			var label = str(GlobalRules.library.as_string_literal(ability.get_kind())).replace("_", " ")
+			if ability.get_parameter().get_value() > 0:
+				label += " " + str(ability.get_parameter().get_value())
+			if ability.get_target_restricted():
+				label += " against " + str(GlobalRules.library.as_string_literal(GlobalRules.library.weapon_ability_target_keyword(ability))).replace("_", " ")
+				for index in range(GlobalRules.library.weapon_ability_other_target_count(ability)):
+					label += " or " + str(GlobalRules.library.as_string_literal(GlobalRules.library.weapon_ability_other_target_keyword(ability, index))).replace("_", " ")
+			make_choise(label, action)
 			added += 1
 		if unwrapped is RLCGameSelectWeapon:
 			make_choise(GlobalRules.action_to_pretty_string(action), action)

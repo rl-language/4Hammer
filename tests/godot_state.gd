@@ -33,9 +33,9 @@ func check_bindings():
 	interaction.models = Node.new()
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
-	assert(rules.library.get_state_schema_version() == 10)
-	assert(rules.library.get_action_schema_version() == 6)
-	assert(rules.library.get_observation_schema_version() == 10)
+	assert(rules.library.get_state_schema_version() == 11)
+	assert(rules.library.get_action_schema_version() == 7)
+	assert(rules.library.get_observation_schema_version() == 11)
 	assert(rules.valid_actions.size() == 6)
 	var choose = RLCGamePickInsidiousInfiltrators.make()
 	rules.apply_action(choose)
@@ -301,6 +301,25 @@ func check_bindings():
 			rules.apply_action(advance)
 	assert(board.get_timing().get_phase().get_value() == 3 and rules.can_apply(shoot))
 	rules.apply_action(shoot)
+	var shooting_kind = RLCGameChooseShootingKind.make()
+	shooting_kind.get_member(0).set_value(0)
+	assert(rules.can_apply(shooting_kind))
+	rules.apply_action(shooting_kind)
+	# Explicit fixture grants exercise duplicate ability buttons in Select Weapons.
+	var grant = RLCWeaponRule.make()
+	grant.get_kind().set_value(6) # SUSTAINED HITS
+	# A field wrapper borrows its parent action; retain that parent while using it.
+	var slot_action = RLCGameSelectWeapon.make()
+	var slot = slot_action.get_member(0)
+	slot.set_value(0)
+	var bearer = RLCModelID.make()
+	bearer.get_id().set_value(0)
+	var shooter_id = RLCUnitID.make()
+	shooter_id.get_id().set_value(0)
+	grant.get_parameter().set_value(1)
+	rules.library.grant_model_weapon_rule(board, shooter_id, bearer, slot, grant)
+	grant.get_parameter().set_value(2)
+	rules.library.grant_model_weapon_rule(board, shooter_id, bearer, slot, grant)
 	var weapon_choice = RLCGameSelectWeapon.make()
 	weapon_choice.get_member(0).set_value(0)
 	assert(rules.can_apply(weapon_choice))
@@ -310,6 +329,12 @@ func check_bindings():
 			weapon_button = button
 	assert(weapon_button != null)
 	weapon_button.button_down.emit()
+	var weapon_ability_button = null
+	for button in choices.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text == rules.strip_symbols("sustained hit 1"):
+			weapon_ability_button = button
+	assert(weapon_ability_button != null)
+	weapon_ability_button.button_down.emit()
 	rules.apply_action(RLCGameSkip.make())
 	var declaration = rules.get_current_target_action()
 	assert(declaration is RLCGameDeclareTarget)
@@ -338,6 +363,7 @@ func check_bindings():
 		rules.apply_action(hit)
 		assert(rules.library.get_current_player(rules.state) == -1)
 	assert(board.get_attack().get_dice().get_hits().get_pool().get_total().get_value() == 3)
+	print("CHECK: Godot shooting selection and hit snapshot reached")
 	var attack_snapshot = rules.as_indented_str(rules.state)
 	var attack_restored = rules.library.play()
 	assert(rules.library.set_state(attack_restored, RLCLib.godot_string_to_rlc_string(attack_snapshot)))
@@ -358,6 +384,7 @@ func check_bindings():
 	assert(rules.library.get_current_player(rules.state) == 1)
 	# Task 10: explicit FNP fixture, with another activation to exercise actual
 	# group buttons, all saves before allocation and model clicks on the defender.
+	print("CHECK: Godot hit snapshot restoration completed")
 	var attacker = rules.library.get(board.get_units(), 0)
 	attacker.set_has_shoot(false)
 	var fnp_fixture = rules.library.make_beast_snagga_boyz()
@@ -365,12 +392,20 @@ func check_bindings():
 	rules.library.assign(rules.library.get(rules.library.get(board.get_units(), 1).get_models(), 0).get_profile(), fnp_profile)
 	assert(rules.can_apply(shoot))
 	rules.apply_action(shoot)
+	assert(rules.can_apply(shooting_kind))
+	rules.apply_action(shooting_kind)
 	weapon_button = null
 	for button in choices.get_node("ChoiseList").get_children():
 		if not button.is_queued_for_deletion() and button.text.contains("captain storm bolter"):
 			weapon_button = button
 	assert(weapon_button != null)
 	weapon_button.button_down.emit()
+	var ability_button = null
+	for button in choices.get_node("ChoiseList").get_children():
+		if not button.is_queued_for_deletion() and button.text == rules.strip_symbols("sustained hit 1"):
+			ability_button = button
+	assert(ability_button != null)
+	ability_button.button_down.emit()
 	rules.apply_action(RLCGameSkip.make())
 	interaction.on_state_change()
 	interaction.select(source_node)
@@ -385,9 +420,11 @@ func check_bindings():
 			group_button = button
 	assert(group_button != null)
 	group_button.button_down.emit()
+	print("CHECK: Godot second shooting selection completed")
 	hit.get_member(0).set_value(6)
+	# Four critical hits with Sustained Hits 1 produce eight wound rolls.
 	for batch in range(2):
-		for i in range(4):
+		for i in range(4 if batch == 0 else 8):
 			assert(rules.library.get_current_player(rules.state) == -1)
 			assert(rules.can_apply(hit))
 			rules.apply_action(hit)
@@ -402,17 +439,19 @@ func check_bindings():
 	assert(save_group_button.text.contains("sv 5"))
 	save_group_button.button_down.emit()
 	hit.get_member(0).set_value(1)
-	for i in range(4):
+	for i in range(8):
 		assert(rules.can_apply(hit))
 		rules.apply_action(hit)
 	if rules.can_apply(RLCGameKeepBatch.make()):
 		rules.apply_action(RLCGameKeepBatch.make())
 	assert(rules.get_current_select_model_action() is RLCGameAllocateWound)
+	print("CHECK: Godot Sustained Hits, save groups and allocation reached")
 	var save_snapshot = rules.as_indented_str(rules.state)
 	var save_restored = rules.library.play()
 	assert(rules.library.set_state(save_restored, RLCLib.godot_string_to_rlc_string(save_snapshot)))
 	rules.set_state(save_restored)
 	board = rules.state.get_board()
+	print("CHECK: Godot pending-save restoration completed")
 	for i in range(3):
 		interaction.on_state_change()
 		assert(target_node.marked and not source_node.marked)
