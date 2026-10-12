@@ -87,6 +87,7 @@ fun setup_at_valid(Board board, Unit unit, BoardPosition anchor, MovementKind ki
 fun staged_setup_at_valid(Board board, Unit unit, BoardPosition anchor, MovementKind kind, Bool infiltrates) -> Bool:
     let candidate : Unit
     candidate = unit
+    mark_unit_offboard(candidate, false)
     let valid = arrange_setup_candidate(board, candidate, anchor, kind, infiltrates)
     return valid
 
@@ -110,7 +111,9 @@ fun setup_anchor_possible(Unit unit, BoardPosition anchor, MovementKind kind, Bo
 # No pending corpse can move; ingress locks all further move types until the
 # next Charge phase (pp.69/87). Selection and actual movement are distinct.
 fun battlefield_move_eligible(Board board, UnitID id, MovementKind kind) -> Bool:
-    if id.get() >= board.units.size() or board[id].history.ingress_locked or !has_live_model(board[id]) or board[id].has_keyword(Keyword::aircraft):
+    if id.get() >= board.units.size() or board[id].off_battlefield or board[id].history.ingress_locked or !has_live_model(board[id]) or board[id].has_keyword(Keyword::aircraft):
+        return false
+    if board[id].history.tactical_move_required and !(kind == MovementKind::normal or kind == MovementKind::advance):
         return false
     if kind == MovementKind::stationary:
         return true
@@ -140,6 +143,7 @@ fun record_move(Board board, UnitID id, MovementKind kind):
     board[id].history.selected_move_phase = board.phase_serial.value + 1
     board[id].history.move_kind = kind
     board[id].has_moved = true
+    board[id].history.tactical_move_required = false
     if !(kind == MovementKind::stationary):
         # p.58 exempts only Pile In/consolidation, not these battlefield moves.
         board[id].interrupt_actions()
@@ -160,6 +164,7 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
     assert(battlefield_entry_available(board, board.reserve_units[reserve.get()]), "battlefield unit capacity exceeded or retired return slot occupied")
     let candidate : Unit
     candidate = board.reserve_units[reserve.get()]
+    mark_unit_offboard(candidate, false)
     let infiltrates = candidate.all_have_ability(AbilityKind::infiltrators)
     let valid = arrange_setup_candidate(board, candidate, position, kind, infiltrates)
     assert(valid, "setup candidate must satisfy every placement condition")
@@ -173,9 +178,11 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
     board[destination].mark_set_up()
     # Arrival itself does not prohibit shooting/charging. Preserve surviving
     # same-turn Advance/Fall Back restrictions explicitly (pp.33/68–69).
-    board[destination].can_shoot = !candidate.history.fell_back_this_turn
+    board[destination].can_shoot = !candidate.history.fell_back_this_turn and !candidate.history.deck_shooting_locked
     board[destination].can_charge = !candidate.history.advanced_this_turn and !candidate.history.fell_back_this_turn
     if kind == MovementKind::ingress:
+        board[destination].history.ingress_turn = board.turn_serial.value + 1
+        board[destination].history.ingress_used_deep_strike = candidate.all_have_ability(AbilityKind::deep_strike)
         board[destination].history.has_ingressed = true
         board[destination].history.ingress_locked = true
         board[destination].history.selected_move_phase = board.phase_serial.value + 1
@@ -200,6 +207,7 @@ fun reposition_unit(Board board, UnitID id) -> Bool:
     board[id].has_return_slot = true
     board[id].return_slot = id
     board.reserve_units.append(board[id])
+    mark_unit_offboard(board.reserve_units.back(), true)
     board[id].models.clear()
     board[id].destroyed_models.value.clear()
     board[id].attached_units.value.clear()
@@ -215,6 +223,7 @@ fun expire_unused_reserves(Board board):
     let i = board.reserve_units.size() - 1
     while i >= 0:
         if board.reserve_units[i].history.strategic_reserve and !board.reserve_units[i].history.has_ingressed and !board.reserve_units[i].history.repositioned:
+            expire_carrier_passengers(board, board.reserve_units[i])
             while !board.reserve_units[i].models.empty():
                 board.reserve_units[i].remove_model(board.reserve_units[i].models.size() - 1)
             board.expired_reserves.value.append(board.reserve_units[i])
@@ -229,12 +238,18 @@ fun strategic_reserve_valid(Board board, Bool player, UnitID id) -> Bool:
     ref unit = board.reserve_units[id.get()]
     if unit.owned_by_player1 != player or unit.history.strategic_reserve or !unit.points_known or unit.has_keyword(Keyword::fortification):
         return false
-    let points = unit.points.value
+    let passenger_points = passenger_reserve_points(board, unit)
+    if passenger_points < 0:
+        return false
+    let points = unit.points.value + passenger_points
     for i in range(board.reserve_units.size()):
         if board.reserve_units[i].owned_by_player1 == player and board.reserve_units[i].history.strategic_reserve:
             if !board.reserve_units[i].points_known:
                 return false
-            points = points + board.reserve_units[i].points.value
+            let reserved_passenger_points = passenger_reserve_points(board, board.reserve_units[i])
+            if reserved_passenger_points < 0:
+                return false
+            points = points + board.reserve_units[i].points.value + reserved_passenger_points
     return 2 * points <= board.battle_points_limit.value
 
 # User instruction: assume a uniform Scouts value and assert mismatches,

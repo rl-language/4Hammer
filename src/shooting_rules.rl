@@ -38,6 +38,8 @@ fun shooting_kind_valid(Board board, UnitID source, ShootingKind kind) -> Bool:
 
 # Battlefield membership is represented by a nonempty live unit slot (pp.34/87).
 fun has_shooting_model(Unit unit) -> Bool:
+    if unit.off_battlefield or unit.history.deck_shooting_locked:
+        return false
     for i in range(unit.models.size()):
         if unit[i].is_alive():
             return true

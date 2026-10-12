@@ -27,6 +27,8 @@ fun model_inside_battlefield(Model model, GeometryPoint point) -> Bool:
 # Coplanar circular bases may touch but cannot overlap; different support
 # levels are distinct. Physical body/hull solids require supplied data (p.12).
 fun model_bases_overlap(Model a, Model b) -> Bool:
+    if a.off_battlefield or b.off_battlefield:
+        return false
     if a.geometry.unsupported_footprint or b.geometry.unsupported_footprint:
         return true
     if a.geometry.elevation != b.geometry.elevation:
@@ -82,7 +84,7 @@ fun unit_placement_valid(Board board, Unit candidate, Int ignored_slot, Bool req
             j = j + 1
         j = 0
         while j < board.units.size():
-            if j != ignored_slot:
+            if j != ignored_slot and !board[j].off_battlefield:
                 let k = 0
                 while k < board[j].models.size():
                     if model_bases_overlap(candidate[i], board[j][k]):
@@ -173,7 +175,7 @@ fun model_segment_valid(Board board, Unit unit, Model model, GeometryPoint start
         return false
     let i = 0
     while i < board.units.size():
-        if board[i].owned_by_player1 != unit.owned_by_player1 and (!policy.traverse_enemies or policy.exclude_titanic):
+        if !board[i].off_battlefield and board[i].owned_by_player1 != unit.owned_by_player1 and (!policy.traverse_enemies or policy.exclude_titanic):
             let j = 0
             while j < board[i].models.size():
                 if !board[i][j].has_keyword(Keyword::aircraft) and (!policy.exclude_titanic or board[i][j].has_keyword(Keyword::titanic)) and segment_crosses_model(model, start, end, board[i][j]):

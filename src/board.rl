@@ -164,6 +164,11 @@ cls Board:
     TimingState timing
     UnitVector units # required
     UnitVector reserve_units # required
+    # Offboard whole units retain carrier-model identity (18.01 p.64).
+    UnitVector embarked_units
+    # Offboard model/weapon button context (Firing Deck p.81).
+    UnitID selected_passenger_bank
+    ModelID selected_passenger_model
     TerrainGeometryVector terrain_geometry
     TerrainAreaVector terrain_areas
     Objective[4] objectives
@@ -218,6 +223,7 @@ cls Board:
         let i = 0
         while i < self.reserve_units.size():
             self.identify_unit(self.reserve_units[i])
+            mark_unit_offboard(self.reserve_units[i], true)
             i = i + 1
         i = 0
         while i < self.units.size():
@@ -268,6 +274,19 @@ cls Board:
                 self.reserve_units[i].has_fought = false
                 self.reserve_units[i].has_shoot = false
             i = i + 1
+        i = 0
+        while i < self.embarked_units.size():
+            self.embarked_units[i].reset_turn_history()
+            self.embarked_units[i].has_run = false
+            self.embarked_units[i].has_moved = false
+            self.embarked_units[i].has_charged = false
+            self.embarked_units[i].can_shoot = true
+            self.embarked_units[i].can_charge = true
+            # Turn-limited compatibility gates expire off-table too (p.68).
+            if self.embarked_units[i].owned_by_player1 == self.current_player:
+                self.embarked_units[i].has_fought = false
+                self.embarked_units[i].has_shoot = false
+            i = i + 1
 
     # Freeze combined model counts after attachments, before casualties change
     # current strength (starting strength p.86; attachment pp.66–67).
@@ -301,6 +320,14 @@ cls Board:
             self.reserve_units[i].history.used_stratagem_this_phase = false
             self.reserve_units[i].history.stratagem_targeted_by_player[0] = false
             self.reserve_units[i].history.stratagem_targeted_by_player[1] = false
+            i = i + 1
+        i = 0
+        while i < self.embarked_units.size():
+            self.embarked_units[i].clear_phase_modifiers()
+            self.embarked_units[i].has_fought = false
+            self.embarked_units[i].history.used_stratagem_this_phase = false
+            self.embarked_units[i].history.stratagem_targeted_by_player[0] = false
+            self.embarked_units[i].history.stratagem_targeted_by_player[1] = false
             i = i + 1
 
     # A phase starts with fresh phase usage and effects, before its start window
@@ -583,7 +610,7 @@ cls Board:
         let total = 0
         for i in range(self.units.size()):
             ref unit = self[i]
-            if unit.owned_by_player1 == player:
+            if !unit.off_battlefield and unit.owned_by_player1 == player:
                 for j in range(unit.models.size()):
                     if self.model_in_objective_range(unit[j], objective):
                         total = total + max(0, unit.model_objective_control(j))
@@ -719,6 +746,8 @@ fun valid_unit_identities(Unit unit, Int next_identity, Vector<Int> seen) -> Boo
 # Compatibility/integrity gate for saved state; versioning is implementation
 # policy, while identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
+    if !valid_passenger_links(board):
+        return false
     if board.schema_version.value != STATE_SCHEMA_VERSION or board.next_identity < 0 or board.next_identity.value >= MAX_IDENTITY_SEQUENCE or board.phase_serial < 0 or board.phase_serial.value >= MAX_PHASE_SERIAL or board.turn_serial < 0 or board.turn_serial.value >= MAX_TURN_SERIAL:
         return false
     if board.destroyed_attack_unit.get() < 0 or board.destroyed_attack_unit.get() >= MAX_UNIT_COUNT or (board.allow_destroyed_attack and board.destroyed_attack_unit.get() >= board.units.size()):
@@ -765,11 +794,18 @@ fun valid_state_foundations(Board board) -> Bool:
         if !valid_unit_numeric_history(board.reserve_units[i]) or !valid_unit_identities(board.reserve_units[i], board.next_identity.value, seen):
             return false
         i = i + 1
+    i = 0
+    while i < board.embarked_units.size():
+        if !valid_unit_numeric_history(board.embarked_units[i]) or !valid_unit_identities(board.embarked_units[i], board.next_identity.value, seen):
+            return false
+        i = i + 1
     return true
 
 # Reject malformed bounded history on load before it can change range/Heavy
 # decisions or inferred observations (p.82 / user numeric-storage requirement).
 fun valid_model_numeric_history(Model model) -> Bool:
+    if model.transport_capacity.value < 0 or model.transport_capacity.value > MAX_UNIT_MODELS or model.transport_space.value < 1 or model.transport_space.value > MAX_UNIT_MODELS or model.firing_deck.value < 0 or model.firing_deck.value > MAX_UNIT_MODELS:
+        return false
     if model.history.vertical_distance.value < 0 or model.history.vertical_distance.value >= MAX_VERTICAL_DISTANCE:
         return false
     if model.history.horizontal_segments.size() > MAX_MOVEMENT_SEGMENTS:
@@ -782,6 +818,8 @@ fun valid_model_numeric_history(Model model) -> Bool:
 # Timestamps remain within configured serial ranges, including zero sentinel.
 # Live and archived bearers must both retain bounded numeric history (pp.19/88).
 fun valid_unit_numeric_history(Unit unit) -> Bool:
+    if unit.history.embarked_phase.value < 0 or unit.history.embarked_phase.value >= MAX_PHASE_STAMP or unit.history.ingress_turn.value < 0 or unit.history.ingress_turn.value >= MAX_TURN_STAMP:
+        return false
     if unit.return_slot.get() < 0 or unit.return_slot.get() >= MAX_UNIT_COUNT:
         return false
     if !valid_fight_history(unit.history) or !valid_action_history(unit.history):
@@ -791,6 +829,11 @@ fun valid_unit_numeric_history(Unit unit) -> Bool:
         if modifier.amount.value < 0 or modifier.amount.value >= MAX_RULE_MODIFIER or modifier.operation.value < 0 or modifier.operation.value > ModifierOperation::subtract.value:
             return false
     if unit.history.last_move_phase.value < 0 or unit.history.last_move_phase.value >= MAX_PHASE_STAMP or unit.history.selected_move_phase.value < 0 or unit.history.selected_move_phase.value >= MAX_PHASE_STAMP or unit.history.last_ranged_attack_turn.value < 0 or unit.history.last_ranged_attack_turn.value >= MAX_TURN_STAMP or unit.history.declared_charge_phase.value < 0 or unit.history.declared_charge_phase.value >= MAX_PHASE_STAMP or unit.history.charge_move_phase.value < 0 or unit.history.charge_move_phase.value >= MAX_PHASE_STAMP:
+        return false
+    let deck_capacity = 0
+    for deck_model in range(unit.models.size()):
+        deck_capacity = deck_capacity + unit[deck_model].firing_deck.value
+    if deck_capacity > MAX_DECK_SELECTIONS:
         return false
     for i in range(unit.models.size()):
         if !valid_model_numeric_history(unit.models[i]):

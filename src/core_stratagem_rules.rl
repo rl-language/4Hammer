@@ -4,7 +4,7 @@ import terrain_rules
 # p.58: mission definitions supply timing, units, use limits and effects.
 # This generic gate deliberately does not create the unplayable example action.
 fun action_start_valid(Board board, UnitID source, Bool player) -> Bool:
-    if source.get() >= board.units.size() or board[source].owned_by_player1 != player or !has_live_model(board[source]) or !board[source].allows_action_start():
+    if source.get() >= board.units.size() or board[source].off_battlefield or board[source].owned_by_player1 != player or !has_live_model(board[source]) or !board[source].allows_action_start():
         return false
     if board.is_in_melee(board[source]) and !board[source].has_keyword(Keyword::titanic):
         return false

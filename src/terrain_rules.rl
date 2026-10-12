@@ -22,6 +22,11 @@ fun model_is_hidden(Board board, Unit unit, Model model) -> Bool:
 # Hidden still restricts enemy detection to 15in by default (p.50); supplied
 # rules may call the override with their actual range, without invented data.
 fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model target, Int detection_range) -> Bool:
+    # Appendix01.02.04 forbids foreign visibility to/from either offboard bank.
+    if observer.identity.value > 0 and target.identity == observer.identity:
+        return true
+    if model_is_offboard(board, observer) or model_is_offboard(board, target):
+        return false
     # User-supplied appendix 02.02.01 clamps modified detection to 9–30in.
     let lone_range = 12
     if target_unit.lone_operative_range.value > 0:
@@ -43,6 +48,8 @@ fun model_can_see_unit(Board board, Model observer, Unit target) -> Bool:
 # Unit-level selector eligibility must not invent visibility for an empty unit
 # (pp.16/25). Weapon declarations still check each firing model (task 9/12).
 fun unit_visible_to_unit(Board board, Unit source, Unit target) -> Bool:
+    if source.identity.value > 0 and source.identity == target.identity:
+        return !source.empty()
     for i in range(source.models.size()):
         if model_can_see_unit(board, source[i], target):
             return true
@@ -130,3 +137,17 @@ fun plunging_fire_applies(Board board, UnitID source, Int model, UnitID target, 
     for ground_index in range(board[target].models.size()):
         grounded = grounded or (board[target][ground_index].is_alive() and board[target][ground_index].geometry.elevation.value == 0)
     return grounded and (board[source][model].geometry.elevation.value >= 3 or (board[source][model].has_keyword(Keyword::towering) and board[target].distance(board[source][model]) <= 12.0))
+
+# Offboard membership is identity-based even when a fixture has not marked
+# its copied models. No battlefield visibility can leak from stale positions
+# in reserves/passengers (appendix01.02.04; core pp.64/68).
+fun model_is_offboard(Board board, Model model) -> Bool:
+    if model.off_battlefield:
+        return true
+    let offboard = false
+    if model.identity.value > 0:
+        for reserve_unit in range(board.reserve_units.size()):
+            offboard = offboard or board.reserve_units[reserve_unit].find_model(model.identity) >= 0
+        for embarked_unit in range(board.embarked_units.size()):
+            offboard = offboard or board.embarked_units[embarked_unit].find_model(model.identity) >= 0
+    return offboard

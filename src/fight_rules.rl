@@ -52,7 +52,7 @@ fun fight_first_unit(Unit unit) -> Bool:
 # and explicit consolidation responses (pp.40/42). Selecting consumes the
 # phase's fight even if no attacks remain after optional Overrun movement.
 fun fight_unit_eligible(Board board, UnitID source) -> Bool:
-    if source.get() >= board.units.size() or board[source].has_fought:
+    if source.get() >= board.units.size() or board[source].off_battlefield or board[source].has_fought:
         return false
     let present = false
     for i in range(board[source].models.size()):

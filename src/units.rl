@@ -23,6 +23,15 @@ enum ModelState:
         return self.value == other.value
 
 cls Model:
+    # Bank/staged offboard units have no battlefield visibility/ranges
+    # (supplied appendix01.02.04, transport pp.64–65).
+    Bool off_battlefield
+    Bool transport_permissions_known
+    LinearlyDistributedInt<0, 33> transport_capacity
+    LinearlyDistributedInt<1, 33> transport_space
+    Keywords permitted_passenger_keywords
+    Keywords forbidden_passenger_keywords
+    LinearlyDistributedInt<0, 33> firing_deck
     # Supplied future datasheets can encode random M and duplicate Scouts
     # without changing fixed profile defaults (appendix 02.02.03; pp.78/84).
     Bool has_random_movement
@@ -151,11 +160,19 @@ cls Model:
 
     # Inclusive two-inch horizontal/five-inch vertical engagement (pp.14–15).
     fun is_engaged_with(Model model) -> Bool:
+        if self.off_battlefield or model.off_battlefield:
+            return false
         return within_geometry_limits(self.horizontal_distance_micrometres(model), self.vertical_distance_micrometres(model), 2, 5)
 
     # Ordinary nearest-base range is straight-line distance; engagement uses
     # its separately prescribed horizontal/vertical limits (pp.9/14).
     fun distance(Model model) -> Float:
+        # Appendix01.02.04: own unit is within its own abilities; no foreign
+        # distance is available while embarked. Finite sentinel is computed.
+        if self.off_battlefield or model.off_battlefield:
+            if self.original_unit.value > 0 and self.original_unit == model.original_unit:
+                return 0.0
+            return 1000000.0
         let horizontal = self.horizontal_distance_micrometres(model)
         let vertical = float(self.vertical_distance_micrometres(model))
         return sqrt(horizontal * horizontal + vertical * vertical) / float(MICROMETRES_PER_INCH)
@@ -209,6 +226,8 @@ cls PhaseModifiers:
     Bool counteroffensive
 
 cls Unit:
+    Bool off_battlefield
+    EntityIdentity embarked_transport
     # Stable retired slot survives reserve round trips (pp.68–69/74).
     Bool has_return_slot
     UnitID return_slot
@@ -276,6 +295,9 @@ cls Unit:
     # Reset setup/distance carriers for the new turn without clearing battle-long
     # usage (turn pp.28–30; movement pp.32–33; One Shot p.83).
     fun reset_turn_history():
+        self.history.deck_shooting_locked = false
+        self.history.disembarked_this_turn = false
+        self.history.tactical_move_required = false
         self.history.was_set_up_this_turn = false
         self.history.made_move_this_turn = false
         self.history.advanced_this_turn = false

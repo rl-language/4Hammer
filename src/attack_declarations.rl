@@ -3,8 +3,8 @@ import shooting_rules
 # Each model can select at most its eight weapon slots (p.16). Targets are
 # indexed by the unchanged UnitID domain, so melee shares have bounded storage
 # without expanding every declaration into a separate unbounded record.
-const MAX_SELECTED_WEAPONS = 256
-const MAX_SELECTED_WEAPONS_PLUS1 = 257
+const MAX_SELECTED_WEAPONS = 288
+const MAX_SELECTED_WEAPONS_PLUS1 = 289
 using AttackWeaponID = BInt<0, MAX_SELECTED_WEAPONS>
 using AttackShare = LinearlyDistributedInt<0, MAX_CHARACTERISTIC>
 using AttackShareChoice = BInt<1, MAX_CHARACTERISTIC>
@@ -70,6 +70,13 @@ fun declared_model_index(Board board, UnitID source, DeclaredWeapon declaration)
 # (pp.19/87). Their removal/lifetime policy remains task 10, but offering a
 # group with no legal recipient would stall the current declaration pipeline.
 fun has_live_attack_recipient(Unit target) -> Bool:
+    if target.off_battlefield:
+        return false
+    return has_live_damage_recipient(target)
+
+# Offboard hazards still allocate damage to live passengers before setup
+# (18.04–18.05 p.65); this does not grant attack target eligibility.
+fun has_live_damage_recipient(Unit target) -> Bool:
     for i in range(target.models.size()):
         if target[i].state == ModelState::normal and target[i].wounds_left() > 0:
             return true
@@ -84,7 +91,7 @@ fun declaration_target_valid(Board board, UnitID source, DeclaredWeapon weapon, 
 # Replacement targets use the supplied appendix 04.03.03; Snap Shooting still
 # selects one shared visible unit for the remaining weapons (p.57).
 fun declaration_target_valid(Board board, UnitID source, DeclaredWeapon weapon, UnitID target, Bool melee, Bool allow_snap_replacement) -> Bool:
-    if source.get() >= board.units.size() or target.get() >= board.units.size() or board[source].empty() or !has_live_attack_recipient(board[target]):
+    if source.get() >= board.units.size() or target.get() >= board.units.size() or board[source].empty() or board[source].off_battlefield or board[target].off_battlefield or !has_live_attack_recipient(board[target]):
         return false
     if board[source].owned_by_player1 == board[target].owned_by_player1:
         return false
@@ -259,5 +266,5 @@ fun attack_model_allowed(Board board, UnitID source, Int model, Bool melee) -> B
     if source.get() >= board.units.size() or model < 0 or model >= board[source].models.size():
         return false
     if board[source][model].is_alive():
-        return true
+        return !board[source].off_battlefield and !board[source][model].off_battlefield
     return melee and board.allow_destroyed_attack and board.destroyed_attack_unit.get() == source.get() and board[source][model].state == ModelState::fight_on_death and !board[source][model].destruction_attack_suppressed

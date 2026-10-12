@@ -14,6 +14,7 @@ import movement_rules
 import charge_rules
 import fight_rules
 import core_stratagem_rules
+import transport_rules
 
 # Wound thresholds use the printed equality boundaries (p.18). The user-
 # supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus
@@ -319,7 +320,7 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
                     nearby = board.units.size()
                     while nearby.value > 0:
                         nearby = nearby - 1
-                        if has_live_attack_recipient(board[nearby.value]) and board[nearby.value].distance(casualty) <= 6.0:
+                        if has_live_damage_recipient(board[nearby.value]) and board[nearby.value].distance(casualty) <= 6.0:
                             subaction* demise_amount = evaluate_random_stat(casualty.deadly_demise)
                             let affected : UnitID
                             affected = nearby.value
@@ -334,7 +335,7 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             if removed >= 0:
                 board[current_job.target].remove_model(removed)
             continue
-        if current_job.amount == 0 or !has_live_attack_recipient(board[current_job.target]):
+        if current_job.amount == 0 or !has_live_damage_recipient(board[current_job.target]):
             continue
         board.attack_info.target_unit_id = current_job.target
         board.current_decision_maker = board[current_job.target].owned_by_player1
@@ -461,7 +462,7 @@ act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit
 # Hazard count is selected weapons, including weapons that never found a
 # target (p.81). Collect every hazard before rerolls/damage; 1–2 fails (p.24).
 act resolve_hazards(ctx Board board, frm UnitID unit, frm HazardousUses count) -> HazardRolls:
-    if count == 0 or !has_live_attack_recipient(board[unit]):
+    if count == 0 or !has_live_damage_recipient(board[unit]):
         return
     frm amount : CombatCounter
     amount = count.value
@@ -1064,7 +1065,7 @@ fun overwatch_target_valid(Board board, UnitID source, UnitID target) -> Bool:
 # Check a source before offering the timing rule: accepting an option with
 # no eligible target would otherwise stall the phase (p.57).
 fun overwatch_source_valid(Board board, Bool player, UnitID source) -> Bool:
-    if source.get() >= board.units.size() or board[source].owned_by_player1 != player or !board.can_target_strat(player, Stratagem::overwatch, board[source]) or board.is_in_melee(board[source]) or board[source].has_keyword(Keyword::titanic) or !has_live_model(board[source]) or !board[source].can_shoot or board[source].history.fell_back_this_turn or board[source].history.action_started or board[source].history.shot_this_phase:
+    if source.get() >= board.units.size() or board[source].owned_by_player1 != player or !board.can_target_strat(player, Stratagem::overwatch, board[source]) or board.is_in_melee(board[source]) or board[source].has_keyword(Keyword::titanic) or !has_live_model(board[source]) or board[source].off_battlefield or !board[source].can_shoot or board[source].history.deck_shooting_locked or board[source].history.fell_back_this_turn or board[source].history.action_started or board[source].history.shot_this_phase:
         return false
     let i = 0
     while i < board.units.size():
@@ -1470,6 +1471,15 @@ act battle_shock_step(ctx Board board) -> BattleShockStep:
             frm reserve_recover = board.reserve_units[reserve_index.value].battle_socked
             subaction*(board, board.reserve_units[reserve_index.value]) reserve_shock_test = battle_shock_test(board, board.reserve_units[reserve_index.value], true, reserve_recover)
         reserve_index = reserve_index + 1
+    # Supplied appendix 01.02.04 explicitly requires the same Command tests
+    # for strategic reserves (core cross-reference pp.68–69). These are army
+    # units, without granting battlefield visibility or distance eligibility.
+    frm passenger_index : UnitIterator
+    while passenger_index.value < board.embarked_units.size():
+        if !board.embarked_units[passenger_index.value].empty() and board.embarked_units[passenger_index.value].owned_by_player1 == board.current_player and (board.embarked_units[passenger_index.value].battle_socked or board.embarked_units[passenger_index.value].is_at_or_below_half_strength()):
+            frm passenger_recover = board.embarked_units[passenger_index.value].battle_socked
+            subaction*(board, board.embarked_units[passenger_index.value]) passenger_shock_test = battle_shock_test(board, board.embarked_units[passenger_index.value], true, passenger_recover)
+        passenger_index = passenger_index + 1
 
 
 # tyranids shadow in the warp rules
@@ -2062,11 +2072,82 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
             # The move failed and returns all positions. Selection still has a
             # legal stationary/retry path through the phase loop (pp.12/32).
             board[id].history.move_kind = MovementKind::stationary
+    subaction*(board) embark_after_move = post_move_embark(board, id)
     if !has_live_model(board[id]):
         board[id].history.selected_move_phase = board.phase_serial.value + 1
     board[id].movement_override = previous_override
     board[id].move_takes_to_skies = false
     board[id].pending_move_kind = MovementKind::normal
+
+# Optional embarkation is offered immediately after the permitted completed
+# move, with a carrier-unit choice followed by its actual model (18.02 p.64).
+act post_move_embark(ctx Board board, frm UnitID passenger_source) -> PostMoveEmbark:
+    if !has_embark_choice(board, passenger_source):
+        return
+    frm previous_mover = board.moving_unit
+    frm previous_embark_owner = board.current_decision_maker
+    board.current_decision_maker = board[passenger_source].owned_by_player1
+    actions:
+        act decline_embark()
+        act choose_embark_transport(frm UnitID embark_carrier) {embark_carrier.get() < board.units.size(), board[embark_carrier].owned_by_player1 == board[passenger_source].owned_by_player1}
+            board.moving_unit = embark_carrier
+            actions:
+                act cancel_embark()
+                act choose_embark_model(frm ModelID embark_model) {embark_after_move_valid(board, passenger_source, embark_carrier, embark_model)}
+                    embark_battlefield_unit(board, passenger_source, embark_carrier, embark_model)
+    board.moving_unit = previous_mover
+    board.current_decision_maker = previous_embark_owner
+
+# Stage a compulsory mode's hazard damage before battlefield placement;
+# bank histories/usage persist and legal individual/preset setups share the
+# exact same geometry kernel (18.04 p.65, appendix01.02.02).
+act disembark(ctx Board board, frm UnitID passenger_bank) -> Disembark:
+    assert(ordinary_disembark_valid(board, passenger_bank), "illegal disembarkation")
+    frm carrier_location = find_passenger_carrier(board, board.embarked_units[passenger_bank.get()].embarked_transport)
+    frm mode = required_disembark_mode(board, board.embarked_units[passenger_bank.get()], carrier_location)
+    actions:
+        act decline_disembark()
+            return
+        act confirm_disembark_mode(DisembarkMode chosen_mode) {chosen_mode == mode}
+    frm passenger_slot = stage_disembarking_passenger(board, passenger_bank)
+    if mode == DisembarkMode::combat:
+        frm disembark_hazards : HazardousUses
+        disembark_hazards = board[passenger_slot].models.size()
+        subaction*(board) combat_hazards = resolve_hazards(board, passenger_slot, disembark_hazards)
+    frm previous_mover = board.moving_unit
+    board.moving_unit = passenger_slot
+    frm candidate = board[passenger_slot]
+    mark_unit_offboard(candidate, false)
+    frm placed : Bool[MAX_UNIT_MODELS]
+    frm complete = candidate.empty()
+    while !complete:
+        actions:
+            act restart_disembark_setup()
+                candidate = board[passenger_slot]
+                mark_unit_offboard(candidate, false)
+                for reset_model in range(MAX_UNIT_MODELS):
+                    placed[reset_model] = false
+            act use_legal_disembark_setup() {transport_has_setup(board, board[passenger_slot], carrier_location, mode, passenger_slot.get())}
+                candidate = board[passenger_slot]
+                mark_unit_offboard(candidate, false)
+                assert(search_transport_setup(board, candidate, carrier_location, mode, passenger_slot.get(), 0), "validated setup search failed")
+                complete = true
+            act disembark_at(BoardPosition position) {transport_preset_valid(board, board[passenger_slot], carrier_location, mode, passenger_slot.get(), position)}
+                candidate = board[passenger_slot]
+                mark_unit_offboard(candidate, false)
+                assert(arrange_transport_candidate(board, candidate, carrier_location, mode, passenger_slot.get(), position), "validated preset failed")
+                complete = true
+            act select_disembarking_model(frm ModelID disembark_model) {disembark_model.get() < candidate.models.size(), !placed[disembark_model.get()]}
+                act place_disembarking_model(BoardPosition position) {disembark_model_input_valid(board, candidate, carrier_location, mode, passenger_slot.get(), disembark_model, position)}
+                candidate[disembark_model].position = position
+                placed[disembark_model.get()] = true
+            act finish_disembark_setup() {all_models_selected(candidate, placed), transport_setup_valid(board, candidate, carrier_location, mode, passenger_slot.get())}
+                complete = true
+    board[passenger_slot] = candidate
+    finish_disembark(board, passenger_slot, mode)
+    if mode == DisembarkMode::tactical and !board[passenger_slot].empty():
+        subaction*(board) tactical_move = movement(board, passenger_slot, false)
+    board.moving_unit = previous_mover
 
 # Every friendly unit must be selected exactly once, including reserves.
 # No remaining arbitrary end-phase escape bypasses mandatory selection (p.32).
@@ -2074,9 +2155,11 @@ act movement_phase(ctx Board board) -> MovementPhase:
     board.current_decision_maker = board.current_player
     while true:
         actions:
+            act select_disembarking_unit(frm UnitID disembark_passenger) {ordinary_disembark_valid(board, disembark_passenger)}
+                subaction*(board) passenger_disembark = disembark(board, disembark_passenger)
             act end_move() {movement_selection_complete(board, board.current_player)}
                 break
-            act move_unit(frm UnitID id) {id.get() < board.units.size(), has_live_model(board[id]), !board[id].has_keyword(Keyword::aircraft), board[id].owned_by_player1 == board.current_player, board[id].history.selected_move_phase != board.phase_serial.value + 1}
+            act move_unit(frm UnitID id) {id.get() < board.units.size(), has_live_model(board[id]), !board[id].off_battlefield, !board[id].has_keyword(Keyword::aircraft), board[id].owned_by_player1 == board.current_player, board[id].history.selected_move_phase != board.phase_serial.value + 1}
                 frm use_gilded_spear = false
                 # Preserve this legacy supplied-roster hook without inventing
                 # new faction authority; exact faction replacement is task 17.
@@ -2230,6 +2313,30 @@ fun deployment_position_valid(Board board, BoardPosition position, Bool current_
         return position.y.value <= 5
     return position.y.value >= BOARD_HEIGHT - 5
 
+# Friendly whole units may start inside an explicitly permitted transport
+# model in Declare Battle Formations (18.01 p.64), before reserve selection.
+act declare_transport_passengers(ctx Board board) -> DeclareTransportPassengers:
+    frm formation_player = board.starting_player
+    frm formation_count : BInt<0, 3>
+    while formation_count.value < 2:
+        board.current_decision_maker = formation_player
+        frm formation_finished = !has_formation_transport(board, formation_player)
+        while !formation_finished:
+            actions:
+                act finish_transport_formations()
+                    formation_finished = true
+                act choose_formation_passenger(frm UnitID formation_passenger) {formation_passenger.get() < board.reserve_units.size(), board.reserve_units[formation_passenger.get()].owned_by_player1 == formation_player}
+                    actions:
+                        act cancel_formation_embark()
+                        act choose_formation_transport(frm UnitID formation_carrier) {formation_carrier.get() < board.reserve_units.size(), board.reserve_units[formation_carrier.get()].owned_by_player1 == formation_player, formation_carrier.get() != formation_passenger.get()}
+                            board.moving_unit = formation_carrier
+                            actions:
+                                act cancel_formation_carrier()
+                                act choose_formation_carrier_model(frm ModelID formation_model) {transport_can_carry(board, board.reserve_units[formation_passenger.get()], board.reserve_units[formation_carrier.get()], formation_model.get())}
+                                    embark_formation_unit(board, formation_passenger, formation_carrier, formation_model)
+        formation_count = formation_count + 1
+        formation_player = !formation_player
+
 # Pre-battle reserve choices require explicit points; AIRCRAFT/transport
 # formation exceptions await task 16, not invented roster costs (p.68).
 act declare_strategic_reserves(ctx Board board) -> DeclareStrategicReserves:
@@ -2306,16 +2413,16 @@ act resolve_scouts(ctx Board board) -> ResolveScouts:
             actions:
                 act finish_scouts()
                     finished = true
-                act select_scout_unit(frm UnitID scout) {scout.get() < board.units.size(), board[scout].owned_by_player1 == player, !board[scout].history.scouts_resolved, scouts_distance(board[scout]) > 0, unit_in_home_zone(board[scout], player)}
+                act select_scout_unit(frm UnitID scout) {scout.get() < board.units.size(), board[scout].owned_by_player1 == player, !board[scout].history.scouts_resolved, transport_scouts_distance(board, board[scout]) > 0, unit_in_home_zone(board[scout], player)}
                     board[scout].pending_move_kind = MovementKind::scout
                     frm distance : StatModifier
-                    distance = scouts_distance(board[scout])
+                    distance = transport_scouts_distance(board, board[scout])
                     subaction*(board, scout) scout_move = move(board, scout, distance)
                     if scout_move.completed:
                         board[scout].history.scouts_resolved = true
                         record_move(board, scout, MovementKind::scout)
                     board[scout].pending_move_kind = MovementKind::normal
-                act select_scout_reserve(frm UnitID reserve) {reserve.get() < board.reserve_units.size(), board.reserve_units[reserve.get()].owned_by_player1 == player, board.reserve_units[reserve.get()].history.strategic_reserve, !board.reserve_units[reserve.get()].history.scouts_resolved, scouts_distance(board.reserve_units[reserve.get()]) > 0, board.units.has_capacity()}
+                act select_scout_reserve(frm UnitID reserve) {reserve.get() < board.reserve_units.size(), board.reserve_units[reserve.get()].owned_by_player1 == player, board.reserve_units[reserve.get()].history.strategic_reserve, !board.reserve_units[reserve.get()].history.scouts_resolved, transport_scouts_distance(board, board.reserve_units[reserve.get()]) > 0, board.units.has_capacity()}
                     actions:
                         act skip()
                         act scout_setup_at(BoardPosition position) {setup_at_valid(board, board.reserve_units[reserve.get()], position, MovementKind::scout, false)}
@@ -2333,6 +2440,7 @@ act battle(ctx Board board) -> Battle:
     board.identify_units()
     subaction*(board) attach_leaders = attach_leaders(board)
     board.capture_starting_strengths()
+    subaction*(board) transport_formations = declare_transport_passengers(board)
     subaction*(board) reserves = declare_strategic_reserves(board)
     subaction*(board) deploy = deploy(board)
     subaction*(board) scouts = resolve_scouts(board)

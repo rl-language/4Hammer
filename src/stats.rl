@@ -114,6 +114,8 @@ enum Keyword:
     grenades
     smoke
     towering
+    transport
+    dedicated_transport
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value

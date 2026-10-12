@@ -30,6 +30,8 @@ const MAX_RANDOM_STAT_RESULT = 513
 const MAX_COMBAT_COUNTER = 4097
 const MAX_WOUNDS = 4097
 const MAX_HAZARDOUS_USES = 257
+# Supported temporary declaration capacity, not a tabletop limit (p.81).
+const MAX_DECK_SELECTIONS = 32
 const MAX_STARTING_STRENGTH = 33
 using CommandPoints = LinearlyDistributedInt<0, MAX_CP>
 using VictoryPoints = LinearlyDistributedInt<0, MAX_SCORE>
@@ -144,6 +146,12 @@ cls UnitActionProgress:
     Bool completed
 
 cls UnitHistory:
+    PhaseStamp embarked_phase
+    TurnStamp ingress_turn
+    Bool ingress_used_deep_strike
+    Bool disembarked_this_turn
+    Bool tactical_move_required
+    Bool deck_shooting_locked
     PhaseStamp last_move_phase
     PhaseStamp selected_move_phase
     PhaseStamp declared_charge_phase
@@ -329,6 +337,8 @@ enum MovementKind:
     scout
     surge
     ingress
+    disembark
+    emergency_disembark
 
     fun equal(MovementKind other) -> Bool:
         return self.value == other.value
@@ -339,3 +349,13 @@ using MovementOverride = LinearlyDistributedInt<0, 258>
 
 # Degree choices are finite editor inputs for free circular-base rotation (p.12).
 using MovementRotation = LinearlyDistributedInt<0, 360>
+
+# Disembark modes are mandatory conditional rules, not free alternatives (p.65).
+enum DisembarkMode:
+    rapid
+    tactical
+    combat
+    emergency
+
+    fun equal(DisembarkMode other) -> Bool:
+        return self.value == other.value
