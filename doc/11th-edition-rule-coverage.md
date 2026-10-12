@@ -501,3 +501,7 @@ Read [the transport/Aircraft report](transports-aircraft.md) for 18.01–18.05 (
 ## Task17 Orks source audit overlay
 
 [The Orks codebase audit](orks-codebase-audit.md) examines every linked datasheet and the ordinary faction rules. The requirements matrix covers all 67 cards and the CP inventory covers 40 stratagems. Orks Leader/Support and carrier permissions now have readable sources; healing/revival and several other appendix definitions are available. These are source/implementation requirements, not new rule implementations or test passes. The user excludes point/DP accounting, requests up to three distinct detachments and retains CP costs; ROADMAP.md contains the pending batches and mandatory fixes.
+
+## Task17.B configuration overlay
+
+[The configuration report](orks-configuration.md) separates actual army identity from legacy roster IDs, implements independent selections of up to three Orks detachments and explicitly enables user-directed point-free public reserves. This adjusts the pricing portion of 20.01/p.68 without certifying new point totals or replacing them with another percentage. Existing point-aware fixtures remain supported. The CP registry covers all 40 source cards' costs/package gates, with common shocked/destroyed target exceptions; their full timing/keyword/effect actions remain later batches. Core 15.01/p.54 payment/use limits and the supplied appendix maximum +1CP increase retain deterministic coverage. ROADMAP.md owns final validation; selecting a package does not implement its effects or certify any of the 67 datasheets.
