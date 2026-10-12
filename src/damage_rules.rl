@@ -129,6 +129,9 @@ enum DamageKind:
     mortal
     devastating
     remove_destroyed
+    deferred_demise
+    emergency_next
+    emergency_setup
 
     # Infrastructure comparison keeps normal/mortal and removal paths distinct
     # for their different spill and destruction rules (pp.24/87).
@@ -199,7 +202,7 @@ fun destruction_unit_valid(Board board, UnitID unit, Bool player, Bool finish, U
 # Trigger presence determines retention, not merely taking attack damage
 # (p.87). Existing faction hooks retain their legacy definitions until task 17.
 fun has_destruction_trigger(Board board, UnitID source, Bool source_known, Model model, Bool fight_on_death) -> Bool:
-    return fight_on_death or model.has_deadly_demise or model.has_keyword(Keyword::master_of_possession) or (source_known and source.get() < board.units.size() and model.is_character() and board[source].has_ability(AbilityKind::feeder_tendrils))
+    return carrier_has_passengers(board, model.identity) or fight_on_death or model.has_deadly_demise or model.has_keyword(Keyword::master_of_possession) or (source_known and source.get() < board.units.size() and model.is_character() and board[source].has_ability(AbilityKind::feeder_tendrils))
 
 # Raw lost wounds are committed only after all prevention for that application.
 # Snapshot provenance before removal so deferred hooks cannot target a new slot

@@ -5909,3 +5909,80 @@ fun test_aircraft16_towering_plunging_range_and_skill() -> Bool:
     info.target_has_cover = true
     return improved == max(2, info.source.skill() - 1) and effective_attack_skill(board, info) == info.source.skill()
 
+# Emergency lifecycle regressions: hazards/setup before carrier demise/removal
+# (core pp.64–65/80/87; supplied offboard appendix01.02.04).
+fun test_transport16_emergency_before_deadly_demise() -> Bool:
+    let board = transport16_fixture()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    board[0][0].has_deadly_demise = true
+    board[0][0].deadly_demise = transport16_fixed_stat(1)
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(0), false, false, 6, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 6, false)
+    let jobs : DamageJobs
+    let sequence = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    sequence.choose_destruction_unit(board, unit_id(0))
+    sequence.resolve_destruction_model(board, damage_test_model(0))
+    if !(can sequence.choose_emergency_passenger(board, unit_id(0))):
+        return false
+    sequence.choose_emergency_passenger(board, unit_id(0))
+    let three : Dice
+    three = 3
+    sequence.roll(board, three)
+    if board.embarked_units.size() != 0 or !board[1].off_battlefield:
+        return false
+    sequence.roll(board, three)
+    let one : Dice
+    one = 1
+    if board[1].off_battlefield or !board[1].battle_socked or board[1].can_charge or !(can sequence.roll(board, one)):
+        return false
+    sequence.roll(board, one)
+    return sequence.is_done() and board[0].empty() and board[1].models.size() == 2 and valid_state_foundations(board)
+
+fun test_transport16_emergency_retains_plain_carrier() -> Bool:
+    let board = transport16_fixture()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(0), false, false, 6, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 6, false)
+    return board[0][0].destruction_pending and carrier_has_passengers(board, board[0][0].identity)
+
+fun test_transport16_emergency_unplaceable_models_destroyed() -> Bool:
+    let board = transport16_fixture()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    board.terrain_geometry.append(geometry_box(0, 0, 0, BOARD_WIDTH, BOARD_HEIGHT, 20))
+    let carrier = find_passenger_carrier(board, board.embarked_units[0].embarked_transport)
+    let original = board.embarked_units[0]
+    let candidate : Unit
+    arrange_emergency_survivors(board, original, candidate, carrier, -1)
+    return candidate.empty()
+
+fun test_transport16_emergency_hazard_damage_before_setup() -> Bool:
+    let board = transport16_fixture()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(0), false, false, 6, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 6, false)
+    let jobs : DamageJobs
+    let sequence = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    sequence.choose_destruction_unit(board, unit_id(0))
+    sequence.resolve_destruction_model(board, damage_test_model(0))
+    sequence.choose_emergency_passenger(board, unit_id(0))
+    sequence.roll(board, attack_test_die(1))
+    sequence.roll(board, attack_test_die(3))
+    if !board[1].off_battlefield or !(can sequence.select_mortal_model(board, damage_test_model(0))):
+        return false
+    sequence.select_mortal_model(board, damage_test_model(0))
+    return sequence.is_done() and !board[1].off_battlefield and board[1][0].suffered_wounds == 1 and board[1].battle_socked and !board[1].can_charge and valid_state_foundations(board)
+
+fun test_transport16_emergency_unplaceable_resolution_archives() -> Bool:
+    let board = transport16_fixture()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    board.terrain_geometry.append(geometry_box(0, 0, 0, BOARD_WIDTH, BOARD_HEIGHT, 20))
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(0), false, false, 6, board[0][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 6, false)
+    let jobs : DamageJobs
+    let sequence = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    sequence.choose_destruction_unit(board, unit_id(0))
+    sequence.resolve_destruction_model(board, damage_test_model(0))
+    sequence.choose_emergency_passenger(board, unit_id(0))
+    sequence.roll(board, attack_test_die(3))
+    sequence.roll(board, attack_test_die(3))
+    return sequence.is_done() and board[0].empty() and board[1].empty() and board[1].destroyed_models.value.size() == 2 and board.embarked_units.empty() and valid_state_foundations(board)

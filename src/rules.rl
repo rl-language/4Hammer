@@ -312,24 +312,79 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
                 jobs.append(damage_job(DamageKind::remove_destroyed, event.unit, casualty.destroying_unit, casualty.destroying_unit_known, false, 0, casualty.identity))
             if casualty.destroying_unit_known and retaliation > 0:
                 jobs.append(damage_job(DamageKind::mortal, casualty.destroying_unit, event.unit, true, false, retaliation.value, invalid_entity_identity()))
+            # p.65 requires passenger hazards/setup before carrier Deadly
+            # Demise. Deferred jobs keep that ordering without recursive frames.
             if casualty.has_deadly_demise:
-                board.current_state = CurrentStateDescription::destruction_roll
-                act roll(Dice explosion)
-                if explosion == 6:
-                    frm nearby : UnitIterator
-                    nearby = board.units.size()
-                    while nearby.value > 0:
-                        nearby = nearby - 1
-                        if has_live_damage_recipient(board[nearby.value]) and board[nearby.value].distance(casualty) <= 6.0:
-                            subaction* demise_amount = evaluate_random_stat(casualty.deadly_demise)
-                            let affected : UnitID
-                            affected = nearby.value
-                            jobs.append(damage_job(DamageKind::mortal, affected, event.unit, true, false, demise_amount.result.value, invalid_entity_identity()))
+                jobs.append(damage_job(DamageKind::deferred_demise, event.unit, event.unit, true, false, 0, casualty.identity))
+            if carrier_has_passengers(board, casualty.identity):
+                jobs.append(damage_job(DamageKind::emergency_next, event.unit, event.unit, true, false, 0, casualty.identity))
             continue
         if jobs.empty():
             break
         current_job = jobs.back()
         jobs.pop()
+        if current_job.kind == DamageKind::emergency_next:
+            if !carrier_has_passengers(board, current_job.recipient):
+                continue
+            board.current_decision_maker = board.current_player
+            act choose_emergency_passenger(frm UnitID emergency_passenger) {emergency_passenger.get() < board.embarked_units.size(), board.embarked_units[emergency_passenger.get()].embarked_transport == current_job.recipient}
+            frm emergency_slot = stage_disembarking_passenger(board, emergency_passenger)
+            frm emergency_hazard_count : CombatCounter
+            emergency_hazard_count = board[emergency_slot].models.size()
+            frm emergency_multiplier : LinearlyDistributedInt<1, 4>
+            emergency_multiplier = hazard_mortal_multiplier(board[emergency_slot])
+            board.current_state = CurrentStateDescription::hazardous_roll
+            subaction*(board) emergency_hazards = collect_attack_dice(board, emergency_hazard_count, false, false, true, board[emergency_slot].owned_by_player1, emergency_slot)
+            emergency_hazard_count = (emergency_hazards.pool.faces[0].value + emergency_hazards.pool.faces[1].value) * emergency_multiplier.value
+            jobs.append(current_job)
+            jobs.append(damage_job(DamageKind::emergency_setup, emergency_slot, current_job.target, true, false, 0, current_job.recipient))
+            if emergency_hazard_count > 0:
+                jobs.append(damage_job(DamageKind::mortal, emergency_slot, current_job.target, false, false, emergency_hazard_count.value, invalid_entity_identity()))
+            continue
+        if current_job.kind == DamageKind::emergency_setup:
+            frm emergency_location = find_passenger_carrier(board, current_job.recipient)
+            frm emergency_original = board[current_job.target]
+            frm emergency_candidate : Unit
+            arrange_emergency_survivors(board, emergency_original, emergency_candidate, emergency_location, current_job.target.get())
+            board[current_job.target] = emergency_candidate
+            finish_disembark(board, current_job.target, DisembarkMode::emergency)
+            # Models unable to set up are destroyed, without a damage/FNP roll
+            # (p.65). Retain any own destruction hook in the same work engine.
+            for unplaced_index in range(emergency_original.models.size()):
+                if board[current_job.target].find_model(emergency_original[unplaced_index].identity) < 0:
+                    let unplaced = emergency_original[unplaced_index]
+                    unplaced.suffered_wounds = unplaced.profile.wounds()
+                    unplaced.off_battlefield = true
+                    if has_destruction_trigger(board, current_job.source, false, unplaced, false):
+                        unplaced.state = ModelState::pending_destruction
+                        unplaced.destruction_pending = true
+                        unplaced.destroyed_by_attack = false
+                        unplaced.destroying_unit_known = false
+                        board[current_job.target].models.append(unplaced)
+                    else:
+                        board[current_job.target].destroyed_models.value.append(unplaced)
+            continue
+        if current_job.kind == DamageKind::deferred_demise:
+            frm demise_index : ModelID
+            let found_demise = board[current_job.target].find_model(current_job.recipient)
+            if found_demise < 0:
+                continue
+            demise_index = found_demise
+            casualty = board[current_job.target][demise_index]
+            board.current_decision_maker = board[current_job.target].owned_by_player1
+            board.current_state = CurrentStateDescription::destruction_roll
+            act roll(Dice explosion)
+            if explosion == 6:
+                frm nearby : UnitIterator
+                nearby = board.units.size()
+                while nearby.value > 0:
+                    nearby = nearby - 1
+                    if has_live_damage_recipient(board[nearby.value]) and board[nearby.value].distance(casualty) <= 6.0:
+                        subaction* demise_amount = evaluate_random_stat(casualty.deadly_demise)
+                        let affected : UnitID
+                        affected = nearby.value
+                        jobs.append(damage_job(DamageKind::mortal, affected, current_job.target, true, false, demise_amount.result.value, invalid_entity_identity()))
+            continue
         if current_job.kind == DamageKind::remove_destroyed:
             let removed = board[current_job.target].find_model(current_job.recipient)
             if removed >= 0:
