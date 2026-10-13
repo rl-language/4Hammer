@@ -16,6 +16,11 @@ if(NOT RLC_TEST_COMPILER)
   message(FATAL_ERROR "Rule tests require rlc; activate the repository Python environment")
 endif()
 set(rule_test_runner "${PROJECT_SOURCE_DIR}/tools/ctest_rules.py")
+set(RULE_TEST_COMPILER_JOBS 4 CACHE STRING "Workers per RLC test compilation (0.4.17+)")
+option(RULE_TEST_OPTIMIZE "Optimize rule tests with -O2 (off for debugging)" OFF)
+if(RULE_TEST_OPTIMIZE)
+  set(rule_test_optimization --optimize)
+endif()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   "${PROJECT_SOURCE_DIR}/tests/baseline.rl"
   "${PROJECT_SOURCE_DIR}/tests/known_discrepancies.rl"
@@ -31,7 +36,8 @@ foreach(suite baseline discrepancies)
   add_test(NAME rules.compile.${suite}
     COMMAND "${Python3_EXECUTABLE}" "${rule_test_runner}" build
       --suite ${suite} --directory "${PROJECT_BINARY_DIR}/rule-tests/${suite}"
-      --compiler "${RLC_TEST_COMPILER}")
+      --compiler "${RLC_TEST_COMPILER}" --jobs "${RULE_TEST_COMPILER_JOBS}"
+      ${rule_test_optimization})
   set_tests_properties(rules.compile.${suite} PROPERTIES
     FIXTURES_SETUP rules_${suite} LABELS "rules;setup" TIMEOUT 600)
 endforeach()

@@ -44,8 +44,14 @@ def main():
     parser.add_argument("--suite", choices=SOURCES)
     parser.add_argument("--directory", type=Path)
     parser.add_argument("--compiler", default="rlc")
+    parser.add_argument("--jobs", type=int, default=4,
+                        help="compiler worker count (RLC 0.4.17+)")
+    parser.add_argument("--optimize", action="store_true",
+                        help="use -O2; omitted for debug builds")
     parser.add_argument("--test")
     args = parser.parse_args()
+    if args.jobs < 1:
+        parser.error("--jobs must be positive")
     if args.mode == "list":
         for suite in SOURCES:
             for name in discover(suite):
@@ -64,7 +70,9 @@ def main():
             (directory / filename).unlink(missing_ok=True)
         common = [args.compiler, str(ROOT / "tests" / SOURCES[args.suite]),
                   "-i", str(ROOT / "src"), "--emit-precondition-checks",
-                  "--emit-bound-checks"]
+                  "--emit-bound-checks", "-j", str(args.jobs)]
+        if args.optimize:
+            common.append("-O2")
         subprocess.run(common + ["--python", "-o", str(directory / "wrapper.py")], check=True)
         subprocess.run(common + ["--shared", "--pylib", "-o", str(directory / library)], check=True)
         if not (directory / library).is_file() or (directory / library).stat().st_size == 0:
