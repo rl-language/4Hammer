@@ -39,7 +39,7 @@ fun rule_modifier(ModifierOperation operation, Int amount) -> RuleModifier:
 # Generic arithmetic is computed transiently; stored amounts/collections stay
 # bounded for inferred ML layout. '-'/'*'/'N/A' callers mark unmodifiable.
 # Replacing a value with zero also prevents later modification (02.02.01).
-fun apply_rule_modifiers(Int base, RuleModifiers modifiers, Bool unmodifiable, Int extra_addition) -> Int:
+fun<Int capacity> apply_rule_modifiers(Int base, CheckedVector<RuleModifier, capacity> modifiers, Bool unmodifiable, Int extra_addition) -> Int:
     let value = float(base)
     let locked = unmodifiable
     for operation in range(5):
@@ -69,7 +69,7 @@ fun apply_rule_modifiers(Int base, RuleModifiers modifiers, Bool unmodifiable, I
     return rounded
 
 # Compatibility arithmetic entry without an additional core increment (02.02.01).
-fun apply_rule_modifiers(Int base, RuleModifiers modifiers, Bool unmodifiable) -> Int:
+fun<Int capacity> apply_rule_modifiers(Int base, CheckedVector<RuleModifier, capacity> modifiers, Bool unmodifiable) -> Int:
     return apply_rule_modifiers(base, modifiers, unmodifiable, 0)
 
 enum ModifiedCharacteristic:
@@ -107,7 +107,7 @@ fun characteristic_limit(ModifiedCharacteristic kind, Int value) -> Int:
 
 # Do not apply minima to special values or a replacement locked to zero;
 # otherwise apply the printed post-modification characteristic bounds.
-fun modified_characteristic(Int base, ModifiedCharacteristic kind, RuleModifiers modifiers, Bool unmodifiable, Int extra_addition) -> Int:
+fun<Int capacity> modified_characteristic(Int base, ModifiedCharacteristic kind, CheckedVector<RuleModifier, capacity> modifiers, Bool unmodifiable, Int extra_addition) -> Int:
     let result = apply_rule_modifiers(base, modifiers, unmodifiable, extra_addition)
     let locked = unmodifiable
     for i in range(modifiers.size()):
@@ -117,7 +117,7 @@ fun modified_characteristic(Int base, ModifiedCharacteristic kind, RuleModifiers
     return characteristic_limit(kind, result)
 
 # Existing consumers need no extra increment; keep one characteristic policy.
-fun modified_characteristic(Int base, ModifiedCharacteristic kind, RuleModifiers modifiers, Bool unmodifiable) -> Int:
+fun<Int capacity> modified_characteristic(Int base, ModifiedCharacteristic kind, CheckedVector<RuleModifier, capacity> modifiers, Bool unmodifiable) -> Int:
     return modified_characteristic(base, kind, modifiers, unmodifiable, 0)
 
 # Rolls are modified after rerolls; hit/wound cumulative changes cap at +/-1,
