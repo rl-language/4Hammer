@@ -152,6 +152,55 @@ cls CharacteristicModifier:
 
 using CharacteristicModifiers = CheckedVector<CharacteristicModifier, 16>
 
+# Incoming attack scope is explicit: Battlewagon Mobile Fortress is ranged-only,
+# while Deff Dread reduction applies to attacks generally (audited datasheets).
+enum IncomingAttackScope:
+    any_attack
+    ranged
+    melee
+
+cls IncomingAttackModifier:
+    ModifiedCharacteristic characteristic
+    RuleModifier modifier
+    IncomingAttackScope scope
+
+using IncomingAttackModifiers = CheckedVector<IncomingAttackModifier, 8>
+
+# Recipient metadata is separate from its own equipped-weapon characteristics
+# (appendix02.02.01). Actual source grants/expiry remain17.E and later units.
+fun incoming_attack_modifier(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, IncomingAttackScope scope) -> IncomingAttackModifier:
+    assert(kind.value == ModifiedCharacteristic::armour_penetration.value or kind.value == ModifiedCharacteristic::damage.value, "incoming modifier must affect AP or D")
+    let result : IncomingAttackModifier
+    result.characteristic = kind
+    result.modifier = rule_modifier(operation, amount)
+    result.scope = scope
+    return result
+
+# Restore validation rejects invalid scopes/operations before attack arithmetic;
+# bounded fields and generated lifecycle preserve the inferred ML layout.
+fun valid_incoming_attack_modifiers(IncomingAttackModifiers modifiers) -> Bool:
+    let valid = true
+    for i in range(modifiers.size()):
+        ref entry = modifiers[i]
+        valid = valid and (entry.characteristic.value == ModifiedCharacteristic::armour_penetration.value or entry.characteristic.value == ModifiedCharacteristic::damage.value)
+        valid = valid and entry.scope.value >= 0 and entry.scope.value <= IncomingAttackScope::melee.value
+        valid = valid and entry.modifier.operation.value >= 0 and entry.modifier.operation.value <= ModifierOperation::subtract.value and entry.modifier.amount.value >= 0 and entry.modifier.amount.value < MAX_RULE_MODIFIER
+        if entry.modifier.operation.value == ModifierOperation::divide.value:
+            valid = valid and entry.modifier.amount.value > 0 and !entry.modifier.negative
+    return valid
+
+# Merge operations before shared arithmetic, never subtract from an already
+# rounded/floored D or AP. Printed cumulative order is appendix02.02.01.
+fun combined_incoming_modifiers(RuleModifiers outgoing, IncomingAttackModifiers incoming, ModifiedCharacteristic kind, Bool melee) -> RuleModifiers:
+    assert(valid_rule_modifiers(outgoing) and valid_incoming_attack_modifiers(incoming), "invalid incoming attack modifiers")
+    let result = outgoing
+    for i in range(incoming.size()):
+        ref entry = incoming[i]
+        if entry.characteristic.value == kind.value and (entry.scope.value == IncomingAttackScope::any_attack.value or (melee and entry.scope.value == IncomingAttackScope::melee.value) or (!melee and entry.scope.value == IncomingAttackScope::ranged.value)):
+            assert(result.has_capacity(), "combined attack modifier capacity exceeded")
+            result.append(entry.modifier)
+    return result
+
 # Construct model-scoped arithmetic without inventing a unit-wide grant (02.02.01).
 fun characteristic_modifier(ModifiedCharacteristic characteristic, ModifierOperation operation, Int amount) -> CharacteristicModifier:
     let result : CharacteristicModifier

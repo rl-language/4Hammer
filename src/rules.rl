@@ -512,10 +512,13 @@ act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit
             frm die : Dice
             die = face.value
             saves.pool.faces[face.value - 1] = saves.pool.faces[face.value - 1] - 1
-            if attack_save_succeeds(groups[active_group.value], die, board.attack_info.attack_penetration()):
+            if attack_save_succeeds(groups[active_group.value], die, board.attack_info.attack_penetration(target[id])):
                 continue
             board.current_state = CurrentStateDescription::damage_roll
-            subaction*(board) normal_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, board.attack_info.damage_modifiers, ModifiedCharacteristic::damage)
+            # Merge the allocated model's incoming D before the per-attack roll
+            # arithmetic/floor (p.19, appendix02.02.01/02.02.03).
+            frm normal_modifiers = combined_incoming_modifiers(board.attack_info.damage_modifiers, target[id].incoming_attack_modifiers, ModifiedCharacteristic::damage, board.attack_info.source.range() == 0)
+            subaction*(board) normal_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, normal_modifiers, ModifiedCharacteristic::damage)
             frm jobs : DamageJobs
             jobs.clear()
             jobs.append(damage_job(DamageKind::normal, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, normal_amount.result.value, target[id].identity))
@@ -526,7 +529,10 @@ act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit
         act allocate_mortal(frm ModelID critical_model) {mortal_model_valid(target, critical_model)}
         frm critical_recipient = target[critical_model].identity
         board.current_state = CurrentStateDescription::damage_roll
-        subaction*(board) critical_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, board.attack_info.damage_modifiers, ModifiedCharacteristic::damage)
+        # Devastating attacks use the allocated recipient's D modifiers before
+        # conversion to mortal wound loss, not on each wound separately (p.80).
+        frm critical_modifiers = combined_incoming_modifiers(board.attack_info.damage_modifiers, target[critical_model].incoming_attack_modifiers, ModifiedCharacteristic::damage, board.attack_info.source.range() == 0)
+        subaction*(board) critical_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, critical_modifiers, ModifiedCharacteristic::damage)
         frm critical_jobs : DamageJobs
         critical_jobs.clear()
         critical_jobs.append(damage_job(DamageKind::devastating, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, critical_amount.result.value, critical_recipient))

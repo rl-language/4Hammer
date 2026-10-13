@@ -45,6 +45,8 @@ cls Model:
     WeaponProfileCode[MAX_WEAPONS] weapon_profile_names
     # Model-scoped arithmetic, not implicit unit-wide grants (appendix02.02.01).
     CharacteristicModifiers characteristic_modifiers
+    # Incoming AP/D grants belong to the actual allocated recipient, not its weapons.
+    IncomingAttackModifiers incoming_attack_modifiers
     Wounds suffered_wounds
     # Core ability24.39: supplied threshold only; legacy fixtures grant none.
     Bool has_damaged

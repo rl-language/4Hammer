@@ -79,6 +79,12 @@ cls AttackSequenceInfo:
     fun attack_penetration() -> Int:
         return modified_characteristic(self.source.penetration(), ModifiedCharacteristic::armour_penetration, self.ap_modifiers, false, -int(self.penetration_bonus))
 
+    # Recipient reductions share outgoing arithmetic before the AP cap
+    # (p.19/appendix02.02.01), without changing invulnerable saves.
+    fun attack_penetration(Model recipient) -> Int:
+        let modifiers = combined_incoming_modifiers(self.ap_modifiers, recipient.incoming_attack_modifiers, ModifiedCharacteristic::armour_penetration, self.source.range() == 0)
+        return modified_characteristic(self.source.penetration(), ModifiedCharacteristic::armour_penetration, modifiers, false, -int(self.penetration_bonus))
+
     fun add_letal_hits():
         self.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::letal_hits))
 
@@ -878,6 +884,8 @@ fun valid_state_foundations(Board board) -> Bool:
 # Reject malformed bounded history on load before it can change range/Heavy
 # decisions or inferred observations (p.82 / user numeric-storage requirement).
 fun valid_model_numeric_history(Model model) -> Bool:
+    if !valid_incoming_attack_modifiers(model.incoming_attack_modifiers):
+        return false
     if !valid_characteristic_modifiers(model.characteristic_modifiers):
         return false
     if model.damaged_threshold.value < 0 or model.damaged_threshold.value >= MAX_WOUNDS:

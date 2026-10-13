@@ -7465,3 +7465,142 @@ fun test_damaged17c3_torrent_keeps_automatic_hits() -> Bool:
         return false
     batch.roll(board, board[1], board[0], attack_test_die(4))
     return batch.is_done() and batch.generated_wounds.value == 1
+
+# Incoming reductions use the allocated recipient and printed arithmetic
+# (p.19, appendix02.02.01; Battlewagon Mobile Fortress/Deff Dread Dread 'Ard).
+fun incoming17c4a_grant(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, IncomingAttackScope scope) -> IncomingAttackModifier:
+    return incoming_attack_modifier(kind, operation, amount, scope)
+
+# Ranged-only defenses do not protect melee or change the bearer's own weapons.
+fun test_incoming17c4a_scope_and_bearer_separation() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::subtract, 1, IncomingAttackScope::ranged))
+    let empty : RuleModifiers
+    let ranged = combined_incoming_modifiers(empty, board[1][0].incoming_attack_modifiers, ModifiedCharacteristic::damage, false)
+    let melee = combined_incoming_modifiers(empty, board[1][0].incoming_attack_modifiers, ModifiedCharacteristic::damage, true)
+    return modified_characteristic(3, ModifiedCharacteristic::damage, ranged, false) == 2 and melee.size() == 0 and board[1][0].characteristic_modifiers.size() == 0
+
+# Outgoing multiplication and incoming subtraction combine before the floor.
+fun test_incoming17c4a_order_floor_and_zero_lock() -> Bool:
+    let outgoing : RuleModifiers
+    outgoing.append(rule_modifier(ModifierOperation::multiply, 2))
+    let incoming : IncomingAttackModifiers
+    incoming.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::subtract, 3, IncomingAttackScope::any_attack))
+    let combined = combined_incoming_modifiers(outgoing, incoming, ModifiedCharacteristic::damage, false)
+    if modified_characteristic(2, ModifiedCharacteristic::damage, combined, false) != 1:
+        return false
+    outgoing.append(rule_modifier(ModifierOperation::replace, 0))
+    combined = combined_incoming_modifiers(outgoing, incoming, ModifiedCharacteristic::damage, false)
+    return modified_characteristic(2, ModifiedCharacteristic::damage, combined, false) == 0
+
+# AP worsening caps at zero and does not modify InSv or natural-one failure.
+fun test_incoming17c4a_ap_save_and_invulnerable() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.source = Weapon::choppa
+    board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::armour_penetration, ModifierOperation::add, 2, IncomingAttackScope::any_attack))
+    if board.attack_info.attack_penetration(board[1][0]) != 0:
+        return false
+    let group : AllocationGroup
+    group.save = 3
+    group.invulnerable = 4
+    return attack_save_succeeds(group, attack_test_die(3), 0) and attack_save_succeeds(group, attack_test_die(4), -6) and !attack_save_succeeds(group, attack_test_die(1), 0)
+
+# Actual Devastating damage consumes incoming D once before wound loss.
+fun test_incoming17c4a_devastating_actual_consumer() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.damage_modifiers.append(rule_modifier(ModifierOperation::replace, 2))
+    board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::subtract, 1, IncomingAttackScope::any_attack))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    damage.allocate_mortal(board, board[1], board[0], damage_test_model(0))
+    return damage.is_done() and board[1][0].suffered_wounds == 1
+
+# Random D is still rolled only after allocation; reductions precede its floor.
+fun test_incoming17c4a_random_damage_after_allocation() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.source = Weapon::smite_witchfire
+    board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::subtract, 1, IncomingAttackScope::ranged))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    if can damage.quantity(board, board[1], board[0], attack_test_die(2)):
+        return false
+    damage.allocate_mortal(board, board[1], board[0], damage_test_model(0))
+    damage.quantity(board, board[1], board[0], attack_test_die(2))
+    return damage.is_done() and board[1][0].suffered_wounds == 1
+
+# Equal outgoing D can differ after a recipient operation; do not group them.
+fun test_incoming17c4a_group_identity_before_rounding() -> Bool:
+    let board = attack_declaration_fixture()
+    let left = board.attack_info
+    let right = left
+    left.damage_modifiers.append(rule_modifier(ModifierOperation::replace, 3))
+    left.damage_modifiers.append(rule_modifier(ModifierOperation::divide, 2))
+    right.damage_modifiers.append(rule_modifier(ModifierOperation::replace, 2))
+    if !same_effective_damage(left, right):
+        return false
+    board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::multiply, 2, IncomingAttackScope::any_attack))
+    return !same_effective_damage(left, right, board[1][0]) and !attacks_are_identical(board, left, right)
+
+# AP/D defenses do not change the printed W/Sv/InSv allocation groups (p.19).
+fun test_incoming17c4a_mixed_recipients_keep_printed_groups() -> Bool:
+    let board = attack_declaration_fixture()
+    let other = board[1][0]
+    other.identity = 0
+    other.incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::armour_penetration, ModifierOperation::add, 2, IncomingAttackScope::any_attack))
+    board[1].models.append(other)
+    board.identify_units()
+    let groups = make_allocation_groups(board, board[1], board.attack_info)
+    return groups.size() == 1 and groups[0].members.size() == 2
+
+# Invalid loaded kind, scope and zero divisor are rejected before arithmetic.
+fun test_incoming17c4a_restore_validation() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::subtract, 1, IncomingAttackScope::any_attack))
+    if !valid_model_numeric_history(board[1][0]):
+        return false
+    board[1][0].incoming_attack_modifiers[0].scope.value = 3
+    if valid_model_numeric_history(board[1][0]):
+        return false
+    board[1][0].incoming_attack_modifiers[0].scope = IncomingAttackScope::any_attack
+    board[1][0].incoming_attack_modifiers[0].characteristic = ModifiedCharacteristic::strength
+    if valid_model_numeric_history(board[1][0]):
+        return false
+    board[1][0].incoming_attack_modifiers[0].characteristic = ModifiedCharacteristic::damage
+    board[1][0].incoming_attack_modifiers[0].modifier = rule_modifier(ModifierOperation::divide, 0)
+    return !valid_model_numeric_history(board[1][0])
+
+# Ordinary failed saves apply the reduction to this attack, without spilling (p.19).
+fun test_incoming17c4a_normal_damage_consumer() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.source = Weapon::heavy_bolter
+    board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::subtract, 1, IncomingAttackScope::ranged))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(1), attack_test_count(0))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(0))
+    damage.roll(board, board[1], board[0], attack_test_die(1))
+    damage.allocate_wound(board, board[1], board[0], damage_test_model(0))
+    return damage.is_done() and board[1][0].suffered_wounds == 1
+
+# Live allocated AP is used by the actual save, rather than the unprotected group (p.19).
+fun test_incoming17c4a_normal_save_consumer() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.source = Weapon::heavy_bolter
+    board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::armour_penetration, ModifierOperation::add, 1, IncomingAttackScope::ranged))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(1), attack_test_count(0))
+    damage.choose_save_group(board, board[1], board[0], allocation_test_group(0))
+    damage.roll(board, board[1], board[0], attack_test_die(3))
+    damage.allocate_wound(board, board[1], board[0], damage_test_model(0))
+    return damage.is_done() and board[1][0].suffered_wounds == 0
+
+# Non-attack mortal wound jobs bypass incoming weapon-D arithmetic (p.24).
+fun test_incoming17c4a_nonattack_mortals_unmodified() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::replace, 0, IncomingAttackScope::any_attack))
+    let damage = resolve_mortal_wounds(board, unit_id(1), unit_id(0), false, attack_test_count(1))
+    damage.select_mortal_model(board, damage_test_model(0))
+    return damage.is_done() and board[1][0].suffered_wounds == 1
+
+# Saves preserve incoming metadata, independent of generated lifecycle (infrastructure).
+fun test_incoming17c4a_saved_metadata_round_trip() -> Bool:
+    let state = play()
+    state.board = attack_declaration_fixture()
+    state.board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::subtract, 1, IncomingAttackScope::ranged))
+    let restored = play()
+    return set_state(restored, to_string(state)) and restored.board[1][0].incoming_attack_modifiers.size() == 1 and restored.board[1][0].incoming_attack_modifiers[0].modifier.signed_amount() == 1 and valid_model_numeric_history(restored.board[1][0])

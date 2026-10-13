@@ -195,6 +195,13 @@ fun target_has_unresolved_weapons(DeclaredWeapons declarations, UnitID target) -
 fun attacks_are_identical(Board board, AttackSequenceInfo left, AttackSequenceInfo right) -> Bool:
     if effective_attack_skill(board, left) != effective_attack_skill(board, right) or left.attack_strength() != right.attack_strength() or left.attack_penetration() != right.attack_penetration() or !same_effective_damage(left, right):
         return false
+    # Equal rounded outgoing values can diverge when recipient operations are
+    # combined before rounding. Compare every possible live allocation (p.17,
+    # appendix02.02.01); recipients stay in their printed W/Sv/InSv groups.
+    for recipient_index in range(board[left.target_unit_id].models.size()):
+        ref recipient = board[left.target_unit_id][recipient_index]
+        if recipient.is_alive() and (left.attack_penetration(recipient) != right.attack_penetration(recipient) or !same_effective_damage(left, right, recipient)):
+            return false
     if !(left.shooting_kind == right.shooting_kind) or left.indirect_stationary_visible != right.indirect_stationary_visible or left.heavy_bonus != right.heavy_bonus or left.engaged_hit_penalties != right.engaged_hit_penalties:
         return false
     if left.total_hit_modifier() != right.total_hit_modifier() or left.total_wound_modifier() != right.total_wound_modifier():
@@ -318,6 +325,15 @@ fun same_effective_damage(AttackSequenceInfo left, AttackSequenceInfo right) -> 
                     return false
             return true
     return false
+
+# Incoming D participates in identical-attack identity for each eligible
+# recipient and every original random face (p.17/appendix02.02.03).
+fun same_effective_damage(AttackSequenceInfo left, AttackSequenceInfo right, Model recipient) -> Bool:
+    let left_incoming = left
+    let right_incoming = right
+    left_incoming.damage_modifiers = combined_incoming_modifiers(left.damage_modifiers, recipient.incoming_attack_modifiers, ModifiedCharacteristic::damage, left.source.range() == 0)
+    right_incoming.damage_modifiers = combined_incoming_modifiers(right.damage_modifiers, recipient.incoming_attack_modifiers, ModifiedCharacteristic::damage, right.source.range() == 0)
+    return same_effective_damage(left_incoming, right_incoming)
 
 # Current bearer grants match the declared profile's explicit identity, even
 # when Firing Deck borrows a passenger weapon (pp.16/81; appendix04.01.03).
