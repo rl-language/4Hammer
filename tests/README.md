@@ -308,3 +308,19 @@ Current CTest is `/workspace/4hammer-validation/task17f-tests`:650/650 pass,648 
 Matching artifacts are `task17f-godot`; run `python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17f-godot --script tests/godot_orks_army.gd --timeout 30`. It checks real child methods, production Warlord/timing buttons, offboard click suppression and status/CP. Previous modifier/source checks also pass. The harness frees its owned RLCLib Object and defers quit; a leak warning remains a failure.
 
 The optimized `task17f-fuzzer` passes preserved/zero/completed-game inputs and43 fresh mutation runs in64s without sanitizer failures or crash artifacts.20-step Gym is finite with22,746 candidates and26,128,335 observations; schemas27/17/27 (next28). Full rendered journeys and wrapper performance remain17.Q. Fresh seed40000 completes878 actions, terminal owner-4, with identical bytes to the sanitized replay (`task17f-gameplay.log`, `task17f-replays`). Actual current unit profiles/abilities are not installed by these fixtures. Next17.G covers Orks Leader/Support mechanics; Forge World/Legends stay excluded.
+
+
+## Attachment mechanics and included Orks lists (batch17.G)
+
+Current CTest is `/workspace/4hammer-validation/task17g-tests`:684/684 pass,682 assertions plus two fixtures. The34 `test_attachment17g_*` cases cover exact roles/permissions, both slot orders, ownership/capacity rejection, provenance, mixed keywords/T, source destruction/return, deferred cleanup, merged model/unit death, Warlord/One Shot saves and Painboss bearer-only arithmetic. [The report](../doc/attachments.md) distinguishes metadata/engine support from actual current profiles and revival/setup. The unoptimized ASAN/UBSAN/leak driver `task17g-sanitized/driver-final` passes all34.
+
+Run the independent inventory cross-check without recompilation:
+
+```sh
+python tools/check_orks_attachment_permissions.py --wrapper /workspace/4hammer-validation/task17g-tests/rule-tests/baseline/wrapper.py
+python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17g-godot --script tests/godot_attachments.gd --timeout 45
+```
+
+The inventory check validates all67 identities,10 Leader/seven Support cards,41 permission edges and13 excluded cards against the compiled implementation. Matching Godot tests validate the actual child frame, source-first reserve pair, production labels and click suppression. Prior army/Warlord and weapon/source tests pass. The broad `godot_state.gd` now uses explicit attachment metadata for its pending-pair fixture; its documented large-journey timeout is1200s. A45s exploratory run timed out, so no full broad journey is claimed for this batch. The focused pending-root-save subset is recorded in ROADMAP.md.
+
+The optimized sanitized `task17g-fuzzer-final` passes preserved lifetime/zero/fresh-game inputs,45 fresh mutation runs in61s and the new1,000-action seed40000 game. The matching fresh input separately replays in49.260s; no controlled performance comparison is claimed.20-step Gym is finite with22,746 candidates and26,183,041 observations; schemas28/18/28 (next29). Full rendered journeys/wrapper retrieval remain17.Q. Other faction permissions, current Orks profiles/grants and actual revival/setup remain separate owners. Next17.H; exclude Forge World/Legends.

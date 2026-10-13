@@ -1,6 +1,6 @@
 # Rulebook design and architecture
 
-This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation after tasks17.D/E,17.C4b and17.F, using Rulebook compiler 0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
+This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation after tasks17.D/E,17.C4b,17.F and17.G, using Rulebook compiler 0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
 Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and [supplied appendix](11th-edition-supplied-appendix.md) for game rules. The architecture supports those rules, but its storage bounds, schemas and UI protocols are project decisions. [AGENTS.md](../AGENTS.md) records development constraints and the language conventions used here.
 
@@ -15,6 +15,7 @@ Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and
 - [Movement and placement](#movement-and-placement)
 - [Combat resolution](#combat-resolution)
 - [Effective characteristics and predicates](#effective-characteristics-and-predicates)
+- [Attached units](#attached-units)
 - [Source events and lasting effects](#source-events-and-lasting-effects)
 - [Transports, geometry and missions](#transports-geometry-and-missions)
 - [Godot integration](#godot-integration)
@@ -67,6 +68,7 @@ The module map below describes responsibility boundaries. Imports expose shared 
 | Interactive orchestration | [rules.rl](../src/rules.rl) | Battle/round/turn/phase frames, dice decisions, declarations, attacks, movement, damage resolution and timing choices |
 | Shared storage contracts | [state_types.rl](../src/state_types.rl) | Bounds, schemas, `CheckedVector`, histories, timing, allocation and setup metadata |
 | Board and entities | [board.rl](../src/board.rl), [units.rl](../src/units.rl) | `Board`, `Unit`, `Model`, positional selectors, identity allocation, banks, query contexts and roster factories |
+| Attachments | [attachment_rules.rl](../src/attachment_rules.rl) | Explicit roles/permissions, bounded component provenance, bodyguard T and source lifetime integration |
 | Profile and army data | [stats.rl](../src/stats.rl), [army_configuration.rl](../src/army_configuration.rl) | Profiles/keywords/abilities, legacy roster identifiers, army identity, detachments, reserve mode and CP metadata |
 | Weapons and names | [weapons.rl](../src/weapons.rl), [named_identities.rl](../src/named_identities.rl) | Weapon profiles/rules, `Stat`, compound expressions and stable datasheet/family/profile catalogs |
 | Arithmetic and conditions | [modifiers.rl](../src/modifiers.rl), [keyword_predicates.rl](../src/keyword_predicates.rl) | Ordered modifier operations, characteristic limits, incoming AP/D records and ALL/ANY/NONE predicates |
@@ -182,7 +184,7 @@ The project requires authored persistent numeric game/frame values to use `BInt`
 
 There is no z-coordinate action. Model elevation and terrain/path metadata retain their bounded domains. Physical calculations can reconstruct micrometre coordinates and use local floats while actual saved positions remain quads. `ModelHistory` stores bounded squared horizontal segment lengths plus vertical distance, then computes square roots on demand; it does not persist a float distance cache.
 
-The current full-game layout is state/observation schema **27**, action schema **17**, with next-state bound **28**. The validated catalog has **22,746** candidates and **26,128,335** observation values. These are a versioned snapshot, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
+The current full-game layout is state/observation schema **28**, action schema **18**, with next-state bound **29**. The validated catalog has **22,746** candidates and **26,183,041** observation values. These are a versioned snapshot, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
 
 ## Turn sequence and decision ownership
 
@@ -302,6 +304,14 @@ Source-installed numerical records use the same effective M/T/Sv/InSv/Ld/OC and 
 `modifier_choices.rl` keeps each authored skill operation and each core contribution separate. Cover and Plunging Fire are BS operations; Heavy, Damaged, ordinary/profile hit bonuses and the two engagement penalties are hit-roll contributions. For every ordinary hit die, after re-rolls, the bearer’s controller may apply or ignore each relevant item, including beneficial items. Selected operations then use the same ordered arithmetic, rounding, characteristic limits and cumulative hit cap. Natural 1/6 and other unmodified gates remain intact. The no-permission path retains aggregate classification.
 
 `ChooseAttackModifiers` persists its bounded list, index and result. A one-Bool `apply_attack_modifier` input represents every subset without enumerating an exponential mask. Board exposes the current modifier/kind for labels; the child restores the previous decision owner and UI context. Group identity compares permissions and the original selectable lists, since equal all-applied totals can offer different subsets. A typed source grant can install a permission, with source-owned expiry and archive cleanup. Actual Orks ability adapters remain later work.
+
+## Attached units
+
+Read [the attachment report](attachments.md) for source citations, the17 included Orks lists and validation boundaries. `attachment_rules.rl` separates exact prebattle permissions from the structural `Unit.attach_to` transfer. Two bounded component records preserve Leader/Support identity, count and unit-rule source scope; models retain original component and wargear/use identity. The bodyguard keeps the combined unit's identity and starting strength even after every bodyguard dies. Model keywords stay local; unit queries union them. Declared attacks query highest bodyguard T while any remain, then highest remaining Leader/Support T.
+
+Typed `Unit.unit_abilities` applies through the original component's lifetime. Model-only modifiers stay on the bearer. Register live conditional sources before formation; activation still requires the condition. `SourceInstance.requires_leading` tracks started-attached permission, while `model_specific_rule` restricts activation to the live model. `source_alive` and `source_confers_rules` differ during p67's attack interval: a destroyed bearer may confer a unit rule until that attacker finishes all attacks, without becoming a live recipient. Damage cleanup releases only the matching attacker, then resolves callbacks/removal.
+
+Whole-unit death uses a separate event merged with the final casualty's model event. Component death does not emit it. An archived bearer can retain provenance for a unit-wide death rule; controller groups remain current player then opponent. Returning-model provenance preserves components and use history; actual revival/setup remains17.J. These records are visible bounded storage, with generated init/drop. The source-first reserve pair has named production buttons and suppresses battlefield clicks; Rules.gd/TraceManager.gd remain unchanged.
 
 ## Source events and lasting effects
 
@@ -439,9 +449,9 @@ The resumable-frame model gives the rules, UI, replay and learning clients a sha
 
 The generic action catalog makes host integration simple and exhaustive. Hosts currently scan it to find legal candidates, and generated wrapper fetching has a measured cost. Small coordinate domains reduce candidates; they do not remove wrapper overhead. Task 17.Q owns the required performance fix and broader rendered/integration validation.
 
-`rules.rl` remains a large orchestration module, with older combat/attachment and faction-specific paths beside the new helpers. A new implementation should follow its callers and the roadmap rather than infer completion from a type, enum entry or factory name. The current attachment entrypoint is legacy; complete source-backed Leader/Support lifecycle remains17.G, the next batch.
+`rules.rl` remains a large orchestration module, with older combat/attachment and faction-specific paths beside the new helpers. A new implementation should follow its callers and the roadmap rather than infer completion from a type, enum entry or factory name. The attachment entrypoint now uses explicit reserve-bank Leader/Support roles and permission metadata; full current datasheet factories remain17.H–P.
 
-Current gaps include ignore-modifier consumers beyond WS/BS and hit rolls, full current Orks profile/loadout/ability migration, source-backed attachments, specialized source reactions, healing/revival/psychic consumers, and oval/hull/multipart geometry. All Forge World and Legends units are excluded by user direction; current Orks implementation targets the54 standard cards. The67-card source catalog retains historical identities. Points/DP accounting, continuous positions and exact body visibility are also excluded. See [the Orks audit](orks-codebase-audit.md), [coverage map](11th-edition-rule-coverage.md) and [ROADMAP.md](../ROADMAP.md) for precise ownership and source dependencies.
+Current gaps include ignore-modifier consumers beyond WS/BS and hit rolls, full current Orks profile/loadout/ability migration, other factions' attachment permissions, specialized source reactions, healing/revival/psychic consumers, and oval/hull/multipart geometry. All Forge World and Legends units are excluded by user direction; current Orks implementation targets the54 standard cards. The67-card source catalog retains historical identities. Points/DP accounting, continuous positions and exact body visibility are also excluded. See [the Orks audit](orks-codebase-audit.md), [coverage map](11th-edition-rule-coverage.md) and [ROADMAP.md](../ROADMAP.md) for precise ownership and source dependencies.
 
 For subsystem detail, use [attack declarations/dice](attack-declarations-dice.md), [damage/destruction](saves-damage-destruction.md), [movement/deployment](movement-deployment.md), [modifiers](model-characteristics.md), [physical weapons/compound dice](physical-weapons-compound-dice.md), [source effects](source-instances-effects.md) and [transports/Aircraft](transports-aircraft.md). Earlier reports contain historical schemas/test counts; current source and the latest roadmap completion section take precedence.
 
