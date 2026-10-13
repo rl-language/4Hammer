@@ -1,6 +1,6 @@
 # Rulebook design and architecture
 
-This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation after tasks 17.D/E, using Rulebook compiler 0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
+This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation after tasks 17.D/E and 17.C4b, using Rulebook compiler 0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
 Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and [supplied appendix](11th-edition-supplied-appendix.md) for game rules. The architecture supports those rules, but its storage bounds, schemas and UI protocols are project decisions. [AGENTS.md](../AGENTS.md) records development constraints and the language conventions used here.
 
@@ -70,6 +70,7 @@ The module map below describes responsibility boundaries. Imports expose shared 
 | Profile and army data | [stats.rl](../src/stats.rl), [army_configuration.rl](../src/army_configuration.rl) | Profiles/keywords/abilities, legacy roster identifiers, army identity, detachments, reserve mode and CP metadata |
 | Weapons and names | [weapons.rl](../src/weapons.rl), [named_identities.rl](../src/named_identities.rl) | Weapon profiles/rules, `Stat`, compound expressions and stable datasheet/family/profile catalogs |
 | Arithmetic and conditions | [modifiers.rl](../src/modifiers.rl), [keyword_predicates.rl](../src/keyword_predicates.rl) | Ordered modifier operations, characteristic limits, incoming AP/D records and ALL/ANY/NONE predicates |
+| Optional attack modifiers | [modifier_choices.rl](../src/modifier_choices.rl) | Bearer permissions, individual modifier provenance, sequential Apply/Ignore choices and selected arithmetic |
 | Attack declaration and dice | [attack_declarations.rl](../src/attack_declarations.rl), [attack_dice.rl](../src/attack_dice.rl) | `DeclaredWeapon`, target/share metadata, attack-group identity, original dice batches and result classification |
 | Shooting and weapon abilities | [shooting_rules.rl](../src/shooting_rules.rl), [weapon_abilities.rl](../src/weapon_abilities.rl) | Shooting-mode legality, selected per-slot abilities, duplicate-instance choices and target conditions |
 | Damage and destruction | [damage_rules.rl](../src/damage_rules.rl) | Allocation groups, save/recipient predicates, `DamageJob`, pending destruction and wound commitment helpers |
@@ -180,7 +181,7 @@ The project requires authored persistent numeric game/frame values to use `BInt`
 
 There is no z-coordinate action. Model elevation and terrain/path metadata retain their bounded domains. Physical calculations can reconstruct micrometre coordinates and use local floats while actual saved positions remain quads. `ModelHistory` stores bounded squared horizontal segment lengths plus vertical distance, then computes square roots on demand; it does not persist a float distance cache.
 
-The current full-game layout is state/observation schema **25**, action schema **15**, with next-state bound **26**. The validated catalog has **22,678** candidates and **25,682,905** observation values. These are a versioned snapshot, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
+The current full-game layout is state/observation schema **26**, action schema **16**, with next-state bound **27**. The validated catalog has **22,680** candidates and **26,032,968** observation values. These are a versioned snapshot, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
 
 ## Turn sequence and decision ownership
 
@@ -239,8 +240,10 @@ flowchart TD
     Declare --> Viable[Revalidate declared targets]
     Viable --> Target[Choose target and resolve targeting effects]
     Target --> Group[Choose and gather identical attacks]
-    Group --> Rolls[Original hit and wound dice plus rerolls]
-    Rolls --> Allocate[Order allocation groups and resolve saves]
+    Group --> Rolls[Original hit dice plus rerolls]
+    Rolls --> Modifiers[Optional WS/BS and hit modifier subsets]
+    Modifiers --> Wounds[Wound dice plus rerolls]
+    Wounds --> Allocate[Order allocation groups and resolve saves]
     Allocate --> Damage[Allocated damage, prevention and jobs]
     Damage --> More[Resolve remaining groups and targets]
     More --> Group
@@ -283,11 +286,15 @@ Profile/weapon enum methods provide base data. Mutable arithmetic lives in spars
 
 `KeywordPredicate` stores the conjunction of ALL, ANY and NONE groups. A unit query uses the constituent keyword union; a model query uses the individual model. Live/offboard eligibility is checked separately from keyword membership. Named unit/weapon predicates use the stable catalogs in `named_identities.rl`, rather than a legacy factory/display name.
 
-Source-installed numerical records use the same effective M/T/Sv/InSv/Ld/OC and Range/skill/S/AP/A/D consumers as manual fixtures. Incoming reductions reach actual saves and damage. Selective modifier ignoring remains task 17.C4b; do not describe a negative-only automatic filter as the planned optional subset choice.
+Source-installed numerical records use the same effective M/T/Sv/InSv/Ld/OC and Range/skill/S/AP/A/D consumers as manual fixtures. Incoming reductions reach actual saves and damage. Optional ignoring currently supports explicit WS/BS and hit-roll permissions, scoped to ranged, melee or any attack. It does not yet expose an unqualified permission across every characteristic and roll.
+
+`modifier_choices.rl` keeps each authored skill operation and each core contribution separate. Cover and Plunging Fire are BS operations; Heavy, Damaged, ordinary/profile hit bonuses and the two engagement penalties are hit-roll contributions. For every ordinary hit die, after re-rolls, the bearer’s controller may apply or ignore each relevant item, including beneficial items. Selected operations then use the same ordered arithmetic, rounding, characteristic limits and cumulative hit cap. Natural 1/6 and other unmodified gates remain intact. The no-permission path retains aggregate classification.
+
+`ChooseAttackModifiers` persists its bounded list, index and result. A one-Bool `apply_attack_modifier` input represents every subset without enumerating an exponential mask. Board exposes the current modifier/kind for labels; the child restores the previous decision owner and UI context. Group identity compares permissions and the original selectable lists, since equal all-applied totals can offer different subsets. A typed source grant can install a permission, with source-owned expiry and archive cleanup. Actual Orks ability adapters remain later work.
 
 ## Source events and lasting effects
 
-The source framework makes an ability's origin, usage and duration explicit. It currently installs typed characteristic, incoming-attack and weapon-rule grants. Actual faction abilities and specialized reactions need their source adapters; registration alone does not make every audited ability executable.
+The source framework makes an ability's origin, usage and duration explicit. It currently installs typed characteristic, incoming-attack, weapon-rule and attack-modifier-permission grants. Actual faction abilities and specialized reactions need their source adapters; registration alone does not make every audited ability executable.
 
 | Record | Role |
 | --- | --- |
@@ -345,7 +352,7 @@ The compiler emits `rules.inc`; [gdexample.cpp](../src/gdexample.cpp) includes i
 | One `BoardPosition` | Grid-location input through the existing x/y getters |
 | Other bounded numeric selector | Explicit control/button support is needed; examples include allocation, attack-group and source-event choices |
 
-[InteractionManager.gd](../scripts/InteractionManager.gd) handles battlefield model/unit clicks and highlights. [SelectPointManager.gd](../scripts/SelectPointManager.gd) converts screen coordinates to the 64-pixel grid. [MultipleChoises.gd](../scripts/MultipleChoises.gd) handles generic choices and special named buttons, including source instances, reserve deployment and Firing Deck. [boardl.gd](../scripts/boardl.gd) renders board state.
+[InteractionManager.gd](../scripts/InteractionManager.gd) handles battlefield model/unit clicks and highlights. [SelectPointManager.gd](../scripts/SelectPointManager.gd) converts screen coordinates to the 64-pixel grid. [MultipleChoises.gd](../scripts/MultipleChoises.gd) handles generic choices and special named buttons, including source instances, reserve deployment and Firing Deck. The one-Bool modifier action receives explicit Apply/Ignore labels with its characteristic, origin and signed operation. [boardl.gd](../scripts/boardl.gd) renders board state.
 
 Autodetection depends on argument **types, counts, order and generated names**, not just rule legality. `UnitID` does not itself encode which bank it selects; the specialized caller/control provides that meaning. Shape-based selectors often choose the first matching legal action type, so simultaneous same-shape choices can require explicit controls. A renamed action, reordered source/target, changed public frame or added argument requires auditing these consumers.
 
@@ -423,7 +430,7 @@ The generic action catalog makes host integration simple and exhaustive. Hosts c
 
 `rules.rl` remains a large orchestration module, with older combat/attachment and faction-specific paths beside the new helpers. A new implementation should follow its callers and the roadmap rather than infer completion from a type, enum entry or factory name. The current attachment entrypoint is legacy; complete source-backed Leader/Support lifecycle remains 17.G.
 
-Current gaps include 17.C4b's optional modifier subsets, full current Orks profile/loadout/ability migration, specialized source reactions, healing/revival/psychic consumers, and oval/hull/multipart geometry. Points/DP accounting, continuous positions and exact body visibility are excluded by user direction. See [the Orks audit](orks-codebase-audit.md), [coverage map](11th-edition-rule-coverage.md) and [ROADMAP.md](../ROADMAP.md) for precise ownership and source dependencies.
+Current gaps include ignore-modifier consumers beyond WS/BS and hit rolls, full current Orks profile/loadout/ability migration, specialized source reactions, healing/revival/psychic consumers, and oval/hull/multipart geometry. All Forge World and Legends units are excluded by user direction; current Orks implementation targets the54 standard cards. The67-card source catalog retains historical identities. Points/DP accounting, continuous positions and exact body visibility are also excluded. See [the Orks audit](orks-codebase-audit.md), [coverage map](11th-edition-rule-coverage.md) and [ROADMAP.md](../ROADMAP.md) for precise ownership and source dependencies.
 
 For subsystem detail, use [attack declarations/dice](attack-declarations-dice.md), [damage/destruction](saves-damage-destruction.md), [movement/deployment](movement-deployment.md), [modifiers](model-characteristics.md), [physical weapons/compound dice](physical-weapons-compound-dice.md), [source effects](source-instances-effects.md) and [transports/Aircraft](transports-aircraft.md). Earlier reports contain historical schemas/test counts; current source and the latest roadmap completion section take precedence.
 

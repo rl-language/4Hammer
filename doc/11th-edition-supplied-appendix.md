@@ -1,6 +1,6 @@
 # Appendix definitions supplied by the user
 
-Authority: the user supplied these definitions during task 9, citing <https://wahapedia.ru/wh40k11ed/the-rules/rules-appendix/>. The site itself could not be accessed (HTTP 403). These entries supplement source gates D03/D11; they are not reproduced core-PDF page quotations. The clauses below retain the supplied operational meaning.
+Authority: the user supplied these definitions during task 9, citing <https://wahapedia.ru/wh40k11ed/the-rules/rules-appendix/>. The site could not be accessed then (HTTP403); subsequent task17 source retrieval succeeded. Later entries identify independently retrieved sections. These entries supplement source gates D03/D11; they are not reproduced core-PDF page quotations. The clauses below retain the supplied operational meaning.
 
 ## Modifiers — 02.02.01
 
@@ -67,3 +67,19 @@ A unit that is embarked within a TRANSPORT or that is in strategic reserves is n
 This means units not on the battlefield cannot be selected or targeted by any attack or rule that requires a unit to be visible or within a certain distance (other than their own abilities). Such units can still use their other rules, and are still units in the controlling player’s army and so can be affected by rules that require a player to select a unit from an army, as well as rules that affect all units in an army. The controlling player must make battle-shock rolls for units that are not on the battlefield in their Command phase if they are battle-shocked, or if they are at or below half-strength.
 
 Authority: user-provided appendix wording, not a PDF quotation. Core transport and reserve references are pp.64–65/68–69.
+
+
+## Ignore Modifiers — 02.02.02 (retrieved during task17)
+
+Source: [rules appendix, Ignore Modifiers](https://wahapedia.ru/wh40k11ed/the-rules/rules-appendix/#Ignore-Modifiers), retrieved2026-10-12 alongside the Orks audit. This is an appendix definition, not a quotation from a core-PDF page.
+
+Some rules enable a player, weapon, model or unit to ignore modifiers. When using such rules, the following points apply:
+
+- Unless otherwise stated, that rule allows you to ignore modifiers to the unit’s rolls and the unit’s profile and weapon characteristics.
+- When a rule states you can ignore modifiers to a stated roll or characteristic, you can choose to ignore all of those modifiers, or only some of them. For example, you can still choose to apply positive/beneficial modifiers while ignoring negative/detrimental modifiers.
+
+Example: Your unit can ignore characteristic modifiers and is under the effect of +2"M and -2"M. You can choose to ignore the -2"M, meaning that unit’s M characteristic will only be modified by the +2"M.
+
+Example: Your unit’s ranged attacks can ignore roll modifiers and are under the effect of +1 to hit rolls and -1 to hit rolls. You can choose to ignore the -1 to hit rolls, meaning those attacks will only be affected by the +1 to hit rolls.
+
+Implementation boundary:17.C4b integrates explicit WS/BS and hit-roll permissions. The definition’s unqualified coverage of every characteristic/roll does not imply those additional consumers have been implemented. Forge World/Legends units are excluded; no Gargantuan Squiggoth grant is installed.
