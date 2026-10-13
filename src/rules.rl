@@ -44,14 +44,19 @@ act evaluate_random_stat(frm Stat stat, frm  StatModifier fixed_extra) -> RollSt
         result = stat.value + fixed_extra.value
         return
 
-    if stat is Dice:
-        frm max_quantity = stat
-        # if the stat has a dice component, 
-        # selects the value for that dice 
-        act quantity(Dice dice) {
-            dice.value <= max_quantity.value
-        }
-        result = dice.value + fixed_extra.value
+    assert(valid_stat(stat), "invalid random characteristic")
+    frm maximum : Dice
+    maximum = stat_dice_sides(stat)
+    frm count : LinearlyDistributedInt<1, 4>
+    count = stat_dice_count(stat)
+    frm index : LinearlyDistributedInt<0, 4>
+    while index.value < count.value:
+        act quantity(Dice dice) {dice.value <= maximum.value}
+        result = result + dice.value
+        index = index + 1
+    let total = result.value + stat_intrinsic_constant(stat) + fixed_extra.value
+    assert(total >= 0 and total < MAX_RANDOM_STAT_RESULT, "random characteristic result capacity exceeded")
+    result = total
 
 fun evaluate_random_stat(Stat stat) -> RollStat:
     let zero : StatModifier 
@@ -70,16 +75,22 @@ act evaluate_weapon_characteristic(ctx Board board, frm Stat stat, frm StatModif
     let zero : StatModifier
     subaction* initial = evaluate_random_stat(stat, zero)
     frm result = initial.result
-    if stat is Dice:
-        frm maximum = stat
+    if stat_dice_count(stat) > 0:
+        frm maximum : Dice
+        maximum = stat_dice_sides(stat)
         if can_command_reroll(board, player, target, true):
             frm previous_owner = board.current_decision_maker
             board.current_decision_maker = player
             act keep_it(Bool keep)
             if !keep:
                 board.commit_stratagem(player, Stratagem::reroll, board[target])
-                act reroll(Dice replacement) {replacement.value <= maximum.value}
-                result = replacement.value
+                # A summed roll re-rolls every original die, once (01.05.02).
+                result = stat_intrinsic_constant(stat)
+                frm reroll_index : LinearlyDistributedInt<0, 4>
+                while reroll_index.value < stat_dice_count(stat):
+                    act reroll(Dice replacement) {replacement.value <= maximum.value}
+                    result = result + replacement.value
+                    reroll_index = reroll_index + 1
             board.current_decision_maker = previous_owner
     let effective = modified_characteristic(result.value, characteristic_kind, modifiers, false, extra.value)
     assert(effective >= 0 and effective < MAX_RANDOM_STAT_RESULT, "weapon characteristic result capacity exceeded")
@@ -1122,9 +1133,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     board.destroyed_attack_unit = previous_destroyed_unit
     frm cleanup_jobs : DamageJobs
     subaction*(board) deaths = resolve_damage_jobs(board, cleanup_jobs, true, source)
-    for i in range(declarations.size()):
-        if declared_weapon_has_kind(declarations[i], WeaponRuleKind::hazardous):
-            hazardous_uses = hazardous_uses + 1
+    hazardous_uses = declared_hazardous_uses(declarations)
     subaction*(board) hazards = resolve_hazards(board, source, hazardous_uses)
 
     board.timing.active_player = previous_active

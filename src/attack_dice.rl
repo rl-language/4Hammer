@@ -132,7 +132,6 @@ fun same_damage_characteristic(Stat left, Stat right) -> Bool:
     if left is FixedStat:
         if right is FixedStat:
             return left.value == right.value
-    if left is Dice:
-        if right is Dice:
-            return left.value == right.value
+    if stat_dice_count(left) > 0 and stat_dice_count(right) > 0:
+        return stat_dice_count(left) == stat_dice_count(right) and stat_dice_sides(left) == stat_dice_sides(right) and stat_intrinsic_constant(left) == stat_intrinsic_constant(right)
     return false

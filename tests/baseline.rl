@@ -7604,3 +7604,173 @@ fun test_incoming17c4a_saved_metadata_round_trip() -> Bool:
     state.board[1][0].incoming_attack_modifiers.append(incoming17c4a_grant(ModifiedCharacteristic::damage, ModifierOperation::subtract, 1, IncomingAttackScope::ranged))
     let restored = play()
     return set_state(restored, to_string(state)) and restored.board[1][0].incoming_attack_modifiers.size() == 1 and restored.board[1][0].incoming_attack_modifiers[0].modifier.signed_amount() == 1 and valid_model_numeric_history(restored.board[1][0])
+
+fun test_physical17d_capacity_and_last_slot() -> Bool:
+    # Capacity is model storage; actual final-slot legality is also checked
+    # in the profile-selection regression below, using its live board.
+    let unit = make_infernus_squad()
+    unit.models.resize(1)
+    unit[0].weapons.clear()
+    for slot in range(MAX_WEAPONS):
+        unit[0].weapons.append(Weapon::bolt_pistol)
+    let selector : BInt<0, MAX_WEAPONS>
+    let choices = enumerate(selector)
+    let valid = MAX_WEAPONS == 13 and MAX_WEAPON_SCOPES == 14 and MAX_SELECTED_WEAPONS == MAX_UNIT_MODELS * MAX_WEAPONS + MAX_DECK_SELECTIONS and unit[0].weapons.size() == 13 and choices.size() == 13 and choices[12].value == 12
+    return valid
+
+
+fun test_physical17d_nazdreg_scoped_profile_exception() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.clear()
+    for slot in range(5):
+        board[0][0].weapons.append(Weapon::captain_storm_bolter)
+        board[0][0].weapon_profile_groups[slot] = 1 + int(slot >= 3)
+    let selected : Bool[MAX_WEAPONS]
+    selected[0] = true
+    selected[3] = true
+    if weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false):
+        return false
+    permit_simultaneous_ranged_profiles(board[0][0], 1)
+    let permitted = weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false) and weapon_selection_valid(board, unit_id(0), 0, 2, false, selected, false) and !weapon_selection_valid(board, unit_id(0), 0, 4, false, selected, false)
+    while board[0][0].weapons.size() < MAX_WEAPONS:
+        board[0][0].weapons.append(Weapon::captain_storm_bolter)
+    let last_slot = weapon_selection_valid(board, unit_id(0), 0, 12, false, selected, false)
+    let outside = weapon_selection_valid(board, unit_id(0), 0, 13, false, selected, false)
+    return permitted and last_slot and !outside
+
+
+fun test_physical17d_one_shot_copies_independent() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.clear()
+    for slot in range(4):
+        board[0][0].weapons.append(Weapon::bolt_pistol)
+        board[0][0].weapon_profile_groups[slot] = 1 + slot / 2
+    consume_one_shot_profile(board[0][0], 0)
+    return board[0][0].used_once_per_battle_weapon[0] and board[0][0].used_once_per_battle_weapon[1] and !board[0][0].used_once_per_battle_weapon[2] and !board[0][0].used_once_per_battle_weapon[3]
+
+
+fun test_physical17d_hazardous_physical_identity() -> Bool:
+    let board = attack_declaration_fixture()
+    board.identify_units()
+    board[0][0].weapon_profile_groups[0] = 1
+    let first = make_declared_weapon(board, unit_id(0), 0, 0)
+    first.selected_rules.append(weapon_rule(WeaponRuleKind::hazardous))
+    let second = first
+    second.slot = 1
+    let third = second
+    third.weapon_owner = board[1][0].identity
+    let declarations : DeclaredWeapons
+    declarations.append(first)
+    declarations.append(second)
+    declarations.append(third)
+    return declared_hazardous_uses(declarations) == 2 and same_declared_physical_weapon(first, second) and !same_declared_physical_weapon(second, third)
+
+
+fun test_physical17d_profile_permission_restore_guard() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].simultaneous_ranged_profiles[12] = true
+    if valid_named_model_identity(board[0][0]):
+        return false
+    board[0][0].simultaneous_ranged_profiles[12] = false
+    board[0][0].simultaneous_ranged_profiles[0] = true
+    return !valid_named_model_identity(board[0][0])
+
+
+fun test_compound17d_d3_sum_and_intrinsic_constant() -> Bool:
+    let expression = compound_stat(2, 3, 2)
+    let sequence = evaluate_random_stat(expression)
+    if can sequence.quantity(attack_test_die(4)):
+        return false
+    sequence.quantity(attack_test_die(2))
+    if sequence.is_done():
+        return false
+    sequence.quantity(attack_test_die(3))
+    return sequence.is_done() and sequence.result.value == 7
+
+
+fun test_compound17d_actual_stompa_attacks_gathering() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::stompa_supa_gatler_point_blank
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let gathering = gather_weapon_count(board, unit_id(0), unit_id(1), declaration, false)
+    gathering.quantity(board, attack_test_die(1))
+    gathering.quantity(board, attack_test_die(6))
+    gathering.quantity(board, attack_test_die(2))
+    return gathering.is_done() and gathering.result.value == 12
+
+
+fun test_compound17d_whole_roll_reroll_before_modifiers() -> Bool:
+    let board = attack_declaration_fixture()
+    board.command_points[0] = 1
+    let modifiers : RuleModifiers
+    modifiers.append(rule_modifier(ModifierOperation::multiply, 2))
+    let sequence = evaluate_weapon_characteristic(board, compound_stat(3, 6, 3), 0, false, unit_id(0), modifiers, ModifiedCharacteristic::damage)
+    sequence.quantity(board, attack_test_die(1))
+    sequence.quantity(board, attack_test_die(1))
+    sequence.quantity(board, attack_test_die(1))
+    sequence.keep_it(board, false)
+    sequence.reroll(board, attack_test_die(6))
+    sequence.reroll(board, attack_test_die(6))
+    if sequence.is_done():
+        return false
+    sequence.reroll(board, attack_test_die(6))
+    return sequence.is_done() and sequence.result.value == 42 and board.command_points[0] == 0
+
+
+fun test_compound17d_allocated_stompa_damage() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1][0].profile = Profile::captain_octavius
+    board.attack_info.source = Weapon::stompa_deffkannon_and_supa_rokkits
+    board[1][0].incoming_attack_modifiers.append(incoming_attack_modifier(ModifiedCharacteristic::damage, ModifierOperation::subtract, 1, IncomingAttackScope::ranged))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    damage.allocate_mortal(board, board[1], board[0], damage_test_model(0))
+    damage.quantity(board, board[1], board[0], attack_test_die(2))
+    return damage.is_done() and board[1][0].suffered_wounds == 3
+
+
+fun test_compound17d_unit_random_movement() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].has_random_movement = true
+    board[0][0].random_movement = compound_stat(2, 3, 6)
+    let sequence = movement(board, unit_id(0), false)
+    sequence.quantity(board, attack_test_die(2))
+    sequence.quantity(board, attack_test_die(3))
+    return board[0].movement_override.value == 12 and can sequence.normal_move(board)
+
+
+fun test_compound17d_random_shape_group_identity() -> Bool:
+    return same_damage_characteristic(dice_stat(6), compound_stat(1, 6, 0)) and !same_damage_characteristic(compound_stat(2, 3, 0), compound_stat(1, 6, 0)) and !same_damage_characteristic(compound_stat(1, 6, 2), compound_stat(1, 6, 3))
+
+
+fun test_compound17d_saved_expressions() -> Bool:
+    let state = play()
+    state.board = attack_declaration_fixture()
+    state.board[0][0].has_random_movement = true
+    state.board[0][0].random_movement = compound_stat(1, 6, 6)
+    state.board[0][0].has_deadly_demise = true
+    state.board[0][0].deadly_demise = compound_stat(2, 6, 0)
+    let restored = play()
+    return set_state(restored, to_string(state)) and stat_dice_count(restored.board[0][0].deadly_demise) == 2 and stat_intrinsic_constant(restored.board[0][0].random_movement) == 6
+
+
+fun test_compound17d_actual_two_dice_deadly_demise() -> Bool:
+    let board = damage_test_fixture()
+    board[1][0].has_deadly_demise = true
+    board[1][0].deadly_demise = compound_stat(2, 6, 0)
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 10, board[1][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    let empty : DamageJobs
+    let cleanup = resolve_damage_jobs(board, empty, true, unit_id(0))
+    cleanup.choose_destruction_unit(board, unit_id(1))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    cleanup.roll(board, attack_test_die(6))
+    for quantity_index in range(6):
+        cleanup.quantity(board, attack_test_die(1))
+    for last_unit_wound in range(2):
+        cleanup.select_mortal_model(board, damage_test_model(0))
+    for own_unit_wound in range(2):
+        cleanup.select_mortal_model(board, damage_test_model(1))
+    for first_unit_wound in range(2):
+        cleanup.select_mortal_model(board, damage_test_model(0))
+    return cleanup.is_done() and board[0].models.size() == 0 and board[1].models.size() == 0 and board[2].models.size() == 0

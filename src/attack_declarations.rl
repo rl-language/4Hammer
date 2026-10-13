@@ -38,6 +38,8 @@ fun make_declared_weapon(Board board, UnitID source, Int model, Int slot) -> Dec
     let result : DeclaredWeapon
     result.model = model
     result.model_identity = board[source][model].identity
+    result.weapon_owner = result.model_identity
+    result.physical_group = board[source][model].weapon_profile_groups[slot]
     result.slot = slot
     result.weapon = board[source][model].weapons[slot]
     result.weapon_name = board[source][model].weapon_names[slot]
@@ -152,7 +154,7 @@ fun weapon_selection_valid(Board board, UnitID source, Int model, Int slot, Bool
     # Appendix 04.01.03: choose one profile per physical weapon per model.
     let group = board[source][model].weapon_profile_groups[slot].value
     for i in range(board[source][model].weapons.size()):
-        if group != 0 and board[source][model].weapon_profile_groups[i].value == group and selected[i]:
+        if group != 0 and board[source][model].weapon_profile_groups[i].value == group and selected[i] and !( !melee and board[source][model].simultaneous_ranged_profiles[slot] and board[source][model].simultaneous_ranged_profiles[i]):
             return false
     ref weapon = board[source][model].weapons[slot]
     if board[source][model].used_once_per_battle_weapon[slot]:
@@ -317,15 +319,16 @@ fun same_effective_damage(AttackSequenceInfo left, AttackSequenceInfo right) -> 
     if left_stat is FixedStat:
         if right_stat is FixedStat:
             return modified_characteristic(left_stat.value, ModifiedCharacteristic::damage, left.damage_modifiers, false, left.melta_damage_bonus.value) == modified_characteristic(right_stat.value, ModifiedCharacteristic::damage, right.damage_modifiers, false, right.melta_damage_bonus.value)
-    if left_stat is Dice:
-        if right_stat is Dice:
-            if left_stat.value != right_stat.value:
+    if stat_dice_count(left_stat) > 0 and stat_dice_count(right_stat) > 0:
+        if stat_dice_count(left_stat) != stat_dice_count(right_stat) or stat_dice_sides(left_stat) != stat_dice_sides(right_stat):
+            return false
+        let minimum = stat_dice_count(left_stat)
+        let maximum = minimum * stat_dice_sides(left_stat)
+        for rolled_sum in range(maximum - minimum + 1):
+            let original = rolled_sum + minimum
+            if modified_characteristic(original + stat_intrinsic_constant(left_stat), ModifiedCharacteristic::damage, left.damage_modifiers, false, left.melta_damage_bonus.value) != modified_characteristic(original + stat_intrinsic_constant(right_stat), ModifiedCharacteristic::damage, right.damage_modifiers, false, right.melta_damage_bonus.value):
                 return false
-            for face_index in range(left_stat.value):
-                let face = face_index + 1
-                if modified_characteristic(face, ModifiedCharacteristic::damage, left.damage_modifiers, false, left.melta_damage_bonus.value) != modified_characteristic(face, ModifiedCharacteristic::damage, right.damage_modifiers, false, right.melta_damage_bonus.value):
-                    return false
-            return true
+        return true
     return false
 
 # Incoming D participates in identical-attack identity for each eligible
@@ -343,3 +346,27 @@ fun declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration
     let model = declared_model_index(board, source, declaration)
     assert(model >= 0, "declared source no longer exists")
     return model_weapon_modifiers(board[source][model], declaration.slot.value, kind, declaration.borrowed_weapon, declaration.weapon_name, declaration.profile_name)
+
+# Hazardous counts actual selected physical weapons, not every simultaneously
+# permitted profile or target share (p.81; Nazdreg profile exception).
+fun same_declared_physical_weapon(DeclaredWeapon left, DeclaredWeapon right) -> Bool:
+    if left.weapon_owner.value > 0 or right.weapon_owner.value > 0:
+        if left.weapon_owner != right.weapon_owner:
+            return false
+    else:
+        if left.borrowed_weapon or right.borrowed_weapon or left.model.get() != right.model.get():
+            return false
+    if left.physical_group.value > 0 or right.physical_group.value > 0:
+        return left.physical_group.value > 0 and left.physical_group == right.physical_group
+    return left.slot == right.slot
+
+fun declared_hazardous_uses(DeclaredWeapons declarations) -> Int:
+    let result = 0
+    for index in range(declarations.size()):
+        if !declared_weapon_has_kind(declarations[index], WeaponRuleKind::hazardous):
+            continue
+        let counted = false
+        for earlier in range(index):
+            counted = counted or (declared_weapon_has_kind(declarations[earlier], WeaponRuleKind::hazardous) and same_declared_physical_weapon(declarations[earlier], declarations[index]))
+        result = result + int(!counted)
+    return result

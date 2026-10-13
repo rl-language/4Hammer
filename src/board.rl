@@ -890,6 +890,8 @@ fun valid_state_foundations(Board board) -> Bool:
 # Reject malformed bounded history on load before it can change range/Heavy
 # decisions or inferred observations (p.82 / user numeric-storage requirement).
 fun valid_model_numeric_history(Model model) -> Bool:
+    if !valid_stat(model.random_movement) or !valid_stat(model.deadly_demise):
+        return false
     if !valid_incoming_attack_modifiers(model.incoming_attack_modifiers):
         return false
     if !valid_characteristic_modifiers(model.characteristic_modifiers):
@@ -974,6 +976,8 @@ fun valid_named_model_identity(Model model) -> Bool:
         if model.weapon_profile_groups[slot].value < 0 or model.weapon_profile_groups[slot].value >= MAX_WEAPON_SCOPES:
             return false
         if model.weapon_names[slot].value < 0 or model.weapon_names[slot].value >= MAX_WEAPONNAMECODE or model.weapon_profile_names[slot].value < 0 or model.weapon_profile_names[slot].value >= MAX_WEAPONPROFILECODE:
+            return false
+        if model.simultaneous_ranged_profiles[slot] and (slot >= model.weapons.size() or model.weapon_profile_groups[slot].value == 0 or model.weapons[slot].range() == 0):
             return false
         if slot >= model.weapons.size() and (model.weapon_names[slot].value != 0 or model.weapon_profile_names[slot].value != 0):
             return false

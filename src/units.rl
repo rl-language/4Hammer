@@ -1739,3 +1739,20 @@ fun grant_physical_weapon_rule(Model model, Int slot, WeaponRule rule):
         if target_slot == slot or (model.weapon_profile_groups[slot].value > 0 and model.weapon_profile_groups[slot] == model.weapon_profile_groups[target_slot]):
             assert(model.additional_weapon_rules[target_slot].has_capacity(), "weapon rule grant capacity exceeded")
             model.additional_weapon_rules[target_slot].append(rule)
+
+# Nazdreg datasheet UNIT COMPOSITION explicitly permits its three separate
+# ranged profiles. Installing actual source profiles remains the unit batch.
+fun permit_simultaneous_ranged_profiles(Model model, Int group):
+    assert(group > 0 and group < MAX_WEAPON_SCOPES, "invalid physical weapon group")
+    for slot in range(model.weapons.size()):
+        if model.weapon_profile_groups[slot].value == group and model.weapons[slot].range() > 0:
+            model.simultaneous_ranged_profiles[slot] = true
+
+# Fixed arrays need typed editor bridges; physical groups encode one equipped
+# copy's alternate profiles (appendix04.01.03), not equal display names.
+fun set_physical_weapon_group(Model model, Int slot, Int group):
+    assert(slot >= 0 and slot < model.weapons.size() and group >= 0 and group < MAX_WEAPON_SCOPES, "invalid physical profile group")
+    model.weapon_profile_groups[slot] = group
+
+fun permits_simultaneous_profile(Model model, Int slot) -> Bool:
+    return slot >= 0 and slot < model.weapons.size() and model.simultaneous_ranged_profiles[slot]

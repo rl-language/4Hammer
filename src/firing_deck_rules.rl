@@ -54,6 +54,8 @@ fun make_deck_declaration(Board board, UnitID source, ModelID carrier, UnitID pa
     result.model = carrier
     result.borrowed_weapon = true
     result.model_identity = board[source][carrier].identity
+    result.weapon_owner = board.embarked_units[passenger.get()][model].identity
+    result.physical_group = board.embarked_units[passenger.get()][model].weapon_profile_groups[slot]
     result.slot = slot
     result.weapon = board.embarked_units[passenger.get()][model].weapons[slot]
     result.weapon_name = board.embarked_units[passenger.get()][model].weapon_names[slot]
