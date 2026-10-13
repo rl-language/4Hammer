@@ -9679,12 +9679,12 @@ fun test_orks17h1_squighog_profiles() -> Bool:
     let unit = make_orks_squighog_boyz(1, 3)
     return orks17h1_profile_values(unit[0].profile, 10, 6, 4, 6, 4, 7, 2, 10) and orks17h1_profile_values(unit[1].profile, 10, 6, 4, 6, 3, 7, 2, 10)
 
-# Exact oval dimensions are data; they do not authorize a circular placement.
-fun test_orks17h1_squighog_ovals_remain_unavailable() -> Bool:
+# User-authorized long-axis circle proxies preserve original oval metadata.
+fun test_orks17h1_squighog_circle_proxies_preserve_ovals() -> Bool:
     let unit = make_orks_squighog_boyz(1, 3)
     unit[0].position = board_position(5, 5)
     let board : Board
-    return unit[0].profile.base_size() == 90.0 and profile_base_width(unit[0].profile) == 52.0 and unit[1].profile.base_size() == 75.0 and profile_base_width(unit[1].profile) == 42.0 and unit[0].geometry.unsupported_footprint and unit[1].geometry.unsupported_footprint and !model_placement_valid(board, unit[0]) and !setup_at_valid(board, unit, board_position(5, 5), MovementKind::normal, false)
+    return unit[0].profile.base_size() == 90.0 and profile_base_width(unit[0].profile) == 52.0 and unit[1].profile.base_size() == 75.0 and profile_base_width(unit[1].profile) == 42.0 and profile_has_oval_base(unit[0].profile) and profile_has_oval_base(unit[1].profile) and !unit[0].geometry.unsupported_footprint and !unit[1].geometry.unsupported_footprint and model_placement_valid(board, unit[0]) and setup_at_valid(board, unit, board_position(5, 27), MovementKind::normal, false)
 
 # Literal ranges include intermediate counts; price tiers add no count rule.
 fun test_orks17h1_snagga_composition_bounds() -> Bool:
@@ -9825,7 +9825,7 @@ fun test_orks17h1_current_data_saved_round_trip() -> Bool:
     game.board.reserve_units.append(make_orks_squighog_boyz(2, 6))
     game.board.identify_units()
     let restored = play()
-    return set_state(restored, to_string(game)) and restored.board.reserve_units[1].models.size() == 20 and restored.board.reserve_units[1][2].weapons.size() == 4 and equipped_named_profile(restored.board.reserve_units[1][2], 2).value == NamedWeaponProfile::choppa_hunter.value and restored.board.reserve_units[2][0].geometry.unsupported_footprint and profile_base_width(restored.board.reserve_units[2][0].profile) == 52.0 and valid_state_foundations(restored.board)
+    return set_state(restored, to_string(game)) and restored.board.reserve_units[1].models.size() == 20 and restored.board.reserve_units[1][2].weapons.size() == 4 and equipped_named_profile(restored.board.reserve_units[1][2], 2).value == NamedWeaponProfile::choppa_hunter.value and !restored.board.reserve_units[2][0].geometry.unsupported_footprint and profile_base_width(restored.board.reserve_units[2][0].profile) == 52.0 and valid_state_foundations(restored.board)
 
 # This subtask supplies exact data; no incomplete card/legacy roster is promoted.
 fun test_orks17h1_data_stage_has_no_unsourced_special_grants() -> Bool:

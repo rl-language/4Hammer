@@ -48,8 +48,8 @@ fun geometry_point_on_grid(StoredTerrainPoint point) -> Bool:
 cls ModelGeometry:
     GridElevation elevation
     Rotation rotation
-    # Legacy fixture profiles only supply a diameter. Other footprints must
-    # be supplied explicitly rather than pretending a hull/oval is a circle.
+    # Ovals use explicit source long-axis circle proxies by user policy.
+    # Unknown hull/multipart dimensions remain unsupported.
     Bool unsupported_footprint
 
 # User-approved task-8 abstraction: areas only, with category flags for mixed

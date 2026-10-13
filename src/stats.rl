@@ -632,3 +632,9 @@ enum Stratagem:
 
     fun equal(Stratagem other) -> Bool:
         return self.value == other.value
+
+
+# Original shape metadata survives the user-authorized long-axis circle proxy.
+# Sources: Orks/Squighog-Boyz75x42 and90x52mm; exact ovals are deferred.
+fun profile_has_oval_base(Profile profile) -> Bool:
+    return profile == Profile::orks_squighog_boy or profile == Profile::orks_nob_on_smasha_squig

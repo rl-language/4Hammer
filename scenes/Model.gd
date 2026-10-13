@@ -65,6 +65,7 @@ func _process(delta):
 	self_modulate = lerp(get_unit_color(), Color.DARK_RED, overed_time)
 	self.position.x = model.get_position().get_x().get_value()*64
 	self.position.y = model.get_position().get_y().get_value()*64
+	# User-authorized oval proxy: source long axis is the temporary circle diameter.
 	var both_scale = GlobalRules.library.base_size(model.get_profile()) / 25.0
 	scale = Vector2(both_scale, both_scale)
 	$Wounds.text = str(GlobalRules.library.wounds_left(model))

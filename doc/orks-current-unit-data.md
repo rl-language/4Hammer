@@ -22,7 +22,7 @@ The audit text extracts omit the separate invulnerable-save boxes and Hunter key
 
 M is in inches. These are new current enum entries; historical profile/weapon entries retain their IDs as explicit legacy fixture data. The current constructors inherit none of the legacy Morgrim/Beast Snagga/monster-hunter abilities. Squad members receive the printed keyword set and ORKS/Waaagh! metadata; Beastboss receives Character/Warboss/Da Boss and the exact Leader permission list. Current names use the existing compact catalog identities.
 
-`profile_base_width` exposes the supplied short axis as immutable profile metadata. It adds no stored float. Both Squighog types are marked `unsupported_footprint` until17.H3 implements actual oval measurement, overlap, setup, paths, rotation and presentation on the existing quad anchors. No75/90mm circle substitution is allowed. Hull dimensions remain separately unavailable.
+`profile_base_width` exposes the supplied short axis as immutable profile metadata. It adds no stored float. The user now authorizes long-axis circle proxies:75mm for Boys and90mm for Nobs, with `unsupported_footprint` false. `profile_has_oval_base` preserves the source shape. All distance, overlap, setup, path and rendering consumers use the same diameter on whole-quad anchors. Rotation does not change a circular proxy. Exact oval geometry is deferred. Hull dimensions remain separately unavailable.
 
 ## Constructors and composition
 
@@ -30,7 +30,7 @@ M is in inches. These are new current enum entries; historical profile/weapon en
 | --- | --- |
 | `make_orks_beastboss()` | One Beastboss with Shoota and the combined Beast Snagga Klaw and Beastchoppa |
 | `make_orks_beast_snagga_boyz(nobs,boys,thump_guns)` |1–2 Nobs,9–18 Boys; zero to one additional Thump Gun per ten total models |
-| `make_orks_squighog_boyz(nobs,boys)` |1–2 Nobs on Smasha Squig,3–6 Squighog Boys; oval placement unavailable |
+| `make_orks_squighog_boyz(nobs,boys)` |1–2 Nobs on Smasha Squig,3–6 Squighog Boys; temporary long-axis circle proxy |
 
 The independent printed ranges are preserved, including intermediate totals. Prices are ignored; the10/20 and4/8 price rows do not invent additional composition constraints. Thump Guns equip Boys and augment their default Choppa/Slugga; they replace neither. Nob equipment remains Power Snappa/Slugga. Every Boy has both Choppa profiles as alternatives of one physical weapon. The Hunter profile requires MONSTER/VEHICLE, meaning either keyword, on the target unit.
 
@@ -45,7 +45,7 @@ These families require at most four stored profiles per model: Boy with addition
 ## Remaining17.H work
 
 - 17.H2: Dodge Dis!, shared once-per-army-round Keep Huntin', Mobbed, Bomb Squig and Brutal Impact, each with source lifetime, real timing/ownership/target choices and damage/shock integration.
-- 17.H3: support the two supplied oval footprints on whole-quad anchors, including distances/collisions/setup/paths/rotation and matching Godot presentation.
+- 17.H3: user-authorized75/90mm circle proxies now allow placement; exact ovals are deferred.
 - 17.H4: switch the existing Orks roster to completed current adapters and validate actual Warlord, attachments, equipment, movement/combat and complete-game journeys.
 
 The public legacy roster remains explicitly uncertified until that switch; this data step does not silently field an incomplete card. No current full card is marked complete. Healing/revival remains17.J and full rendered journeys/wrapper performance remain17.Q. [ROADMAP.md](../ROADMAP.md) records executed validation and the next subtask.

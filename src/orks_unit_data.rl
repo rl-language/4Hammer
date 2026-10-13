@@ -91,8 +91,8 @@ fun make_orks_beast_snagga_boyz(Int nobs, Int boys, Int thump_guns) -> Unit:
 
 # Squighog equipment includes ranged+melee Stikka profiles as one physical
 # weapon, and jaws as Extra Attacks. Neither profile has inherited Lance/FNP.
-# The source gives75x42/90x52 ovals: keep them unavailable for placement until
-#17.H3 supports those footprints; never pretend they are75/90mm circles.
+# The source gives75x42/90x52 ovals. User policy now permits temporary75/90mm
+# long-axis circles; retain both axes and explicit shape metadata.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
 fun orks_squighog_model(Bool nob) -> Model:
     let profile = Profile::orks_squighog_boy
@@ -103,7 +103,8 @@ fun orks_squighog_model(Bool nob) -> Model:
     model.keywords.append(Keyword::beast_snagga)
     model.keywords.append(Keyword::explosives)
     model.keywords.append(Keyword::mobile)
-    model.geometry.unsupported_footprint = true
+    # User-authorized long-axis circle proxy; original oval axes stay metadata.
+    model.geometry.unsupported_footprint = false
     if nob:
         equip_orks_profile(model, Weapon::orks_slugga, NamedWeaponProfile::slugga, 0)
         equip_orks_profile(model, Weapon::orks_big_choppa, NamedWeaponProfile::big_choppa, 0)
@@ -114,8 +115,8 @@ fun orks_squighog_model(Bool nob) -> Model:
     equip_orks_profile(model, Weapon::orks_squig_jaws, NamedWeaponProfile::squig_s_jaws, 0)
     return model
 
-# Count/equipment data only; Bomb Squig/Brutal Impact and oval geometry must
-# be completed before production roster migration (17.H2/H3).
+# Count/equipment data with user-authorized circle proxies. Bomb Squig/Brutal
+# Impact must be completed before production roster migration (17.H2/H4).
 # https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
 fun make_orks_squighog_boyz(Int nobs, Int boys) -> Unit:
     assert(orks_squighog_composition_valid(nobs, boys), "illegal Squighog composition")
