@@ -54,7 +54,7 @@ cls SourceWeaponGrant:
     WeaponProfileCode profile_name
     Bool physical_scope
 
-using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant
+using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant | AttackModifierPermission
 
 cls SourceUseLimits:
     # Zero is unlimited for this interval; combine all four printed limits.

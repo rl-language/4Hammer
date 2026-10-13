@@ -63,6 +63,8 @@ cls AttackSequenceInfo:
     Bool characteristics_known
     FixedStat weapon_strength
     RuleModifiers skill_modifiers
+    Bool may_ignore_skill_modifiers
+    Bool may_ignore_hit_modifiers
     RuleModifiers ap_modifiers
     RuleModifiers damage_modifiers
     Profile source_profile
@@ -208,6 +210,9 @@ cls Board:
     Bool[2] has_used_insane_bravery
     Bool[2] has_used_shadow_in_the_warp
 
+    # Pending Apply/Ignore detail is editor context, not a new choice domain.
+    AttackModifierChoice pending_modifier_choice
+    ModifierSelectionKind pending_modifier_kind
     PendingSourceEvents active_source_events
     SourceInstances source_instances
     SourceUseRecords source_uses
@@ -821,6 +826,8 @@ fun valid_weapon_condition(WeaponRule rule) -> Bool:
 # Compatibility/integrity gate: configurations cannot bypass their bounded
 # policies; identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
+    if !valid_attack_modifier_choice(board.pending_modifier_choice) or board.pending_modifier_kind.value < 0 or board.pending_modifier_kind.value > ModifierSelectionKind::hit_roll.value:
+        return false
     if !valid_source_foundations(board):
         return false
     if !valid_rule_modifiers(board.attack_info.skill_modifiers) or !valid_rule_modifiers(board.attack_info.ap_modifiers) or !valid_rule_modifiers(board.attack_info.damage_modifiers):
@@ -895,6 +902,8 @@ fun valid_state_foundations(Board board) -> Bool:
 # Reject malformed bounded history on load before it can change range/Heavy
 # decisions or inferred observations (p.82 / user numeric-storage requirement).
 fun valid_model_numeric_history(Model model) -> Bool:
+    if !valid_attack_modifier_permissions(model.attack_modifier_permissions):
+        return false
     if !valid_stat(model.random_movement) or !valid_stat(model.deadly_demise):
         return false
     if !valid_incoming_attack_modifiers(model.incoming_attack_modifiers):

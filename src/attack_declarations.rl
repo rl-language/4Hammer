@@ -197,6 +197,14 @@ fun target_has_unresolved_weapons(DeclaredWeapons declarations, UnitID target) -
 # applicable weapon rules, effective roll modifiers/rerolls, cover and target
 # defenses (p.17). Profile identity alone is not an attack characteristic.
 fun attacks_are_identical(Board board, AttackSequenceInfo left, AttackSequenceInfo right) -> Bool:
+    #02.02.02/p.17: equal all-applied results do not identify the same
+    # available subsets. Mixed bearers must not share another model's permission.
+    if left.may_ignore_skill_modifiers != right.may_ignore_skill_modifiers or left.may_ignore_hit_modifiers != right.may_ignore_hit_modifiers:
+        return false
+    if left.may_ignore_skill_modifiers and (left.source.skill() != right.source.skill() or !same_attack_modifier_choices(attack_skill_choices(board, left), attack_skill_choices(board, right))):
+        return false
+    if left.may_ignore_hit_modifiers and !same_attack_modifier_choices(attack_hit_choices(board, left), attack_hit_choices(board, right)):
+        return false
     if effective_attack_skill(board, left) != effective_attack_skill(board, right) or left.attack_strength() != right.attack_strength() or left.attack_penetration() != right.attack_penetration() or !same_effective_damage(left, right):
         return false
     # Equal rounded outgoing values can diverge when recipient operations are

@@ -292,3 +292,63 @@ fun physical_weapon_modifier(ModifiedCharacteristic kind, ModifierOperation oper
     let result = weapon_characteristic_modifier(kind, operation, amount, slot)
     result.physical_scope = true
     return result
+
+# Appendix02.02.02: permission scope is explicit and independently grants
+# WS/BS and hit-roll choices. Metadata alone never grants a legacy factory.
+cls AttackModifierPermission:
+    SourceEffectKey source_effect
+    IncomingAttackScope scope
+    Bool skill
+    Bool hit_roll
+
+using AttackModifierPermissions = CheckedVector<AttackModifierPermission, 8>
+
+# Typed source/fixture construction, not an automatic detrimental-only filter
+# (https://wahapedia.ru/wh40k11ed/the-rules/rules-appendix/#Ignore-Modifiers).
+fun attack_modifier_permission(Bool skill, Bool hit_roll, IncomingAttackScope scope) -> AttackModifierPermission:
+    assert(skill or hit_roll, "empty ignore-modifier permission")
+    let result : AttackModifierPermission
+    result.skill = skill
+    result.hit_roll = hit_roll
+    result.scope = scope
+    return result
+
+# Reject forged source handles and invalid/no-op scope metadata on restoration;
+# active ownership is checked against source records separately (02.02.02).
+fun valid_attack_modifier_permission(AttackModifierPermission permission) -> Bool:
+    return permission.source_effect.value >= 0 and permission.source_effect.value < MAX_SOURCE_EFFECT_KEY and permission.scope.value >= 0 and permission.scope.value <= IncomingAttackScope::melee.value and (permission.skill or permission.hit_roll)
+
+# Pure metadata validation; generated lifecycle handles the bounded list.
+fun valid_attack_modifier_permissions(AttackModifierPermissions permissions) -> Bool:
+    let valid = true
+    for permission_index in range(permissions.size()):
+        valid = valid and valid_attack_modifier_permission(permissions[permission_index])
+    return valid
+
+# Each core contribution must remain selectable independently before summing
+# and capping. Provenance is UI/selection infrastructure for02.02.02.
+enum ModifierOrigin:
+    characteristic
+    hit_bonus
+    hit_penalty
+    profile_hit_bonus
+    damaged
+    heavy
+    engaged_source
+    engaged_target
+    cover
+    plunging_fire
+
+enum ModifierSelectionKind:
+    weapon_skill
+    ballistic_skill
+    hit_roll
+
+cls AttackModifierChoice:
+    RuleModifier modifier
+    ModifierOrigin origin
+
+# Sixteen authored operations plus distinct Cover/Plunging Fire increments;
+# the action payload remains one Bool, never a2^18 mask (02.02.02/pp.50/73).
+using AttackModifierChoices = CheckedVector<AttackModifierChoice, 18>
+using SelectedAttackModifiers = CheckedVector<RuleModifier, 18>

@@ -17,6 +17,7 @@ import core_stratagem_rules
 import transport_rules
 import firing_deck_rules
 import source_effects
+import modifier_choices
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.
@@ -276,16 +277,37 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                 lethal_wounds = lethal_wounds + 1
             lethal_remaining = lethal_remaining - 1
         frm hit_face : Dice
-        for i in range(6):
-            hit_face = i + 1
+        frm hit_index : LinearlyDistributedInt<0, 7>
+        while hit_index.value < 6:
+            hit_face = hit_index.value + 1
+            hit_index = hit_index + 1
+            # Each ordinary die can choose its own subset after re-rolls,
+            # before modifiers are applied (02.02.01/02.02.02). Preserve the
+            # aggregate fast path when no supported permission is present.
+            if hit_face.value > 1 and hit_face.value < 6 and !board.attack_info.only_hits_on_6 and (board.attack_info.may_ignore_skill_modifiers or board.attack_info.may_ignore_hit_modifiers):
+                frm skill_options = attack_skill_choices(board, board.attack_info)
+                frm hit_options = attack_hit_choices(board, board.attack_info)
+                frm ordinary_remaining : CombatCounter
+                ordinary_remaining = hits.pool.faces[hit_face.value - 1]
+                frm selection_kind = ModifierSelectionKind::weapon_skill
+                if board.attack_info.source.range() > 0:
+                    selection_kind = ModifierSelectionKind::ballistic_skill
+                while ordinary_remaining > 0:
+                    subaction*(board) skills = choose_attack_modifiers(board, skill_options, source_unit.owned_by_player1, selection_kind, board.attack_info.may_ignore_skill_modifiers)
+                    subaction*(board) increments = choose_attack_modifiers(board, hit_options, source_unit.owned_by_player1, ModifierSelectionKind::hit_roll, board.attack_info.may_ignore_hit_modifiers)
+                    let selected_outcome = classify_attack_hit(board, board.attack_info, hit_face, selected_hit_bonus(hit_face.value, increments.result), selected_attack_skill(board.attack_info, skills.result))
+                    if selected_outcome == AttackRollResult::success:
+                        add_attack_count(generated_hits, 1)
+                    ordinary_remaining = ordinary_remaining - 1
+                continue
             let outcome = classify_attack_hit(board, board.attack_info, hit_face, get_hit_roll_bonus(board))
             if outcome == AttackRollResult::critical:
-                add_attack_count(generated_hits, hits.pool.faces[i].value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
+                add_attack_count(generated_hits, hits.pool.faces[hit_face.value - 1].value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
                 add_attack_count(generated_wounds, lethal_wounds.value)
-                add_attack_count(generated_hits, hits.pool.faces[i].value - lethal_wounds.value)
+                add_attack_count(generated_hits, hits.pool.faces[hit_face.value - 1].value - lethal_wounds.value)
             else:
                 if outcome == AttackRollResult::success:
-                    add_attack_count(generated_hits, hits.pool.faces[i].value)
+                    add_attack_count(generated_hits, hits.pool.faces[hit_face.value - 1].value)
     if generated_hits > 0:
         board.current_state = CurrentStateDescription::wound_roll
         subaction*(board) wounds = collect_attack_dice(board, generated_hits, board.attack_info.reroll_wounds or board.attack_info.has_weapon_rule(board, WeaponRuleKind::twin_linked), board.attack_info.reroll1_wounds, true, source_unit.owned_by_player1, board.attack_info.source_unit_id)
@@ -970,6 +992,10 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     info.source_profile = board[source][model].profile
     # Damaged is bearer-local, refreshed for every new group (core24.39).
     info.damaged_hit_penalty = board[source][model].is_damaged()
+    #02.02.02: permissions follow the actual bearer (carrier for Firing Deck),
+    # not the chosen target or an unrelated model in a mixed unit.
+    info.may_ignore_skill_modifiers = attack_permission_available(board, board[source][model], info.source.range() == 0, true)
+    info.may_ignore_hit_modifiers = attack_permission_available(board, board[source][model], info.source.range() == 0, false)
     # Recompute each new group's battlefield T after earlier casualties/effects
     # (appendix05.02.01); target_info only preserves the enclosing rule choices.
     info.source_unit_id = source

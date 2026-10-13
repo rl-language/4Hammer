@@ -5,9 +5,9 @@ func _initialize():
 
 func check_damaged():
 	var library = root.get_node("GlobalRules").library
-	assert(library.get_state_schema_version() == 25)
-	assert(library.get_observation_schema_version() == 25)
-	assert(library.get_action_schema_version() == 15)
+	assert(library.get_state_schema_version() == 26)
+	assert(library.get_observation_schema_version() == 26)
+	assert(library.get_action_schema_version() == 16)
 	var board = RLCBoard.make()
 	var attacker = library.make_infernus_squad()
 	var defender = library.make_infernus_squad()

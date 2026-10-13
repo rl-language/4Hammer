@@ -8243,3 +8243,350 @@ fun test_compound17d_actual_two_dice_deadly_demise() -> Bool:
     for first_unit_wound in range(2):
         cleanup.select_mortal_model(board, damage_test_model(0))
     return cleanup.is_done() and board[0].models.size() == 0 and board[1].models.size() == 0 and board[2].models.size() == 0
+
+# Appendix02.02.02 permits every subset, including beneficial operations;
+# this is a generic core fixture, not an excluded Forge World unit.
+fun test_ignore17c4b_every_subset_before_arithmetic() -> Bool:
+    let board = attack_declaration_fixture()
+    let choices : AttackModifierChoices
+    choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 2), ModifierOrigin::characteristic))
+    choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, -2), ModifierOrigin::characteristic))
+    choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::multiply, 2), ModifierOrigin::characteristic))
+    let valid = true
+    for pattern in range(8):
+        let selected = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::ballistic_skill, true)
+        let expected : SelectedAttackModifiers
+        let divisor = 1
+        for choice_index in range(3):
+            let keep = ((pattern / divisor) % 2) == 1
+            divisor = divisor * 2
+            selected.apply_attack_modifier(board, keep)
+            if keep:
+                expected.append(choices[choice_index].modifier)
+        valid = valid and selected.is_done() and apply_rule_modifiers(4, selected.result, false) == apply_rule_modifiers(4, expected, false)
+    return valid
+
+# No permission means the complete list applies without a new decision;
+# empty lists never stall or change the caller's controller (02.02.02).
+fun test_ignore17c4b_unpermitted_and_empty_skip_choices() -> Bool:
+    let board = attack_declaration_fixture()
+    board.current_decision_maker = true
+    let choices : AttackModifierChoices
+    choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, -1), ModifierOrigin::hit_penalty))
+    let denied = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::hit_roll, false)
+    let empty : AttackModifierChoices
+    let none = choose_attack_modifiers(board, empty, false, ModifierSelectionKind::hit_roll, true)
+    return denied.is_done() and none.is_done() and denied.result.size() == 1 and none.result.size() == 0 and board.current_decision_maker
+
+# Optional choice belongs to the affected attacker, not the turn owner or
+# incoming source, and must restore nested caller/UI roles (02.02.02).
+fun test_ignore17c4b_controller_and_context_restored() -> Bool:
+    let board = attack_declaration_fixture()
+    board.current_player = false
+    board.current_decision_maker = false
+    board.pending_modifier_kind = ModifierSelectionKind::weapon_skill
+    board.pending_modifier_choice = attack_modifier_choice(rule_modifier(ModifierOperation::add, 3), ModifierOrigin::characteristic)
+    let choices : AttackModifierChoices
+    choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, -1), ModifierOrigin::damaged))
+    let sequence = choose_attack_modifiers(board, choices, true, ModifierSelectionKind::hit_roll, true)
+    let valid = board.current_decision_maker and board.pending_modifier_kind.value == ModifierSelectionKind::hit_roll.value and can sequence.apply_attack_modifier(board, false)
+    sequence.apply_attack_modifier(board, false)
+    return valid and sequence.is_done() and !board.current_decision_maker and board.pending_modifier_kind.value == ModifierSelectionKind::weapon_skill.value and board.pending_modifier_choice.modifier.amount == 3 and board.command_points[1] == 0
+
+# Keeping only a detrimental contribution must remain possible; sign filtering
+# would incorrectly force the beneficial one (02.02.02/02.02.01).
+fun test_ignore17c4b_can_ignore_beneficial_hit_bonus() -> Bool:
+    let board = attack_declaration_fixture()
+    let choices : AttackModifierChoices
+    choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::heavy))
+    choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, -1), ModifierOrigin::damaged))
+    let sequence = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::hit_roll, true)
+    sequence.apply_attack_modifier(board, false)
+    sequence.apply_attack_modifier(board, true)
+    return sequence.is_done() and selected_hit_bonus(sequence.result) == -1
+
+# Cover/Plunging Fire remain separate BS choices. Operation order/floors apply
+# after filtering, never to an already rounded all-applied BS (pp.50/73;02.02.02).
+fun test_ignore17c4b_cover_plunging_and_skill_operation_order() -> Bool:
+    let board = attack_declaration_fixture()
+    let info = orks17c2b_info(board, 0)
+    info.source = Weapon::slugga
+    info.target_has_cover = true
+    info.plunging_fire = true
+    info.skill_modifiers.append(rule_modifier(ModifierOperation::divide, 2))
+    let options = attack_skill_choices(board, info)
+    let sequence = choose_attack_modifiers(board, options, false, ModifierSelectionKind::ballistic_skill, true)
+    sequence.apply_attack_modifier(board, true)
+    sequence.apply_attack_modifier(board, false)
+    sequence.apply_attack_modifier(board, true)
+    return options.size() == 3 and options[1].origin.value == ModifierOrigin::plunging_fire.value and options[2].origin.value == ModifierOrigin::cover.value and selected_attack_skill(info, sequence.result) == (info.source.skill() + 2) / 2
+
+# Ignores Cover removes cover before optional choices; it never removes
+# other modifiers or lets an absent '-' skill be modified (pp.82/85;02.02.01).
+fun test_ignore17c4b_ignore_cover_and_torrent_special_skill() -> Bool:
+    let board = attack_declaration_fixture()
+    let info = orks17c2b_info(board, 0)
+    info.target_has_cover = true
+    info.selected_weapon_rules.append(weapon_rule(WeaponRuleKind::ignore_cover))
+    let choices = attack_skill_choices(board, info)
+    info.source = Weapon::stompa_supa_gatler_point_blank
+    let selected : SelectedAttackModifiers
+    selected.append(rule_modifier(ModifierOperation::add, 4))
+    return choices.size() == 0 and selected_attack_skill(info, selected) == 0
+
+# Heavy, Damaged, ordinary flags and both engagement contributions must be
+# independently available before the +/-1 sum cap (pp.18/35/63/82;02.02.02).
+fun test_ignore17c4b_hit_core_provenance_and_cap() -> Bool:
+    let board = attack_declaration_fixture()
+    let info = orks17c2b_info(board, 0)
+    info.hit_roll_bonus = true
+    info.hit_roll_malus = true
+    info.damaged_hit_penalty = true
+    info.heavy_bonus = true
+    info.engaged_hit_penalties = 2
+    info.selected_weapon_rules.append(weapon_rule(WeaponRuleKind::heavy))
+    let choices = attack_hit_choices(board, info)
+    let sequence = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::hit_roll, true)
+    for modifier_index in range(choices.size()):
+        sequence.apply_attack_modifier(board, !choices[modifier_index].modifier.negative)
+    return choices.size() == 6 and choices[2].origin.value == ModifierOrigin::damaged.value and choices[3].origin.value == ModifierOrigin::heavy.value and choices[4].origin.value == ModifierOrigin::engaged_source.value and choices[5].origin.value == ModifierOrigin::engaged_target.value and selected_hit_bonus(sequence.result) == 1
+
+# Permission applies to one bearer and declared attack kind, with separate
+# characteristic and roll categories (02.02.02; model/unit scope02.05.01).
+fun test_ignore17c4b_permission_bearer_scope_and_kinds() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.append(Weapon::relic_weapon)
+    board[0][0].attack_modifier_permissions.append(attack_modifier_permission(true, false, IncomingAttackScope::ranged))
+    let ranged = orks17c2b_info(board, 0)
+    let melee = orks17c2b_info(board, 1)
+    let other = declared_attack_info(board, unit_id(1), unit_id(0), make_declared_weapon(board, unit_id(1), 0, 0), board.attack_info)
+    return ranged.may_ignore_skill_modifiers and !ranged.may_ignore_hit_modifiers and !melee.may_ignore_skill_modifiers and !other.may_ignore_skill_modifiers
+
+# Equal current BS can have different optional subsets; permission mismatches
+# and canceling hit contributions must split groups (p.17/02.02.02).
+fun test_ignore17c4b_grouping_preserves_available_subsets() -> Bool:
+    let board = attack_declaration_fixture()
+    let left = orks17c2b_info(board, 0)
+    let right = left
+    left.may_ignore_skill_modifiers = true
+    if attacks_are_identical(board, left, right):
+        return false
+    right.may_ignore_skill_modifiers = true
+    left.skill_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+    left.skill_modifiers.append(rule_modifier(ModifierOperation::add, -1))
+    if attacks_are_identical(board, left, right):
+        return false
+    left.skill_modifiers.clear()
+    left.may_ignore_hit_modifiers = true
+    right.may_ignore_hit_modifiers = true
+    left.hit_roll_bonus = true
+    left.hit_roll_malus = true
+    return !attacks_are_identical(board, left, right)
+
+# With no permission, equivalent effective profiles retain existing batching
+# even if their unfiltered records differ (p.17;02.02.01).
+fun test_ignore17c4b_no_permission_keeps_equivalent_grouping() -> Bool:
+    let board = attack_declaration_fixture()
+    let left = orks17c2b_info(board, 0)
+    let right = left
+    left.skill_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+    left.skill_modifiers.append(rule_modifier(ModifierOperation::add, -1))
+    return attacks_are_identical(board, left, right)
+
+# Original natural one/six, Snap Shooting and Indirect's unmodified floor
+# survive selected subsets; these are gates, not modifiers (pp.18/35/57).
+fun test_ignore17c4b_natural_and_unmodified_hit_gates() -> Bool:
+    let board = attack_declaration_fixture()
+    let info = orks17c2b_info(board, 0)
+    let valid = classify_attack_hit(board, info, attack_test_die(1), 1, 2) == AttackRollResult::failed and classify_attack_hit(board, info, attack_test_die(6), -1, 6) == AttackRollResult::critical
+    info.only_hits_on_6 = true
+    valid = valid and classify_attack_hit(board, info, attack_test_die(5), 1, 2) == AttackRollResult::failed
+    info.only_hits_on_6 = false
+    info.shooting_kind = ShootingKind::indirect
+    info.indirect_stationary_visible = false
+    info.selected_weapon_rules.append(weapon_rule(WeaponRuleKind::indirect_fire))
+    return valid and classify_attack_hit(board, info, attack_test_die(5), 1, 2) == AttackRollResult::failed
+
+# Real hit batches must allow distinct choices for identical original faces;
+# two attacks do not have to keep the same subset (02.02.02/p.18).
+fun test_ignore17c4b_actual_batch_per_attack_skill_and_hit() -> Bool:
+    let board = attack_declaration_fixture()
+    board.command_points[0] = 0
+    board[0][0].attack_modifier_permissions.append(attack_modifier_permission(true, true, IncomingAttackScope::any_attack))
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::add, 1))
+    board.attack_info = orks17c2b_info(board, 0)
+    board.attack_info.hit_roll_malus = true
+    let sequence = resolve_attack_dice(board, board[1], board[0], attack_test_count(2))
+    sequence.roll(board, board[1], board[0], attack_test_die(2))
+    sequence.roll(board, board[1], board[0], attack_test_die(2))
+    let offered = can sequence.apply_attack_modifier(board, board[1], board[0], false)
+    sequence.apply_attack_modifier(board, board[1], board[0], false)
+    sequence.apply_attack_modifier(board, board[1], board[0], false)
+    sequence.apply_attack_modifier(board, board[1], board[0], true)
+    sequence.apply_attack_modifier(board, board[1], board[0], true)
+    sequence.roll(board, board[1], board[0], attack_test_die(1))
+    return offered and sequence.is_done() and sequence.generated_hits == 1 and sequence.generated_wounds == 0 and board.current_decision_maker == false
+
+# The hit chooser follows completed replacement dice, not an original failure;
+# rerolls remain once per original die (02.02.01/01.05.02/02.02.02).
+fun test_ignore17c4b_actual_reroll_then_select_modifiers() -> Bool:
+    let board = attack_declaration_fixture()
+    board.command_points[0] = 0
+    board[0][0].attack_modifier_permissions.append(attack_modifier_permission(false, true, IncomingAttackScope::any_attack))
+    board.attack_info = orks17c2b_info(board, 0)
+    board.attack_info.hit_roll_malus = true
+    board.attack_info.reroll_hits = true
+    let sequence = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
+    sequence.roll(board, board[1], board[0], attack_test_die(1))
+    let delayed = !can sequence.apply_attack_modifier(board, board[1], board[0], false)
+    sequence.select_reroll(board, board[1], board[0], attack_test_die(1))
+    sequence.reroll(board, board[1], board[0], attack_test_die(2))
+    sequence.apply_attack_modifier(board, board[1], board[0], false)
+    sequence.roll(board, board[1], board[0], attack_test_die(1))
+    return delayed and sequence.is_done() and sequence.generated_hits == 1
+
+# Natural criticals skip meaningless ignoring decisions while preserving
+# Sustained/Lethal and the old batch counts (pp.18/82/84).
+fun test_ignore17c4b_actual_natural_criticals_without_choices() -> Bool:
+    let board = attack_declaration_fixture()
+    board.command_points[0] = 0
+    board[0][0].attack_modifier_permissions.append(attack_modifier_permission(true, true, IncomingAttackScope::any_attack))
+    board.attack_info = orks17c2b_info(board, 0)
+    board.attack_info.hit_roll_malus = true
+    let sequence = resolve_attack_dice(board, board[1], board[0], attack_test_count(2))
+    sequence.roll(board, board[1], board[0], attack_test_die(1))
+    sequence.roll(board, board[1], board[0], attack_test_die(6))
+    let no_choice = !can sequence.apply_attack_modifier(board, board[1], board[0], false)
+    sequence.roll(board, board[1], board[0], attack_test_die(1))
+    return no_choice and sequence.is_done() and sequence.generated_hits == 1
+
+# Opposing out-of-phase attacks use their own controller for ignoring and
+# restore the nested caller after dice resolution (02.02.02/user sequencing).
+fun test_ignore17c4b_actual_opponent_controller() -> Bool:
+    let board = attack_declaration_fixture()
+    board.command_points[1] = 0
+    board[1][0].attack_modifier_permissions.append(attack_modifier_permission(false, true, IncomingAttackScope::any_attack))
+    let declaration = make_declared_weapon(board, unit_id(1), 0, 0)
+    board.attack_info = declared_attack_info(board, unit_id(1), unit_id(0), declaration, board.attack_info)
+    board.attack_info.hit_roll_malus = true
+    board.current_decision_maker = false
+    let sequence = resolve_attack_dice(board, board[0], board[1], attack_test_count(1))
+    sequence.roll(board, board[0], board[1], attack_test_die(5))
+    let correct_owner = board.current_decision_maker
+    sequence.apply_attack_modifier(board, board[0], board[1], false)
+    sequence.roll(board, board[0], board[1], attack_test_die(1))
+    return correct_owner and sequence.is_done() and !board.current_decision_maker
+
+# Firing Deck attacks use the carrier's permission, not the passenger's;
+# stable physical/borrowed identity remains separate (p.81/02.02.02).
+fun test_ignore17c4b_borrowed_carrier_permissions() -> Bool:
+    let board = attack_declaration_fixture()
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    declaration.borrowed_weapon = true
+    board[0][0].attack_modifier_permissions.append(attack_modifier_permission(false, true, IncomingAttackScope::ranged))
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return info.may_ignore_hit_modifiers and !info.may_ignore_skill_modifiers
+
+# Source-owned permissions share expiry, overlaps, returned members and saved
+# recipient integrity with numerical grants (01.02.02/02.02.02).
+fun test_ignore17c4b_source_permission_expiry_and_overlap() -> Bool:
+    let board = attack_declaration_fixture()
+    let first = source17e_instance(board, 0, 31)
+    first.grant = source_attack_modifier_grant(attack_modifier_permission(true, true, IncomingAttackScope::any_attack))
+    register_source_instance(board, first)
+    let second = first
+    second.rule = 32
+    second.duration = SourceDuration::turn
+    register_source_instance(board, second)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    sequence.choose_source_event(board, source17e_id(1))
+    board.begin_phase(BattlePhase::shooting)
+    let still_allowed = attack_permission_available(board, board[0][0], false, true) and board[0][0].attack_modifier_permissions.size() == 1
+    refresh_source_effects(board, TimingWindow::turn_end)
+    return still_allowed and !attack_permission_available(board, board[0][0], false, true) and valid_source_foundations(board)
+
+# Offboard/archive cleanup cannot revive an expired ignore permission
+# (01.02.02/01.02.04/p.88); prototypes stay untagged.
+fun test_ignore17c4b_source_permission_offboard_archive_cleanup() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 33)
+    instance.grant = source_attack_modifier_grant(attack_modifier_permission(true, false, IncomingAttackScope::ranged))
+    register_source_instance(board, instance)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    let copy = board[0]
+    copy.identity = 0
+    copy[0].identity = 0
+    copy.retired = false
+    board[0].remove_model(0)
+    board.reserve_units.append(copy)
+    board.begin_phase(BattlePhase::shooting)
+    return board[0].destroyed_models.value[0].attack_modifier_permissions.size() == 0 and board.reserve_units[0][0].attack_modifier_permissions.size() == 0
+
+# Invalid permissions/choice origins and forged lifetime handles must fail
+# restore checks instead of authorizing an arbitrary new source (02.02.02).
+fun test_ignore17c4b_invalid_permission_and_forged_handle() -> Bool:
+    let board = attack_declaration_fixture()
+    let permission = attack_modifier_permission(true, false, IncomingAttackScope::ranged)
+    permission.scope.value = 9
+    board[0][0].attack_modifier_permissions.append(permission)
+    let scope_rejected = !valid_model_numeric_history(board[0][0])
+    board[0][0].attack_modifier_permissions.clear()
+    permission.scope.value = IncomingAttackScope::ranged.value
+    permission.source_effect = 8
+    board[0][0].attack_modifier_permissions.append(permission)
+    let handle_rejected = !valid_source_foundations(board)
+    board.pending_modifier_choice.origin.value = 99
+    return scope_rejected and handle_rejected and !valid_state_foundations(board)
+
+# The pending choice and ordinary permission list survive a complete Game
+# save/restore; new schemas protect changed layouts (infrastructure/02.02.02).
+fun test_ignore17c4b_saved_permission_and_pending_label() -> Bool:
+    let state = play()
+    state.board = attack_declaration_fixture()
+    state.board[0][0].attack_modifier_permissions.append(attack_modifier_permission(true, true, IncomingAttackScope::any_attack))
+    state.board.pending_modifier_kind = ModifierSelectionKind::hit_roll
+    state.board.pending_modifier_choice = attack_modifier_choice(rule_modifier(ModifierOperation::add, -1), ModifierOrigin::heavy)
+    let restored = play()
+    return set_state(restored, to_string(state)) and restored.board[0][0].attack_modifier_permissions.size() == 1 and modifier_choice_label(restored.board) == modifier_choice_label(state.board) and restored.board.schema_version.value == 26
+
+# Core modifiers fit alongside every supported authored skill record;18 is
+# a collection bound, while each Apply/Ignore payload still enumerates2 (02.02.02).
+fun test_ignore17c4b_full_skill_list_plus_core_capacity() -> Bool:
+    let board = attack_declaration_fixture()
+    let info = orks17c2b_info(board, 0)
+    for modifier_index in range(16):
+        info.skill_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+    info.plunging_fire = true
+    info.target_has_cover = true
+    let options = attack_skill_choices(board, info)
+    let sequence = choose_attack_modifiers(board, options, false, ModifierSelectionKind::ballistic_skill, true)
+    for selected_index in range(18):
+        sequence.apply_attack_modifier(board, false)
+    return options.size() == 18 and sequence.is_done() and sequence.result.size() == 0 and selected_attack_skill(info, sequence.result) == info.source.skill()
+
+
+# A suspended chooser round-trips its index/result, not just the Board label;
+# ctx ownership remains the caller's after restore (02.02.02 infrastructure).
+fun test_ignore17c4b_pending_frame_round_trip() -> Bool:
+    let board = attack_declaration_fixture()
+    let choices : AttackModifierChoices
+    choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 2), ModifierOrigin::characteristic))
+    choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, -1), ModifierOrigin::cover))
+    let sequence = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::ballistic_skill, true)
+    sequence.apply_attack_modifier(board, true)
+    let restored = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::ballistic_skill, true)
+    let parsed = from_string(restored, to_string(sequence))
+    restored.apply_attack_modifier(board, false)
+    return parsed and restored.is_done() and restored.result.size() == 1 and restored.result[0].signed_amount() == 2
+
+# Roll arithmetic measures retained operations against the original die before
+# applying the hit cap, including non-additive operations (02.02.01/02.02.02).
+fun test_ignore17c4b_nonadditive_roll_arithmetic() -> Bool:
+    let modifiers : SelectedAttackModifiers
+    modifiers.append(rule_modifier(ModifierOperation::multiply, 2))
+    let doubled = selected_hit_bonus(4, modifiers)
+    modifiers.clear()
+    modifiers.append(rule_modifier(ModifierOperation::replace, 1))
+    return doubled == 1 and selected_hit_bonus(4, modifiers) == -1

@@ -52,6 +52,9 @@ func on_state_change():
 				label = "Gain Mobile for this move" if unwrapped.get_member(0) else "Keep current keywords"
 			if unwrapped is RLCGameUseLethalHits:
 				label = "Automatically wound with this critical hit" if unwrapped.get_member(0) else "Roll to wound with this critical hit"
+			if unwrapped is RLCGameApplyAttackModifier:
+				var detail = GlobalRules.library.convert_string(GlobalRules.library.modifier_choice_label(GlobalRules.state.get_board()))
+				label = ("Apply " if unwrapped.get_member(0) else "Ignore ") + detail
 			if unwrapped is RLCGameAdvance:
 				label = "Advance" if unwrapped.get_member(0) else "Normal move"
 			make_choise(label, action)

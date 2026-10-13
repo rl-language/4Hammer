@@ -240,6 +240,9 @@ fun install_source_grant(Model model, SourceGrant grant, SourceEffectKey key):
     if installed is IncomingAttackModifier:
         installed.source_effect = key
         model.incoming_attack_modifiers.append(installed)
+    if installed is AttackModifierPermission:
+        installed.source_effect = key
+        model.attack_modifier_permissions.append(installed)
     if installed is SourceWeaponGrant:
         installed.rule.source_effect = key
         for slot in range(model.weapons.size()):
@@ -298,6 +301,11 @@ fun remove_source_grant(Model model, SourceEffectKey key):
         index = index - 1
         if model.incoming_attack_modifiers[index].source_effect == key:
             model.incoming_attack_modifiers.erase(index)
+    index = model.attack_modifier_permissions.size()
+    while index > 0:
+        index = index - 1
+        if model.attack_modifier_permissions[index].source_effect == key:
+            model.attack_modifier_permissions.erase(index)
     for slot in range(model.weapons.size()):
         index = model.additional_weapon_rules[slot].size()
         while index > 0:
@@ -412,6 +420,8 @@ fun valid_source_grant(SourceGrant grant) -> Bool:
         let incoming : IncomingAttackModifiers
         incoming.append(grant)
         valid = valid_incoming_attack_modifiers(incoming) and grant.source_effect.value == 0
+    if grant is AttackModifierPermission:
+        valid = valid_attack_modifier_permission(grant) and grant.source_effect.value == 0
     if grant is SourceWeaponGrant:
         valid = valid_weapon_condition(grant.rule) and grant.rule.source_effect.value == 0 and grant.weapon_scope.value >= 0 and grant.weapon_scope.value < MAX_WEAPON_SCOPES and grant.weapon_name.value >= 0 and grant.weapon_name.value < MAX_WEAPONNAMECODE and grant.profile_name.value >= 0 and grant.profile_name.value < MAX_WEAPONPROFILECODE and (!grant.physical_scope or grant.weapon_scope.value > 0)
     return valid
@@ -513,6 +523,8 @@ fun model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
         present = present or model.characteristic_modifiers[index].source_effect == key
     for incoming_index in range(model.incoming_attack_modifiers.size()):
         present = present or model.incoming_attack_modifiers[incoming_index].source_effect == key
+    for permission_index in range(model.attack_modifier_permissions.size()):
+        present = present or model.attack_modifier_permissions[permission_index].source_effect == key
     for slot in range(model.weapons.size()):
         for rule_index in range(model.additional_weapon_rules[slot].size()):
             present = present or model.additional_weapon_rules[slot][rule_index].source_effect == key
@@ -554,6 +566,8 @@ fun valid_model_source_handles(Board board, Model model) -> Bool:
         valid = valid and source_handle_matches_model(board, model.characteristic_modifiers[index].source_effect, model.identity)
     for incoming in range(model.incoming_attack_modifiers.size()):
         valid = valid and source_handle_matches_model(board, model.incoming_attack_modifiers[incoming].source_effect, model.identity)
+    for permission_index in range(model.attack_modifier_permissions.size()):
+        valid = valid and source_handle_matches_model(board, model.attack_modifier_permissions[permission_index].source_effect, model.identity)
     for slot in range(model.weapons.size()):
         for rule in range(model.additional_weapon_rules[slot].size()):
             valid = valid and source_handle_matches_model(board, model.additional_weapon_rules[slot][rule].source_effect, model.identity)
@@ -564,4 +578,11 @@ fun valid_model_source_handles(Board board, Model model) -> Bool:
 fun source_characteristic_grant(CharacteristicModifier grant) -> SourceGrant:
     let result : SourceGrant
     result = grant
+    return result
+
+#02.02.02 permission grants share the existing source lifetime/prototype
+# ownership, including overlaps and offboard/archived recipients (01.02.02).
+fun source_attack_modifier_grant(AttackModifierPermission permission) -> SourceGrant:
+    let result : SourceGrant
+    result = permission
     return result

@@ -34,7 +34,7 @@ enum AttackRollResult:
 # A natural 1 fails before critical/threshold checks, and natural 6 is critical
 # (p.18). Existing Snap Shooting's explicit six-only gate is p.57; the rest of
 # that stratagem remains task 15. Cover changes BS independently of modifiers.
-fun classify_attack_hit(Board board, AttackSequenceInfo info, Dice roll, Int modifier) -> AttackRollResult:
+fun classify_attack_hit(Board board, AttackSequenceInfo info, Dice roll, Int modifier, Int skill) -> AttackRollResult:
     if roll == 1:
         return AttackRollResult::failed
     if roll == 6:
@@ -43,9 +43,14 @@ fun classify_attack_hit(Board board, AttackSequenceInfo info, Dice roll, Int mod
         return AttackRollResult::failed
     if info.only_hits_on_6:
         return AttackRollResult::failed
-    if roll.value + modifier >= effective_attack_skill(board, info):
+    if roll.value + modifier >= skill:
         return AttackRollResult::success
     return AttackRollResult::failed
+
+# Compatibility/classification without an ignore permission keeps all
+# applicable skill modifiers; the selected overload preserves natural dice (p.18).
+fun classify_attack_hit(Board board, AttackSequenceInfo info, Dice roll, Int modifier) -> AttackRollResult:
+    return classify_attack_hit(board, info, roll, modifier, effective_attack_skill(board, info))
 
 # Exact double/half boundaries use multiplication, with no integer-halving
 # rounding (p.18). This helper applies no app-only modifier policy.

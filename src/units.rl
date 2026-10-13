@@ -47,6 +47,8 @@ cls Model:
     CharacteristicModifiers characteristic_modifiers
     # Incoming AP/D grants belong to the actual allocated recipient, not its weapons.
     IncomingAttackModifiers incoming_attack_modifiers
+    # Explicit scoped permissions for appendix02.02.02; sources own expiry.
+    AttackModifierPermissions attack_modifier_permissions
     Wounds suffered_wounds
     # Core ability24.39: supplied threshold only; legacy fixtures grant none.
     Bool has_damaged
