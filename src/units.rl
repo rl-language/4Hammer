@@ -49,6 +49,15 @@ cls Model:
     IncomingAttackModifiers incoming_attack_modifiers
     # Explicit scoped permissions for appendix02.02.02; sources own expiry.
     AttackModifierPermissions attack_modifier_permissions
+    # Explicit current Army Rules; no legacy factory infers these from its name.
+    # https://wahapedia.ru/wh40k11ed/factions/orks/ (Waaagh!/Da Boss).
+    Bool has_waaagh
+    Bool has_da_boss
+    # Supplied Warlord definition; Ghazghkull also requires this model.
+    Bool must_be_warlord
+    Bool cannot_be_warlord
+    Bool grants_unit_riled_up
+    CheckedVector<SourceEffectKey, 8> riled_source_effects
     Wounds suffered_wounds
     # Core ability24.39: supplied threshold only; legacy fixtures grant none.
     Bool has_damaged
@@ -208,7 +217,15 @@ cls Model:
     # Legacy profiles use >6 for no InSv. This is '-', not a modifiable save
     # that a bonus can turn into an invulnerable permission (appendix02.02.01).
     fun effective_invulnerable_save() -> Int:
-        return effective_characteristic_value(self.profile.invuln_save(), ModifiedCharacteristic::invulnerable_save, self.characteristic_modifiers, self.profile.invuln_save() > 6)
+        let base = self.profile.invuln_save()
+        if self.is_riled_up():
+            base = min(base, 5)
+        return effective_characteristic_value(base, ModifiedCharacteristic::invulnerable_save, self.characteristic_modifiers, base > 6)
+
+    # Riled-up gives a5+ InSv and ranged Assault; owned keys preserve overlapping
+    # permanent/timed sources (Orks Army Rules / Waaagh!, appendix01.02.02).
+    fun is_riled_up() -> Bool:
+        return !self.riled_source_effects.empty()
 
     # Leadership and OC consumers use the bearer scope (p.9; appendix02.02.01).
     fun effective_leadership() -> Int:
@@ -302,6 +319,8 @@ cls Unit:
     Hidden<Vector<AttachmentComponent>> attached_units
     UnitHistory history
     Bool retired
+    # Unit-level mandatory Warlord wording is distinct from a named model.
+    Bool must_supply_warlord
     # Points are absent from legacy rosters; enforce reserve caps only when
     # configured data is explicit, never manufacture faction costs (p.68).
     Bool points_known
@@ -348,6 +367,7 @@ cls Unit:
         self.history.was_set_up_this_turn = false
         self.history.made_move_this_turn = false
         self.history.advanced_this_turn = false
+        self.history.advance_allows_charge = false
         self.history.fell_back_this_turn = false
         # p.58: starting another action is a turn-local restriction; pending
         # cross-turn mission actions keep their completion/failure state.
@@ -1761,3 +1781,20 @@ fun set_physical_weapon_group(Model model, Int slot, Int group):
 # raw fixed-array selector (Nazdreg UNIT COMPOSITION; appendix04.01.03).
 fun permits_simultaneous_profile(Model model, Int slot) -> Bool:
     return slot >= 0 and slot < model.weapons.size() and model.simultaneous_ranged_profiles[slot]
+
+
+# A unit ability follows its live constituent union; corpses cannot keep an
+# active army ability (Orks Waaagh! / appendix02.05.01 / destruction p.87).
+fun unit_has_waaagh(Unit unit) -> Bool:
+    let available = false
+    for index in range(unit.models.size()):
+        available = available or (unit[index].is_alive() and unit[index].has_waaagh)
+    return available and unit.has_keyword(Keyword::orks)
+
+# All members receive each unit-wide riled grant. Read only live bearers for
+# movement/shooting permissions (Orks Waaagh! / destruction p.87).
+fun unit_is_riled_up(Unit unit) -> Bool:
+    let active = false
+    for index in range(unit.models.size()):
+        active = active or (unit[index].is_alive() and unit[index].is_riled_up())
+    return active

@@ -18,6 +18,7 @@ import transport_rules
 import firing_deck_rules
 import source_effects
 import modifier_choices
+import orks_army_rules
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.

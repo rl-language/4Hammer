@@ -211,6 +211,7 @@ cls Board:
     Bool[2] has_used_shadow_in_the_warp
 
     # Pending Apply/Ignore detail is editor context, not a new choice domain.
+    UnitID selected_warlord_unit
     AttackModifierChoice pending_modifier_choice
     ModifierSelectionKind pending_modifier_kind
     PendingSourceEvents active_source_events
@@ -828,7 +829,7 @@ fun valid_weapon_condition(WeaponRule rule) -> Bool:
 fun valid_state_foundations(Board board) -> Bool:
     if !valid_attack_modifier_choice(board.pending_modifier_choice) or board.pending_modifier_kind.value < 0 or board.pending_modifier_kind.value > ModifierSelectionKind::hit_roll.value:
         return false
-    if !valid_source_foundations(board):
+    if !valid_orks_army_state(board) or !valid_source_foundations(board):
         return false
     if !valid_rule_modifiers(board.attack_info.skill_modifiers) or !valid_rule_modifiers(board.attack_info.ap_modifiers) or !valid_rule_modifiers(board.attack_info.damage_modifiers):
         return false
@@ -902,6 +903,9 @@ fun valid_state_foundations(Board board) -> Bool:
 # Reject malformed bounded history on load before it can change range/Heavy
 # decisions or inferred observations (p.82 / user numeric-storage requirement).
 fun valid_model_numeric_history(Model model) -> Bool:
+    for riled_index in range(model.riled_source_effects.size()):
+        if model.riled_source_effects[riled_index].value < 0 or model.riled_source_effects[riled_index].value >= MAX_SOURCE_EFFECT_KEY:
+            return false
     if !valid_attack_modifier_permissions(model.attack_modifier_permissions):
         return false
     if !valid_stat(model.random_movement) or !valid_stat(model.deadly_demise):

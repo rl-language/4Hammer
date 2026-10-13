@@ -150,7 +150,7 @@ fun commit_source_usage(Board board, SourceInstance instance):
 # Explicit offboard permission never authorises visibility/range measurement
 # to/from reserves/passengers (supplied01.02.04). Conditional ranges use bases.
 fun source_event_available(Board board, SourceInstance instance, SourceEvent event) -> Bool:
-    if instance.disabled or instance.aura or instance.trigger.value != event.kind.value or (event.kind.value == SourceEventKind::timing_window.value and instance.window.value != event.window.value) or !source_usage_available(board, instance):
+    if instance.disabled or instance.aura or instance.own_unit_passive or instance.trigger.value != event.kind.value or (event.kind.value == SourceEventKind::timing_window.value and instance.window.value != event.window.value) or !source_usage_available(board, instance):
         return false
     if instance.phase.value != BattlePhase::none.value and instance.phase.value != board.timing.phase.value:
         return false
@@ -243,6 +243,8 @@ fun install_source_grant(Model model, SourceGrant grant, SourceEffectKey key):
     if installed is AttackModifierPermission:
         installed.source_effect = key
         model.attack_modifier_permissions.append(installed)
+    if installed is RiledUpGrant:
+        model.riled_source_effects.append(key)
     if installed is SourceWeaponGrant:
         installed.rule.source_effect = key
         for slot in range(model.weapons.size()):
@@ -306,6 +308,11 @@ fun remove_source_grant(Model model, SourceEffectKey key):
         index = index - 1
         if model.attack_modifier_permissions[index].source_effect == key:
             model.attack_modifier_permissions.erase(index)
+    index = model.riled_source_effects.size()
+    while index > 0:
+        index = index - 1
+        if model.riled_source_effects[index] == key:
+            model.riled_source_effects.erase(index)
     for slot in range(model.weapons.size()):
         index = model.additional_weapon_rules[slot].size()
         while index > 0:
@@ -325,8 +332,11 @@ fun refresh_source_effects(Board board, TimingWindow ended):
         expired = expired or (effect.duration.value == SourceDuration::turn.value and (effect.turn_stamp.value != board.turn_serial.value or ended == TimingWindow::turn_end))
         expired = expired or (effect.duration.value == SourceDuration::round.value and (effect.round_stamp.value != board.current_round.value or ended == TimingWindow::round_end))
         expired = expired or (effect.duration.value == SourceDuration::next_own_turn.value and effect.owner == board.current_player and effect.turn_stamp.value != board.turn_serial.value)
+        # War Cry ends after the next turn, not at its start or at the end of
+        # the activation turn (Orks Army Rules / War Cry).
+        expired = expired or (effect.duration.value == SourceDuration::end_next_turn.value and (board.turn_serial.value > effect.turn_stamp.value + 1 or (ended == TimingWindow::turn_end and board.turn_serial.value > effect.turn_stamp.value)))
         expired = expired or (effect.requires_live_source and !source_alive(board, board.source_instances[effect.source.value]))
-        if board.source_instances[effect.source.value].aura:
+        if board.source_instances[effect.source.value].aura or board.source_instances[effect.source.value].own_unit_passive:
             let target_location = locate_source(board, effect.target_unit, invalid_entity_identity())
             expired = expired or !target_location.found
             if target_location.found:
@@ -346,38 +356,42 @@ fun refresh_source_effects(Board board, TimingWindow ended):
         board.source_effects.erase(index)
     for source_index in range(board.source_instances.size()):
         ref instance = board.source_instances[source_index]
-        if !instance.aura or !source_alive(board, instance):
+        if (!instance.aura and !instance.own_unit_passive) or !source_alive(board, instance):
             continue
-        for unit_index in range(board.units.size()):
-            let target_location : SourceLocation
-            target_location.found = true
-            target_location.unit = unit_index
-            if !source_aura_target(board, instance, target_location):
-                continue
-            let existing = -1
-            for effect_index in range(board.source_effects.size()):
-                if board.source_effects[effect_index].source.value == source_index and board.source_effects[effect_index].target_unit == board.units[unit_index].identity:
-                    existing = effect_index
-            if existing >= 0:
-                continue
-            assert(board.next_source_effect.value + 1 < MAX_SOURCE_EFFECT_KEY, "source effect key capacity exceeded")
-            board.next_source_effect = board.next_source_effect + 1
-            let aura_effect : SourceEffect
-            aura_effect.identity = board.next_source_effect
-            aura_effect.source = source_index
-            aura_effect.target_unit = board.units[unit_index].identity
-            aura_effect.unit_scope = true
-            aura_effect.duration = SourceDuration::battle
-            aura_effect.requires_live_source = true
-            aura_effect.owner = instance.owner
-            aura_effect.phase_stamp = board.phase_serial.value
-            aura_effect.turn_stamp = board.turn_serial.value
-            aura_effect.round_stamp = board.current_round.value
-            for recipient in range(board.units[unit_index].models.size()):
-                if board.units[unit_index][recipient].is_alive():
-                    install_source_grant(board.units[unit_index][recipient], instance.grant, aura_effect.identity)
-                    aura_effect.recipients.append(board.units[unit_index][recipient].identity)
-            board.source_effects.append(aura_effect)
+        let recipient_bank : SourceBank
+        for bank_index in range(3):
+            recipient_bank.value = bank_index
+            for unit_index in range(source_bank_size(board, recipient_bank)):
+                let target_location : SourceLocation
+                target_location.found = true
+                target_location.unit = unit_index
+                target_location.bank = recipient_bank
+                if !source_aura_target(board, instance, target_location):
+                    continue
+                let existing = -1
+                for effect_index in range(board.source_effects.size()):
+                    if board.source_effects[effect_index].source.value == source_index and board.source_effects[effect_index].target_unit == source_bank_unit(board, recipient_bank, unit_index).identity:
+                        existing = effect_index
+                if existing >= 0:
+                    continue
+                assert(board.next_source_effect.value + 1 < MAX_SOURCE_EFFECT_KEY, "source effect key capacity exceeded")
+                board.next_source_effect = board.next_source_effect + 1
+                let aura_effect : SourceEffect
+                aura_effect.identity = board.next_source_effect
+                aura_effect.source = source_index
+                aura_effect.target_unit = source_bank_unit(board, recipient_bank, unit_index).identity
+                aura_effect.unit_scope = true
+                aura_effect.duration = SourceDuration::battle
+                aura_effect.requires_live_source = true
+                aura_effect.owner = instance.owner
+                aura_effect.phase_stamp = board.phase_serial.value
+                aura_effect.turn_stamp = board.turn_serial.value
+                aura_effect.round_stamp = board.current_round.value
+                for recipient in range(source_bank_unit(board, recipient_bank, unit_index).models.size()):
+                    if source_bank_unit(board, recipient_bank, unit_index)[recipient].is_alive():
+                        install_source_grant(source_bank_unit(board, recipient_bank, unit_index)[recipient], instance.grant, aura_effect.identity)
+                        aura_effect.recipients.append(source_bank_unit(board, recipient_bank, unit_index)[recipient].identity)
+                board.source_effects.append(aura_effect)
 
 # Saved declaration snapshots cannot revive an expired weapon-rule grant
 # merely because its old value remains in a queued attack (pp.17/01.02.02).
@@ -422,6 +436,8 @@ fun valid_source_grant(SourceGrant grant) -> Bool:
         valid = valid_incoming_attack_modifiers(incoming) and grant.source_effect.value == 0
     if grant is AttackModifierPermission:
         valid = valid_attack_modifier_permission(grant) and grant.source_effect.value == 0
+    if grant is RiledUpGrant:
+        valid = grant.enabled
     if grant is SourceWeaponGrant:
         valid = valid_weapon_condition(grant.rule) and grant.rule.source_effect.value == 0 and grant.weapon_scope.value >= 0 and grant.weapon_scope.value < MAX_WEAPON_SCOPES and grant.weapon_name.value >= 0 and grant.weapon_name.value < MAX_WEAPONNAMECODE and grant.profile_name.value >= 0 and grant.profile_name.value < MAX_WEAPONPROFILECODE and (!grant.physical_scope or grant.weapon_scope.value > 0)
     return valid
@@ -435,12 +451,14 @@ fun valid_source_foundations(Board board) -> Bool:
         ref instance = board.source_instances[source_index]
         if instance.rule.value <= 0 or instance.rule.value >= 513 or instance.source_unit.value <= 0 or instance.source_unit.value > board.next_identity.value or instance.source_model.value < 0 or instance.source_model.value > board.next_identity.value:
             return false
-        if instance.trigger.value < 0 or instance.trigger.value > SourceEventKind::model_destroyed.value or instance.window.value < 0 or instance.window.value > TimingWindow::fight_end.value or instance.phase.value < 0 or instance.phase.value > BattlePhase::fight.value or instance.subject.value < 0 or instance.subject.value > SourceSubject::target_unit.value or instance.use_scope.value < 0 or instance.use_scope.value > SourceUseScope::model.value or instance.recipient.value < 0 or instance.recipient.value > SourceTarget::source_model.value or instance.duration.value < 0 or instance.duration.value > SourceDuration::battle.value:
+        if instance.trigger.value < 0 or instance.trigger.value > SourceEventKind::model_destroyed.value or instance.window.value < 0 or instance.window.value > TimingWindow::fight_end.value or instance.phase.value < 0 or instance.phase.value > BattlePhase::fight.value or instance.subject.value < 0 or instance.subject.value > SourceSubject::target_unit.value or instance.use_scope.value < 0 or instance.use_scope.value > SourceUseScope::model.value or instance.recipient.value < 0 or instance.recipient.value > SourceTarget::source_model.value or instance.duration.value < 0 or instance.duration.value > SourceDuration::end_next_turn.value:
             return false
         let keyword : Keyword
         if !instance.recipient_condition.valid(max(keyword)):
             return false
         if instance.aura and (instance.recipient.value != SourceTarget::event_unit.value or instance.duration.value != SourceDuration::battle.value or instance.trigger_range.value <= 0 or instance.optional or instance.recipient.value == SourceTarget::source_model.value or instance.subject.value == SourceSubject::target_unit.value or instance.limits.phase.value > 0 or instance.limits.turn.value > 0 or instance.limits.round.value > 0 or instance.limits.battle.value > 0):
+            return false
+        if instance.own_unit_passive and (instance.aura or instance.recipient.value != SourceTarget::source_unit.value or instance.duration.value != SourceDuration::battle.value or !instance.requires_live_source or instance.optional or instance.trigger_range.value != 0 or instance.limits.phase.value > 0 or instance.limits.turn.value > 0 or instance.limits.round.value > 0 or instance.limits.battle.value > 0):
             return false
         if (instance.own_turn_only and instance.opposing_turn_only) or (instance.use_scope.value == SourceUseScope::model.value and instance.source_model.value == 0) or (instance.recipient.value == SourceTarget::source_model.value and instance.source_model.value == 0) or !valid_source_grant(instance.grant):
             return false
@@ -453,7 +471,7 @@ fun valid_source_foundations(Board board) -> Bool:
             return false
     for effect_index in range(board.source_effects.size()):
         ref effect = board.source_effects[effect_index]
-        if effect.identity.value <= 0 or effect.identity.value > board.next_source_effect.value or effect.source.value < 0 or effect.source.value >= board.source_instances.size() or effect.duration.value < 0 or effect.duration.value > SourceDuration::battle.value or effect.owner != board.source_instances[effect.source.value].owner:
+        if effect.identity.value <= 0 or effect.identity.value > board.next_source_effect.value or effect.source.value < 0 or effect.source.value >= board.source_instances.size() or effect.duration.value < 0 or effect.duration.value > SourceDuration::end_next_turn.value or effect.owner != board.source_instances[effect.source.value].owner:
             return false
         if effect.phase_stamp.value < 0 or effect.phase_stamp.value > board.phase_serial.value or effect.turn_stamp.value < 0 or effect.turn_stamp.value > board.turn_serial.value or effect.round_stamp.value < 0 or effect.round_stamp.value > board.current_round.value:
             return false
@@ -497,7 +515,13 @@ fun valid_source_foundations(Board board) -> Bool:
 # (supplied01.02.04/02.05.01; range/base definitions supplied by the user).
 fun source_aura_target(Board board, SourceInstance instance, SourceLocation target) -> Bool:
     let location = locate_source(board, instance.source_unit, instance.source_model)
-    if !source_alive(board, instance) or !location.found or location.bank.value != SourceBank::battlefield.value or target.bank.value != SourceBank::battlefield.value:
+    if !source_alive(board, instance) or !location.found:
+        return false
+    # Own-unit passive abilities need no external measurement and remain
+    # available offboard, unlike auras (appendix01.02.04; Super Runts/Effigy).
+    if instance.own_unit_passive:
+        return location.bank.value == target.bank.value and location.unit.value == target.unit.value and (target.bank.value == SourceBank::battlefield.value or instance.offboard_allowed)
+    if location.bank.value != SourceBank::battlefield.value or target.bank.value != SourceBank::battlefield.value:
         return false
     ref caster = source_bank_unit(board, location.bank, location.unit.value)
     ref recipient = source_bank_unit(board, target.bank, target.unit.value)
@@ -525,6 +549,8 @@ fun model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
         present = present or model.incoming_attack_modifiers[incoming_index].source_effect == key
     for permission_index in range(model.attack_modifier_permissions.size()):
         present = present or model.attack_modifier_permissions[permission_index].source_effect == key
+    for riled_index in range(model.riled_source_effects.size()):
+        present = present or model.riled_source_effects[riled_index] == key
     for slot in range(model.weapons.size()):
         for rule_index in range(model.additional_weapon_rules[slot].size()):
             present = present or model.additional_weapon_rules[slot][rule_index].source_effect == key
@@ -568,6 +594,8 @@ fun valid_model_source_handles(Board board, Model model) -> Bool:
         valid = valid and source_handle_matches_model(board, model.incoming_attack_modifiers[incoming].source_effect, model.identity)
     for permission_index in range(model.attack_modifier_permissions.size()):
         valid = valid and source_handle_matches_model(board, model.attack_modifier_permissions[permission_index].source_effect, model.identity)
+    for riled_index in range(model.riled_source_effects.size()):
+        valid = valid and source_handle_matches_model(board, model.riled_source_effects[riled_index], model.identity)
     for slot in range(model.weapons.size()):
         for rule in range(model.additional_weapon_rules[slot].size()):
             valid = valid and source_handle_matches_model(board, model.additional_weapon_rules[slot][rule].source_effect, model.identity)
@@ -585,4 +613,14 @@ fun source_characteristic_grant(CharacteristicModifier grant) -> SourceGrant:
 fun source_attack_modifier_grant(AttackModifierPermission permission) -> SourceGrant:
     let result : SourceGrant
     result = permission
+    return result
+
+
+# One typed status installs all three printed riled benefits through consumers,
+# with exact-key expiry rather than independent buff lifetimes (Orks Waaagh!).
+fun riled_up_grant() -> SourceGrant:
+    let grant : RiledUpGrant
+    grant.enabled = true
+    let result : SourceGrant
+    result = grant
     return result

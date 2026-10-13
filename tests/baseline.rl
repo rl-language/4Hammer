@@ -8549,7 +8549,7 @@ fun test_ignore17c4b_saved_permission_and_pending_label() -> Bool:
     state.board.pending_modifier_kind = ModifierSelectionKind::hit_roll
     state.board.pending_modifier_choice = attack_modifier_choice(rule_modifier(ModifierOperation::add, -1), ModifierOrigin::heavy)
     let restored = play()
-    return set_state(restored, to_string(state)) and restored.board[0][0].attack_modifier_permissions.size() == 1 and modifier_choice_label(restored.board) == modifier_choice_label(state.board) and restored.board.schema_version.value == 26
+    return set_state(restored, to_string(state)) and restored.board[0][0].attack_modifier_permissions.size() == 1 and modifier_choice_label(restored.board) == modifier_choice_label(state.board) and restored.board.schema_version.value == STATE_SCHEMA_VERSION
 
 # Core modifiers fit alongside every supported authored skill record;18 is
 # a collection bound, while each Apply/Ignore payload still enumerates2 (02.02.02).
@@ -8590,3 +8590,191 @@ fun test_ignore17c4b_nonadditive_roll_arithmetic() -> Bool:
     modifiers.clear()
     modifiers.append(rule_modifier(ModifierOperation::replace, 1))
     return doubled == 1 and selected_hit_bonus(4, modifiers) == -1
+
+
+# Current Army Rules fixtures, not replacement Orks datasheets. Profile data
+# intentionally remains the small existing core combat fixture (Orks17.F).
+fun orks17f_fixture() -> Board:
+    let board = attack_declaration_fixture()
+    board.armies[0].faction = ArmyFaction::orks
+    board.armies[1].faction = ArmyFaction::orks
+    board[0][0].keywords.append(Keyword::orks)
+    board[1][0].keywords.append(Keyword::orks)
+    board[0][0].has_waaagh = true
+    board[1][0].has_waaagh = true
+    board.identify_units()
+    board.start_turn_history()
+    return board
+
+# Zero-key is an explicit intrinsic fixture grant; actual passives register
+# stable model sources. No datasheet grants are inferred (Orks Waaagh!).
+fun orks17f_intrinsic_riled(Model model):
+    let key : SourceEffectKey
+    model.riled_source_effects.append(key)
+
+# Only live ORKS units with explicit Waaagh! get the Advance re-roll.
+fun test_orks17f_waaagh_eligibility() -> Bool:
+    let board = orks17f_fixture()
+    let valid = unit_has_waaagh(board[0])
+    board[0][0].has_waaagh = false
+    let absent = !unit_has_waaagh(board[0])
+    board[0][0].has_waaagh = true
+    board[0][0].keywords.clear()
+    let foreign = !unit_has_waaagh(board[0])
+    board[0][0].keywords.append(Keyword::orks)
+    board[0][0].state = ModelState::pending_destruction
+    return valid and absent and foreign and !unit_has_waaagh(board[0])
+
+# Riled supplies a5+ InSv where absent, keeps a better printed save and uses
+# shared subsequent arithmetic rather than replacing a better choice.
+fun test_orks17f_riled_invulnerable_save() -> Bool:
+    let board = orks17f_fixture()
+    orks17f_intrinsic_riled(board[0][0])
+    let absent = board[0][0].effective_invulnerable_save() == 5
+    board[0][0].profile = Profile::captain_octavius
+    let better = board[0][0].effective_invulnerable_save() == 4
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::invulnerable_save, ModifierOperation::add, -1))
+    return absent and better and board[0][0].effective_invulnerable_save() == 3
+
+# Printed start window excludes Command abilities/end/round; configured
+# non-Orks armies cannot activate a stray fixture's Waaagh! data.
+fun test_orks17f_war_cry_wrong_window_and_faction() -> Bool:
+    let board = orks17f_fixture()
+    let resolved : Bool[2]
+    let absent = !orks_timing_rule_available(board, TimingWindow::command_abilities, false, OrksTimingRule::war_cry, resolved) and !orks_timing_rule_available(board, TimingWindow::round_start, false, OrksTimingRule::war_cry, resolved)
+    board.armies[0].faction = ArmyFaction::space_marines
+    return absent and !war_cry_available(board, false)
+
+# End of NEXT turn is distinct from end of activation turn and next start.
+# Activation in either player's turn has the same two-turn interval.
+fun test_orks17f_war_cry_end_next_turn() -> Bool:
+    let board = orks17f_fixture()
+    board.open_timing_window(TimingWindow::command_start)
+    call_war_cry(board, false)
+    board.close_timing_window()
+    refresh_source_effects(board, TimingWindow::turn_end)
+    let own_end = unit_is_riled_up(board[0])
+    board.current_player = true
+    board.start_turn_history()
+    let next_start = unit_is_riled_up(board[0])
+    refresh_source_effects(board, TimingWindow::turn_end)
+    return own_end and next_start and !unit_is_riled_up(board[0]) and board.source_effects.empty() and board.armies[0].war_cry_used
+
+# Offboard army units receive War Cry without illegal range/visibility tests;
+# a missing Waaagh! ability is not granted by faction membership alone.
+fun test_orks17f_war_cry_reserves_and_passengers() -> Bool:
+    let board = orks17f_fixture()
+    let reserved : Unit
+    reserved = board[0]
+    reserved.identity = invalid_entity_identity()
+    reserved[0].identity = invalid_entity_identity()
+    board.identify_unit(reserved)
+    mark_unit_offboard(reserved, true)
+    board.reserve_units.append(reserved)
+    let embarked : Unit
+    embarked = reserved
+    embarked.identity = invalid_entity_identity()
+    embarked[0].identity = invalid_entity_identity()
+    board.identify_unit(embarked)
+    board.embarked_units.append(embarked)
+    board[1][0].has_waaagh = false
+    board.open_timing_window(TimingWindow::command_start)
+    call_war_cry(board, false)
+    board.close_timing_window()
+    return unit_is_riled_up(board[0]) and unit_is_riled_up(board.reserve_units[0]) and unit_is_riled_up(board.embarked_units[0]) and !unit_is_riled_up(board[1]) and board.source_effects.size() == 3
+
+# A retained/destroyed source cannot cancel the accepted army-wide War Cry.
+# Archived grants are nevertheless cleaned up at their printed expiry.
+fun test_orks17f_war_cry_source_death_archive_cleanup() -> Bool:
+    let board = orks17f_fixture()
+    board.open_timing_window(TimingWindow::command_start)
+    call_war_cry(board, false)
+    board.close_timing_window()
+    board[0][0].state = ModelState::pending_destruction
+    board[0].remove_model(0)
+    board.current_player = true
+    board.start_turn_history()
+    let persisted = board[0].destroyed_models.value[0].is_riled_up()
+    refresh_source_effects(board, TimingWindow::turn_end)
+    return persisted and !board[0].destroyed_models.value[0].is_riled_up()
+
+# Overlapping permanent and War Cry copies retain independent handles; only
+# live-model permanent sources end on source death (Stompa Effigy/Super Runts).
+fun test_orks17f_permanent_and_war_cry_overlap() -> Bool:
+    let board = orks17f_fixture()
+    board[0][0].grants_unit_riled_up = true
+    register_orks_passive_rules(board)
+    register_orks_passive_rules(board)
+    let single = board.source_instances.size() == 1 and board[0][0].riled_source_effects.size() == 1
+    board.open_timing_window(TimingWindow::command_start)
+    call_war_cry(board, false)
+    board.close_timing_window()
+    let overlap = board[0][0].riled_source_effects.size() == 2
+    board.current_player = true
+    board.start_turn_history()
+    refresh_source_effects(board, TimingWindow::turn_end)
+    return single and overlap and board[0][0].riled_source_effects.size() == 1 and unit_is_riled_up(board[0])
+
+# Own-unit passives work in reserves/embarked banks; they are not external
+# auras and require no range to an offboard unit (appendix01.02.04).
+fun test_orks17f_permanent_offboard_bank_transfer() -> Bool:
+    let board = orks17f_fixture()
+    board[0][0].grants_unit_riled_up = true
+    mark_unit_offboard(board[0], true)
+    board.reserve_units.append(board[0])
+    board.units.erase(0)
+    register_orks_passive_rules(board)
+    let reserved = unit_is_riled_up(board.reserve_units[0])
+    board.embarked_units.append(board.reserve_units[0])
+    board.reserve_units.erase(0)
+    refresh_source_effects(board, TimingWindow::none)
+    return reserved and unit_is_riled_up(board.embarked_units[0]) and board.source_effects.size() == 1
+
+# Permanent source follows a transferred model's current unit, while overlap
+# keys from other sources are retained. Attachment integration remains17.G.
+fun test_orks17f_permanent_source_transfer() -> Bool:
+    let board = orks17f_fixture()
+    board[0].models.append(board[0][0])
+    board[0][1].identity = invalid_entity_identity()
+    board.identify_unit(board[0])
+    board[0][0].grants_unit_riled_up = true
+    register_orks_passive_rules(board)
+    let target : Unit
+    target.owned_by_player1 = false
+    target.models.append(board[0][0])
+    board[0].models.erase(0)
+    board.identify_unit(target)
+    board.units.append(target)
+    refresh_source_effects(board, TimingWindow::none)
+    return !unit_is_riled_up(board[0]) and unit_is_riled_up(board.units.back()) and board.source_effects.size() == 1
+
+# A model death stops the source-bound passive for its surviving unit; Fight
+# on Death retention is not active ability permission (destruction p.87).
+fun test_orks17f_permanent_source_death() -> Bool:
+    let board = orks17f_fixture()
+    board[0].models.append(board[0][0])
+    board[0][1].identity = invalid_entity_identity()
+    board.identify_unit(board[0])
+    board[0][0].grants_unit_riled_up = true
+    register_orks_passive_rules(board)
+    board[0][0].state = ModelState::pending_destruction
+    refresh_source_effects(board, TimingWindow::none)
+    return !unit_is_riled_up(board[0]) and !board[0][0].is_riled_up() and board.source_effects.empty()
+
+# Matching Game saves retain army usage, stable Warlord and pending riled
+# effects. Bad keys/source metadata are rejected before effective consumers.
+fun test_orks17f_saved_state_and_forged_handles() -> Bool:
+    let game = play()
+    game.board = orks17f_fixture()
+    game.board.armies[0].warlord = game.board[0][0].identity
+    game.board[0][0].keywords.append(Keyword::character)
+    game.board[0][0].keywords.append(Keyword::warlord)
+    game.board.open_timing_window(TimingWindow::command_start)
+    call_war_cry(game.board, false)
+    game.board.close_timing_window()
+    let saved = to_string(game)
+    let restored = play()
+    let accepted = set_state(restored, saved)
+    let retained = accepted and restored.board.armies[0].war_cry_used and restored.board[0][0].is_riled_up() and restored.board.armies[0].warlord == game.board.armies[0].warlord
+    restored.board[0][0].riled_source_effects[0].value = 999
+    return retained and !valid_state_foundations(restored.board)

@@ -32,6 +32,7 @@ enum SourceDuration:
     round
     next_own_turn
     battle
+    end_next_turn
 
 enum SourceTarget:
     source_unit
@@ -54,7 +55,12 @@ cls SourceWeaponGrant:
     WeaponProfileCode profile_name
     Bool physical_scope
 
-using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant | AttackModifierPermission
+# Orks Waaagh! grants riled status as one owned effect, not three unrelated
+# buffs; see the faction Army Rules / Waaagh! section.
+cls RiledUpGrant:
+    Bool enabled
+
+using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant | AttackModifierPermission | RiledUpGrant
 
 cls SourceUseLimits:
     # Zero is unlimited for this interval; combine all four printed limits.
@@ -82,6 +88,8 @@ cls SourceInstance:
     SourceUseLimits limits
     Bool disabled
     Bool aura
+    # Source-bound own-unit passive, including reserves/passengers (01.02.04).
+    Bool own_unit_passive
     KeywordPredicate recipient_condition
     Bool optional
     Bool offboard_allowed

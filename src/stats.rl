@@ -130,6 +130,9 @@ enum Keyword:
     towering
     transport
     dedicated_transport
+    # Faction keyword from the current Orks datasheets (Orks faction URL).
+    orks
+    warlord
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value

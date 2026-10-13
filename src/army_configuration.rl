@@ -73,6 +73,10 @@ cls ArmyConfiguration:
     ArmyFaction faction
     CheckedVector<OrksDetachment, 3> detachments
     ReserveBudgetMode reserve_budget
+    # Stable Warlord and per-army War Cry use survive transfers/destruction.
+    # Orks Army Rules / Da Boss and War Cry; no roster-name inference.
+    EntityIdentity warlord
+    Bool war_cry_used
 
     # Gate a package by actual selection, not roster name or an implicit DP
     # budget (Orks detachment sections at the URL above).
