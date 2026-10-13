@@ -1,5 +1,11 @@
 import board
 
+# Printed source examples for shared limits: Nazdreg's Intimidating Motivation
+# and Supreme Kunnin', and Beast Snagga Boyz' Bomb Squig. These are framework
+# examples, not installed ability effects:
+# https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg
+# https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz
+
 # Bank bridges preserve stable source/recipient identities through reserve and
 # passenger transfers (supplied01.02.02/01.02.04; core pp.65/68/88).
 fun source_bank_size(Board board, SourceBank bank) -> Int:

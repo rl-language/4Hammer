@@ -1742,6 +1742,7 @@ fun grant_physical_weapon_rule(Model model, Int slot, WeaponRule rule):
 
 # Nazdreg datasheet UNIT COMPOSITION explicitly permits its three separate
 # ranged profiles. Installing actual source profiles remains the unit batch.
+# Source: https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg
 fun permit_simultaneous_ranged_profiles(Model model, Int group):
     assert(group > 0 and group < MAX_WEAPON_SCOPES, "invalid physical weapon group")
     for slot in range(model.weapons.size()):
@@ -1754,5 +1755,7 @@ fun set_physical_weapon_group(Model model, Int slot, Int group):
     assert(slot >= 0 and slot < model.weapons.size() and group >= 0 and group < MAX_WEAPON_SCOPES, "invalid physical profile group")
     model.weapon_profile_groups[slot] = group
 
+# Expose the sourced profile permission to Godot without an unbounded or
+# raw fixed-array selector (Nazdreg UNIT COMPOSITION; appendix04.01.03).
 fun permits_simultaneous_profile(Model model, Int slot) -> Bool:
     return slot >= 0 and slot < model.weapons.size() and model.simultaneous_ranged_profiles[slot]

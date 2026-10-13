@@ -360,6 +360,8 @@ fun same_declared_physical_weapon(DeclaredWeapon left, DeclaredWeapon right) -> 
         return left.physical_group.value > 0 and left.physical_group == right.physical_group
     return left.slot == right.slot
 
+# Roll one Hazardous test per selected physical weapon, even when a sourced
+# exception permits several profiles or targets (core p.81; appendix04.01.03).
 fun declared_hazardous_uses(DeclaredWeapons declarations) -> Int:
     let result = 0
     for index in range(declarations.size()):
