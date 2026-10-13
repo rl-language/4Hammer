@@ -1,10 +1,10 @@
 import shooting_rules
 
-# Each model can select at most its eight weapon slots (p.16). Targets are
+# Each model can select at most its thirteen stored profile slots (p.16). Targets are
 # indexed by the unchanged UnitID domain, so melee shares have bounded storage
 # without expanding every declaration into a separate unbounded record.
-const MAX_SELECTED_WEAPONS = 288
-const MAX_SELECTED_WEAPONS_PLUS1 = 289
+const MAX_SELECTED_WEAPONS = 448
+const MAX_SELECTED_WEAPONS_PLUS1 = 449
 using AttackWeaponID = BInt<0, MAX_SELECTED_WEAPONS>
 using AttackShare = LinearlyDistributedInt<0, MAX_CHARACTERISTIC>
 using AttackShareChoice = BInt<1, MAX_CHARACTERISTIC>
@@ -12,6 +12,8 @@ using AttackShareChoice = BInt<1, MAX_CHARACTERISTIC>
 cls DeclaredWeapon:
     ModelID model
     EntityIdentity model_identity
+    EntityIdentity weapon_owner
+    LinearlyDistributedInt<0, MAX_WEAPON_SCOPES> physical_group
     BInt<0, MAX_WEAPONS> slot
     Weapon weapon
     # Borrowed profiles receive carrier-wide grants, not carrier slot grants (p.81).

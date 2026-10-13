@@ -139,6 +139,8 @@ fun modified_cp_cost(Int original, RuleModifiers modifiers) -> Int:
 # install only their affected models; expiry/source-instance policy belongs to17.E.
 # This shares one bounded list rather than sixteen slots for every characteristic.
 cls CharacteristicModifier:
+    # Zero is an intrinsic/manual grant; nonzero belongs to one timed effect.
+    SourceEffectKey source_effect
     ModifiedCharacteristic characteristic
     RuleModifier modifier
     # Zero affects the bearer/all equipped weapons; nonzero is slot+1.
@@ -160,6 +162,8 @@ enum IncomingAttackScope:
     melee
 
 cls IncomingAttackModifier:
+    # Zero is an intrinsic/manual grant; nonzero belongs to one timed effect.
+    SourceEffectKey source_effect
     ModifiedCharacteristic characteristic
     RuleModifier modifier
     IncomingAttackScope scope
@@ -182,6 +186,7 @@ fun valid_incoming_attack_modifiers(IncomingAttackModifiers modifiers) -> Bool:
     let valid = true
     for i in range(modifiers.size()):
         ref entry = modifiers[i]
+        valid = valid and entry.source_effect.value >= 0 and entry.source_effect.value < MAX_SOURCE_EFFECT_KEY
         valid = valid and (entry.characteristic.value == ModifiedCharacteristic::armour_penetration.value or entry.characteristic.value == ModifiedCharacteristic::damage.value)
         valid = valid and entry.scope.value >= 0 and entry.scope.value <= IncomingAttackScope::melee.value
         valid = valid and entry.modifier.operation.value >= 0 and entry.modifier.operation.value <= ModifierOperation::subtract.value and entry.modifier.amount.value >= 0 and entry.modifier.amount.value < MAX_RULE_MODIFIER
@@ -215,6 +220,8 @@ fun valid_characteristic_modifiers(CharacteristicModifiers modifiers) -> Bool:
         return false
     for i in range(modifiers.size()):
         ref entry = modifiers[i]
+        if entry.source_effect.value < 0 or entry.source_effect.value >= MAX_SOURCE_EFFECT_KEY:
+            return false
         if entry.weapon_scope.value < 0 or entry.weapon_scope.value > MAX_WEAPONS or (entry.weapon_scope.value > 0 and !weapon_characteristic_kind(entry.characteristic)):
             return false
         if entry.weapon_name.value < 0 or entry.weapon_name.value >= MAX_WEAPONNAMECODE or entry.profile_name.value < 0 or entry.profile_name.value >= MAX_WEAPONPROFILECODE:

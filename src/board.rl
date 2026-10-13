@@ -1,4 +1,5 @@
 import units
+import source_effect_types
 import range
 
 # enum to set the proper state description from within godot user interface. Irrelevant for everything else.
@@ -207,6 +208,11 @@ cls Board:
     Bool[2] has_used_insane_bravery
     Bool[2] has_used_shadow_in_the_warp
 
+    PendingSourceEvents active_source_events
+    SourceInstances source_instances
+    SourceUseRecords source_uses
+    SourceEffects source_effects
+    SourceEffectKey next_source_effect
     AttackSequenceInfo attack_info
     # Active group labels/target are editor infrastructure for p.19 decisions.
     AllocationGroups active_allocation_groups

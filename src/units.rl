@@ -75,6 +75,9 @@ cls Model:
     # Appendix 04.01.03: nonzero equal IDs identify profiles of one physical weapon.
     LinearlyDistributedInt<0, MAX_WEAPON_SCOPES>[MAX_WEAPONS] weapon_profile_groups
     # Infrastructure: reuse the bounded keyword predicate, not its ability kind/parameter.
+    # Nazdreg explicitly selects all three ranged profiles of Kustom Blasta X;
+    # this permission is per equipped profile, not a blanket model exemption.
+    Bool[MAX_WEAPONS] simultaneous_ranged_profiles
     WeaponRule[MAX_WEAPONS] hunter_profile_conditions
     Bool[MAX_WEAPONS] used_once_per_battle_weapon
 

@@ -4,7 +4,59 @@ import state_types
 import keyword_predicates
 
 using Dice = BInt<1, 7>
-using Stat = FixedStat | Dice
+
+# Source expressions include D3, D6+6,2D6+2 and3D6+3 (all67 Orks scan).
+# Intrinsic constants are part of the characteristic, not modifiers (02.02.03).
+cls CompoundDice:
+    LinearlyDistributedInt<1, 4> count
+    Bool d3
+    FixedStat constant
+
+using Stat = FixedStat | Dice | CompoundDice
+
+# Checked construction supports every audited compound expression without
+# enlarging the six-face chance payload or summing hidden random values.
+fun compound_stat(Int count, Int sides, Int constant) -> Stat:
+    assert(count >= 1 and count <= 3 and (sides == 3 or sides == 6) and constant >= 0 and constant < MAX_CHARACTERISTIC, "unsupported dice expression")
+    let expression : CompoundDice
+    expression.count = count
+    expression.d3 = sides == 3
+    expression.constant = constant
+    let result : Stat
+    result = expression
+    return result
+
+# Roll-shape queries distinguish original dice from intrinsic constants for
+# complete re-rolls and identical attack grouping (01.05.02/02.02.03).
+fun stat_dice_count(Stat stat) -> Int:
+    if stat is Dice:
+        return 1
+    if stat is CompoundDice:
+        return stat.count.value
+    return 0
+
+fun stat_dice_sides(Stat stat) -> Int:
+    if stat is Dice:
+        return stat.value
+    if stat is CompoundDice:
+        return 6 - 3 * int(stat.d3)
+    return 0
+
+fun stat_intrinsic_constant(Stat stat) -> Int:
+    if stat is CompoundDice:
+        return stat.constant.value
+    return 0
+
+# Restore guard for random M/demise and explicit expression consumers;
+# this is bounded-state infrastructure for pp.17/19/33/80.
+fun valid_stat(Stat stat) -> Bool:
+    if stat is FixedStat:
+        return stat.value >= 0 and stat.value < MAX_CHARACTERISTIC
+    if stat is Dice:
+        return stat.value >= 1 and stat.value <= 6
+    if stat is CompoundDice:
+        return stat.count.value >= 1 and stat.count.value <= 3 and stat.constant.value >= 0 and stat.constant.value < MAX_CHARACTERISTIC
+    return false
 
 # Store a fixed weapon characteristic in a bounded standard type for inferred
 # ML layout; supports attack count/damage (pp.17/19). Evaluation fix is task 9.
@@ -60,6 +112,8 @@ fun size_as_observation_tensor(WeaponRuleKind kind) -> Int:
     return 1
 
 cls WeaponRule:
+    # Zero is an intrinsic/manual grant; nonzero belongs to one timed effect.
+    SourceEffectKey source_effect
     WeaponRuleKind kind
     LinearlyDistributedInt<0, MAX_CHARACTERISTIC> parameter
     # Target predicates preserve adjacent/slash/excluded keyword meaning
@@ -685,6 +739,25 @@ enum Weapon:
         WeaponRules rules = weapon_rules()
 
 
+    # Source-backed expression fixtures; current unit/loadout installation is17.P.
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Stompa
+    stompa_supa_gatler_point_blank:
+        Int range = 12
+        Stat attacks = compound_stat(3, 6, 3)
+        Int skill = 0
+        Int strenght = 7
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::torrent))
+    stompa_deffkannon_and_supa_rokkits:
+        Int range = 72
+        Stat attacks = raw_stat(12)
+        Int skill = 5
+        Int strenght = 14
+        Int penetration = -3
+        Stat damage = compound_stat(1, 6, 2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::blast, 2))
+
     # Magnitude lookup retains the first declared parameter, distinct from
     # presence for parameterless abilities (pp.80–85). Own copies exit once.
     fun get_rule_parameter(WeaponRuleKind rule) -> Int:
@@ -718,12 +791,27 @@ fun size_as_observation_tensor(Weapon kind) -> Int:
 # contain commas which RLC 0.3.3's indenter splits. Stable tags keep readable
 # saves round-trippable while retaining inferred bounded ML types. These stored
 # characteristics feed attack count/damage (core pp.17/19; reference 04.03/05.04).
+fun append_to_string(CompoundDice expression, String output):
+    append_to_string(expression.count, output)
+    output.append(" "s)
+    append_to_string(expression.d3, output)
+    output.append(" "s)
+    append_to_string(expression.constant, output)
+
+# Stable expression codec retains original dice and intrinsic constant
+# separately, without a custom observation writer (appendix02.02.03).
+fun parse_string(CompoundDice expression, String buffer, Int index) -> Bool:
+    return parse_string(expression.count, buffer, index) and parse_string(expression.d3, buffer, index) and parse_string(expression.constant, buffer, index)
+
 fun append_to_string(Stat stat, String output):
     if stat is FixedStat:
         output.append("fixed "s)
         append_to_string(stat, output)
     else if stat is Dice:
         output.append("dice "s)
+        append_to_string(stat, output)
+    else if stat is CompoundDice:
+        output.append("compound "s)
         append_to_string(stat, output)
 
 # Decode the stable characteristic tags with the standard bound checks; a bad
@@ -745,4 +833,11 @@ fun parse_string(Stat result, String buffer, Int index) -> Bool:
             return false
         result = value
         return true
+    if buffer.substring_matches("compound", index):
+        index = index + 8
+        let expression : CompoundDice
+        if !parse_string(expression, buffer, index):
+            return false
+        result = expression
+        return valid_stat(result)
     return false
