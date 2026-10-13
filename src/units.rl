@@ -52,6 +52,8 @@ cls Model:
     # Explicit current Army Rules; no legacy factory infers these from its name.
     # https://wahapedia.ru/wh40k11ed/factions/orks/ (Waaagh!/Da Boss).
     Bool has_waaagh
+    # Runnin' wiv da Herd affects only the attached Painboss bearer.
+    Bool painboss_mounted_attachment
     Bool has_da_boss
     # Supplied Warlord definition; Ghazghkull also requires this model.
     Bool must_be_warlord
@@ -75,6 +77,12 @@ cls Model:
     Stat deadly_demise
     # Trigger timing is lifecycle infrastructure for destruction p.87.
     Bool destruction_pending
+    # A conferred attached-unit rule survives attack destruction until all
+    # that attacking unit's attacks end (p.67). This is not live-model status.
+    Bool attachment_abilities_retained
+    # Unit-destruction callbacks are emitted only for the whole attached unit
+    # (p.66), sharing this final casualty's existing destruction timing.
+    Bool destroyed_whole_unit
     # Supplied Fight on Death: keep triggers pending until own attack/phase end.
     Bool destruction_released
     Bool destruction_attack_suppressed
@@ -104,6 +112,12 @@ cls Model:
 
     # Read per-model keywords without copying owning storage (pp.67/87).
     fun has_keyword(Keyword keyword) -> Bool:
+        # Painboss Runnin' wiv da Herd: no keyword spread to other models.
+        if self.painboss_mounted_attachment:
+            if keyword == Keyword::infantry:
+                return false
+            if keyword == Keyword::mobile or keyword == Keyword::mounted:
+                return true
         let i = 0
         ref rules = self.keywords
         while i != rules.size():
@@ -204,7 +218,7 @@ cls Model:
     # Effective model characteristics retain one printed arithmetic policy
     # (appendix02.02.01); source selection and expiry are separate consumers.
     fun effective_movement(Int base) -> Int:
-        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, false)
+        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, false, 4 * int(self.painboss_mounted_attachment))
 
     # Multiple Toughness uses each model's effective value (appendix05.02.01).
     fun effective_toughness() -> Int:
@@ -316,9 +330,18 @@ cls Unit:
     StartingStrength starting_strenght
     EntityIdentity identity
     Hidden<Vector<Model>> destroyed_models
-    Hidden<Vector<AttachmentComponent>> attached_units
+    # Current unit datasheet/permissions are explicit source metadata. Model
+    # tags/characteristics stay per-model; component rules stay unit-scoped.
+    DatasheetCode roster_datasheet
+    AttachmentRole attachment_role
+    BodyguardPermissions permitted_bodyguards
+    Abilities unit_abilities
+    Bool bodyguard_waaagh
+    StartingStrength bodyguard_starting_strength
+    CheckedVector<AttachmentComponent, 2> attached_units
     UnitHistory history
     Bool retired
+    Bool unit_destruction_event_issued
     # Unit-level mandatory Warlord wording is distinct from a named model.
     Bool must_supply_warlord
     # Points are absent from legacy rosters; enforce reserve caps only when
@@ -332,6 +355,8 @@ cls Unit:
     # Archive identity, origin and weapon-use history before compacting live models
     # (destroyed models p.19; One Shot p.83; returning models p.88).
     fun remove_model(Int index):
+        self.models[index].attachment_abilities_retained = false
+        self.models[index].destroyed_whole_unit = false
         self.destroyed_models.value.append(self.models[index])
         self.models.erase(index)
         if self.models.empty():
@@ -382,6 +407,9 @@ cls Unit:
     # (p.86; attached units pp.66–67). Strength thresholds are task 7.
     fun capture_starting_strength():
         self.starting_strenght = self.models.size()
+        if self.attached_units.empty():
+            self.bodyguard_starting_strength = self.models.size()
+            self.bodyguard_waaagh = component_has_waaagh(self, self.identity)
 
     fun has_greater_strenght_wound_protection() -> Bool:
         return self.phase_modifiers.greater_strenght_wound_protection 
@@ -402,7 +430,7 @@ cls Unit:
 
     # Attached units do not retain Lone Operative targeting protection (p.83).
     fun is_lone_operative() -> Bool:
-        return self.attached_units.value.empty() and self.has_ability(AbilityKind::lone_operative)
+        return self.attached_units.empty() and self.has_ability(AbilityKind::lone_operative)
 
     # Finish deferred removals including index zero and preserve archive history
     # (destroyed models pp.19/87); enabling Fight on Death still needs ability data.
@@ -434,17 +462,31 @@ cls Unit:
             self.models[i].consolidate_torward(other)
             i = i + 1
 
-    # Preserve component identity/count when transferring an attached model
-    # (Leader/Support pp.66–67; combined starting strength p.86). Eligibility is task 6.
+    # Structural transfer preserves every model/history and unit-scoped source,
+    # not just one Character. Public eligibility is attachment_rules.rl (p.66).
     fun attach_to(Unit other):
-        assert(self.models.size() == 1, "only units with one model can be attached")
-        other.models.append(self.models[0])
+        assert(self.identity.value > 0 and other.identity.value > 0 and self.identity != other.identity and attachment_role_available(other, self.attachment_role) and self.attached_units.empty(), "source must be an unattached Leader or Support")
+        assert(self.models.size() > 0 and other.models.size() + self.models.size() <= MAX_UNIT_MODELS and other.attached_units.has_capacity(), "attachment model/component capacity exceeded")
+        if other.attached_units.empty():
+            other.bodyguard_starting_strength = other.models.size()
+            other.bodyguard_waaagh = component_has_waaagh(other, other.identity)
         let component : AttachmentComponent
         component.identity = self.identity
         component.starting_strength = self.models.size()
         component.name = self.name
-        other.attached_units.value.append(component)
-        self.models.erase(0)
+        component.role = self.attachment_role
+        component.datasheet = self.roster_datasheet
+        component.abilities = self.unit_abilities
+        component.waaagh = component_has_waaagh(self, self.identity)
+        other.attached_units.append(component)
+        for source_model in range(self.models.size()):
+            # https://wahapedia.ru/wh40k11ed/factions/orks/Painboss
+            # Runnin' wiv da Herd changes this model's M/keywords only.
+            if self.roster_datasheet.value == OrksDatasheet::painboss.value and other.has_keyword(Keyword::mounted):
+                self.models[source_model].painboss_mounted_attachment = true
+            other.models.append(self.models[source_model])
+        other.starting_strenght = other.models.size()
+        self.models.clear()
 
     # Success against any Leadership characteristic uses the lowest threshold
     # (Leadership rolls p.9, procedural A7). Empty units cannot roll.
@@ -507,20 +549,20 @@ cls Unit:
     # Compare doubled counts without rounding odd starting strengths (p.86).
     # Strict below-half is distinct from Command phase at-or-below eligibility.
     fun is_below_half_strenght() -> Bool:
-        if self.empty() or self.starting_strenght.value == 0:
+        if live_attachment_strength(self) == 0 or self.starting_strenght.value == 0:
             return false
         if self.starting_strenght.value == 1:
             return self.models[0].wounds_left() * 2 < self.models[0].profile.wounds()
-        return self.models.size() * 2 < self.starting_strenght.value
+        return live_attachment_strength(self) * 2 < self.starting_strenght.value
 
     # Command rolls include exactly half-strength (p.30); one-model units use
     # remaining wounds, combined units retain their original model count (p.86).
     fun is_at_or_below_half_strength() -> Bool:
-        if self.empty() or self.starting_strenght.value == 0:
+        if live_attachment_strength(self) == 0 or self.starting_strenght.value == 0:
             return false
         if self.starting_strenght.value == 1:
             return self.models[0].wounds_left() * 2 <= self.models[0].profile.wounds()
-        return self.models.size() * 2 <= self.starting_strenght.value
+        return live_attachment_strength(self) * 2 <= self.starting_strenght.value
 
     fun get_temporary_weapon_parameter(WeaponRuleKind rule) -> Int: 
         let temp_rules = self.get_temporary_weapon_rules()
@@ -534,9 +576,11 @@ cls Unit:
     fun max_weapon_parameter(Weapon w, WeaponRuleKind kind) -> Int:
         return max(w.get_rule_parameter(kind), self.get_temporary_weapon_parameter(kind)) 
 
-    # Destroyed retained models cannot supply active abilities; an all-dead
-    # unit cannot satisfy an ability requirement vacuously (p.87).
+    # Typed unit rules retain p67 conferral; intrinsic per-model all-member
+    # checks require live bearers and do not pass vacuously (p.87).
     fun all_have_ability(AbilityKind kind) -> Bool:
+        if scoped_unit_ability(self, kind):
+            return true
         let alive = false
         let all_have = true
         for i in range(self.models.size()):
@@ -561,25 +605,33 @@ cls Unit:
             i = i + 1
         return false
 
-    # Exclude retained destroyed models from active unit abilities (p.87);
-    # attached-unit ability lifetime remains deferred with task 6.
+    # Typed unit-scope rules follow their source component until its last
+    # member dies; attack destruction retains them through all attacks (p.67).
     fun has_ability(AbilityKind kind) -> Bool:
+        if scoped_unit_ability(self, kind):
+            return true
         let i = 0
         while i != self.models.size():
-            if self.models[i].is_alive() and self.models[i].has_ability(kind):
+            if model_confers_attached_abilities(self.models[i]) and self.models[i].has_ability(kind):
                 return true 
             i = i + 1
         return false
 
-    # Appendix05.02.01: highest battlefield T for an unattached unit.
-    # Bodyguard-only selection for attached units belongs to17.G's provenance.
-    # Do not shadow the running maximum or count offboard models. Retained
-    # Fight on Death models stay on the battlefield until removal (appendix).
+    # Bodyguard-only highest battlefield T while any bodyguard is present;
+    # otherwise the remaining Leaders/Supports' maximum (p.66/05.02.01).
+    # Retained models remain physically on the battlefield until removal.
     fun get_unit_toughtness() -> Int:
         let maximum_toughness = 0
+        let bodyguard_toughness = 0
+        let bodyguard_present = false
         for model_index in range(self.models.size()):
             if !self.models[model_index].off_battlefield:
                 maximum_toughness = max(maximum_toughness, self.models[model_index].effective_toughness())
+                if self.models[model_index].original_unit == self.identity:
+                    bodyguard_present = true
+                    bodyguard_toughness = max(bodyguard_toughness, self.models[model_index].effective_toughness())
+        if !self.attached_units.empty() and bodyguard_present:
+            return bodyguard_toughness
         return maximum_toughness
 
     fun translate(Int x, Int y):
@@ -1788,7 +1840,11 @@ fun permits_simultaneous_profile(Model model, Int slot) -> Bool:
 fun unit_has_waaagh(Unit unit) -> Bool:
     let available = false
     for index in range(unit.models.size()):
-        available = available or (unit[index].is_alive() and unit[index].has_waaagh)
+        available = available or (model_confers_attached_abilities(unit[index]) and unit[index].has_waaagh)
+    if !unit.attached_units.empty():
+        available = available or (unit.bodyguard_waaagh and component_source_active(unit, unit.identity))
+        for component_index in range(unit.attached_units.size()):
+            available = available or (unit.attached_units[component_index].waaagh and component_source_active(unit, unit.attached_units[component_index].identity))
     return available and unit.has_keyword(Keyword::orks)
 
 # All members receive each unit-wide riled grant. Read only live bearers for

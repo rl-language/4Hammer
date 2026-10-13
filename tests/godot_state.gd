@@ -33,9 +33,9 @@ func check_bindings():
 	interaction.models = Node.new()
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
-	assert(rules.library.get_state_schema_version() == 27)
-	assert(rules.library.get_action_schema_version() == 17)
-	assert(rules.library.get_observation_schema_version() == 27)
+	assert(rules.library.get_state_schema_version() == 28)
+	assert(rules.library.get_action_schema_version() == 18)
+	assert(rules.library.get_observation_schema_version() == 28)
 	assert(rules.valid_actions.size() == 6)
 	# User-directed configuration: actual enum buttons, unique picks, saved
 	# pending selection and automatic handoff after the third package.
@@ -66,10 +66,14 @@ func check_bindings():
 	rules.apply_action(choose)
 	assert(rules.valid_actions.size() == 6)
 	rules.apply_action(RLCGamePickStrikeForceOctavious.make())
+	# Source-backed attachment fixture: legacy Space Marine profiles do not
+	# supply current permissions. Configure one explicit pair for the pending
+	# reserve-pair save test; do not infer permissions in production code.
+	configure_attachment_save_fixture(rules)
 	rules.apply_action(RLCGameDoneAttaching.make())
 	finish_reserve_choices(rules)
 	var target = rules.get_current_target_action()
-	assert(target != null)
+	assert(target is RLCGameAttachUnit)
 	assert(target.get_member(0) is RLCUnitID)
 	assert(target.get_member(1) is RLCUnitID)
 	var snapshot = rules.as_indented_str(rules.state)
@@ -850,3 +854,24 @@ func append_core_keyword(library, model, value, expected_name):
 	keyword.set_value(value)
 	assert(str(library.as_string_literal(keyword)) == expected_name)
 	library.append(model.get_keywords(), keyword)
+
+# Explicit binding fixture only (p66/19.01). Both models retain legacy circle
+# profiles; assigning metadata does not certify current Orks datasheets.
+func configure_attachment_save_fixture(rules):
+	var reserves = rules.state.get_board().get_reserve_units()
+	var source_id = -1
+	var target_id = -1
+	for index in range(rules.library.size(reserves)):
+		var unit = rules.library.get(reserves, index)
+		if not unit.get_owned_by_player1():
+			continue
+		if rules.library.size(unit.get_models()) == 1 and source_id < 0:
+			source_id = index
+		if rules.library.size(unit.get_models()) > 1 and target_id < 0:
+			target_id = index
+	assert(source_id >= 0 and target_id >= 0)
+	var tag = RLCOrksDatasheet.make()
+	tag.set_value(59) # Warboss permission fixture
+	rules.library.configure_orks_attachment(rules.library.get(reserves, source_id), tag)
+	tag.set_value(16) # Boyz bodyguard fixture
+	rules.library.configure_orks_attachment(rules.library.get(reserves, target_id), tag)

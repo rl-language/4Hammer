@@ -212,7 +212,15 @@ fun commit_wound_loss(Board board, DamageJob job, ModelID model, Int lost, Bool 
     if lost > 0:
         board[job.target][model].suffered_wounds = min(board[job.target][model].profile.wounds(), board[job.target][model].suffered_wounds.value + lost)
     if board[job.target][model].wounds_left() <= 0:
-        if has_destruction_trigger(board, job.source, job.source_known, board[job.target][model], fight_on_death):
+        # Source lifetime p.67 independently requires retaining the bearer,
+        # even if it has no Deadly Demise or other death-trigger ability.
+        let retained_rules = retain_attachment_rules_for_attack(board, job.target, model, job)
+        board[job.target][model].attachment_abilities_retained = retained_rules
+        let unit_death = !board[job.target].unit_destruction_event_issued and live_attachment_strength(board[job.target]) == 0 and has_source_unit_destruction_trigger(board, job)
+        board[job.target][model].destroyed_whole_unit = unit_death
+        if unit_death:
+            board[job.target].unit_destruction_event_issued = true
+        if unit_death or retained_rules or has_destruction_trigger(board, job.source, job.source_known, board[job.target][model], fight_on_death):
             board[job.target][model].state = ModelState::pending_destruction
             if fight_on_death:
                 board[job.target][model].state = ModelState::fight_on_death
@@ -237,4 +245,16 @@ fun has_source_destruction_trigger(Board board, UnitID attacker, Bool known, Mod
             event.target = board[attacker].identity
         for index in range(board.source_instances.size()):
             found = found or source_event_available(board, board.source_instances[index], event)
+    return found
+
+
+# A Bodyguard/Leader/Support component dying does not destroy the attached
+# unit. Only its final live member emits the unit event (p.66/19.02).
+fun has_source_unit_destruction_trigger(Board board, DamageJob job) -> Bool:
+    let event = source_event(SourceEventKind::unit_destroyed, board[job.target].identity, invalid_entity_identity(), invalid_entity_identity())
+    if job.source_known and job.source.get() < board.units.size():
+        event.target = board[job.source].identity
+    let found = false
+    for instance in range(board.source_instances.size()):
+        found = found or source_event_available(board, board.source_instances[instance], event)
     return found

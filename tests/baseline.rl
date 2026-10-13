@@ -998,9 +998,10 @@ fun test_attachment_preserves_component_identity() -> Bool:
     board.identify_units()
     let origin = board.reserve_units[1].identity
     let model = board.reserve_units[1][0].identity
+    board.reserve_units[1].attachment_role = AttachmentRole::leader
     board.reserve_units[1].attach_to(board.reserve_units[0])
     board.reserve_units[0].capture_starting_strength()
-    return board.reserve_units[0].starting_strenght == 6 and board.reserve_units[0][5].identity == model and board.reserve_units[0][5].original_unit == origin and board.reserve_units[0].attached_units.value[0].identity == origin and board.reserve_units[0].attached_units.value[0].starting_strength == 1
+    return board.reserve_units[0].starting_strenght == 6 and board.reserve_units[0][5].identity == model and board.reserve_units[0][5].original_unit == origin and board.reserve_units[0].attached_units[0].identity == origin and board.reserve_units[0].attached_units[0].starting_strength == 1
 
 # p.86: starting strength counts models, not the legal model-index domain.
 fun test_starting_strength_accepts_full_capacity() -> Bool:
@@ -9060,3 +9061,574 @@ fun test_orks17f_borrowed_carrier_assault() -> Bool:
     let model : ModelID
     let declaration = make_deck_declaration(board, unit_id(0), model, unit_id(0), model, 0)
     return carrier_has_ranged_rule(board, unit_id(0), WeaponRuleKind::assault) and chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::assault) and !model_weapon_has_rule(board.embarked_units[0][0], 0, WeaponRuleKind::assault)
+
+# P66/source-list fixtures use existing circle/profiles only as test data.
+# Named attachment metadata does not claim complete current Orks datasheets.
+fun attachment17g_fixture() -> Board:
+    let board : Board
+    let bodyguard = make_infernus_squad()
+    for model in range(bodyguard.models.size()):
+        bodyguard[model].abilities.clear()
+    configure_orks_attachment(bodyguard, OrksDatasheet::boyz)
+    board.reserve_units.append(bodyguard)
+    let leader = make_tantus()
+    leader[0].abilities.clear()
+    configure_orks_attachment(leader, OrksDatasheet::warboss)
+    board.reserve_units.append(leader)
+    let support = make_octavius()
+    support[0].abilities.clear()
+    configure_orks_attachment(support, OrksDatasheet::painboy)
+    board.reserve_units.append(support)
+    board.identify_units()
+    return board
+
+# Move an already formed fixture to the battlefield; this is not a setup
+# permission or a substitute for the later datasheet/geometry adapters.
+fun attachment17g_battlefield(Board board):
+    while !board.reserve_units.empty():
+        mark_unit_offboard(board.reserve_units[0], false)
+        board.units.append(board.reserve_units[0])
+        board.reserve_units.erase(0)
+    for unit in range(board.units.size()):
+        for model in range(board[unit].models.size()):
+            board[unit][model].position = board_position(5 + (model % 4) * 2 + unit * 15, 5 + (model / 4) * 2)
+        board[unit].capture_starting_strength()
+        board[unit].can_shoot = true
+        board[unit].can_charge = true
+
+# Typed per-component source helper: effects apply to the attached unit while
+# its original Leader component confers them (pp.66–67/19.04).
+fun attachment17g_source(Board board, EntityIdentity component, Int rule) -> SourceInstance:
+    let source : SourceInstance
+    source.source_unit = component
+    source.rule = rule
+    source.name.value = "Attachment lifetime fixture"s
+    source.owner = false
+    source.own_unit_passive = true
+    source.offboard_allowed = true
+    source.requires_live_source = true
+    source.duration = SourceDuration::battle
+    source.grant = source_characteristic_grant(characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 2))
+    return source
+
+# Main damage entry snapshots a real attacking unit rather than using low-level
+# storage damage as a substitute for p67 timing (damage/destruction pp.19/87).
+fun attachment17g_job(Int target, Int attacker, Bool from_attack) -> DamageJob:
+    return damage_job(DamageKind::normal, unit_id(target), unit_id(attacker), true, from_attack, 1, invalid_entity_identity())
+
+# All17 included Leader/Support rows, including the six-entry Big Mek maximum.
+# Lists are independently checked against the retrieved attachment cards.
+fun test_attachment17g_included_permission_role_counts() -> Bool:
+    let leaders = 0
+    let supports = 0
+    let tag : OrksDatasheet
+    for code in range(MAX_DATASHEETCODE):
+        tag.value = code
+        let unit : Unit
+        configure_orks_attachment(unit, tag)
+        if unit.attachment_role.value == AttachmentRole::leader.value:
+            leaders = leaders + 1
+        if unit.attachment_role.value == AttachmentRole::support.value:
+            supports = supports + 1
+    return leaders == 10 and supports == 7
+
+# Explicit examples distinguish related cards: only Mega Armour/Nazdreg lead
+# Meganobz, while Shokk Attack Gun lacks Big Mek's Flash Gitz/Breaka permissions.
+fun test_attachment17g_exact_permission_lists() -> Bool:
+    let mek : Unit
+    configure_orks_attachment(mek, OrksDatasheet::big_mek)
+    let big = mek.permitted_bodyguards.size() == 6 and mek.permitted_bodyguards[2].value == OrksDatasheet::flash_gitz.value and mek.permitted_bodyguards[5].value == OrksDatasheet::tankbustas.value
+    configure_orks_attachment(mek, OrksDatasheet::big_mek_with_shokk_attack_gun)
+    let shokk = mek.permitted_bodyguards.size() == 4 and mek.permitted_bodyguards[1].value == OrksDatasheet::mek_gunz.value and mek.permitted_bodyguards[2].value == OrksDatasheet::nobz.value
+    configure_orks_attachment(mek, OrksDatasheet::nazdreg)
+    return big and shokk and mek.permitted_bodyguards.size() == 1 and mek.permitted_bodyguards[0].value == OrksDatasheet::meganobz.value
+
+# No excluded Forge World/Legends source receives an attachment implementation.
+fun test_attachment17g_excluded_and_unknown_unavailable() -> Bool:
+    let unit : Unit
+    configure_orks_attachment(unit, OrksDatasheet::warboss_on_warbike)
+    let legends = unit.attachment_role.value == 0 and unit.permitted_bodyguards.empty()
+    configure_orks_attachment(unit, OrksDatasheet::gargantuan_squiggoth)
+    let forge = unit.attachment_role.value == 0 and unit.permitted_bodyguards.empty()
+    configure_orks_attachment(unit, OrksDatasheet::unknown)
+    return legends and forge and unit.permitted_bodyguards.empty() and unit.attachment_role.value == 0
+
+# P66 permits one role of each kind; identity/whole-model history is preserved.
+fun test_attachment17g_leader_and_support_slots() -> Bool:
+    let board = attachment17g_fixture()
+    let leader = board.reserve_units[1].identity
+    let support = board.reserve_units[2].identity
+    let model = board.reserve_units[1][0].identity
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    let leader_only = board.reserve_units[0].attached_units.size() == 1 and !attachment_role_available(board.reserve_units[0], AttachmentRole::leader)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    ref combined = board.reserve_units[0]
+    return leader_only and combined.models.size() == 7 and combined.attached_units.size() == 2 and combined.attached_units[0].identity == leader and combined.attached_units[1].identity == support and combined[5].identity == model and combined[5].original_unit == leader and combined.starting_strenght == 7 and combined.bodyguard_starting_strength == 5 and valid_state_foundations(board)
+
+# Support-first has the same role budgets, not a blanket one-character limit.
+fun test_attachment17g_support_then_leader() -> Bool:
+    let board = attachment17g_fixture()
+    attach_reserved_unit(board, unit_id(2), unit_id(0), false)
+    let support_only = !attachment_role_available(board.reserve_units[0], AttachmentRole::support) and attachment_role_available(board.reserve_units[0], AttachmentRole::leader)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    return support_only and board.reserve_units[0].attached_units.size() == 2 and board.reserve_units[0].starting_strenght == 7
+
+# Foreign, self, spare, wrong bodyguard, already-attached and in-battle choices
+# are rejected without mutating state (p66/Godot bounded selectors).
+fun test_attachment17g_legality_rejects_invalid_and_atomic() -> Bool:
+    let board = attachment17g_fixture()
+    let before = to_string(board)
+    let rejected = !attachment_valid(board, unit_id(1), unit_id(1), false) and !attachment_valid(board, unit_id(31), unit_id(0), false) and !attachment_valid(board, unit_id(1), unit_id(31), false) and !attachment_valid(board, unit_id(1), unit_id(0), true) and !attachment_valid(board, unit_id(1), unit_id(2), false)
+    let unchanged = to_string(board) == before
+    board.reserve_units[0].roster_datasheet = OrksDatasheet::gretchin.value
+    let wrong = !attachment_valid(board, unit_id(1), unit_id(0), false)
+    board.reserve_units[0].roster_datasheet = OrksDatasheet::boyz.value
+    board.start_turn_history()
+    return rejected and unchanged and wrong and !attachment_valid(board, unit_id(1), unit_id(0), false)
+
+# Generic p66 transfer supports multi-model leaders instead of asserting size1.
+# Source components retain their own count within the combined starting strength.
+fun test_attachment17g_multi_model_leader() -> Bool:
+    let board = attachment17g_fixture()
+    board.reserve_units[1].models.append(board.reserve_units[1][0])
+    board.reserve_units[1][1].identity = invalid_entity_identity()
+    board.identify_unit(board.reserve_units[1])
+    let second = board.reserve_units[1][1].identity
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    return board.reserve_units[0].models.size() == 7 and board.reserve_units[0].attached_units[0].starting_strength == 2 and board.reserve_units[0][6].identity == second and valid_state_foundations(board)
+
+# Duplicate Leaders/Supports cannot consume an existing role; empty/dead
+# prebattle sources and overflow also cannot produce a valid action (p66).
+fun test_attachment17g_duplicate_role_and_capacity() -> Bool:
+    let board = attachment17g_fixture()
+    configure_orks_attachment(board.reserve_units[2], OrksDatasheet::warboss)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    let duplicate = !attachment_valid(board, unit_id(1), unit_id(0), false)
+    let bounded = attachment17g_fixture()
+    bounded.reserve_units[0].models.resize(32)
+    for offset in range(27):
+        let model = offset + 5
+        bounded.reserve_units[0][model] = bounded.reserve_units[0][0]
+        bounded.reserve_units[0][model].identity = invalid_entity_identity()
+    bounded.identify_unit(bounded.reserve_units[0])
+    return duplicate and !attachment_valid(bounded, unit_id(1), unit_id(0), false)
+
+# Attaching an earlier reserve slot safely commits to the later target before
+# erasure/compaction; persistent model/source references do not shift (p66/88).
+fun test_attachment17g_source_before_target_compaction() -> Bool:
+    let board = attachment17g_fixture()
+    let bodyguard : Unit
+    bodyguard = board.reserve_units[0]
+    board.reserve_units[0] = board.reserve_units[1]
+    board.reserve_units[1] = bodyguard
+    let target = board.reserve_units[1].identity
+    attach_reserved_unit(board, unit_id(0), unit_id(1), false)
+    return board.reserve_units[0].identity == target and board.reserve_units[0].models.size() == 6 and board.reserve_units[0].attached_units.size() == 1
+
+# Actual prebattle frame owns choices and restores its caller. Passing one
+# player cannot let that player re-enter or prevent the other from attaching.
+fun test_attachment17g_frame_owner_and_passes() -> Bool:
+    let board = attachment17g_fixture()
+    board.current_decision_maker = true
+    let sequence = attach_leaders(board)
+    let first = !board.current_decision_maker and can sequence.attach_unit(board, unit_id(1), unit_id(0))
+    sequence.done_attaching(board)
+    let second = board.current_decision_maker and !can sequence.attach_unit(board, unit_id(1), unit_id(0))
+    sequence.done_attaching(board)
+    return first and second and sequence.is_done() and board.current_decision_maker
+
+# p67 unit keyword union does not copy Leader keywords into bodyguard models.
+fun test_attachment17g_keyword_union_not_model_spread() -> Bool:
+    let board = attachment17g_fixture()
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    return board.reserve_units[0].has_keyword(Keyword::psyker) and !board.reserve_units[0][0].has_keyword(Keyword::psyker) and board.reserve_units[0][5].has_keyword(Keyword::psyker)
+
+# Bodyguard T outranks even a tougher Leader; when bodyguards are physically
+# removed, remaining Leaders/Supports supply the maximum (p66/05.02.01).
+fun test_attachment17g_bodyguard_toughness_then_remaining() -> Bool:
+    let board = attachment17g_fixture()
+    board.reserve_units[1][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 6))
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    let bodyguard_t = board[0][0].effective_toughness()
+    let before = board[0].get_unit_toughtness() == bodyguard_t
+    for casualty in range(5):
+        board[0].remove_model(0)
+    return before and board[0].get_unit_toughtness() == board[0][0].effective_toughness() and board[0].get_unit_toughtness() > bodyguard_t and board[0].attached_units.size() == 1
+
+# Dead bodyguards do not split Leaders and Support or restore individual counts.
+# Half-strength remains against the combined initial7 models (pp66/86).
+fun test_attachment17g_bodyguard_death_keeps_combined_unit() -> Bool:
+    let board = attachment17g_fixture()
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    for casualty in range(5):
+        board[0].remove_model(0)
+    return board.units.size() == 1 and board[0].models.size() == 2 and board[0].starting_strenght == 7 and board[0].attached_units.size() == 2 and board[0].is_at_or_below_half_strength() and component_started_leading(board[0], board[0][0].original_unit) and component_started_leading(board[0], board[0][1].original_unit)
+
+# A typed unit ability spreads through the attached unit until its component's
+# last member dies; a raw model-only modifier never spreads (p67/19.04).
+fun test_attachment17g_scoped_unit_ability_and_model_modifier() -> Bool:
+    let board = attachment17g_fixture()
+    board.reserve_units[1].unit_abilities.append(AbilityKind::deep_strike)
+    board.reserve_units[1][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 3))
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    let granted = board.reserve_units[0].all_have_ability(AbilityKind::deep_strike) and !board.reserve_units[0][0].has_ability(AbilityKind::deep_strike) and board.reserve_units[0][0].effective_movement(6) == 6 and board.reserve_units[0][5].effective_movement(6) == 9
+    board.reserve_units[0].remove_model(5)
+    return granted and !board.reserve_units[0].has_ability(AbilityKind::deep_strike)
+
+# p67 component rules depend on the LAST member, not their first bearer.
+fun test_attachment17g_multi_model_component_lifetime() -> Bool:
+    let board = attachment17g_fixture()
+    board.reserve_units[1].unit_abilities.append(AbilityKind::stealth)
+    board.reserve_units[1].models.append(board.reserve_units[1][0])
+    board.reserve_units[1][1].identity = invalid_entity_identity()
+    board.identify_unit(board.reserve_units[1])
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    board.reserve_units[0].remove_model(5)
+    let survivor = board.reserve_units[0].has_ability(AbilityKind::stealth)
+    board.reserve_units[0].remove_model(5)
+    return survivor and !board.reserve_units[0].has_ability(AbilityKind::stealth)
+
+# Bodyguard-scoped rules end with the bodyguard component rather than with the
+# attached unit's last Leader, and start again on a later validated revival.
+fun test_attachment17g_bodyguard_rule_lifetime_and_revival() -> Bool:
+    let board = attachment17g_fixture()
+    board.reserve_units[0].unit_abilities.append(AbilityKind::stealth)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    for casualty in range(5):
+        board[0].remove_model(0)
+    let gone = !board[0].has_ability(AbilityKind::stealth)
+    let returned : Model
+    returned = board[0].destroyed_models.value[0]
+    board[0].destroyed_models.value.erase(0)
+    restore_attachment_provenance(board[0], returned)
+    board[0].models.append(returned)
+    return gone and board[0].has_ability(AbilityKind::stealth) and board[0].starting_strenght == 6 and valid_state_foundations(board)
+
+# Unit-only source identities resolve absorbed components instead of pointing
+# at a removed reserve slot (pp66–67). Usage belongs to the current attached unit.
+fun test_attachment17g_component_source_resolution() -> Bool:
+    let board = attachment17g_fixture()
+    let component = board.reserve_units[1].identity
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    let source = attachment17g_source(board, component, 200)
+    source.requires_leading = true
+    register_source_instance(board, source)
+    let location = locate_source(board, component, invalid_entity_identity())
+    return location.found and location.bank.value == SourceBank::reserves.value and location.unit.value == 0 and source_alive(board, source) and board.reserve_units[0][0].effective_movement(6) == 8 and valid_source_foundations(board)
+
+# p67 leading permission persists after bodyguards die; an unattached Leader
+# cannot use a rule with that condition merely because it has Leader metadata.
+fun test_attachment17g_while_leading_after_bodyguard_death() -> Bool:
+    let board = attachment17g_fixture()
+    let component = board.reserve_units[1].identity
+    let source = attachment17g_source(board, component, 201)
+    source.requires_leading = true
+    register_source_instance(board, source)
+    let death_rule = source
+    death_rule.own_unit_passive = false
+    death_rule.trigger = SourceEventKind::unit_destroyed
+    let death_event = source_event(SourceEventKind::unit_destroyed, component, invalid_entity_identity(), invalid_entity_identity())
+    let solo = !source_alive(board, source) and board.reserve_units[0][0].effective_movement(6) == 6 and !source_event_available(board, death_rule, death_event)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    for casualty in range(5):
+        board[0].remove_model(0)
+    refresh_source_effects(board, TimingWindow::none)
+    death_event.unit = board[0].identity
+    return solo and source_alive(board, source) and board[0][0].effective_movement(6) == 8 and source_event_available(board, death_rule, death_event)
+
+# P67 registered source grants stay active through attack-caused source death,
+# then expire before that attacker's destruction callbacks/removal.
+fun test_attachment17g_attack_deferred_source_grant() -> Bool:
+    let board = attachment17g_fixture()
+    let component = board.reserve_units[1].identity
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    board[1].owned_by_player1 = true
+    let source = attachment17g_source(board, component, 202)
+    register_source_instance(board, source)
+    let model : ModelID
+    model = 5
+    commit_wound_loss(board, attachment17g_job(0, 1, true), model, board[0][5].profile.wounds(), false)
+    refresh_source_effects(board, TimingWindow::none)
+    let retained = !source_alive(board, source) and source_confers_rules(board, source) and board[0][0].effective_movement(6) == 8 and board[0][5].attachment_abilities_retained
+    release_attachment_rules(board, unit_id(1))
+    return retained and !source_confers_rules(board, source) and board[0][0].effective_movement(6) == 6 and !board[0][5].attachment_abilities_retained
+
+# Non-attack destruction has no attacking-unit interval; the grant ends now.
+fun test_attachment17g_non_attack_source_expires_immediately() -> Bool:
+    let board = attachment17g_fixture()
+    let component = board.reserve_units[1].identity
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    board[1].owned_by_player1 = true
+    let source = attachment17g_source(board, component, 203)
+    register_source_instance(board, source)
+    let model : ModelID
+    model = 5
+    commit_wound_loss(board, attachment17g_job(0, 1, false), model, board[0][5].profile.wounds(), false)
+    refresh_source_effects(board, TimingWindow::none)
+    return board[0].models.size() == 5 and !source_confers_rules(board, source) and board[0][0].effective_movement(6) == 6 and board.source_effects.empty()
+
+# A unit-source grant returns when its original archived component member is
+# revived; original wargear/physical usage/start counts are preserved (p67/88).
+fun test_attachment17g_source_revival_restores_lifetime() -> Bool:
+    let board = attachment17g_fixture()
+    let component = board.reserve_units[1].identity
+    board.reserve_units[1][0].used_once_per_battle_weapon[0] = true
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    let source = attachment17g_source(board, component, 204)
+    source.requires_leading = true
+    register_source_instance(board, source)
+    board[0].remove_model(5)
+    refresh_source_effects(board, TimingWindow::none)
+    let expired = board[0][0].effective_movement(6) == 6
+    let returned : Model
+    returned = board[0].destroyed_models.value[0]
+    board[0].destroyed_models.value.erase(0)
+    restore_attachment_provenance(board[0], returned)
+    board[0].models.append(returned)
+    refresh_source_effects(board, TimingWindow::none)
+    return expired and source_confers_rules(board, source) and board[0][0].effective_movement(6) == 8 and board[0][5].used_once_per_battle_weapon[0] and board[0].starting_strenght == 6 and valid_state_foundations(board)
+
+# Painboss's own keyword/M changes do not alter other models or become a unit-
+# wide characteristic grant (Runnin' wiv da Herd; Painboss source card).
+fun test_attachment17g_painboss_mounted_bearer_only() -> Bool:
+    let board = attachment17g_fixture()
+    configure_orks_attachment(board.reserve_units[0], OrksDatasheet::squighog_boyz)
+    board.reserve_units[0][0].keywords.append(Keyword::mounted)
+    configure_orks_attachment(board.reserve_units[2], OrksDatasheet::painboss)
+    attach_reserved_unit(board, unit_id(2), unit_id(0), false)
+    return !board.reserve_units[0][5].has_keyword(Keyword::infantry) and board.reserve_units[0][5].has_keyword(Keyword::mobile) and board.reserve_units[0][5].has_keyword(Keyword::mounted) and board.reserve_units[0][5].effective_movement(6) == 10 and board.reserve_units[0][1].has_keyword(Keyword::infantry) and !board.reserve_units[0][1].has_keyword(Keyword::mobile) and board.reserve_units[0][1].effective_movement(6) == 6
+
+# The+4 M is an addition before division/rounding, and infantry attachment does
+# not activate it (Painboss card; appendix02.02.01).
+fun test_attachment17g_painboss_arithmetic_and_infantry() -> Bool:
+    let board = attachment17g_fixture()
+    configure_orks_attachment(board.reserve_units[0], OrksDatasheet::beast_snagga_boyz)
+    configure_orks_attachment(board.reserve_units[2], OrksDatasheet::painboss)
+    board.reserve_units[2][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::divide, 2))
+    attach_reserved_unit(board, unit_id(2), unit_id(0), false)
+    let infantry = board.reserve_units[0][5].effective_movement(6) == 3 and board.reserve_units[0][5].has_keyword(Keyword::infantry)
+    board.reserve_units[0][5].painboss_mounted_attachment = true
+    return infantry and board.reserve_units[0][5].effective_movement(6) == 5
+
+# Restore integrity rejects wrong component roles, strengths, origins and
+# duplicate role slots rather than letting forged metadata change combat.
+fun test_attachment17g_invalid_component_metadata() -> Bool:
+    let board = attachment17g_fixture()
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    board.reserve_units[0].attached_units[0].role.value = 0
+    let role = !valid_attachment_state(board.reserve_units[0])
+    board.reserve_units[0].attached_units[0].role = AttachmentRole::leader
+    board.reserve_units[0].starting_strenght = 5
+    let strength = !valid_attachment_state(board.reserve_units[0])
+    board.reserve_units[0].starting_strenght = 6
+    board.reserve_units[0][5].original_unit = 999
+    return role and strength and !valid_attachment_state(board.reserve_units[0])
+
+# Matching Game saves retain bounded components and all original member IDs.
+fun test_attachment17g_saved_components_round_trip() -> Bool:
+    let game = play()
+    game.board = attachment17g_fixture()
+    attach_reserved_unit(game.board, unit_id(1), unit_id(0), false)
+    attach_reserved_unit(game.board, unit_id(1), unit_id(0), false)
+    let restored = play()
+    return set_state(restored, to_string(game)) and restored.board.reserve_units[0].attached_units.size() == 2 and restored.board.reserve_units[0].starting_strenght == 7 and valid_state_foundations(restored.board)
+
+# Lone Operative protection does not return just because bodyguards died;
+# the source remains part of the same attached unit (p83/19.01.01).
+fun test_attachment17g_lone_operative_stays_attached() -> Bool:
+    let board = attachment17g_fixture()
+    board.reserve_units[1][0].abilities.append(AbilityKind::lone_operative)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    for casualty in range(5):
+        board.reserve_units[0].remove_model(0)
+    return !board.reserve_units[0].is_lone_operative() and board.reserve_units[0].has_ability(AbilityKind::lone_operative)
+
+# Whole-unit effects wait for every component, including an archived bearer;
+# p66 does not treat a Leader/bodyguard component death as unit destruction.
+fun test_attachment17g_whole_unit_destruction_waits() -> Bool:
+    let board = attachment17g_fixture()
+    let component = board.reserve_units[1].identity
+    let bearer = board.reserve_units[1][0].identity
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    let source = attachment17g_source(board, component, 205)
+    source.source_model = bearer
+    source.own_unit_passive = false
+    source.requires_live_source = false
+    source.trigger = SourceEventKind::unit_destroyed
+    source.limits.battle = 1
+    source.use_scope = SourceUseScope::unit
+    register_source_instance(board, source)
+    let model : ModelID
+    model = 5
+    commit_wound_loss(board, attachment17g_job(0, 0, false), model, board[0][5].profile.wounds(), false)
+    let leader_death = !board[0].unit_destruction_event_issued and board[0].models.size() == 6
+    model = 0
+    for casualty in range(5):
+        commit_wound_loss(board, attachment17g_job(0, 0, false), model, board[0][0].profile.wounds(), false)
+    let bodyguard_death = !board[0].unit_destruction_event_issued and board[0].models.size() == 1
+    commit_wound_loss(board, attachment17g_job(0, 0, false), model, board[0][0].profile.wounds(), false)
+    let last = board[0][0].destroyed_whole_unit and board[0].unit_destruction_event_issued and live_attachment_strength(board[0]) == 0
+    let jobs : DamageJobs
+    let cleanup = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    cleanup.choose_destruction_unit(board, unit_id(0))
+    cleanup.resolve_destruction_model(board, model)
+    cleanup.choose_source_event(board, source17e_id(0))
+    return leader_death and bodyguard_death and last and cleanup.is_done() and board[0].models.empty() and board[0].destroyed_models.value.size() == 7 and board.source_uses.size() == 1 and board.source_uses[0].subject == board[0].identity and board.source_uses[0].battle_uses == 1 and valid_state_foundations(board)
+
+# Simultaneous model/unit destruction hooks share controller groups (user
+# sequencing rule); the active player's hooks precede the opponent's.
+fun test_attachment17g_merged_death_event_ownership() -> Bool:
+    let board = attachment17g_fixture()
+    let component = board.reserve_units[1].identity
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    board[1].owned_by_player1 = true
+    let own = attachment17g_source(board, component, 206)
+    own.own_unit_passive = false
+    own.requires_live_source = false
+    own.trigger = SourceEventKind::unit_destroyed
+    own.limits.battle = 1
+    register_source_instance(board, own)
+    let opponent = attachment17g_source(board, board[1].identity, 207)
+    opponent.owner = true
+    opponent.own_unit_passive = false
+    opponent.requires_live_source = false
+    opponent.trigger = SourceEventKind::model_destroyed
+    opponent.subject = SourceSubject::enemy_unit
+    opponent.limits.battle = 1
+    register_source_instance(board, opponent)
+    board.current_decision_maker = true
+    let event = source_event(SourceEventKind::model_destroyed, board[0].identity, board[1].identity, board[0][5].identity)
+    let sequence = resolve_source_event(board, event, true)
+    let first = !board.current_decision_maker and can sequence.choose_source_event(board, source17e_id(1)) and !can sequence.choose_source_event(board, source17e_id(0))
+    sequence.choose_source_event(board, source17e_id(1))
+    let second = board.current_decision_maker and can sequence.choose_source_event(board, source17e_id(0))
+    sequence.choose_source_event(board, source17e_id(0))
+    return first and second and sequence.is_done() and board.current_decision_maker and board.source_uses.size() == 2
+
+# A specific bearer can confer a unit grant independently of surviving peers;
+# the final attack cleanup expires it and archives the exact destroyed model.
+fun test_attachment17g_bearer_cleanup_after_all_attacks() -> Bool:
+    let board = attachment17g_fixture()
+    let component = board.reserve_units[1].identity
+    let bearer = board.reserve_units[1][0].identity
+    board.reserve_units[1].models.append(board.reserve_units[1][0])
+    board.reserve_units[1][1].identity = invalid_entity_identity()
+    board.identify_unit(board.reserve_units[1])
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    let source = attachment17g_source(board, component, 208)
+    source.source_model = bearer
+    register_source_instance(board, source)
+    let model : ModelID
+    model = 5
+    commit_wound_loss(board, attachment17g_job(0, 1, true), model, board[0][5].profile.wounds(), false)
+    refresh_source_effects(board, TimingWindow::none)
+    release_attachment_rules(board, unit_id(0))
+    let retained = board[0][5].attachment_abilities_retained and board[0][0].effective_movement(6) == 8 and live_attachment_strength(board[0]) == 6
+    let jobs : DamageJobs
+    let cleanup = resolve_damage_jobs(board, jobs, true, unit_id(1))
+    let expired = board[0][0].effective_movement(6) == 6
+    cleanup.choose_destruction_unit(board, unit_id(0))
+    cleanup.resolve_destruction_model(board, model)
+    return retained and expired and cleanup.is_done() and board[0].models.size() == 6 and board[0].destroyed_models.value[0].identity == bearer and !board[0].destroyed_models.value[0].attachment_abilities_retained and valid_state_foundations(board)
+
+# Single-model activation never borrows p67's retained unit-rule permission.
+fun test_attachment17g_model_rule_not_retained_activation() -> Bool:
+    let board = attachment17g_fixture()
+    let component = board.reserve_units[1].identity
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    let source = attachment17g_source(board, component, 209)
+    source.source_model = board[0][5].identity
+    source.own_unit_passive = false
+    source.trigger = SourceEventKind::attack_targeted
+    register_source_instance(board, source)
+    let model : ModelID
+    model = 5
+    commit_wound_loss(board, attachment17g_job(0, 1, true), model, board[0][5].profile.wounds(), false)
+    let event = source_event(SourceEventKind::attack_targeted, board[0].identity, board[1].identity, invalid_entity_identity())
+    let unit_rule = source_event_available(board, source, event)
+    source.model_specific_rule = true
+    return unit_rule and !source_event_available(board, source, event) and !source_confers_rules(board, source)
+
+# The last bodyguard retains typed unit abilities through all attacks, while
+# destroyed retained models never inflate current half-strength (p67/86).
+fun test_attachment17g_bodyguard_attack_lifetime_and_half() -> Bool:
+    let board = attachment17g_fixture()
+    board.reserve_units[0].unit_abilities.append(AbilityKind::stealth)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    for casualty in range(4):
+        board[0].remove_model(0)
+    let model : ModelID
+    commit_wound_loss(board, attachment17g_job(0, 1, true), model, board[0][0].profile.wounds(), false)
+    let retained = board[0].has_ability(AbilityKind::stealth) and board[0].all_have_ability(AbilityKind::stealth) and board[0].is_at_or_below_half_strength() and live_attachment_strength(board[0]) == 1
+    release_attachment_rules(board, unit_id(1))
+    return retained and !board[0].has_ability(AbilityKind::stealth) and board[0].starting_strenght == 6
+
+# Real declarations consume bodyguard T, and refresh to remaining Leader T
+# when every physical bodyguard is gone (p66/19.02; declaration p17).
+fun test_attachment17g_actual_declaration_toughness() -> Bool:
+    let board = attachment17g_fixture()
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    board[0][5].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::replace, 9))
+    let declaration = make_declared_weapon(board, unit_id(1), 0, 0)
+    let first = declared_attack_info(board, unit_id(1), unit_id(0), declaration, board.attack_info)
+    for casualty in range(5):
+        board[0].remove_model(0)
+    let last = declared_attack_info(board, unit_id(1), unit_id(0), declaration, board.attack_info)
+    return first.target_toughness == 4 and last.target_toughness == 9
+
+# Warlord and physical One Shot identities survive formation, death and saves
+# without reselecting the model (user Warlord definition; p67/88).
+fun test_attachment17g_warlord_and_usage_identity() -> Bool:
+    let game = play()
+    game.board = attachment17g_fixture()
+    let bearer = game.board.reserve_units[1][0].identity
+    game.board.armies[0].warlord = bearer
+    game.board.reserve_units[1][0].keywords.append(Keyword::warlord)
+    game.board.reserve_units[1][0].used_once_per_battle_weapon[0] = true
+    attach_reserved_unit(game.board, unit_id(1), unit_id(0), false)
+    let formed = game.board.reserve_units[0][5].has_keyword(Keyword::warlord) and game.board.reserve_units[0][5].identity == bearer
+    game.board.reserve_units[0].remove_model(5)
+    let restored = play()
+    let saved = set_state(restored, to_string(game))
+    return formed and saved and restored.board.armies[0].warlord == bearer and restored.board.reserve_units[0].destroyed_models.value[0].used_once_per_battle_weapon[0] and restored.board.reserve_units[0].destroyed_models.value[0].identity == bearer
+
+# Formation allows the bounded32-model boundary but rejects empty/dead source
+# fixtures and duplicate Support roles (p66; implementation capacity32).
+fun test_attachment17g_capacity_boundary_and_dead_source() -> Bool:
+    let board = attachment17g_fixture()
+    board.reserve_units[0].models.resize(30)
+    for offset in range(25):
+        let model = offset + 5
+        board.reserve_units[0][model] = board.reserve_units[0][0]
+        board.reserve_units[0][model].identity = invalid_entity_identity()
+    board.identify_unit(board.reserve_units[0])
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    let boundary = board.reserve_units[0].models.size() == 32 and valid_state_foundations(board)
+    let invalid = attachment17g_fixture()
+    invalid.reserve_units[1][0].suffered_wounds = invalid.reserve_units[1][0].profile.wounds()
+    let dead = !attachment_valid(invalid, unit_id(1), unit_id(0), false)
+    invalid.reserve_units[1].models.clear()
+    let empty = !attachment_valid(invalid, unit_id(1), unit_id(0), false)
+    configure_orks_attachment(invalid.reserve_units[1], OrksDatasheet::painboy)
+    invalid.reserve_units[1].models.append(invalid.reserve_units[2][0])
+    invalid.reserve_units[1][0].identity = invalid_entity_identity()
+    invalid.reserve_units[1][0].original_unit = invalid_entity_identity()
+    invalid.identify_unit(invalid.reserve_units[1])
+    attach_reserved_unit(invalid, unit_id(2), unit_id(0), false)
+    return boundary and dead and empty and !attachment_valid(invalid, unit_id(1), unit_id(0), false)

@@ -77,7 +77,7 @@ fun embark_battlefield_unit(Board board, UnitID passenger, UnitID carrier, Model
     board.embarked_units.append(board[passenger])
     board[passenger].models.clear()
     board[passenger].destroyed_models.value.clear()
-    board[passenger].attached_units.value.clear()
+    board[passenger].attached_units.clear()
     board[passenger].identity = 0
     board[passenger].embarked_transport = 0
     board[passenger].retired = true

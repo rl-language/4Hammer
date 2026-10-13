@@ -13,6 +13,7 @@ enum SourceEventKind:
     shock_start
     shock_end
     model_destroyed
+    unit_destroyed
 
 enum SourceSubject:
     own_unit
@@ -90,6 +91,10 @@ cls SourceInstance:
     Bool aura
     # Source-bound own-unit passive, including reserves/passengers (01.02.04).
     Bool own_unit_passive
+    # P67: while-leading is retained after bodyguard death; single-model rule
+    # activation remains distinct from a conferred unit ability.
+    Bool requires_leading
+    Bool model_specific_rule
     KeywordPredicate recipient_condition
     Bool optional
     Bool offboard_allowed

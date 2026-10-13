@@ -240,13 +240,18 @@ fun valid_characteristic_modifiers(CharacteristicModifiers modifiers) -> Bool:
 
 # Filter before arithmetic; replacement/order/rounding/floors are shared with
 # the supplied appendix. One exit lets generated cleanup release owning locals.
-fun effective_characteristic_value(Int base, ModifiedCharacteristic characteristic, CharacteristicModifiers modifiers, Bool special) -> Int:
+fun effective_characteristic_value(Int base, ModifiedCharacteristic characteristic, CharacteristicModifiers modifiers, Bool special, Int extra_addition) -> Int:
     assert(valid_characteristic_modifiers(modifiers), "invalid characteristic modifiers")
     let applicable : RuleModifiers
     for i in range(modifiers.size()):
         if modifiers[i].characteristic.value == characteristic.value:
             applicable.append(modifiers[i].modifier)
-    return modified_characteristic(base, characteristic, applicable, special)
+    return modified_characteristic(base, characteristic, applicable, special, extra_addition)
+
+# Keep the existing model query while letting sourced core increments enter
+# addition before division/rounding (02.02.01; Painboss Runnin' wiv da Herd).
+fun effective_characteristic_value(Int base, ModifiedCharacteristic characteristic, CharacteristicModifiers modifiers, Bool special) -> Int:
+    return effective_characteristic_value(base, characteristic, modifiers, special, 0)
 
 # Appendix02.02.01: these characteristics belong to equipped weapon profiles.
 fun weapon_characteristic_kind(ModifiedCharacteristic kind) -> Bool:

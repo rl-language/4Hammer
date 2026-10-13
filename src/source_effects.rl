@@ -35,6 +35,12 @@ fun locate_source(Board board, EntityIdentity unit_identity, EntityIdentity mode
             ref unit = source_bank_unit(board, bank, unit_index)
             if unit.retired:
                 continue
+            if model_identity.value == 0:
+                for component in range(unit.attached_units.size()):
+                    if unit.attached_units[component].identity == unit_identity:
+                        result.found = true
+                        result.bank = bank
+                        result.unit = unit_index
             if model_identity.value == 0 and unit.identity == unit_identity:
                 result.found = true
                 result.bank = bank
@@ -46,6 +52,19 @@ fun locate_source(Board board, EntityIdentity unit_identity, EntityIdentity mode
                     result.unit = unit_index
     return result
 
+# While-leading eligibility follows original component provenance, including
+# an archived bearer at whole-unit destruction (pp66–67/19.01–19.04).
+fun source_started_leading(Unit unit, SourceInstance instance) -> Bool:
+    let component = instance.source_unit
+    if instance.source_model.value > 0:
+        for model in range(unit.models.size()):
+            if unit[model].identity == instance.source_model:
+                component = unit[model].original_unit
+        for archive in range(unit.destroyed_models.value.size()):
+            if unit.destroyed_models.value[archive].identity == instance.source_model:
+                component = unit.destroyed_models.value[archive].original_unit
+    return component_started_leading(unit, component)
+
 # Sources cannot become a different model when casualties compact its unit.
 # Own destruction triggers are separately authorised by their event (p.87).
 fun source_alive(Board board, SourceInstance instance) -> Bool:
@@ -54,15 +73,37 @@ fun source_alive(Board board, SourceInstance instance) -> Bool:
         return false
     ref unit = source_bank_unit(board, location.bank, location.unit.value)
     if instance.source_model.value == 0:
-        return has_live_damage_recipient(unit)
+        let alive = false
+        for member in range(unit.models.size()):
+            alive = alive or (unit[member].original_unit == instance.source_unit and unit[member].is_alive())
+        return alive and (!instance.requires_leading or source_started_leading(unit, instance))
     let model = unit.find_model(instance.source_model)
-    return model >= 0 and unit[model].is_alive()
+    return model >= 0 and unit[model].is_alive() and (!instance.requires_leading or source_started_leading(unit, instance))
+
+# P67 unit/bearer grants retain their conferred effects through attack end,
+# but this predicate does not make a destroyed model a live action recipient.
+fun source_confers_rules(Board board, SourceInstance instance) -> Bool:
+    if instance.model_specific_rule:
+        return source_alive(board, instance)
+    let location = locate_source(board, instance.source_unit, instance.source_model)
+    if instance.disabled or !location.found:
+        return false
+    ref unit = source_bank_unit(board, location.bank, location.unit.value)
+    if instance.source_model.value == 0:
+        return component_source_active(unit, instance.source_unit) and (!instance.requires_leading or source_started_leading(unit, instance))
+    let model = unit.find_model(instance.source_model)
+    return model >= 0 and model_confers_attached_abilities(unit[model]) and (!instance.requires_leading or source_started_leading(unit, instance))
 
 # Source rules use explicit rule codes for printed shared limits; equal names
 # do not infer shared restrictions. All numeric metadata is standard bounded.
 fun register_source_instance(Board board, SourceInstance instance) -> SourceInstanceID:
     assert(instance.rule.value > 0 and instance.rule.value < 513 and instance.source_unit.value > 0, "invalid source rule identity")
-    assert(source_alive(board, instance), "source must exist when registered")
+    # Army data exists before the optional formation choice (p66). Register
+    # an actually live source even while its while-leading condition is false;
+    # source_alive/conferral still enforce that condition during activation.
+    let physical_source = instance
+    physical_source.requires_leading = false
+    assert(source_alive(board, physical_source), "source must exist when registered")
     let id : SourceInstanceID
     id = board.source_instances.size()
     assert(valid_source_grant(instance.grant), "invalid source grant")
@@ -83,6 +124,15 @@ fun source_event(SourceEventKind kind, EntityIdentity unit, EntityIdentity targe
     result.model = model
     return result
 
+# Whole-unit death belongs to the surviving attached container even when a
+# bearer died earlier. This fallback is only event provenance, not proof of
+# a live source or ongoing conferral (p66/19.02; p67/19.04).
+fun source_event_location(Board board, SourceInstance instance, SourceEvent event) -> SourceLocation:
+    let location = locate_source(board, instance.source_unit, instance.source_model)
+    if !location.found and event.kind.value == SourceEventKind::unit_destroyed.value and !instance.model_specific_rule:
+        location = locate_source(board, instance.source_unit, invalid_entity_identity())
+    return location
+
 # Per-army/unit/model keys remain distinct. Attached model sources resolve the
 # current containing unit for per-unit use (pp.66–67; sourced Orks restrictions).
 fun source_usage_subject(Board board, SourceInstance instance) -> EntityIdentity:
@@ -91,7 +141,7 @@ fun source_usage_subject(Board board, SourceInstance instance) -> EntityIdentity
         result = instance.source_model
     if instance.use_scope.value == SourceUseScope::unit.value:
         result = instance.source_unit
-        let location = locate_source(board, instance.source_unit, instance.source_model)
+        let location = locate_source(board, instance.source_unit, invalid_entity_identity())
         if location.found:
             result = source_bank_unit(board, location.bank, location.unit.value).identity
     return result
@@ -158,9 +208,16 @@ fun source_event_available(Board board, SourceInstance instance, SourceEvent eve
         return false
     if instance.restrict_movement and (event.kind.value == SourceEventKind::move_start.value or event.kind.value == SourceEventKind::move_end.value) and instance.movement.value != event.movement.value:
         return false
+    let location = source_event_location(board, instance, event)
+    # Explicit death permission does not waive a while-leading condition.
+    if instance.requires_leading and (!location.found or !source_started_leading(source_bank_unit(board, location.bank, location.unit.value), instance)):
+        return false
     let own_destruction = event.kind.value == SourceEventKind::model_destroyed.value and instance.source_model.value > 0 and instance.source_model == event.model
-    let location = locate_source(board, instance.source_unit, instance.source_model)
-    if !own_destruction and (!location.found or !source_alive(board, instance)):
+    let own_unit_destruction = false
+    if event.kind.value == SourceEventKind::unit_destroyed.value and location.found and !instance.model_specific_rule:
+        own_unit_destruction = event.unit == source_bank_unit(board, location.bank, location.unit.value).identity
+    own_destruction = own_destruction or own_unit_destruction
+    if !own_destruction and (!location.found or !(source_alive(board, instance) or (!instance.model_specific_rule and source_confers_rules(board, instance)))):
         return false
     if location.found and location.bank.value != SourceBank::battlefield.value and !instance.offboard_allowed:
         return false
@@ -176,7 +233,7 @@ fun source_event_available(Board board, SourceInstance instance, SourceEvent eve
     let recipient_location = locate_source(board, recipient, invalid_entity_identity())
     if instance.recipient.value == SourceTarget::source_model.value and !source_alive(board, instance):
         return false
-    if !recipient_location.found or !has_live_damage_recipient(source_bank_unit(board, recipient_location.bank, recipient_location.unit.value)) or !unit_matches_keywords(source_bank_unit(board, recipient_location.bank, recipient_location.unit.value), instance.recipient_condition):
+    if !recipient_location.found or (!has_live_damage_recipient(source_bank_unit(board, recipient_location.bank, recipient_location.unit.value)) and !(own_unit_destruction and recipient == event.unit)) or !unit_matches_keywords(source_bank_unit(board, recipient_location.bank, recipient_location.unit.value), instance.recipient_condition):
         return false
     if event.kind.value == SourceEventKind::timing_window.value:
         return true
@@ -258,7 +315,7 @@ fun commit_pending_source(Board board, PendingSourceEvents pending, SourceEventI
     ref instance = board.source_instances[pending[id.value].source.value]
     let target = instance.source_unit
     if instance.recipient.value == SourceTarget::source_unit.value or instance.recipient.value == SourceTarget::source_model.value:
-        let source_location = locate_source(board, instance.source_unit, instance.source_model)
+        let source_location = source_event_location(board, instance, pending[id.value].event)
         if source_location.found:
             target = source_bank_unit(board, source_location.bank, source_location.unit.value).identity
     if instance.recipient.value == SourceTarget::event_unit.value:
@@ -268,7 +325,7 @@ fun commit_pending_source(Board board, PendingSourceEvents pending, SourceEventI
     let location = locate_source(board, target, invalid_entity_identity())
     assert(location.found, "source effect recipient disappeared")
     ref unit = source_bank_unit(board, location.bank, location.unit.value)
-    assert(has_live_damage_recipient(unit), "source effect has no live recipient")
+    assert(has_live_damage_recipient(unit) or pending[id.value].event.kind.value == SourceEventKind::unit_destroyed.value, "source effect has no live recipient")
     assert(board.next_source_effect.value + 1 < MAX_SOURCE_EFFECT_KEY and board.source_effects.has_capacity(), "source effect capacity exceeded")
     board.next_source_effect = board.next_source_effect + 1
     let effect : SourceEffect
@@ -335,7 +392,7 @@ fun refresh_source_effects(Board board, TimingWindow ended):
         # War Cry ends after the next turn, not at its start or at the end of
         # the activation turn (Orks Army Rules / War Cry).
         expired = expired or (effect.duration.value == SourceDuration::end_next_turn.value and (board.turn_serial.value > effect.turn_stamp.value + 1 or (ended == TimingWindow::turn_end and board.turn_serial.value > effect.turn_stamp.value)))
-        expired = expired or (effect.requires_live_source and !source_alive(board, board.source_instances[effect.source.value]))
+        expired = expired or (effect.requires_live_source and !source_confers_rules(board, board.source_instances[effect.source.value]))
         if board.source_instances[effect.source.value].aura or board.source_instances[effect.source.value].own_unit_passive:
             let target_location = locate_source(board, effect.target_unit, invalid_entity_identity())
             expired = expired or !target_location.found
@@ -356,7 +413,7 @@ fun refresh_source_effects(Board board, TimingWindow ended):
         board.source_effects.erase(index)
     for source_index in range(board.source_instances.size()):
         ref instance = board.source_instances[source_index]
-        if (!instance.aura and !instance.own_unit_passive) or !source_alive(board, instance):
+        if (!instance.aura and !instance.own_unit_passive) or !source_confers_rules(board, instance):
             continue
         let recipient_bank : SourceBank
         for bank_index in range(3):
@@ -451,7 +508,7 @@ fun valid_source_foundations(Board board) -> Bool:
         ref instance = board.source_instances[source_index]
         if instance.rule.value <= 0 or instance.rule.value >= 513 or instance.source_unit.value <= 0 or instance.source_unit.value > board.next_identity.value or instance.source_model.value < 0 or instance.source_model.value > board.next_identity.value:
             return false
-        if instance.trigger.value < 0 or instance.trigger.value > SourceEventKind::model_destroyed.value or instance.window.value < 0 or instance.window.value > TimingWindow::fight_end.value or instance.phase.value < 0 or instance.phase.value > BattlePhase::fight.value or instance.subject.value < 0 or instance.subject.value > SourceSubject::target_unit.value or instance.use_scope.value < 0 or instance.use_scope.value > SourceUseScope::model.value or instance.recipient.value < 0 or instance.recipient.value > SourceTarget::source_model.value or instance.duration.value < 0 or instance.duration.value > SourceDuration::end_next_turn.value:
+        if instance.trigger.value < 0 or instance.trigger.value > SourceEventKind::unit_destroyed.value or instance.window.value < 0 or instance.window.value > TimingWindow::fight_end.value or instance.phase.value < 0 or instance.phase.value > BattlePhase::fight.value or instance.subject.value < 0 or instance.subject.value > SourceSubject::target_unit.value or instance.use_scope.value < 0 or instance.use_scope.value > SourceUseScope::model.value or instance.recipient.value < 0 or instance.recipient.value > SourceTarget::source_model.value or instance.duration.value < 0 or instance.duration.value > SourceDuration::end_next_turn.value:
             return false
         let keyword : Keyword
         if !instance.recipient_condition.valid(max(keyword)):
@@ -495,7 +552,7 @@ fun valid_source_foundations(Board board) -> Bool:
                 return false
     for pending_index in range(board.active_source_events.size()):
         ref pending = board.active_source_events[pending_index]
-        if pending.source.value < 0 or pending.source.value >= board.source_instances.size() or pending.event.kind.value < 0 or pending.event.kind.value > SourceEventKind::model_destroyed.value:
+        if pending.source.value < 0 or pending.source.value >= board.source_instances.size() or pending.event.kind.value < 0 or pending.event.kind.value > SourceEventKind::unit_destroyed.value:
             return false
     let bank : SourceBank
     for bank_index in range(3):
@@ -515,7 +572,7 @@ fun valid_source_foundations(Board board) -> Bool:
 # (supplied01.02.04/02.05.01; range/base definitions supplied by the user).
 fun source_aura_target(Board board, SourceInstance instance, SourceLocation target) -> Bool:
     let location = locate_source(board, instance.source_unit, instance.source_model)
-    if !source_alive(board, instance) or !location.found:
+    if !source_confers_rules(board, instance) or !location.found:
         return false
     # Own-unit passive abilities need no external measurement and remain
     # available offboard, unlike auras (appendix01.02.04; Super Runts/Effigy).
@@ -624,3 +681,17 @@ fun riled_up_grant() -> SourceGrant:
     let result : SourceGrant
     result = grant
     return result
+
+
+# Simultaneous model/unit destruction rules share controller groups and choice
+# ordering; a source has exactly one trigger, so the total still fits64 (p.66/87;
+# user-supplied Rules Sequencing). Non-destruction dispatch remains unchanged.
+fun collect_destruction_sources(Board board, SourceEvent model_event, Bool unit_destroyed) -> PendingSourceEvents:
+    let pending = collect_source_events(board, model_event)
+    if unit_destroyed:
+        let unit_event = model_event
+        unit_event.kind = SourceEventKind::unit_destroyed
+        let additional = collect_source_events(board, unit_event)
+        for event in range(additional.size()):
+            pending.append(additional[event])
+    return pending

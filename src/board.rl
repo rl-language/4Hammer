@@ -788,7 +788,7 @@ fun register_identity(EntityIdentity identity, Int next_identity, Vector<Int> se
 # Validate live, archived and attached identities together on load; supports
 # the lifecycle/provenance invariants of pp.19, 66–67 and 86–88.
 fun valid_unit_identities(Unit unit, Int next_identity, Vector<Int> seen) -> Bool:
-    if !register_identity(unit.identity, next_identity, seen):
+    if !valid_attachment_state(unit) or !register_identity(unit.identity, next_identity, seen):
         return false
     let i = 0
     while i < unit.models.size():
@@ -801,8 +801,8 @@ fun valid_unit_identities(Unit unit, Int next_identity, Vector<Int> seen) -> Boo
             return false
         i = i + 1
     i = 0
-    while i < unit.attached_units.value.size():
-        if !register_identity(unit.attached_units.value[i].identity, next_identity, seen):
+    while i < unit.attached_units.size():
+        if !register_identity(unit.attached_units[i].identity, next_identity, seen):
             return false
         i = i + 1
     return true

@@ -213,7 +213,7 @@ fun reposition_unit(Board board, UnitID id) -> Bool:
     mark_unit_offboard(board.reserve_units.back(), true)
     board[id].models.clear()
     board[id].destroyed_models.value.clear()
-    board[id].attached_units.value.clear()
+    board[id].attached_units.clear()
     board[id].identity = 0
     board[id].retired = true
     return true

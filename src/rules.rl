@@ -19,14 +19,15 @@ import firing_deck_rules
 import source_effects
 import modifier_choices
 import orks_army_rules
+import attachment_rules
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.
 # Actual faction grants remain source data; this dispatcher installs typed grants.
-act resolve_source_event(ctx Board board, frm SourceEvent trigger) -> SourceEventResolution:
+act resolve_source_event(ctx Board board, frm SourceEvent trigger, frm Bool unit_destroyed) -> SourceEventResolution:
     frm previous_owner = board.current_decision_maker
     frm previous_candidates = board.active_source_events
-    frm pending = collect_source_events(board, trigger)
+    frm pending = collect_destruction_sources(board, trigger, unit_destroyed)
     frm player = board.current_player
     frm controllers : BInt<0, 3>
     while controllers.value < 2:
@@ -42,6 +43,11 @@ act resolve_source_event(ctx Board board, frm SourceEvent trigger) -> SourceEven
         controllers = controllers + 1
     board.active_source_events = previous_candidates
     board.current_decision_maker = previous_owner
+
+# Existing gameplay boundaries have no accompanying unit-destruction event;
+# retain their context interface while death dispatch merges both (pp.66/87).
+fun resolve_source_event(Board board, SourceEvent trigger) -> SourceEventResolution:
+    return resolve_source_event(board, trigger, false)
 
 # Wound thresholds use the printed equality boundaries (p.18). The user-
 # supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus
@@ -362,6 +368,10 @@ act prevent_wound_loss(ctx Board board, frm UnitID target, frm ModelID model, fr
 act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_attacks, frm UnitID finished_source) -> DamageResolution:
     frm previous_owner = board.current_decision_maker
     frm previous_target = board.attack_info.target_unit_id
+    # P67 conferral ends once this attacking unit's full sequence is finished,
+    # before its delayed destruction effects and removals are resolved.
+    if finish_attacks:
+        release_attachment_rules(board, finished_source)
     frm current_job : DamageJob
     frm event : PendingDestruction
     frm casualty : Model
@@ -381,8 +391,9 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             destroying_identity = 0
             if casualty.destroying_unit_known:
                 destroying_identity = board[casualty.destroying_unit].identity
-            subaction*(board) source_destruction = resolve_source_event(board, source_event(SourceEventKind::model_destroyed, board[event.unit].identity, destroying_identity, casualty.identity))
+            subaction*(board) source_destruction = resolve_source_event(board, source_event(SourceEventKind::model_destroyed, board[event.unit].identity, destroying_identity, casualty.identity), casualty.destroyed_whole_unit)
             board[event.unit][event.model].destruction_pending = false
+            board[event.unit][event.model].destroyed_whole_unit = false
             absent_source.owned_by_player1 = !board[event.unit].owned_by_player1
             retaliation = 0
             if casualty.destroying_unit_known:
@@ -2482,29 +2493,23 @@ act round(ctx Board board) -> Round:
     subaction*(board) end = resolve_timing_window(board, TimingWindow::round_end)
     expire_unused_reserves(board)
 
-# the game sequence before the battle start where players
-# can elect to attach leaders to units
+# Muster attachments use explicit Leader/Support permissions and separate
+# role slots (p.66). Source comes first in the two-UnitID editor payload; both
+# indices address reserves and are supplied by named choice-panel buttons.
 act attach_leaders(ctx Board board) -> AttachLeaderStep:
-    board.current_decision_maker = board.starting_player
-    frm passed_players = [false, false]
+    frm previous_owner = board.current_decision_maker
+    frm attachment_player = board.starting_player
+    frm passed_players : Bool[2]
     while !passed_players[0] or !passed_players[1]:
-        actions: 
+        board.current_decision_maker = attachment_player
+        actions:
             act done_attaching()
-                passed_players[int(board.current_decision_maker)] = true
-                board.current_decision_maker = !board.current_decision_maker
-            act attack_character(frm UnitID unit_id, frm UnitID char_id) {
-                unit_id.get() < board.reserve_units.size(),
-                char_id.get() < board.reserve_units.size(),
-                board.reserve_units[unit_id.get()].owned_by_player1 == board.current_decision_maker,
-                board.reserve_units[char_id.get()].owned_by_player1 == board.current_decision_maker,
-                board.reserve_units[char_id.get()].models.size() == 1,
-                board.reserve_units[char_id.get()].has_keyword(Keyword::character),
-                !board.reserve_units[unit_id.get()].all_have_keyword(Keyword::character)
-            }
-            board.reserve_units[char_id.get()].attach_to(board.reserve_units[unit_id.get()])
-            board.reserve_units.erase(char_id.get())
-            if !passed_players[int(!board.current_decision_maker)]:
-                board.current_decision_maker = !board.current_decision_maker
+                passed_players[int(attachment_player)] = true
+            act attach_unit(frm UnitID attach_source, frm UnitID attach_target) {attachment_valid(board, attach_source, attach_target, attachment_player)}
+                attach_reserved_unit(board, attach_source, attach_target, attachment_player)
+        if !passed_players[int(!attachment_player)]:
+            attachment_player = !attachment_player
+    board.current_decision_maker = previous_owner
 
 # Legacy mission-zone accessor remains for external bindings; actual setup
 # always uses complete candidate checks below (pp.14/82).

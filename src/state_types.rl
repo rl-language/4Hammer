@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 27
-const ACTION_SCHEMA_VERSION = 17
-const OBSERVATION_SCHEMA_VERSION = 27
+const STATE_SCHEMA_VERSION = 28
+const ACTION_SCHEMA_VERSION = 18
+const OBSERVATION_SCHEMA_VERSION = 28
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -125,7 +125,7 @@ fun<T, Int capacity> size_as_observation_tensor(CheckedVector<T, capacity> obj) 
 # Nonnegative bounds keep generated Python/Godot names valid in RLC 0.4.14.
 const MAX_ENTITY_IDENTITIES = 16384
 const MAX_IDENTITY_SEQUENCE = 16385
-const NEXT_STATE_SCHEMA_VERSION = 28
+const NEXT_STATE_SCHEMA_VERSION = 29
 const MAX_PHASE_SERIAL = 64
 const MAX_TURN_SERIAL = 16
 const MAX_PHASE_STAMP = 65
@@ -251,10 +251,26 @@ fun<T, Int capacity> parse_string(CheckedVector<T, capacity> result, String buff
         i = i + 1
     return true
 
+# At most one Leader and one Support, separate from the bodyguard component
+# (p.66). Source adapters provide permissions; role is not inferred from size.
+enum AttachmentRole:
+    bodyguard
+    leader
+    support
+
+const MAX_BODYGUARD_TYPES = 6
+using BodyguardPermissions = CheckedVector<DatasheetCode, MAX_BODYGUARD_TYPES>
+
+# Component identity/starting strength/source data persists after its models
+# die, allowing19.04 lifetime and later revival without splitting (pp.66–67/88).
 cls AttachmentComponent:
     EntityIdentity identity
     StartingStrength starting_strength
     Hidden<String> name
+    AttachmentRole role
+    DatasheetCode datasheet
+    Abilities abilities
+    Bool waaagh
 
 # Serialize the bounded backing collection for save/replay round trips; implementation
 # infrastructure preserves roster contents and casualties (pp.19/86).
