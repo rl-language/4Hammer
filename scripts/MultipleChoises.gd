@@ -72,6 +72,15 @@ func on_state_change():
 				effect = "Counteroffensive (2 CP)"
 			make_choise(effect + ": " + source_name, action)
 			added += 1
+		if unwrapped is RLCGameAttachUnit:
+			var source_id = unwrapped.get_member(0).get_id().get_value()
+			var target_id = unwrapped.get_member(1).get_id().get_value()
+			var reserves = GlobalRules.state.get_board().get_reserve_units()
+			var leader = GlobalRules.library.get(reserves, source_id)
+			var bodyguard = GlobalRules.library.get(reserves, target_id)
+			var role = GlobalRules.library.as_string_literal(leader.get_attachment_role())
+			make_choise("Attach " + str(role) + ": " + RLCLib.convert_string(leader.get_name().get_value()) + " to " + RLCLib.convert_string(bodyguard.get_name().get_value()), action)
+			added += 1
 		if unwrapped is RLCGameChooseWarlordModel:
 			var model_id = unwrapped.get_member(0).get_id().get_value()
 			var reserve_id = GlobalRules.state.get_board().get_selected_warlord_unit().get_id().get_value()

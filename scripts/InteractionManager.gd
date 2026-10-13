@@ -12,6 +12,10 @@ func on_state_change():
 	current_select_model_action = GlobalRules.get_current_select_model_action()
 	current_target_unit_action = GlobalRules.get_current_target_action()
 	current_select_unit_action = GlobalRules.get_current_select_unit_action()
+	# Attachment pairs address reserves; source/target battlefield clicks use
+	# different collections and must not supply those IDs.
+	if current_target_unit_action is RLCGameAttachUnit:
+		current_target_unit_action = null
 	# Deployment selects reserves through the choice panel. Battlefield model
 	# indices address a different collection and must not select reserve units.
 	if current_select_unit_action is RLCGameChooseWarlordUnit or current_select_unit_action is RLCGameSelectUnit or current_select_unit_action is RLCGameSelectReserveUnit or current_select_unit_action is RLCGameSelectIngressUnit or current_select_unit_action is RLCGameSelectScoutReserve or current_select_unit_action is RLCGameChooseStrategicReserve or current_select_unit_action is RLCGameChooseFormationPassenger or current_select_unit_action is RLCGameChooseFormationTransport or current_select_unit_action is RLCGameSelectDisembarkingUnit or current_select_unit_action is RLCGameChooseEmergencyPassenger or current_select_unit_action is RLCGameSelectFiringDeckPassenger:
