@@ -57,7 +57,7 @@ Each row is a separately reviewable batch, usually with smaller function/rule co
 | 17.C1 | ALL/ANY/NONE keyword predicates, unit versus model queries, weapon/Hunter consumers and editor labels. | Complete; see predicate report |
 | 17.C2 | Effective characteristic consumers and named weapon/unit selectors; retain modifier arithmetic, source scope and random/special values. | Complete:17.C2a/b/c engine consumers and named selectors; actual source effects/data remain later owners |
 | 17.C3 | Damaged remaining-wounds metadata and hit penalties before the cumulative cap. | Complete; see report and final validation below |
-| 17.C4 | Incoming AP/damage reductions and selective modifier ignoring in saves/damage/grouping. | Pending |
+| 17.C4 | Incoming AP/damage reductions and selective modifier ignoring in saves/damage/grouping. | 17.C4a consumers implemented; 17.C4b subset selection pending |
 | 17.D1 | Physical weapon copies/profile groups, loadout bounds and Nazdreg's sourced profile-selection exception. | Pending |
 | 17.D2 | Compound random characteristics and demise; summed-roll re-rolls, intrinsic constants and preserved random-melee assertion. | Pending |
 | 17.E | Source-instance event hooks, bounded use-scope records and effect durations/expiry across battlefield/reserve/passenger banks. | Pending |
@@ -112,3 +112,8 @@ Configuration, explicit point-free reserves and shared CP policies are implement
 ## Batch17.C3 completion
 
 [The Damaged report](damaged.md) completes explicit threshold metadata, bearer-local gathered-group refresh and the pre-cap hit penalty, including healing, retained models, Firing Deck and Torrent regressions.546 assertions /548 entries,12 sanitizer cases, focused Godot, completed game and replay/mutation checks pass; ROADMAP.md records evidence. O02 remains partial pending incoming reductions/selective ignoring17.C4 and live sources17.E. Actual datasheet profiles/grants remain pending. Next is17.C4.
+
+
+## Batch17.C4a incoming AP/D
+
+[The incoming modifier report](incoming-attack-modifiers.md) records recipient-specific any/ranged/melee operations in actual saves, normal and Devastating damage. Attack identity includes each live recipient's AP/D mapping before rounding, while printed allocation groups remain unchanged.558 assertions /560 entries,12 sanitizer cases, focused Godot,20-step Gym and fixed replay/mutation checks pass. The fresh878-action game also passes; ROADMAP.md records final provenance and limits.17.C4a is complete. O02/17.C4 remain partial:17.C4b optional modifier subset choices,17.E source conditions/expiry and actual datasheet grants are still required.

@@ -530,3 +530,8 @@ Read [the transport/Aircraft report](transports-aircraft.md) for 18.01–18.05 (
 ## Task17.C3 Damaged overlay
 
 [The Damaged report](damaged.md) implements website core ability24.39 with explicit threshold metadata and current bearer snapshots. Its -1 hit modifier precedes the supplied appendix02.02.01 cap; hits/criticals p.18, Torrent p.85 and Firing Deck p.81 retain their consumers.546 assertions /548 entries,12 sanitizer cases, focused bindings, game and replay/mutation validation pass. O02 remains partial pending incoming reductions/selective ignoring, live sources and actual datasheet grants. ROADMAP.md owns evidence and17.C4 is next.
+
+
+## Task17.C4a incoming modifier overlay
+
+[The incoming modifier report](incoming-attack-modifiers.md) adds recipient AP/D arithmetic to pp.17–19 saves/damage/grouping and p.80 Devastating consumers. Supplied appendix02.02.01 operations merge before rounding/limits;02.02.03 random D remains post-allocation, and p.24 ordinary mortals bypass weapon D. Ranged-only Mobile Fortress and all-attack Dread ’Ard source wording is recorded without installing those unit grants.558 assertions /560 entries,12 sanitizer cases, focused bindings/ML and replay/mutation validation pass. The fresh878-action game also passes. ROADMAP.md records final evidence; O02/17.C4 remain partial pending02.02.02 optional subset selection, live source effects and actual datasheets.

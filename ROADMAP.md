@@ -417,6 +417,8 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
   - [x] **17.C2c:** Named physical-weapon/profile and datasheet selectors, with actual source consumers; live aura/conditional grants retain their later batch owners.
 - [x] **17.C3:** Damaged remaining-wounds metadata and the hit-roll consumer, applied before the cumulative +/-1 cap.
 - [ ] **17.C4:** Incoming AP/damage reductions and selective modifier ignoring, with actual save/damage consumers and grouping boundaries.
+  - [x] **17.C4a:** Recipient-specific incoming AP/D arithmetic, ranged/melee scope, actual saves/normal/Devastating damage, restore checks and identical-attack boundaries. Implemented and validated; see final evidence below.
+  - [ ] **17.C4b:** Explicit optional subset selection for ignore-modifier permissions (appendix02.02.02), including WS/BS and hit rolls; preserve chooser ownership, core modifier provenance and Godot action discovery. Do not substitute an automatic negative-only filter.
 - [ ] **17.D–E:** Physical weapon capacity/profile selection, compound dice and source-instance event/use/effect records. These are distinct batches/commits, not one framework rewrite.
 - [ ] **17.F–H:** Waaagh!/riled-up and Da Boss, source-backed Orks attachments/task6, then the existing three Orks unit families with their actual rules.
 - [ ] **17.I–N:** War Horde one rule/card at a time; healing/revival; carrier permission/seating and Trukk; special/reactive movement; hit/kill provenance and post-attack effects; psychic systems and their units.
@@ -427,7 +429,7 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
 
 **Audit verification:** exactly 67 unique unit rows match the faction page's linked datasheets, all downloads succeeded, all source-labelled records are 11th edition, and all requirement IDs resolve to the audit. The 40 ordinary CP-card rows match the source cards; Hulking Brutes records its optional +1CP, and Infested War Zone records its 2CP base. Batch17.A made only documentation changes; implementation tests were not rerun for that audit because no game or test code changed. Source snapshots/hashes are outside the checkout at `/workspace/4hammer-validation/orks-audit-2026-10-12`.
 
-Task6's Orks source deferral is now resolved, but mechanics remain pending in 17.G; other factions still need their permission data. **Next implementation batch: 17.C2.** Mark later batches complete only after their actual rule, binding and sanitizer validation. Missing dimensions, source ambiguities and preserved visibility limits remain explicit dependencies; ignoring prices does not authorise inventing alternate reserve percentages or removing CP restrictions.
+Task6's Orks source deferral is now resolved, but mechanics remain pending in 17.G; other factions still need their permission data. **Next implementation batch:17.C4b.** Mark later batches complete only after their actual rule, binding and sanitizer validation. Missing dimensions, source ambiguities and preserved visibility limits remain explicit dependencies; ignoring prices does not authorise inventing alternate reserve percentages or removing CP restrictions.
 
 ### Batch17.B — implemented and validated
 
@@ -515,3 +517,16 @@ Schemas are state/observation23, action14, next-state24. Seed40000 completes878 
 Fresh short-seed mutation fuzzing completes **50 runs in61s**, coverage11,254 /features18,064, without sanitizer failures or crash artifacts (`task17c3-fuzz-verified.log`, empty `task17c3-fuzz-artifacts`). This bounded robustness check does not certify every rule or current datasheet.
 
 **17.C3 is complete. Next:17.C4**, incoming AP/D reductions and selective modifier ignoring in actual save/damage/grouping consumers. O02/task17 remain partial; actual Orks profiles/grants, live sources, attachments and later families retain their owners. All identified errors must be fixed by their owning batches, including the17.Q wrapper bottleneck.
+
+
+## Batch17.C4a completion
+
+[The incoming AP/D report](doc/incoming-attack-modifiers.md) records source-backed recipient arithmetic, explicit ranged/melee scope and real allocation/save/normal/Devastating consumers. Incoming operations merge before rounding/floors; ordinary non-attack mortal jobs bypass weapon D. Printed W/Sv/InSv allocation groups remain intact, while attack identity checks every live recipient's complete AP/D mapping. Restore validation and generated lifecycle preserve bounded state. This implements generic support, not current unit profiles or source grants.
+
+Final CTest passes **558 assertions /560 entries in404.27s**, empty discrepancies (`/workspace/4hammer-validation/task17c4a-final-ctest.log`). All12 focused native cases pass ASAN/UBSAN/leak detection (`task17c4a-sanitized.log`, `task17c4a-sanitized/driver`). The initial fixture used an unavailable CheckedVector.empty helper; its corrected size comparison is in the final verified build. The superseded first run is not passing evidence.
+
+Matching native/header/C++ artifacts in `task17c4a-godot` pass the incoming-modifier and prior weapon scripts (`task17c4a-godot.log`, `task17c4a-godot-weapon.log`); full rendered/interaction journeys were not rerun. Schemas are state/observation24, action14, next-state25. The20-step Gym check reports **22,379 action candidates /18,932,339 finite observations**, +1,393,952 (about7.95%) (`task17c4a-gym.log`). Grid/action domains and production Rules.gd/TraceManager.gd remain unchanged. Gameplay/ML reuse the newly compiled CTest wrapper importing full_game; they do not reuse the prior batch's native library.
+
+The sanitized fuzzer passes both preserved lifetime inputs, the fixed zero input and the existing878-action game replay, taking **33.921s** for that game (`task17c4a-replay.log`). Fresh short-seed mutation fuzzing completes **31 runs in62s**, coverage8,188 /features11,508, without sanitizer failures or crash artifacts (`task17c4a-fuzz.log`, empty `task17c4a-fuzz-artifacts`). These scaffold rosters do not install new incoming grants; the12 focused tests supply those explicitly. The campaign verifies robustness, not complete faction rules.
+
+Fresh schema24 seed40000 completes **878 actions**, terminal owner **-4** (`task17c4a-gameplay.log`, `task17c4a-replays`). Its input bytes match the sanitized replay exactly. **17.C4a is complete.** **Next:17.C4b**, optional arbitrary subset selection for selective modifier ignoring, including WS/BS/hit-roll permissions, correct chooser ownership and Godot discovery.17.C4/task17 and O02 remain partial. Source installation/expiry and actual profiles/grants retain their later owners; all identified issues, including17.Q wrapper retrieval performance, must be fixed by the owning batches.
