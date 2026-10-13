@@ -547,3 +547,8 @@ Final0.4.17:596 supported assertions /598 entries,38 debug and optimized sanitiz
 ## Task17.C4b optional attack modifier overlay
 
 [Optional attack modifier subsets](modifier-ignoring.md) integrates retrieved appendix02.02.02 with explicit WS/BS/hit permissions, appendix02.02.01 arithmetic/re-roll precedence and pp.17–18 grouping/natural gates. Cover/Plunging Fire pp.50/73 and Heavy/Ignores Cover/engagement pp.82/35 retain separate choices; source effects use01.02.02/01.02.04.619 assertions /621 entries,23 native sanitizer/leak cases, production Godot choices, finite Gym and fixed replay/mutation checks pass. ROADMAP.md owns exact evidence.17.C4 is complete within these explicit categories; other ignore consumers and actual included54 datasheets remain source-adapter work. Forge World/Legends units are excluded. Next is17.F; this does not certify all Orks/core rules.
+
+
+## Task17.F Orks army-rule overlay
+
+[Orks army rules](orks-army-rules.md) implements retrieved faction Army Rules and user-supplied Warlord selection. Ordinary pp.33–37/65/81 restrictions remain, with sourced riled exceptions and appendix01.02.02/01.02.04 persistence/offboard handling. War Cry spans through next-turn end; Da Boss gains literal1CP separately from Core CP/appendix08.02.01. No old-edition melee A/S boost or excluded unit adapter is added.648 assertions /650 entries,29 sanitizer/leak cases, production Godot selectors/timing/click suppression, finite Gym and fixed replay/mutation checks pass. ROADMAP.md records exact evidence; actual current54 datasheets remain their source-data batches. Next17.G resumes Leader/Support/task6, not a Legends/Forge World migration.

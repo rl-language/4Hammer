@@ -65,7 +65,7 @@ Each row is a separately reviewable batch, usually with smaller function/rule co
 | 17.D1 | Physical weapon copies/profile groups, loadout bounds and Nazdreg's sourced profile-selection exception. | Complete: engine metadata/consumers; actual unit loadouts remain later data batches |
 | 17.D2 | Compound random characteristics and demise; summed-roll re-rolls, intrinsic constants and preserved random-melee assertion. | Complete; see physical/compound report |
 | 17.E | Source-instance event hooks, bounded use-scope records and effect durations/expiry across battlefield/reserve/passenger banks. | Complete: generic event/typed-grant framework and live unit auras; specialized source adapters remain later owners |
-| 17.F | Waaagh!/riled-up, War Cry and Da Boss independently, including overlapping grants and permanent riled sources. | Pending |
+| 17.F | Waaagh!/riled-up, War Cry, Da Boss and supplied Warlord selection, including overlapping/permanent sources. | Shared engine implemented and validated; actual datasheet flags remain data owners |
 | 17.G | Resume task 6 with available Orks Leader/Support permissions, mixed characteristics, component identity and death/revival lifetime. | Pending; permissions now available |
 | 17.H | Replace the three legacy Orks unit families with current Beastboss, Beast Snagga Boyz and Squighog Boyz; add each special ability separately. Squighog geometry needs the explicit oval work below. | Pending |
 | 17.I | War Horde first: passive rule, each enhancement/upgrade, then each of six CP stratagems. Test alongside another completed detachment, rather than assuming exactly one active package. | Pending |
@@ -135,3 +135,8 @@ The user requested shared validation with distinct commits. Final RLC0.4.17 pass
 ## Batch17.C4b optional modifier subsets
 
 [The modifier choice report](modifier-ignoring.md) completes generic optional WS/BS/hit subset selection after re-rolls, preserves core provenance and controller context, adds typed source permission lifetime and grouping boundaries, and tests the production Godot Apply/Ignore panel.619 assertions /621 CTest entries,23 native sanitizer/leak cases, finite Gym and fixed replay plus43 mutation runs pass; ROADMAP.md owns exact evidence. No Gargantuan Squiggoth, Forge World or Legends adapter is installed.17.C4 is complete within this explicit scope; O02/task17 and actual included datasheet adapters remain partial. Unqualified ignore consumers beyond WS/BS/hit belong to the source-adapter batch that introduces an included requirement. Next is17.F.
+
+
+## Batch17.F army-rule integration
+
+[Orks army rules](orks-army-rules.md) completes shared current Waaagh Advance re-rolls, source-owned riled InSv/Assault/selected-Advance charge exception, both Command-start War Cry with exact next-turn-end lifetime, mandatory round-start selected-Warlord Da Boss CP, and user-supplied Warlord unit/model selection/requirements/prohibitions.648 assertions /650 entries,29 native sanitizer/leak cases, production Godot buttons/click suppression, finite Gym and preserved/game replays plus43 mutation runs pass. ROADMAP.md owns exact evidence. O01's shared army mechanism is complete, while actual keyword/profile/source adapters remain17.H–P. Legacy roster names infer no grants; all Forge World/Legends remain excluded. Next17.G resumes task6 with the included10 Leader/7 Support lists.

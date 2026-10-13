@@ -1,6 +1,6 @@
 # Rulebook design and architecture
 
-This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation after tasks 17.D/E and 17.C4b, using Rulebook compiler 0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
+This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation after tasks17.D/E,17.C4b and17.F, using Rulebook compiler 0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
 Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and [supplied appendix](11th-edition-supplied-appendix.md) for game rules. The architecture supports those rules, but its storage bounds, schemas and UI protocols are project decisions. [AGENTS.md](../AGENTS.md) records development constraints and the language conventions used here.
 
@@ -80,6 +80,7 @@ The module map below describes responsibility boundaries. Imports expose shared 
 | Terrain and objectives | [terrain_rules.rl](../src/terrain_rules.rl) | Visibility abstraction, area membership, cover, target conditions and objective/action eligibility |
 | Core stratagems and actions | [core_stratagem_rules.rl](../src/core_stratagem_rules.rl) | Core effect eligibility and phase-local action permissions; shared CP payment is on `Board` |
 | Transport and borrowed weapons | [transport_rules.rl](../src/transport_rules.rl), [firing_deck_rules.rl](../src/firing_deck_rules.rl) | Carrier/passenger links, embark/disembark setup, capacity, emergency setup and Firing Deck selections |
+| Orks army mechanics | [orks_army_rules.rl](../src/orks_army_rules.rl) | Explicit Waaagh!/Da Boss metadata, riled grants, War Cry start-window choices and pre-formation Warlord selection |
 | Source lifecycle | [source_effect_types.rl](../src/source_effect_types.rl), [source_effects.rl](../src/source_effects.rl) | Source/event/use/effect records, eligibility, typed grants, expiry, aura refresh and restore validation |
 
 Most interactive sequences live in `rules.rl`. The smaller modules expose calculations, predicates and explicit mutation helpers. Some domain modules also own a small interactive frame, such as `choose_weapon_abilities` or `select_firing_deck`. Keep reusable mechanics in those modules and let the orchestration frame decide when to invoke them.
@@ -181,7 +182,7 @@ The project requires authored persistent numeric game/frame values to use `BInt`
 
 There is no z-coordinate action. Model elevation and terrain/path metadata retain their bounded domains. Physical calculations can reconstruct micrometre coordinates and use local floats while actual saved positions remain quads. `ModelHistory` stores bounded squared horizontal segment lengths plus vertical distance, then computes square roots on demand; it does not persist a float distance cache.
 
-The current full-game layout is state/observation schema **26**, action schema **16**, with next-state bound **27**. The validated catalog has **22,680** candidates and **26,032,968** observation values. These are a versioned snapshot, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
+The current full-game layout is state/observation schema **27**, action schema **17**, with next-state bound **28**. The validated catalog has **22,746** candidates and **26,128,335** observation values. These are a versioned snapshot, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
 
 ## Turn sequence and decision ownership
 
@@ -276,6 +277,16 @@ A wound commitment can retain a destroyed model for its triggered effects or Fig
 
 Damage frames temporarily set `attack_info.target_unit_id` to the actual casualty unit. This is essential for Godot ModelID choices: self-inflicted Hazardous or a destruction cascade may target models outside the original attack target. The previous context is restored afterward.
 
+### Orks army rules and riled status
+
+Current Waaagh! grants eligible ORKS units Advance re-rolls. Riled status grants5+ InSv, ranged Assault and charge permission when selected to Advance; it does not grant the old-edition melee A/S boosts. Sparse source keys on each model preserve overlapping status grants. Save consumers select the better printed/riled base InSv before modifiers. Equipped and Firing Deck rule snapshots tag Assault with the originating effect key, so stale snapshots cannot revive expired status.
+
+The Advance charge exception is retained in bounded `UnitHistory.advance_allows_charge` when Advance is selected. Other charge restrictions remain. Turn resets clear this snapshot across banks; repositioning preserves it for the same turn.
+
+`resolve_timing_window` offers a separate one-enum Orks rule choice inside the existing controller groups. Optional War Cry is at either Command start, once per army per battle. A disabled source record owns its grants to eligible units in all banks; accepted effects survive the originating unit’s death and last to the end of the next turn (`SourceDuration.end_next_turn`). They expire after that turn’s end-window effects, not at its start. Da Boss is mandatory at round start for the selected live Warlord with explicit metadata, and grants literal1CP separately from Command Core CP. It does not use the inherited extra-CP flag as an unstated ceiling.
+
+Godot supplies explicit reserve Warlord unit/model buttons and Orks timing labels. Those selectors are excluded from battlefield clicks. Source flags/current profiles, mandatory datasheet requirements and reactive riled grants remain their actual unit adapters; these engine fixtures are not complete Orks datasheets.
+
 ## Effective characteristics and predicates
 
 Profile/weapon enum methods provide base data. Mutable arithmetic lives in sparse records attached to the affected bearer or recipient. The effective queries combine those records at the actual consumer instead of permanently rewriting the base profile.
@@ -294,7 +305,7 @@ Source-installed numerical records use the same effective M/T/Sv/InSv/Ld/OC and 
 
 ## Source events and lasting effects
 
-The source framework makes an ability's origin, usage and duration explicit. It currently installs typed characteristic, incoming-attack, weapon-rule and attack-modifier-permission grants. Actual faction abilities and specialized reactions need their source adapters; registration alone does not make every audited ability executable.
+The source framework makes an ability's origin, usage and duration explicit. It currently installs typed characteristic, incoming-attack, weapon-rule, attack-modifier-permission and riled-status grants. Actual faction abilities and specialized reactions need their source adapters; registration alone does not make every audited ability executable.
 
 | Record | Role |
 | --- | --- |
@@ -322,7 +333,7 @@ Usage keys combine the **explicit rule code**, player, army/unit/model scope and
 
 `commit_pending_source` copies the payload before tagging it. Each installed copy has its own `SourceEffectKey`; equal overlapping buffs therefore expire independently. Zero denotes an intrinsic/manual grant. Removing one key scans every live/offboard bank and casualty archive. Unit-wide grants refresh returned members without duplicating surviving records; stale weapon-rule snapshots check that their key is still active.
 
-Passive unit auras refresh source life/disablement, recipient keywords and base range. Exit removes their owned grants; entry can install a new key. Own units remain in range of their own abilities, and offboard permission never authorizes external distance/visibility measurements. Model-specific and wholly-within aura modes remain source-adapter work.
+Passive unit auras refresh source life/disablement, recipient keywords and base range. `own_unit_passive` is a distinct source mode: it follows the source model’s current unit and can grant its own ability in reserves/passengers without external measurement. It expires/reinstalls owned copies when the source dies, is disabled or changes containing unit. Exit removes their owned grants; entry can install a new key. Own units remain in range of their own abilities, and offboard permission never authorizes external distance/visibility measurements. Model-specific and wholly-within aura modes remain source-adapter work.
 
 Configured source/pending/effect/use capacities are 64, rule codes are 1–512 and monotonic effect keys are 1–4096. Registered source slots are disabled rather than erased/reindexed. Overflow asserts. These capacities must be reviewed against actual playable army combinations as data/adapters arrive.
 
@@ -336,7 +347,7 @@ The spatial model preserves whole-inch anchors with circle/base calculations and
 
 Objectives use configured marker/area metadata and stored control snapshots at rule boundaries. A bare `Board` has no mission scoring; public `play()` explicitly selects the legacy mission fixture. New mission scoring needs its own supplied definitions and boundary consumers.
 
-Army identity and up-to-three Orks detachment selections live in `ArmyConfiguration`, separately from legacy `Faction` roster IDs. Public selection explicitly enables point-free reserve budgeting under user authority. Existing point-aware fixture metadata remains supported. Detachment/CP registries provide configuration and cost/gate information; full card/enhancement effects remain later batches.
+Army identity and up-to-three Orks detachment selections live in `ArmyConfiguration`, separately from legacy `Faction` roster IDs. Orks Warlord selection uses reserve-unit then model inputs before formations; eligibility checks the unit’s ORKS/CHARACTER keywords, model Character/prohibition and all required candidates. The selected model gains WARLORD; the army keeps its stable handle through transfer/death. A legacy roster lacking current faction/army-rule metadata remains uncertified. Public selection explicitly enables point-free reserve budgeting under user authority. Existing point-aware fixture metadata remains supported. Detachment/CP registries provide configuration and cost/gate information; full card/enhancement effects remain later batches.
 
 ## Godot integration
 
@@ -428,9 +439,9 @@ The resumable-frame model gives the rules, UI, replay and learning clients a sha
 
 The generic action catalog makes host integration simple and exhaustive. Hosts currently scan it to find legal candidates, and generated wrapper fetching has a measured cost. Small coordinate domains reduce candidates; they do not remove wrapper overhead. Task 17.Q owns the required performance fix and broader rendered/integration validation.
 
-`rules.rl` remains a large orchestration module, with older combat/attachment and faction-specific paths beside the new helpers. A new implementation should follow its callers and the roadmap rather than infer completion from a type, enum entry or factory name. The current attachment entrypoint is legacy; complete source-backed Leader/Support lifecycle remains 17.G.
+`rules.rl` remains a large orchestration module, with older combat/attachment and faction-specific paths beside the new helpers. A new implementation should follow its callers and the roadmap rather than infer completion from a type, enum entry or factory name. The current attachment entrypoint is legacy; complete source-backed Leader/Support lifecycle remains17.G, the next batch.
 
-Current gaps include ignore-modifier consumers beyond WS/BS and hit rolls, full current Orks profile/loadout/ability migration, specialized source reactions, healing/revival/psychic consumers, and oval/hull/multipart geometry. All Forge World and Legends units are excluded by user direction; current Orks implementation targets the54 standard cards. The67-card source catalog retains historical identities. Points/DP accounting, continuous positions and exact body visibility are also excluded. See [the Orks audit](orks-codebase-audit.md), [coverage map](11th-edition-rule-coverage.md) and [ROADMAP.md](../ROADMAP.md) for precise ownership and source dependencies.
+Current gaps include ignore-modifier consumers beyond WS/BS and hit rolls, full current Orks profile/loadout/ability migration, source-backed attachments, specialized source reactions, healing/revival/psychic consumers, and oval/hull/multipart geometry. All Forge World and Legends units are excluded by user direction; current Orks implementation targets the54 standard cards. The67-card source catalog retains historical identities. Points/DP accounting, continuous positions and exact body visibility are also excluded. See [the Orks audit](orks-codebase-audit.md), [coverage map](11th-edition-rule-coverage.md) and [ROADMAP.md](../ROADMAP.md) for precise ownership and source dependencies.
 
 For subsystem detail, use [attack declarations/dice](attack-declarations-dice.md), [damage/destruction](saves-damage-destruction.md), [movement/deployment](movement-deployment.md), [modifiers](model-characteristics.md), [physical weapons/compound dice](physical-weapons-compound-dice.md), [source effects](source-instances-effects.md) and [transports/Aircraft](transports-aircraft.md). Earlier reports contain historical schemas/test counts; current source and the latest roadmap completion section take precedence.
 

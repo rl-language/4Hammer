@@ -19,7 +19,7 @@ Dice modifiers apply after rerolls. “Unmodified” means the result after rero
 - Random D: determine independently each time an attack inflicts damage, after the opposing player selects the recipient model. That determination is a damage roll. An operator suffix such as the `+1` in D6+1 belongs to the characteristic, rather than being a modifier.
 - Other random characteristics: determine individually per model/weapon each time needed.
 
-Current Stat fixtures represent fixed values and a single D3/D6-style random domain; sums/operators and new random model characteristics need corresponding supplied datasheets and representation in their owning tasks. The user directs us to assume random-A melee weapons do not exist. Melee target declaration asserts fixed A; unsupported data fails explicitly rather than inventing a split policy.
+At task9 completion, Stat fixtures represented fixed values and a single D3/D6-style domain. Batch17.D subsequently added bounded compound D3/D6 expressions/constants and whole-roll re-rolls; current datasheet values still require their owning adapters. The user directs us to assume random-A melee weapons do not exist. Melee target declaration asserts fixed A; unsupported data fails explicitly rather than inventing a split policy.
 
 ## Re-rolls — 01.05.02
 
@@ -33,7 +33,7 @@ The task-9 implementation permits replacement targets for unresolved weapon shar
 
 ## Remaining sources
 
-Multiple Weapon Profiles was subsequently supplied below. Source gates for healing, extra CP, supplied mission/faction data and other absent app definitions remain open; these definitions do not resolve them. They do not authorize an invented faction ability, profile-switching mechanic or deployment rule.
+Multiple Weapon Profiles was subsequently supplied below. Task17 source retrieval resolved availability of healing/revival and further appendix definitions; their consumers remain the named roadmap tasks. Unsupplied missions/other factions remain source gaps. They do not authorize an invented faction ability, profile-switching mechanic or deployment rule.
 
 ## Multiple Weapon Profiles — 04.01.03
 
@@ -83,3 +83,14 @@ Example: Your unit can ignore characteristic modifiers and is under the effect o
 Example: Your unit’s ranged attacks can ignore roll modifiers and are under the effect of +1 to hit rolls and -1 to hit rolls. You can choose to ignore the -1 to hit rolls, meaning those attacks will only be affected by the +1 to hit rolls.
 
 Implementation boundary:17.C4b integrates explicit WS/BS and hit-roll permissions. The definition’s unqualified coverage of every characteristic/roll does not imply those additional consumers have been implemented. Forge World/Legends units are excluded; no Gargantuan Squiggoth grant is installed.
+
+
+## Select your Warlord — user supplied during17.F
+
+Authority: supplied by the user on2026-10-13 in response to the17.F source gap; no core-PDF page is claimed.
+
+Select one CHARACTER unit to be your Warlord’s unit. This must be a unit that has the faction keyword you chose as your army faction. Then select one CHARACTER model in that unit to be your Warlord, the supreme leader of your army, and make a note of this on your army roster. That model gains the WARLORD keyword.
+
+Some units have a rule on their datasheet stating that they must be your WARLORD. If you want to include one or more of these units in your army, you must select one of them to be your WARLORD. Rules that state that a model cannot be your WARLORD take precedence over ones that require it to be your WARLORD.
+
+Current17.F integration covers Orks pre-formation selection, stable identity and the Da Boss consumer. Actual profile/mandatory/prohibition metadata remains each included datasheet’s implementation owner.
