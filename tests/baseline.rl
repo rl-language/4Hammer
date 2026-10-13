@@ -9633,6 +9633,8 @@ fun test_attachment17g_capacity_boundary_and_dead_source() -> Bool:
     attach_reserved_unit(invalid, unit_id(2), unit_id(0), false)
     return boundary and dead and empty and !attachment_valid(invalid, unit_id(1), unit_id(0), false)
 
+# Current HTML profile tables, including their separately printed InSv boxes.
+# Sources: Beastboss, Beast-Snagga-Boyz, Squighog-Boyz Orks card URLs.
 fun orks17h1_profile_values(Profile profile, Int expected_movement, Int expected_toughness, Int expected_save, Int expected_invulnerable, Int expected_wounds, Int expected_leadership, Int expected_control, Int expected_fnp) -> Bool:
     return profile.movement() == expected_movement and profile.thoughness() == expected_toughness and profile.save() == expected_save and profile.invuln_save() == expected_invulnerable and profile.wounds() == expected_wounds and profile.leadership() == expected_leadership and profile.control() == expected_control and profile.feel_no_pain() == expected_fnp
 
@@ -9644,21 +9646,190 @@ fun orks17h1_weapon_values(Weapon weapon, Int expected_range_value, Int expected
 
 # Small declaration fixture with real current Snagga loadout metadata; geometry
 # is a circle fixture, not production roster integration or missing abilities.
-# Current HTML profile tables; pure data tests precede factory integration.
+fun orks17h1_attack_board() -> Board:
+    let board : Board
+    board.units.append(make_orks_beast_snagga_boyz(1, 9, 1))
+    let target = make_infernus_squad()
+    target.models.resize(1)
+    target.owned_by_player1 = true
+    target[0].position = board_position(4, 3)
+    board.units.append(target)
+    for model in range(board[0].models.size()):
+        board[0][model].position = board_position(2 + (model % 3) * 2, 5 + (model / 3) * 2)
+    board.identify_units()
+    board.capture_starting_strengths()
+    for unit in range(board.units.size()):
+        board[unit].capture_starting_strength()
+        board[unit].can_shoot = true
+        board[unit].can_charge = true
+    return board
+
+# Beastboss now has T6,5+ InSv,6+ FNP, and one combined melee weapon.
 fun test_orks17h1_beastboss_profile() -> Bool:
-    return orks17h1_profile_values(Profile::orks_beastboss, 6, 6, 4, 5, 6, 6, 1, 6) and Profile::orks_beastboss.base_size() == 50.0
+    let unit = make_orks_beastboss()
+    return unit.models.size() == 1 and orks17h1_profile_values(unit[0].profile, 6, 6, 4, 5, 6, 6, 1, 6) and unit[0].profile.base_size() == 50.0 and profile_base_width(unit[0].profile) == 50.0
 
+# Boy1W/Nob3W share6+ InSv; the old FNP6 is absent on both profiles.
 fun test_orks17h1_snagga_profiles() -> Bool:
-    return orks17h1_profile_values(Profile::orks_beast_snagga_nob, 6, 5, 5, 6, 3, 7, 2, 10) and orks17h1_profile_values(Profile::orks_beast_snagga_boy, 6, 5, 5, 6, 1, 7, 2, 10)
+    let unit = make_orks_beast_snagga_boyz(1, 9, 0)
+    return orks17h1_profile_values(unit[0].profile, 6, 5, 5, 6, 3, 7, 2, 10) and orks17h1_profile_values(unit[1].profile, 6, 5, 5, 6, 1, 7, 2, 10) and unit[0].profile.base_size() == 32.0 and unit[1].profile.base_size() == 32.0
 
+# Both mounted types are T6,6+ InSv with no FNP; Nob has4W, Boy3W.
 fun test_orks17h1_squighog_profiles() -> Bool:
-    return orks17h1_profile_values(Profile::orks_nob_on_smasha_squig, 10, 6, 4, 6, 4, 7, 2, 10) and orks17h1_profile_values(Profile::orks_squighog_boy, 10, 6, 4, 6, 3, 7, 2, 10)
+    let unit = make_orks_squighog_boyz(1, 3)
+    return orks17h1_profile_values(unit[0].profile, 10, 6, 4, 6, 4, 7, 2, 10) and orks17h1_profile_values(unit[1].profile, 10, 6, 4, 6, 3, 7, 2, 10)
 
+# Exact oval dimensions are data; they do not authorize a circular placement.
+fun test_orks17h1_squighog_ovals_remain_unavailable() -> Bool:
+    let unit = make_orks_squighog_boyz(1, 3)
+    unit[0].position = board_position(5, 5)
+    let board : Board
+    return unit[0].profile.base_size() == 90.0 and profile_base_width(unit[0].profile) == 52.0 and unit[1].profile.base_size() == 75.0 and profile_base_width(unit[1].profile) == 42.0 and unit[0].geometry.unsupported_footprint and unit[1].geometry.unsupported_footprint and !model_placement_valid(board, unit[0]) and !setup_at_valid(board, unit, board_position(5, 5), MovementKind::normal, false)
+
+# Literal ranges include intermediate counts; price tiers add no count rule.
+fun test_orks17h1_snagga_composition_bounds() -> Bool:
+    return orks_snagga_composition_valid(1, 9, 0) and orks_snagga_composition_valid(2, 18, 2) and orks_snagga_composition_valid(2, 11, 1) and !orks_snagga_composition_valid(0, 9, 0) and !orks_snagga_composition_valid(3, 9, 0) and !orks_snagga_composition_valid(1, 8, 0) and !orks_snagga_composition_valid(1, 19, 0)
+
+# Optional quota is one additional Thump Gun per ten total models.
+fun test_orks17h1_thump_gun_quota() -> Bool:
+    return orks_snagga_composition_valid(1, 9, 1) and !orks_snagga_composition_valid(1, 9, 2) and orks_snagga_composition_valid(1, 18, 1) and !orks_snagga_composition_valid(1, 18, 2) and orks_snagga_composition_valid(2, 18, 2) and !orks_snagga_composition_valid(2, 18, 3) and !orks_snagga_composition_valid(1, 9, -1)
+
+# Printed independent1–2/3–6 ranges are preserved without prices.
+fun test_orks17h1_squighog_composition_bounds() -> Bool:
+    return orks_squighog_composition_valid(1, 3) and orks_squighog_composition_valid(2, 6) and orks_squighog_composition_valid(2, 5) and !orks_squighog_composition_valid(0, 3) and !orks_squighog_composition_valid(3, 3) and !orks_squighog_composition_valid(1, 2) and !orks_squighog_composition_valid(1, 7)
+
+# Minimum/maximal legal source composition produces bounded starting counts.
+fun test_orks17h1_factories_capture_composition() -> Bool:
+    let small = make_orks_beast_snagga_boyz(1, 9, 0)
+    let large = make_orks_beast_snagga_boyz(2, 18, 2)
+    let mounted = make_orks_squighog_boyz(2, 6)
+    return small.models.size() == 10 and small.starting_strenght == 10 and large.models.size() == 20 and large.starting_strenght == 20 and mounted.models.size() == 8 and mounted.starting_strenght == 8 and large[1].profile == Profile::orks_beast_snagga_nob and large[2].profile == Profile::orks_beast_snagga_boy
+
+# No inherited Morgrim/Beastboss/monster-hunter identity or old ability grants.
+fun test_orks17h1_beastboss_keywords_and_army_metadata() -> Bool:
+    let unit = make_orks_beastboss()
+    return unit[0].has_keyword(Keyword::orks) and unit[0].has_keyword(Keyword::infantry) and unit[0].has_keyword(Keyword::beast_snagga) and unit[0].has_keyword(Keyword::character) and unit[0].has_keyword(Keyword::warboss) and !unit[0].has_keyword(Keyword::beastboss) and unit[0].has_da_boss and unit_has_waaagh(unit) and unit[0].abilities.empty() and unit_matches_datasheet(unit, OrksDatasheet::beastboss) and unit.attachment_role.value == AttachmentRole::leader.value
+
+# Battleline/Beast Snagga/Mob/Orks are actual keywords on every member.
+fun test_orks17h1_snagga_keywords_and_metadata() -> Bool:
+    let unit = make_orks_beast_snagga_boyz(2, 18, 0)
+    let valid = unit.attachment_role.value == AttachmentRole::bodyguard.value and unit_has_waaagh(unit)
+    for model in range(unit.models.size()):
+        valid = valid and unit[model].has_keyword(Keyword::battleline) and unit[model].has_keyword(Keyword::infantry) and unit[model].has_keyword(Keyword::beast_snagga) and unit[model].has_keyword(Keyword::mob) and unit[model].has_keyword(Keyword::orks) and !unit[model].has_keyword(Keyword::monster_hunters) and unit[model].abilities.empty() and model_matches_datasheet(unit[model], OrksDatasheet::beast_snagga_boyz)
+    return valid
+
+# Explosives/Mobile are included, with no inherited infantry/squighog keyword.
+fun test_orks17h1_squighog_keywords_and_metadata() -> Bool:
+    let unit = make_orks_squighog_boyz(2, 6)
+    let valid = unit_has_waaagh(unit)
+    for model in range(unit.models.size()):
+        valid = valid and unit[model].has_keyword(Keyword::mounted) and unit[model].has_keyword(Keyword::beast_snagga) and unit[model].has_keyword(Keyword::explosives) and unit[model].has_keyword(Keyword::mobile) and unit[model].has_keyword(Keyword::orks) and !unit[model].has_keyword(Keyword::infantry) and !unit[model].has_keyword(Keyword::squighog_boyz) and unit[model].abilities.empty()
+    return valid
+
+# Beastboss has exactly two weapons, one combined six-attack melee profile.
+fun test_orks17h1_beastboss_equipment() -> Bool:
+    let unit = make_orks_beastboss()
+    return unit[0].weapons.size() == 2 and equipped_named_weapon(unit[0], 0).value == NamedWeapon::shoota.value and equipped_named_weapon(unit[0], 1).value == NamedWeapon::beast_snagga_klaw_and_beastchoppa.value and orks17h1_weapon_values(unit[0].weapons[0], 18, 2, 4, 4, 0, 1) and orks17h1_weapon_values(unit[0].weapons[1], 0, 6, 2, 12, -2, 2)
+
+# Thump Gun augments the Boy's default equipment; a Nob never receives it.
+fun test_orks17h1_thump_adds_without_replacing() -> Bool:
+    let unit = make_orks_beast_snagga_boyz(2, 18, 2)
+    return unit[0].weapons.size() == 2 and unit[1].weapons.size() == 2 and unit[2].weapons.size() == 4 and unit[3].weapons.size() == 4 and unit[4].weapons.size() == 3 and equipped_named_weapon(unit[2], 0).value == NamedWeapon::slugga.value and equipped_named_weapon(unit[2], 1).value == NamedWeapon::choppa.value and equipped_named_weapon(unit[2], 3).value == NamedWeapon::thump_gun.value
+
+# Every current Snagga row is fixed-A, including Thump Gun's3 (not D3/Blast).
 fun test_orks17h1_snagga_weapon_table() -> Bool:
     return orks17h1_weapon_values(Weapon::orks_slugga, 12, 1, 5, 4, 0, 1) and orks17h1_weapon_values(Weapon::orks_thump_gun, 18, 3, 5, 6, 0, 2) and !Weapon::orks_thump_gun.has_rule(WeaponRuleKind::blast) and orks17h1_weapon_values(Weapon::orks_choppa_standard, 0, 3, 3, 5, -1, 1) and orks17h1_weapon_values(Weapon::orks_choppa_hunter, 0, 3, 3, 6, -2, 1) and orks17h1_weapon_values(Weapon::orks_power_snappa, 0, 3, 3, 8, -2, 2)
 
 # Profile alternatives share one physical Choppa; reject selecting both.
+fun test_orks17h1_choppa_physical_profile_selection() -> Bool:
+    let board = orks17h1_attack_board()
+    let selected : Bool[MAX_WEAPONS]
+    let first = weapon_selection_valid(board, unit_id(0), 1, 1, true, selected, false)
+    selected[1] = true
+    return first and !weapon_selection_valid(board, unit_id(0), 1, 2, true, selected, false) and board[0][1].weapon_profile_groups[1].value == 1 and board[0][1].weapon_profile_groups[2].value == 1 and equipped_named_profile(board[0][1], 2).value == NamedWeaponProfile::choppa_hunter.value
+
+# Hunter may target either Monster or Vehicle, never an ordinary infantry unit.
+fun test_orks17h1_hunter_actual_target_legality() -> Bool:
+    let board = orks17h1_attack_board()
+    let declaration = make_declared_weapon(board, unit_id(0), 1, 2)
+    let excluded = !declaration_target_valid(board, unit_id(0), declaration, unit_id(1), true)
+    board[1][0].keywords.append(Keyword::monster)
+    let monster = declaration_target_valid(board, unit_id(0), declaration, unit_id(1), true)
+    board[1][0].keywords.clear()
+    board[1][0].keywords.append(Keyword::vehicle)
+    return excluded and monster and declaration_target_valid(board, unit_id(0), declaration, unit_id(1), true)
+
+# Whole-unit excluded keywords govern actual Lethal Hits, not allocated models.
+fun test_orks17h1_lethal_hits_target_exclusion() -> Bool:
+    let board = orks17h1_attack_board()
+    let declaration = make_declared_weapon(board, unit_id(0), 1, 0)
+    let ordinary = chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::letal_hits)
+    board[1][0].keywords.append(Keyword::monster)
+    let monster = !chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::letal_hits)
+    board[1][0].keywords.clear()
+    board[1][0].keywords.append(Keyword::vehicle)
+    return ordinary and monster and !chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::letal_hits)
+
+# Combined Beastboss Sustained Hits2 uses the same positive ANY condition.
+fun test_orks17h1_beastboss_conditional_sustained() -> Bool:
+    let board = orks17h1_attack_board()
+    board[0] = make_orks_beastboss()
+    board.identify_units()
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 1)
+    let ordinary = !chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::sustained_hit)
+    board[1][0].keywords.append(Keyword::vehicle)
+    return ordinary and chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::sustained_hit) and chosen_weapon_parameter(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::sustained_hit) == 2
+
+# The new anti-Monster/Vehicle4+ reaches the critical-wound consumer.
+fun test_orks17h1_thump_actual_anti_consumer() -> Bool:
+    let board = orks17h1_attack_board()
+    let declaration = make_declared_weapon(board, unit_id(0), 1, 3)
+    let ordinary = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    let ordinary_threshold = critical_wound_threshold(board, ordinary)
+    board[1][0].keywords.append(Keyword::monster)
+    let monster = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return ordinary_threshold == 6 and critical_wound_threshold(board, monster) == 4 and declaration_fixed_attacks(board, unit_id(0), declaration, 0) == 3
+
+# Full mounted weapon rows have the printed S7/Cleave2 Big Choppa and no Lance.
 fun test_orks17h1_squighog_weapon_table() -> Bool:
     return orks17h1_weapon_values(Weapon::orks_saddlegit_shiv, 9, 1, 4, 3, 0, 1) and orks17h1_weapon_values(Weapon::orks_stikka_ranged, 9, 1, 5, 5, -1, 2) and orks17h1_weapon_values(Weapon::orks_big_choppa, 0, 4, 3, 7, -1, 2) and Weapon::orks_big_choppa.get_rule_parameter(WeaponRuleKind::cleave) == 2 and orks17h1_weapon_values(Weapon::orks_squig_jaws, 0, 3, 4, 6, -1, 2) and Weapon::orks_squig_jaws.has_rule(WeaponRuleKind::extra_attacks) and orks17h1_weapon_values(Weapon::orks_stikka_melee, 0, 3, 3, 5, -1, 2) and !Weapon::orks_stikka_melee.has_rule(WeaponRuleKind::lance)
 
 # Mounted models retain all equipment, including melee Stikka absent before.
+fun test_orks17h1_squighog_equipment_and_profiles() -> Bool:
+    let unit = make_orks_squighog_boyz(1, 3)
+    return unit[0].weapons.size() == 3 and unit[1].weapons.size() == 4 and equipped_named_weapon(unit[0], 0).value == NamedWeapon::slugga.value and equipped_named_weapon(unit[0], 1).value == NamedWeapon::big_choppa.value and equipped_named_weapon(unit[0], 2).value == NamedWeapon::squig_s_jaws.value and equipped_named_weapon(unit[1], 0).value == NamedWeapon::saddlegit_s_shiv.value and equipped_named_profile(unit[1], 1).value == NamedWeaponProfile::stikka_ranged.value and equipped_named_profile(unit[1], 2).value == NamedWeaponProfile::stikka_melee.value and unit[1].weapon_profile_groups[1] == unit[1].weapon_profile_groups[2]
+
+# Each copy has fresh owning storage and per-model physical profile selection.
+fun test_orks17h1_equipment_copies_are_independent() -> Bool:
+    let unit = make_orks_beast_snagga_boyz(1, 9, 0)
+    unit[1].used_once_per_battle_weapon[1] = true
+    unit[1].weapons.clear()
+    return unit[2].weapons.size() == 3 and !unit[2].used_once_per_battle_weapon[1]
+
+# Real current data passes the new attachment permission and bodyguard T path.
+fun test_orks17h1_current_beastboss_attachment() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_orks_beast_snagga_boyz(1, 9, 0))
+    board.reserve_units.append(make_orks_beastboss())
+    board.identify_units()
+    let permitted = attachment_valid(board, unit_id(1), unit_id(0), false)
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    return permitted and board[0].models.size() == 11 and board[0].starting_strenght == 11 and board[0].get_unit_toughtness() == 5 and board[0][10].effective_toughness() == 6 and unit_has_waaagh(board[0]) and valid_state_foundations(board)
+
+# Source data survives a Game save with mixed profiles, names and optional guns.
+fun test_orks17h1_current_data_saved_round_trip() -> Bool:
+    let game = play()
+    game.board.reserve_units.append(make_orks_beastboss())
+    game.board.reserve_units.append(make_orks_beast_snagga_boyz(2, 18, 2))
+    game.board.reserve_units.append(make_orks_squighog_boyz(2, 6))
+    game.board.identify_units()
+    let restored = play()
+    return set_state(restored, to_string(game)) and restored.board.reserve_units[1].models.size() == 20 and restored.board.reserve_units[1][2].weapons.size() == 4 and equipped_named_profile(restored.board.reserve_units[1][2], 2).value == NamedWeaponProfile::choppa_hunter.value and restored.board.reserve_units[2][0].geometry.unsupported_footprint and profile_base_width(restored.board.reserve_units[2][0].profile) == 52.0 and valid_state_foundations(restored.board)
+
+# This subtask supplies exact data; no incomplete card/legacy roster is promoted.
+fun test_orks17h1_data_stage_has_no_unsourced_special_grants() -> Bool:
+    let boss = make_orks_beastboss()
+    let snagga = make_orks_beast_snagga_boyz(1, 9, 0)
+    let hog = make_orks_squighog_boyz(1, 3)
+    return boss.unit_abilities.empty() and snagga.unit_abilities.empty() and hog.unit_abilities.empty() and !boss[0].grants_unit_riled_up and !hog[0].has_random_movement and !hog[0].has_deadly_demise

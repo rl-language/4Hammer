@@ -20,6 +20,7 @@ import source_effects
 import modifier_choices
 import orks_army_rules
 import attachment_rules
+import orks_unit_data
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.
