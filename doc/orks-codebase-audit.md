@@ -58,9 +58,9 @@ Each row is a separately reviewable batch, usually with smaller function/rule co
 | 17.C2 | Effective characteristic consumers and named weapon/unit selectors; retain modifier arithmetic, source scope and random/special values. | Complete:17.C2a/b/c engine consumers and named selectors; actual source effects/data remain later owners |
 | 17.C3 | Damaged remaining-wounds metadata and hit penalties before the cumulative cap. | Complete; see report and final validation below |
 | 17.C4 | Incoming AP/damage reductions and selective modifier ignoring in saves/damage/grouping. | 17.C4a consumers implemented; 17.C4b subset selection pending |
-| 17.D1 | Physical weapon copies/profile groups, loadout bounds and Nazdreg's sourced profile-selection exception. | Pending |
-| 17.D2 | Compound random characteristics and demise; summed-roll re-rolls, intrinsic constants and preserved random-melee assertion. | Pending |
-| 17.E | Source-instance event hooks, bounded use-scope records and effect durations/expiry across battlefield/reserve/passenger banks. | Pending |
+| 17.D1 | Physical weapon copies/profile groups, loadout bounds and Nazdreg's sourced profile-selection exception. | Complete: engine metadata/consumers; actual unit loadouts remain later data batches |
+| 17.D2 | Compound random characteristics and demise; summed-roll re-rolls, intrinsic constants and preserved random-melee assertion. | Complete; see physical/compound report |
+| 17.E | Source-instance event hooks, bounded use-scope records and effect durations/expiry across battlefield/reserve/passenger banks. | Complete: generic event/typed-grant framework and live unit auras; specialized source adapters remain later owners |
 | 17.F | Waaagh!/riled-up, War Cry and Da Boss independently, including overlapping grants and permanent riled sources. | Pending |
 | 17.G | Resume task 6 with available Orks Leader/Support permissions, mixed characteristics, component identity and death/revival lifetime. | Pending; permissions now available |
 | 17.H | Replace the three legacy Orks unit families with current Beastboss, Beast Snagga Boyz and Squighog Boyz; add each special ability separately. Squighog geometry needs the explicit oval work below. | Pending |
@@ -117,3 +117,12 @@ Configuration, explicit point-free reserves and shared CP policies are implement
 ## Batch17.C4a incoming AP/D
 
 [The incoming modifier report](incoming-attack-modifiers.md) records recipient-specific any/ranged/melee operations in actual saves, normal and Devastating damage. Attack identity includes each live recipient's AP/D mapping before rounding, while printed allocation groups remain unchanged.558 assertions /560 entries,12 sanitizer cases, focused Godot,20-step Gym and fixed replay/mutation checks pass. The fresh878-action game also passes; ROADMAP.md records final provenance and limits.17.C4a is complete. O02/17.C4 remain partial:17.C4b optional modifier subset choices,17.E source conditions/expiry and actual datasheet grants are still required.
+
+
+## Shared17.D/E implementation overlay
+
+[Physical weapons/compound dice](physical-weapons-compound-dice.md) resolves O03 and O04's storage/profile-selection consumers: a reviewed13-profile envelope, explicitly permitted simultaneous Nazdreg profiles, independent physical copies/One Shot and Hazardous identity, original D3/D6 expressions/constants and complete summed re-rolls in actual A/D/M/demise. Actual equipment quotas/factories remain their datasheet batches; two Stompa weapon rows are source fixtures, not a complete Stompa implementation.
+
+[Source instances/effects](source-instances-effects.md) resolves O06's generic event/use framework alongside legacy timing groups, and O02's typed grant/expiry/live-unit-aura foundations. Stable unit/model sources, owner/scope-specific conjunctive limits, optional/mandatory sequencing, overlapping effect ownership and expiry across banks/archives have actual consumers and restore validation. Specialized reactions/conditions, model/wholly-within aura modes and current source abilities remain their source adapters.
+
+The user requested shared validation with distinct commits. Final RLC0.4.17 passes596 assertions /598 CTest entries, all38 focused cases in both unoptimized and optimized ASAN/UBSAN/leak builds, matching source-button/weapon Godot checks, finite Gym and preserved/game fuzzer inputs plus41 mutation runs. ROADMAP.md records provenance, growth and remaining work. The compiler fixes the independently verified constant-control-flow cleanup defect; no custom lifecycle or workaround remains. **Next:17.C4b**; O02/task17 and all current datasheet migrations remain partial.

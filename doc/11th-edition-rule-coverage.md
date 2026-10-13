@@ -535,3 +535,10 @@ Read [the transport/Aircraft report](transports-aircraft.md) for 18.01–18.05 (
 ## Task17.C4a incoming modifier overlay
 
 [The incoming modifier report](incoming-attack-modifiers.md) adds recipient AP/D arithmetic to pp.17–19 saves/damage/grouping and p.80 Devastating consumers. Supplied appendix02.02.01 operations merge before rounding/limits;02.02.03 random D remains post-allocation, and p.24 ordinary mortals bypass weapon D. Ranged-only Mobile Fortress and all-attack Dread ’Ard source wording is recorded without installing those unit grants.558 assertions /560 entries,12 sanitizer cases, focused bindings/ML and replay/mutation validation pass. The fresh878-action game also passes. ROADMAP.md records final evidence; O02/17.C4 remain partial pending02.02.02 optional subset selection, live source effects and actual datasheets.
+
+
+## Task17.D/E physical, dice and source overlay
+
+[Physical weapons/compound dice](physical-weapons-compound-dice.md) implements appendix04.01.03 profile selection with Nazdreg's explicit source exception, core24.15/p.81 physical Hazardous counting, and appendix01.05.02/02.02.03 original summed re-rolls/random characteristics/constants in A/D/M/demise. [Source instances/effects](source-instances-effects.md) implements stable event/use/typed-grant infrastructure at core pp.16–19/28–38/87–88 with supplied current-player-first sequencing and01.02.02/01.02.04 expiry/offboard policy. Unit auras refresh source life, recipient keywords and base range; actual current faction abilities/specialized aura adapters remain their data owners.
+
+Final0.4.17:596 supported assertions /598 entries,38 debug and optimized sanitizer/leak cases, production Godot source buttons/weapon checks, finite Gym and preserved/game replays plus41 mutation runs pass. ROADMAP.md owns exact evidence.17.D/E are complete as engine infrastructure;17.C4b selective modifier subsets and actual current datasheets/grants remain pending. These fixtures do not certify full Orks or all core rules.
