@@ -1526,6 +1526,7 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
     # Exactly two controller groups; bounded frame storage supports ML inference.
     frm count : BInt<0, 3>
     frm resolved : Bool[9]
+    frm resolved_orks : Bool[2]
     frm previous_candidates = board.active_source_events
     frm source_trigger : SourceEvent
     source_trigger.kind = SourceEventKind::timing_window
@@ -1536,15 +1537,20 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
         while i < 9:
             resolved[i] = false
             i = i + 1
+        resolved_orks[0] = false
+        resolved_orks[1] = false
         board.current_decision_maker = player
         board.timing.controller = player
         if count == 1:
             board.timing.stage = TimingStage::opposing_player_rules
-        while timing_rules_remaining(board, window, player, resolved) or source_events_remaining(board, pending, player, false):
+        while timing_rules_remaining(board, window, player, resolved) or source_events_remaining(board, pending, player, false) or orks_timing_rules_remaining(board, window, player, resolved_orks, false):
             board.active_source_events = pending
             actions:
-                act finish_timing_rules() {(!(window == TimingWindow::turn_end) or !has_incoherent_units(board, player)) and !source_events_remaining(board, pending, player, true)}
+                act finish_timing_rules() {(!(window == TimingWindow::turn_end) or !has_incoherent_units(board, player)) and !source_events_remaining(board, pending, player, true) and !orks_timing_rules_remaining(board, window, player, resolved_orks, true)}
                     break
+                act choose_orks_timing_rule(frm OrksTimingRule orks_rule) {orks_timing_rule_available(board, window, player, orks_rule, resolved_orks)}
+                    resolved_orks[orks_rule.value] = true
+                    resolve_orks_timing_rule(board, player, orks_rule)
                 act choose_window_source(frm SourceEventID event) {pending_source_valid(board, pending, event, player)}
                     commit_pending_source(board, pending, event, player)
                 act choose_timing_rule(frm TimingRule rule) {
@@ -2219,7 +2225,8 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
                 extra = 2 * int(use_the_gilded_spear)
                 if do_it:
                     kind = MovementKind::advance
-                    board.current_roll = rerollable_dice_roll(board, false, false, true, board[id].owned_by_player1, id)
+                    board[id].history.advance_allows_charge = unit_is_riled_up(board[id])
+                    board.current_roll = rerollable_dice_roll(board, unit_has_waaagh(board[id]), false, true, board[id].owned_by_player1, id)
                     subaction*(board) board.current_roll
                     extra = board.current_roll.result.value
                 selected = true
@@ -2635,6 +2642,7 @@ act battle(ctx Board board) -> Battle:
     board.identify_units()
     subaction*(board) attach_leaders = attach_leaders(board)
     board.capture_starting_strengths()
+    register_orks_passive_rules(board)
     subaction*(board) transport_formations = declare_transport_passengers(board)
     subaction*(board) reserves = declare_strategic_reserves(board)
     subaction*(board) deploy = deploy(board)
@@ -2726,3 +2734,4 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
     board.armies[int(current_player)].reserve_budget = ReserveBudgetMode::point_free
     board.identify_units()
     subaction*(board) selected_detachments = select_orks_detachments(board, current_player)
+    subaction*(board) selected_warlord = select_orks_warlord(board, current_player)

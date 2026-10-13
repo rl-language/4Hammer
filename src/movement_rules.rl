@@ -152,7 +152,10 @@ fun record_move(Board board, UnitID id, MovementKind kind):
     if kind == MovementKind::advance:
         board[id].history.advanced_this_turn = true
         board[id].has_run = true
-        board[id].can_charge = false
+        # Only this Advance restriction is waived; transport/action/fall-back
+        # restrictions still apply (Orks Waaagh! and core pp.33/65).
+        if !board[id].history.advance_allows_charge:
+            board[id].can_charge = false
     if kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape:
         board[id].history.fell_back_this_turn = true
         board[id].can_shoot = false
@@ -179,7 +182,7 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
     # Arrival itself does not prohibit shooting/charging. Preserve surviving
     # same-turn Advance/Fall Back restrictions explicitly (pp.33/68–69).
     board[destination].can_shoot = !candidate.history.fell_back_this_turn and !candidate.history.deck_shooting_locked
-    board[destination].can_charge = !candidate.history.advanced_this_turn and !candidate.history.fell_back_this_turn
+    board[destination].can_charge = (!candidate.history.advanced_this_turn or candidate.history.advance_allows_charge) and !candidate.history.fell_back_this_turn
     if kind == MovementKind::ingress:
         board[destination].history.ingress_turn = board.turn_serial.value + 1
         board[destination].history.ingress_used_deep_strike = candidate.all_have_ability(AbilityKind::deep_strike)

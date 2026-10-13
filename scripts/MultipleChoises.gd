@@ -40,6 +40,8 @@ func on_state_change():
 				label += " shooting"
 			if unwrapped is RLCGameChooseFightKind:
 				label += " fight"
+			if unwrapped is RLCGameChooseOrksTimingRule:
+				label = "Call War Cry (once per battle)" if unwrapped.get_member(0).get_value() == 0 else "Da Boss: gain 1 CP"
 			if unwrapped is RLCGameChooseOrksDetachment:
 				label = "Select detachment: " + label
 			make_choise(label, action)
@@ -70,15 +72,23 @@ func on_state_change():
 				effect = "Counteroffensive (2 CP)"
 			make_choise(effect + ": " + source_name, action)
 			added += 1
+		if unwrapped is RLCGameChooseWarlordModel:
+			var model_id = unwrapped.get_member(0).get_id().get_value()
+			var reserve_id = GlobalRules.state.get_board().get_selected_warlord_unit().get_id().get_value()
+			var roster_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_reserve_units(), reserve_id)
+			make_choise("Warlord: " + RLCLib.convert_string(roster_unit.get_name().get_value()) + " model " + str(model_id + 1), action)
+			added += 1
 		# Deployment IDs refer to reserves, not the battlefield models used by
 		# the click selector. Offer the actual legal reserve action as a button.
-		if unwrapped is RLCGameSelectUnit or unwrapped is RLCGameSelectReserveUnit or unwrapped is RLCGameSelectIngressUnit or unwrapped is RLCGameSelectScoutReserve or unwrapped is RLCGameChooseStrategicReserve or unwrapped is RLCGameChooseFormationPassenger or unwrapped is RLCGameChooseFormationTransport:
+		if unwrapped is RLCGameChooseWarlordUnit or unwrapped is RLCGameSelectUnit or unwrapped is RLCGameSelectReserveUnit or unwrapped is RLCGameSelectIngressUnit or unwrapped is RLCGameSelectScoutReserve or unwrapped is RLCGameChooseStrategicReserve or unwrapped is RLCGameChooseFormationPassenger or unwrapped is RLCGameChooseFormationTransport:
 			var reserve_id = unwrapped.get_member(0).get_id().get_value()
 			var reserves = GlobalRules.state.get_board().get_reserve_units()
 			var unit = GlobalRules.library.get(reserves, reserve_id)
 			var unit_name = RLCLib.convert_string(unit.get_name().get_value())
 			var army = 2 if unit.get_owned_by_player1() else 1
 			var prefix = "Deploy" if unwrapped is RLCGameSelectUnit else "Reserve"
+			if unwrapped is RLCGameChooseWarlordUnit:
+				prefix = "Warlord unit"
 			if unwrapped is RLCGameSelectScoutReserve:
 				prefix = "Scout setup"
 			if unwrapped is RLCGameChooseStrategicReserve:

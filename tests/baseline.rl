@@ -8591,7 +8591,6 @@ fun test_ignore17c4b_nonadditive_roll_arithmetic() -> Bool:
     modifiers.append(rule_modifier(ModifierOperation::replace, 1))
     return doubled == 1 and selected_hit_bonus(4, modifiers) == -1
 
-
 # Current Army Rules fixtures, not replacement Orks datasheets. Profile data
 # intentionally remains the small existing core combat fixture (Orks17.F).
 fun orks17f_fixture() -> Board:
@@ -8611,6 +8610,12 @@ fun orks17f_fixture() -> Board:
 fun orks17f_intrinsic_riled(Model model):
     let key : SourceEffectKey
     model.riled_source_effects.append(key)
+
+# Snapshot charge permission when selected to Advance, as Army Rules says;
+# movement history persists it separately from subsequently changing buffs.
+fun orks17f_select_advance(Board board, UnitID source):
+    board[source].history.advance_allows_charge = unit_is_riled_up(board[source])
+    record_move(board, source, MovementKind::advance)
 
 # Only live ORKS units with explicit Waaagh! get the Advance re-roll.
 fun test_orks17f_waaagh_eligibility() -> Bool:
@@ -8635,6 +8640,98 @@ fun test_orks17f_riled_invulnerable_save() -> Bool:
     let better = board[0][0].effective_invulnerable_save() == 4
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::invulnerable_save, ModifierOperation::add, -1))
     return absent and better and board[0][0].effective_invulnerable_save() == 3
+
+# No inherited10th-edition +A/+S is introduced. Ranged Assault is per bearer,
+# while melee and unrelated units retain their existing rules (Orks Waaagh!).
+fun test_orks17f_riled_assault_only_ranged() -> Bool:
+    let board = orks17f_fixture()
+    orks17f_intrinsic_riled(board[0][0])
+    let ranged = model_weapon_has_rule(board[0][0], 0, WeaponRuleKind::assault)
+    let foreign = !model_weapon_has_rule(board[1][0], 0, WeaponRuleKind::assault)
+    board[0][0].weapons.append(Weapon::choppa)
+    let melee = !model_weapon_has_rule(board[0][0], 1, WeaponRuleKind::assault)
+    let modifiers = model_weapon_modifiers(board[0][0], 1, ModifiedCharacteristic::attacks, false)
+    return ranged and foreign and melee and modifiers.size() == 0
+
+# Actual Assault mode and target legality consume the granted rule (pp.34–35;
+# Orks Waaagh!). Riled does not permit shooting after Fall Back or engagement.
+fun test_orks17f_assault_shooting_consumers() -> Bool:
+    let board = orks17f_fixture()
+    orks17f_intrinsic_riled(board[0][0])
+    orks17f_select_advance(board, unit_id(0))
+    board.begin_phase(BattlePhase::shooting)
+    board[0].shooting_kind = ShootingKind::assault
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let valid = shooting_kind_valid(board, unit_id(0), ShootingKind::assault) and declaration_target_valid(board, unit_id(0), declaration, unit_id(1), false)
+    board[0].history.fell_back_this_turn = true
+    return valid and !shooting_unit_valid(board, unit_id(0))
+
+# Charge permission belongs to this selected Advance even after riled expiry.
+# Granting riled after an ordinary Advance cannot retroactively waive it.
+fun test_orks17f_advance_charge_snapshot() -> Bool:
+    let board = orks17f_fixture()
+    orks17f_intrinsic_riled(board[0][0])
+    orks17f_select_advance(board, unit_id(0))
+    board[0][0].riled_source_effects.clear()
+    let retained = charge_source_valid(board, unit_id(0), false)
+    board.start_turn_history()
+    orks17f_select_advance(board, unit_id(0))
+    orks17f_intrinsic_riled(board[0][0])
+    return retained and !charge_source_valid(board, unit_id(0), false)
+
+# Other charge restrictions remain even for riled units (pp.33/65/74).
+fun test_orks17f_charge_restrictions_and_reset() -> Bool:
+    let board = orks17f_fixture()
+    orks17f_intrinsic_riled(board[0][0])
+    orks17f_select_advance(board, unit_id(0))
+    board[0].history.fell_back_this_turn = true
+    let fallback = !charge_source_valid(board, unit_id(0), false)
+    board[0].history.fell_back_this_turn = false
+    board[0].can_charge = false
+    let unrelated = !charge_source_valid(board, unit_id(0), false)
+    board.start_turn_history()
+    return fallback and unrelated and !board[0].history.advance_allows_charge and !board[0].history.advanced_this_turn
+
+# Waaagh! free re-roll enters the real Advance roll, without CP expenditure.
+# This test stops at movement input; placement legality remains core fixtures.
+fun test_orks17f_actual_advance_reroll() -> Bool:
+    let board = orks17f_fixture()
+    board.begin_phase(BattlePhase::movement)
+    let sequence = movement(board, unit_id(0), false)
+    sequence.advance(board, true)
+    let die : Dice
+    die = 2
+    sequence.roll(board, die)
+    let valid = can sequence.keep_it(board, false)
+    sequence.keep_it(board, false)
+    die = 5
+    sequence.reroll(board, die)
+    return valid and board.command_points[0] == 0 and board.current_roll.result.value == 5
+
+# Command-start choice is available to both armies, with current player first.
+# Declining War Cry spends no battle use and restores decision ownership.
+fun test_orks17f_war_cry_decline_and_controller_order() -> Bool:
+    let board = orks17f_fixture()
+    board.begin_phase(BattlePhase::command)
+    let sequence = resolve_timing_window(board, TimingWindow::command_start)
+    let rule = OrksTimingRule::war_cry
+    let first = !board.current_decision_maker and can sequence.choose_orks_timing_rule(board, rule)
+    sequence.finish_timing_rules(board)
+    let second = board.current_decision_maker and can sequence.choose_orks_timing_rule(board, rule)
+    sequence.finish_timing_rules(board)
+    return first and second and sequence.is_done() and !board.armies[0].war_cry_used and !board.armies[1].war_cry_used and !board.current_decision_maker
+
+# Either Command start may call it once per army; the opponent never receives
+# the other army's grant. Applying it spends no CP (Orks War Cry).
+fun test_orks17f_war_cry_both_armies_and_once() -> Bool:
+    let board = orks17f_fixture()
+    board.begin_phase(BattlePhase::command)
+    let sequence = resolve_timing_window(board, TimingWindow::command_start)
+    sequence.choose_orks_timing_rule(board, OrksTimingRule::war_cry)
+    let isolated = unit_is_riled_up(board[0]) and !unit_is_riled_up(board[1]) and board.armies[0].war_cry_used
+    sequence.choose_orks_timing_rule(board, OrksTimingRule::war_cry)
+    let resolved : Bool[2]
+    return isolated and sequence.is_done() and unit_is_riled_up(board[1]) and board.armies[1].war_cry_used and !orks_timing_rule_available(board, TimingWindow::command_start, false, OrksTimingRule::war_cry, resolved) and board.command_points[0] == 0 and board.command_points[1] == 0
 
 # Printed start window excludes Command abilities/end/round; configured
 # non-Orks armies cannot activate a stray fixture's Waaagh! data.
@@ -8761,6 +8858,69 @@ fun test_orks17f_permanent_source_death() -> Bool:
     refresh_source_effects(board, TimingWindow::none)
     return !unit_is_riled_up(board[0]) and !board[0][0].is_riled_up() and board.source_effects.empty()
 
+# Da Boss requires exactly the selected live Warlord's explicit ability, not
+# an arbitrary living boss. Mandatory round-start1CP is separate from Core CP.
+fun test_orks17f_da_boss_mandatory_once_per_window() -> Bool:
+    let board = orks17f_fixture()
+    board[0][0].has_da_boss = true
+    board.armies[0].warlord = board[0][0].identity
+    board[0][0].keywords.append(Keyword::character)
+    board[0][0].keywords.append(Keyword::warlord)
+    let sequence = resolve_timing_window(board, TimingWindow::round_start)
+    let mandatory = !can sequence.finish_timing_rules(board)
+    sequence.choose_orks_timing_rule(board, OrksTimingRule::da_boss)
+    return mandatory and sequence.is_done() and board.command_points[0] == 1 and board.command_points[1] == 0 and !board.current_decision_maker
+
+# Both players receive their own mandatory1CP in controller order. Neither
+# gains it from a different player's Warlord (Orks Army Rules / Da Boss).
+fun test_orks17f_da_boss_both_players() -> Bool:
+    let board = orks17f_fixture()
+    board[0][0].has_da_boss = true
+    board[1][0].has_da_boss = true
+    board.armies[0].warlord = board[0][0].identity
+    board[0][0].keywords.append(Keyword::character)
+    board[0][0].keywords.append(Keyword::warlord)
+    board.armies[1].warlord = board[1][0].identity
+    board[1][0].keywords.append(Keyword::character)
+    board[1][0].keywords.append(Keyword::warlord)
+    let sequence = resolve_timing_window(board, TimingWindow::round_start)
+    sequence.choose_orks_timing_rule(board, OrksTimingRule::da_boss)
+    let opponent = board.current_decision_maker and !can sequence.finish_timing_rules(board)
+    sequence.choose_orks_timing_rule(board, OrksTimingRule::da_boss)
+    return opponent and sequence.is_done() and board.command_points[0] == 1 and board.command_points[1] == 1
+
+# Missing, foreign or destroyed Warlord never substitutes another model;
+# selected reserve Warlord can use its own rule (appendix01.02.04).
+fun test_orks17f_da_boss_identity_life_and_offboard() -> Bool:
+    let board = orks17f_fixture()
+    board[0][0].has_da_boss = true
+    let unset = !da_boss_available(board, false)
+    board.armies[0].warlord = board[1][0].identity
+    let foreign = !da_boss_available(board, false) and !valid_orks_army_state(board)
+    board.armies[0].warlord = board[0][0].identity
+    board[0][0].keywords.append(Keyword::character)
+    board[0][0].keywords.append(Keyword::warlord)
+    mark_unit_offboard(board[0], true)
+    board.reserve_units.append(board[0])
+    board.units.erase(0)
+    let offboard = da_boss_available(board, false)
+    board.reserve_units[0][0].state = ModelState::pending_destruction
+    return unset and foreign and offboard and !da_boss_available(board, false)
+
+# Supplied11th-edition Da Boss lacks the legacy extra-CP ceiling. Existing
+# CP is preserved and literal gain is not silently blocked by that old flag.
+fun test_orks17f_da_boss_literal_cp_gain() -> Bool:
+    let board = orks17f_fixture()
+    board[0][0].has_da_boss = true
+    board.armies[0].warlord = board[0][0].identity
+    board[0][0].keywords.append(Keyword::character)
+    board[0][0].keywords.append(Keyword::warlord)
+    board.obtained_extra_cp_this_round[0] = true
+    board.command_points[0] = 7
+    let sequence = resolve_timing_window(board, TimingWindow::round_start)
+    sequence.choose_orks_timing_rule(board, OrksTimingRule::da_boss)
+    return sequence.is_done() and board.command_points[0] == 8
+
 # Matching Game saves retain army usage, stable Warlord and pending riled
 # effects. Bad keys/source metadata are rejected before effective consumers.
 fun test_orks17f_saved_state_and_forged_handles() -> Bool:
@@ -8778,3 +8938,125 @@ fun test_orks17f_saved_state_and_forged_handles() -> Bool:
     let retained = accepted and restored.board.armies[0].war_cry_used and restored.board[0][0].is_riled_up() and restored.board.armies[0].warlord == game.board.armies[0].warlord
     restored.board[0][0].riled_source_effects[0].value = 999
     return retained and !valid_state_foundations(restored.board)
+
+# Stale selected Assault snapshots cannot outlive their riled effect (p.78;
+# appendix01.02.02). This also tests the actual declaration-rule consumer.
+fun test_orks17f_assault_snapshot_expiry() -> Bool:
+    let board = orks17f_fixture()
+    board.open_timing_window(TimingWindow::command_start)
+    call_war_cry(board, false)
+    board.close_timing_window()
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let before = chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::assault)
+    board.current_player = true
+    board.start_turn_history()
+    refresh_source_effects(board, TimingWindow::turn_end)
+    return before and !chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::assault) and !model_weapon_has_rule(board[0][0], 0, WeaponRuleKind::assault)
+
+# User-supplied Warlord definition: an Orks Character unit, then a Character
+# model. Other player/non-faction/non-Character candidates remain illegal.
+fun orks17f_warlord_fixture() -> Board:
+    let board = orks17f_fixture()
+    board[0][0].keywords.append(Keyword::character)
+    board[1][0].keywords.append(Keyword::character)
+    mark_unit_offboard(board[0], true)
+    mark_unit_offboard(board[1], true)
+    board.reserve_units.append(board[0])
+    board.reserve_units.append(board[1])
+    board.units.clear()
+    return board
+
+# Real two-step selector rejects foreign/spare indices, grants WARLORD and
+# restores the previous decision owner/context (user Warlord definition).
+fun test_orks17f_actual_warlord_selection() -> Bool:
+    let board = orks17f_warlord_fixture()
+    board.current_decision_maker = true
+    board.selected_warlord_unit = 1
+    let sequence = select_orks_warlord(board, false)
+    let unit : UnitID
+    unit = 1
+    let foreign = !can sequence.choose_warlord_unit(board, unit)
+    unit = 31
+    let spare = !can sequence.choose_warlord_unit(board, unit)
+    unit = 0
+    sequence.choose_warlord_unit(board, unit)
+    let model : ModelID
+    model = 31
+    let spare_model = !can sequence.choose_warlord_model(board, model)
+    model = 0
+    sequence.choose_warlord_model(board, model)
+    return foreign and spare and spare_model and sequence.is_done() and board.reserve_units[0][0].has_keyword(Keyword::warlord) and board.armies[0].warlord == board.reserve_units[0][0].identity and board.current_decision_maker and board.selected_warlord_unit.get() == 1 and valid_state_foundations(board)
+
+# Forced named model takes precedence over an ordinary alternative; if several
+# units require a Warlord, select one eligible required unit (user definition).
+fun test_orks17f_required_warlord_and_model() -> Bool:
+    let board = orks17f_warlord_fixture()
+    board.reserve_units[0].models.append(board.reserve_units[0][0])
+    board.reserve_units[0][1].identity = invalid_entity_identity()
+    board.identify_unit(board.reserve_units[0])
+    board.reserve_units[0][1].must_be_warlord = true
+    let model : ModelID
+    let ordinary = !orks_warlord_model_valid(board, false, unit_id(0), model)
+    model = 1
+    return ordinary and orks_warlord_model_valid(board, false, unit_id(0), model) and !orks_warlord_unit_valid(board, false, unit_id(1))
+
+# Prohibition overrides required status and excludes that model from both
+# optional and forced eligibility (user Warlord definition).
+fun test_orks17f_cannot_warlord_overrides_required() -> Bool:
+    let board = orks17f_warlord_fixture()
+    board.reserve_units[0].models.append(board.reserve_units[0][0])
+    board.reserve_units[0][1].identity = invalid_entity_identity()
+    board.identify_unit(board.reserve_units[0])
+    board.reserve_units[0][0].must_be_warlord = true
+    board.reserve_units[0][0].cannot_be_warlord = true
+    let model : ModelID
+    let prohibited = !orks_warlord_model_valid(board, false, unit_id(0), model)
+    model = 1
+    return prohibited and orks_warlord_model_valid(board, false, unit_id(0), model)
+
+# A required unit can supply any eligible Character; the unit's faction union
+# and model's Character status are checked independently (user definition).
+fun test_orks17f_warlord_unit_and_character_conditions() -> Bool:
+    let board = orks17f_warlord_fixture()
+    board.reserve_units[0].must_supply_warlord = true
+    let model : ModelID
+    let required = orks_warlord_model_valid(board, false, unit_id(0), model)
+    board.reserve_units[0][0].keywords.clear()
+    board.reserve_units[0][0].keywords.append(Keyword::orks)
+    let non_character = !orks_warlord_unit_valid(board, false, unit_id(0))
+    board.reserve_units[0][0].keywords.clear()
+    board.reserve_units[0][0].keywords.append(Keyword::character)
+    return required and non_character and !orks_warlord_unit_valid(board, false, unit_id(0))
+
+# Two required units still allow exactly one Warlord; unit/model prohibitions
+# must not be inferred from a datasheet name (user definition).
+fun test_orks17f_multiple_required_units() -> Bool:
+    let board = orks17f_warlord_fixture()
+    board.reserve_units[1].owned_by_player1 = false
+    board.reserve_units[0].must_supply_warlord = true
+    board.reserve_units[1].must_supply_warlord = true
+    let sequence = select_orks_warlord(board, false)
+    let choices = can sequence.choose_warlord_unit(board, unit_id(0)) and can sequence.choose_warlord_unit(board, unit_id(1))
+    sequence.choose_warlord_unit(board, unit_id(1))
+    let model : ModelID
+    sequence.choose_warlord_model(board, model)
+    return choices and sequence.is_done() and !board.reserve_units[0][0].has_keyword(Keyword::warlord) and board.reserve_units[1][0].has_keyword(Keyword::warlord)
+
+# Firing Deck's borrowed profile receives the carrier's riled Assault without
+# modifying the passenger's equipped gun (p.81 / Orks Waaagh!).
+fun test_orks17f_borrowed_carrier_assault() -> Bool:
+    let board = orks17f_fixture()
+    let passenger : Unit
+    passenger = board[1]
+    passenger.owned_by_player1 = false
+    passenger.embarked_transport = board[0][0].identity
+    mark_unit_offboard(passenger, true)
+    board.embarked_units.append(passenger)
+    board[1].models.clear()
+    board[1].retired = true
+    board[0][0].firing_deck = 1
+    board[0][0].weapons.clear()
+    orks17f_intrinsic_riled(board[0][0])
+    let model : ModelID
+    let declaration = make_deck_declaration(board, unit_id(0), model, unit_id(0), model, 0)
+    return carrier_has_ranged_rule(board, unit_id(0), WeaponRuleKind::assault) and chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::assault) and !model_weapon_has_rule(board.embarked_units[0][0], 0, WeaponRuleKind::assault)

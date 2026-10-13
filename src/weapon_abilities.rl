@@ -20,6 +20,7 @@ fun model_weapon_rules(Board board, UnitID source, Int model, Int slot) -> Weapo
         result.append(intrinsic[i])
     for i in range(board[source][model].additional_weapon_rules[slot].size()):
         result.append(board[source][model].additional_weapon_rules[slot][i])
+    append_riled_assault_rules(board[source][model], board[source][model].weapons[slot], result)
     let granted = board[source].get_temporary_weapon_rules()
     for i in range(granted.size()):
         result.append(granted[i])
@@ -27,6 +28,8 @@ fun model_weapon_rules(Board board, UnitID source, Int model, Int slot) -> Weapo
 
 # Selection/eligibility uses ability presence before the target is declared (p.78).
 fun model_weapon_has_rule(Model model, Int slot, WeaponRuleKind kind) -> Bool:
+    if kind == WeaponRuleKind::assault and model.weapons[slot].range() > 0 and model.is_riled_up():
+        return true
     if model.weapons[slot].has_rule(kind):
         return true
     for i in range(model.additional_weapon_rules[slot].size()):
@@ -153,3 +156,14 @@ fun consume_one_shot_profile(Model model, Int slot):
     for i in range(model.weapons.size()):
         if i == slot or (group != 0 and model.weapon_profile_groups[i].value == group):
             model.used_once_per_battle_weapon[i] = true
+
+
+# Each riled source supplies ranged Assault with its own expiry key, so a
+# declaration snapshot cannot revive an expired grant (Orks Waaagh!/01.02.02).
+fun append_riled_assault_rules(Model model, Weapon weapon, WeaponAbilitySet rules):
+    if weapon.range() == 0:
+        return
+    for riled_index in range(model.riled_source_effects.size()):
+        let granted = weapon_rule(WeaponRuleKind::assault)
+        granted.source_effect = model.riled_source_effects[riled_index]
+        rules.append(granted)

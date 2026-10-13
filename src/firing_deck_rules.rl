@@ -66,6 +66,7 @@ fun make_deck_declaration(Board board, UnitID source, ModelID carrier, UnitID pa
         result.selected_rules.append(intrinsic[intrinsic_index])
     for granted_index in range(board.embarked_units[passenger.get()][model].additional_weapon_rules[slot].size()):
         result.selected_rules.append(board.embarked_units[passenger.get()][model].additional_weapon_rules[slot][granted_index])
+    append_riled_assault_rules(board[source][carrier], result.weapon, result.selected_rules)
     let own_rules = board[source].get_temporary_weapon_rules()
     for own_index in range(own_rules.size()):
         result.selected_rules.append(own_rules[own_index])
@@ -91,7 +92,7 @@ fun carrier_has_ranged_rule(Board board, UnitID source, WeaponRuleKind kind) -> 
                     for bank_model in range(board.embarked_units[bank_unit].models.size()):
                         for weapon_slot in range(board.embarked_units[bank_unit][bank_model].weapons.size()):
                             if board.embarked_units[bank_unit][bank_model].weapons[weapon_slot].range() > 0 and !model_weapon_has_rule(board.embarked_units[bank_unit][bank_model], weapon_slot, WeaponRuleKind::one_shot):
-                                found = found or model_weapon_has_rule(board.embarked_units[bank_unit][bank_model], weapon_slot, kind)
+                                found = found or model_weapon_has_rule(board.embarked_units[bank_unit][bank_model], weapon_slot, kind) or (kind == WeaponRuleKind::assault and board[source][carrier_index].is_riled_up())
     return found
 
 # Firing Deck runs only in own Shooting, never Snap or melee (24.14 p.81).
