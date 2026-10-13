@@ -525,3 +525,8 @@ Read [the transport/Aircraft report](transports-aircraft.md) for 18.01–18.05 (
 ## Task17.C2c named-selector overlay
 
 [The named-selector report](named-selectors.md) and [source identity crosswalk](orks-named-identities.tsv) add67 datasheet identities and139 families/176 profile identities, including distinct same-name ranged/melee profiles. Compact conjunctive selectors reach actual characteristic/weapon-rule consumers; mixed unit/model scope, archives, saves and Firing Deck identity are covered.534 assertions /536 entries,25 native sanitizer cases and final binding/ML/game/replay/fuzzer checks pass.17.C2 is complete; O02 remains partial pending Damaged, incoming reductions, selective ignoring, live source effects and actual datasheet grants. No current datasheet is certified by these generic fixtures.
+
+
+## Task17.C3 Damaged overlay
+
+[The Damaged report](damaged.md) implements website core ability24.39 with explicit threshold metadata and current bearer snapshots. Its -1 hit modifier precedes the supplied appendix02.02.01 cap; hits/criticals p.18, Torrent p.85 and Firing Deck p.81 retain their consumers.546 assertions /548 entries,12 sanitizer cases, focused bindings, game and replay/mutation validation pass. O02 remains partial pending incoming reductions/selective ignoring, live sources and actual datasheet grants. ROADMAP.md owns evidence and17.C4 is next.

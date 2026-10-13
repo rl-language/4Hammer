@@ -415,7 +415,7 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
     - [x] **17.C2b1:** Effective fixed Range/WS/BS/S/AP, slot/bearer scope, ordered core increments, group identity/T refresh and actual targeting/hit/wound/save consumers.
     - [x] **17.C2b2:** Effective A/D, fixed melee shares, random-characteristic timing/re-rolls and complete damage grouping. Preserve the user-required assertion for nonexistent random-A melee weapons.
   - [x] **17.C2c:** Named physical-weapon/profile and datasheet selectors, with actual source consumers; live aura/conditional grants retain their later batch owners.
-- [ ] **17.C3:** Damaged remaining-wounds metadata and the hit-roll consumer, applied before the cumulative +/-1 cap.
+- [x] **17.C3:** Damaged remaining-wounds metadata and the hit-roll consumer, applied before the cumulative +/-1 cap.
 - [ ] **17.C4:** Incoming AP/damage reductions and selective modifier ignoring, with actual save/damage consumers and grouping boundaries.
 - [ ] **17.D–E:** Physical weapon capacity/profile selection, compound dice and source-instance event/use/effect records. These are distinct batches/commits, not one framework rewrite.
 - [ ] **17.F–H:** Waaagh!/riled-up and Da Boss, source-backed Orks attachments/task6, then the existing three Orks unit families with their actual rules.
@@ -502,3 +502,16 @@ Final CTest passes **534 assertions /536 entries**, empty discrepancies, **280.4
 Schemas: state/observation22, action14, next-state23. Gym passes20 steps with **22,379 candidates /17,523,864 finite observations**, about2.8% growth (`task17c2c-final-gym.log`). Current-schema seed40000 completes **878 actions**, terminal owner-4 (`task17c2c-final-gameplay.log`, `task17c2c-final-replays`); the final sanitized game replay passes in **32.531s** (`task17c2c-final-replay-game.log`). Both lifetime inputs and fixed zero pass separately. Fresh short-seed mutation fuzzing completes **50 runs /62s**, coverage8,331 /features14,019, without failures/artifacts (`task17c2c-final-fuzz.log`).
 
 **17.C2c and17.C2 are complete. Next:17.C3**, Damaged remaining-wounds metadata and hit penalty before cumulative +/-1, then17.C4 incoming reductions/selective ignoring. O02/task17 remain partial; source installation/expiry17.E, compound/capacity17.D, attachment17.G and actual current datasheets17.H and subsequent families remain mandatory. Every identified error, including the17.Q wrapper bottleneck, retains its fixing owner.
+
+
+## Batch17.C3 completion
+
+[The Damaged report](doc/damaged.md) records website core ability24.39, verified in the cached Battlewagon tooltip. Explicit bearer metadata feeds each gathered group's current remaining-wounds status. The penalty joins hit modifiers before their cumulative cap; healing refreshes it, mixed models remain independent, retained Fight on Death models qualify and Firing Deck uses the carrier. Threshold zero is permitted; raw invalid metadata is rejected. No current datasheet grant is installed.
+
+Final CTest passes **546 assertions /548 entries in370.03s** (`/workspace/4hammer-validation/task17c3-ctest-verified.log`). All12 focused native cases pass ASAN/UBSAN/leak detection (`task17c3-sanitized-verified.log`, driver `task17c3-sanitized/driver-verified`). Initial enum syntax, duplicate fixture identity and assumed BS errors were corrected; earlier runs are superseded. Matching native/header/C++ artifacts in `task17c3-godot` pass the Damaged and prior weapon scripts; full rendered/interaction journeys were not rerun.
+
+Schemas are state/observation23, action14, next-state24. Seed40000 completes878 actions, terminal owner-4 (`task17c3-gameplay.log`, `task17c3-replays`). Gym passes20 steps with22,379 candidates /17,538,387 observations (+14,523, about0.083%); action/grid domains remain unchanged (`task17c3-gym.log`). The sanitized fuzzer replays both preserved lifetime inputs, the fixed zero input and the completed game, whose replay takes34.252s (`task17c3-replay-verified.log`).
+
+Fresh short-seed mutation fuzzing completes **50 runs in61s**, coverage11,254 /features18,064, without sanitizer failures or crash artifacts (`task17c3-fuzz-verified.log`, empty `task17c3-fuzz-artifacts`). This bounded robustness check does not certify every rule or current datasheet.
+
+**17.C3 is complete. Next:17.C4**, incoming AP/D reductions and selective modifier ignoring in actual save/damage/grouping consumers. O02/task17 remain partial; actual Orks profiles/grants, live sources, attachments and later families retain their owners. All identified errors must be fixed by their owning batches, including the17.Q wrapper bottleneck.

@@ -340,3 +340,13 @@ Characteristic filters conjunctively combine optional representative slot/physic
 Unit named queries use constituent identity union, model queries remain local, and datasheet-filtered model grants must not affect other constituents. Named/physical rule-grant helpers use existing per-slot declarations. Source installation/expiry, attachment lifecycle and actual stats/loadouts/abilities remain later owners. Schemas are state/observation22, action14, next-state23; preserve the grid and Rules.gd/TraceManager.gd. ROADMAP.md owns final validation and completion.
 
 Batch17.C2c/17.C2 is complete:534 assertions /536 CTest entries,25 native sanitizer cases, matching focused Godot,878-action game,32.531s sanitized replay and50 mutation runs/62s pass. Layout:17,523,864 observations (+2.8%),22,379 candidates. **Next:17.C3**, Damaged, then17.C4. This is completed engine support; task17, live source effects and current profiles/abilities remain pending.
+
+## Damaged — batch17.C3
+
+Read [the Damaged report](doc/damaged.md) and ROADMAP.md. Core ability24.39 was verified in the cached Battlewagon tooltip: Damaged X gives -1 to a model's hit rolls while remaining wounds are at or below X. Store explicit `has_damaged` and standard bounded `damaged_threshold`; never infer the ability from low health or legacy factories. X can be zero; do not invent X>0 or X<starting-wounds constraints.
+
+Every gathered group snapshots the actual bearer's current status, overriding stale context after damage/healing. Other models remain unaffected. Retained Fight on Death models at zero wounds still satisfy the condition; ordinary attack eligibility is separate. Firing Deck uses carrier status. Add the penalty to the ordinary hit sum before Heavy/engagement increments and the +/-1 cap; never modify WS/BS or subtract after capping. Keep Torrent and natural critical rules intact. Actual source data and selective ignoring remain later owners.
+
+Schemas are state/observation23, action14, next-state24. Use generated lifecycle methods and matching rebuilt native/Godot artifacts; preserve grid/action domains and Rules.gd/TraceManager.gd. New fixture copies must reset `identity` before identification, and tests must read actual weapon skills rather than assume BS3. CurrentStateDescription has no equality trait; compare its `.value` explicitly. ROADMAP.md records final completion/evidence.
+
+Batch17.C3 is complete:546 assertions /548 entries,12 native sanitizer cases, matching focused Godot,878-action game and20-step Gym pass. ROADMAP.md owns final replay/mutation evidence. **Next:17.C4**, incoming reductions and selective modifier ignoring; no current Orks datasheet is certified by these generic fixtures.
