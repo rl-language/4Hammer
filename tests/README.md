@@ -21,7 +21,7 @@ For another virtual environment, activate it first; if CMake cached a different 
 
 `ctest -N --test-dir build-tests` lists the tests. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` runs a selected case. Labels `baseline`, `discrepancies` and `expected-failure` allow filtering with `-L`. CTest automatically includes the matching compilation fixture even for a single selected test. Each suite compiles once per invocation with precondition/bounds checks; each assertion runs in its own process. A failed compilation blocks its cases rather than using an old library.
 
-The current discovery lists **709 entries**:707 supported assertions and2 compilation fixtures. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
+The current discovery lists **740 entries**:738 supported assertions and2 compilation fixtures. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
 
 CTest is also available in a normal game configuration (`BUILD_GAME=ON`, the default), and Make/Ninja support `cmake --build build-tests --target test`. CMake itself has no `--test` command. Reconfigure after changing test declarations or the manifest; CMake also tracks these files for regeneration during a build. Generated libraries stay in the chosen build directory. The original Python runner below remains available.
 
@@ -340,3 +340,20 @@ python tools/check_godot_state.py --build-path /workspace/4hammer-validation/tas
 The HTML check passes3 cards/five profiles/13 printed weapon rows, including separate invulnerable-save boxes omitted by text extraction. Semantic/native tests cover FNP, keywords, equipment and target conditions separately. Matching Godot checks pass current constructors/labels/attachments/oval guards/root saves; prior attachment and weapon/source controls also pass. Full broad/rendered journeys remain17.Q.
 
 The optimized sanitized `task17h1-fuzzer` passes preserved lifetime, zero and completed-game inputs and31 fresh mutation runs in66s without sanitizer failures/artifacts.20-step Gym passes22,746 candidates/26,183,041 finite observations. Schemas29/18/29, next30, require matching bindings/policies despite unchanged tensor dimensions. A fresh1,000-action game completes with input bytes matching the sanitized replay; the public roster remains legacy until17.H4. ROADMAP.md records final logs and scope. Next17.H2 implements the special abilities;17.H3 owns oval geometry. Forge World/Legends remain excluded.
+
+
+## Combined current Orks abilities and circle proxies (17.H2/H3)
+
+Current discovery has738 assertions/740 entries in `/workspace/4hammer-validation/task17h23-tests`. Initial full execution passes739/740; the updated circle-placement fixture incorrectly used an opposing deployment zone. After correcting its anchor, all58 affected entries pass (57 assertions plus compilation). These results cover every registered assertion across the two runs; no full740/740 rerun is claimed. The31 new `test_orks17h23_*` cases cover source windows/limits/targets, actual move/charge hooks, hit/damage/shock consumers, FNP/spill, owner restoration, saves and proxy edges/overlap/rotation/movement. [The report](../doc/orks-current-unit-rules.md) records printed rules and user-approved approximation limits.
+
+The unoptimized ASAN/UBSAN/leak driver `task17h23-sanitized/driver-final` passes all56 current-data/ability cases with leak detection. If sandbox process inspection blocks LeakSanitizer, run the same binary through the permitted outside-sandbox execution flow; do not disable leak detection. Matching pure native/header/C++ bindings are `task17h23-godot`:
+
+```sh
+python tools/check_orks_unit_tables.py --wrapper /workspace/4hammer-validation/task17h23-tests/rule-tests/baseline/wrapper.py --source-dir /workspace/4hammer-validation/orks-audit-2026-10-12/sources
+python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17h23-godot --script tests/godot_orks_unit_rules.gd --timeout 45
+python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17h23-godot --script tests/godot_orks_unit_data.gd --timeout 45
+```
+
+The HTML check passes3 cards/five profiles/13 weapon rows. New source-choice and prior data/attachment/ignoring/weapon-source Godot controls pass. CTest's Python-linked --pylib native library requires Python symbols and is not a direct substitute for Godot's pure native build; compatible Python wrappers can still be reused for Gym/gameplay without recompiling.
+
+Schemas30/19/30, next31, require matching bindings/policies.20-step Gym passes22,907 candidates/28,980,462 finite observations; coordinate domains are unchanged. Fresh legacy-roster gameplay completes1,000 legal actions and its matching optimized sanitized `task17h23-fuzzer` replay passes, alongside both lifetime inputs/zero input. Fresh mutation completes20 runs in66s without failures/artifacts. Native/Godot fixtures cover actual current abilities; production roster promotion remains17.H4 and broad/rendered/performance validation remains17.Q. Follow the user's combined-task workflow: complete both related edits and fixtures before costly builds, then rerun only checks affected by corrections.

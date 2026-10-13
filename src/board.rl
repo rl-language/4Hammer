@@ -124,6 +124,10 @@ cls AttackSequenceInfo:
             found = found or (self.temporary_weapon_abilities[i].kind == kind and self.rule_applies(board, self.temporary_weapon_abilities[i]))
         return found
 
+    # Beastboss/Dodge Dis! is a separate +1 before the core cumulative cap,
+    # so another bonus/penalty cannot overwrite it (Orks/Beastboss; core p18
+    # and appendix02.02.01). Optional ignoring retains its own provenance.
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
     fun total_hit_modifier() -> Int:
         let result = int(self.hit_roll_bonus) + int(self.dodge_dis_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
         let i = 0

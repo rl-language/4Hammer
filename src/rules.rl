@@ -1632,6 +1632,8 @@ act spawn_unit(ctx Board board) -> PickUnit:
 # Roll against any Leadership characteristic (p.9). Only a successful roll
 # in the Command Battle-shock step clears shock present at that step's start
 # (p.30). Insane Bravery is restricted to that step and once per battle (p.56).
+# Mobbed supplies the -1/-2 roll penalty through this same pipeline:
+# https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz
 act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm Bool recover_shock, frm LinearlyDistributedInt<0, 3> penalty) -> BattleShockTest:
     if unit.empty():
         return

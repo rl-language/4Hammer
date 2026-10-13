@@ -1,6 +1,6 @@
 # Rulebook design and architecture
 
-This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation after tasks17.D/E,17.C4b,17.F,17.G and the17.H1 data step, using Rulebook compiler 0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
+This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation after tasks17.D/E,17.C4b,17.F,17.G and the combined17.H2/H3 step, using Rulebook compiler 0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
 Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and [supplied appendix](11th-edition-supplied-appendix.md) for game rules. The architecture supports those rules, but its storage bounds, schemas and UI protocols are project decisions. [AGENTS.md](../AGENTS.md) records development constraints and the language conventions used here.
 
@@ -83,7 +83,8 @@ The module map below describes responsibility boundaries. Imports expose shared 
 | Terrain and objectives | [terrain_rules.rl](../src/terrain_rules.rl) | Visibility abstraction, area membership, cover, target conditions and objective/action eligibility |
 | Core stratagems and actions | [core_stratagem_rules.rl](../src/core_stratagem_rules.rl) | Core effect eligibility and phase-local action permissions; shared CP payment is on `Board` |
 | Transport and borrowed weapons | [transport_rules.rl](../src/transport_rules.rl), [firing_deck_rules.rl](../src/firing_deck_rules.rl) | Carrier/passenger links, embark/disembark setup, capacity, emergency setup and Firing Deck selections |
-| Current Orks data | [orks_unit_data.rl](../src/orks_unit_data.rl) | Source profiles/equipment/count validators, named physical alternatives and explicit oval guard; abilities/roster promotion retain17.H2–H4 |
+| Current Orks data | [orks_unit_data.rl](../src/orks_unit_data.rl) | Source profiles/equipment/count validators, named physical alternatives, ability metadata and user-authorized oval proxies |
+| Current Orks unit abilities | [orks_unit_rules.rl](../src/orks_unit_rules.rl) | Identity-backed Keep Huntin'/Bomb registration, targeted eligibility/usage and Mobbed requirements; rules.rl owns their action dispatch |
 | Orks army mechanics | [orks_army_rules.rl](../src/orks_army_rules.rl) | Explicit Waaagh!/Da Boss metadata, riled grants, War Cry start-window choices and pre-formation Warlord selection |
 | Source lifecycle | [source_effect_types.rl](../src/source_effect_types.rl), [source_effects.rl](../src/source_effects.rl) | Source/event/use/effect records, eligibility, typed grants, expiry, aura refresh and restore validation |
 
@@ -186,7 +187,7 @@ The project requires authored persistent numeric game/frame values to use `BInt`
 
 There is no z-coordinate action. Model elevation and terrain/path metadata retain their bounded domains. Physical calculations can reconstruct micrometre coordinates and use local floats while actual saved positions remain quads. `ModelHistory` stores bounded squared horizontal segment lengths plus vertical distance, then computes square roots on demand; it does not persist a float distance cache.
 
-The current full-game layout is state/observation schema **29**, action schema **18**, with next-state bound **30**. The validated catalog has **22,746** candidates and **26,183,041** observation values. These are a versioned snapshot, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
+The current full-game layout is state/observation schema **30**, action schema **19**, with next-state bound **31**. The validated catalog has **22,907** candidates and **28,980,462** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
 
 ## Turn sequence and decision ownership
 
@@ -311,7 +312,11 @@ Source-installed numerical records use the same effective M/T/Sv/InSv/Ld/OC and 
 
 [Current Orks profiles/loadouts](orks-current-unit-data.md) describes17.H1's five model profiles and12 unique weapon profiles, literal composition ranges, optional Thump Guns and named physical profile alternatives. Constructors configure actual keyword/datasheet/Army Rules/attachment metadata. Raw HTML supplies separate InSv boxes and the Hunter keyword header omitted by the text extracts. An independent tool checks the compiled values against those tables.
 
-These constructors are data-stage APIs, not newly playable complete cards. Special ability consumers17.H2 and proper oval geometry17.H3 precede production roster promotion17.H4. Squighog profiles expose both source axes and fail placement through `unsupported_footprint`; no circle substitution or fractional position migration is introduced. Existing profile/weapon IDs remain historical fixtures. Their enum/keyword normalization changes require schema29 even though action catalogs/storage lengths are unchanged.
+These constructors now carry current ability metadata. [The ability report](orks-current-unit-rules.md) describes17.H2's actual consumers. `orks_unit_rules.rl` registers identity-backed Keep Huntin' and Bomb Squig sources after identity assignment; movement-start/end dispatch combines them with ordinary grants in controller groups. Keep Huntin' has two source windows but one army-round use key. Bomb Squig has one original-unit token and resolves through ordinary mortal allocation/destruction. Movement source dispatch is separate from generic destruction dispatch, avoiding recursive action-frame ownership. Distinct `choose_movement_source` and targeted one-UnitID actions preserve Godot discovery; actual dice retain the `roll`/`quantity` chance contract.
+
+Dodge Dis! is a separate hit contribution in each attack snapshot, preserving pre-cap arithmetic and optional ignoring provenance. Brutal Impact adds a damage operation to every declared profile when the actual source unit has charged this turn. Mobbed runs all engaged enemy Monster/Vehicle shock tests after completed charge movement, with source-controller ordering and target-owned shock choices. Unit/component conferral reuses the existing attachment lifecycle.
+
+Squighog profiles retain original oval axes and `profile_has_oval_base`, while the user's updated policy permits75/90mm long-axis circle proxies through the common distance/overlap/setup/path/rendering consumers. Rotation leaves the proxy unchanged. Exact ovals are deferred; unknown hull/multipart geometry remains unsupported. Anchors stay on whole quads. Production roster promotion remains17.H4; the public legacy roster does not exercise these current adapters. Existing profile/weapon IDs remain historical fixtures. New ability values, hit provenance and action frames require matching schemas30/19/30, next31.
 
 ## Attached units
 

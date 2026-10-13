@@ -67,7 +67,7 @@ Each row is a separately reviewable batch, usually with smaller function/rule co
 | 17.E | Source-instance event hooks, bounded use-scope records and effect durations/expiry across battlefield/reserve/passenger banks. | Complete: generic event/typed-grant framework and live unit auras; specialized source adapters remain later owners |
 | 17.F | Waaagh!/riled-up, War Cry, Da Boss and supplied Warlord selection, including overlapping/permanent sources. | Shared engine implemented and validated; actual datasheet flags remain data owners |
 | 17.G | Resume task 6 with available Orks Leader/Support permissions, mixed characteristics, component identity and death/revival lifetime. | Implemented/tested17.G; source metadata adapters available, actual current profiles pending |
-| 17.H | Replace the three legacy Orks unit families with current Beastboss, Beast Snagga Boyz and Squighog Boyz; add each special ability separately. Squighog geometry needs the explicit oval work below. |17.H1 data implemented/tested; special abilities17.H2, oval geometry17.H3 and production roster promotion17.H4 pending |
+| 17.H | Replace the three legacy Orks unit families with current Beastboss, Beast Snagga Boyz and Squighog Boyz; add each special ability separately. Squighog bases retain oval metadata with user-approved circle proxies. |17.H1–H3 data/abilities/proxies implemented/tested; production roster promotion17.H4 pending, exact ovals deferred |
 | 17.I | War Horde first: passive rule, each enhancement/upgrade, then each of six CP stratagems. Test alongside another completed detachment, rather than assuming exactly one active package. | Pending |
 | 17.J | Healing/revival kernel and source-specific consumers; distinguish model/unit healing and new-unit replacement. Migrate Painboy/Painboss/Mek and other repair units one at a time. | Pending |
 | 17.K | Carrier permission/seat aggregation and Gretchin; integrate Trukk with Firing Deck and its reactive disembarkation. Extend actual carrier data individually. | Pending; missing hull geometry remains explicit |
@@ -75,7 +75,7 @@ Each row is a separately reviewable batch, usually with smaller function/rule co
 | 17.M | Hit/kill provenance and post-shoot debuffs/reactions; add each affected datasheet independently. | Pending |
 | 17.N | Psychic budget/phase restrictions, Weirdboy and Kill Rig abilities, then Wurrband. | Pending |
 | 17.O | Complete remaining ordinary packages individually: Da Big Hunt; Green Tide/Bully Boyz/Shoota Boyz/Taktikal Brigade/Brute Bosses; Wreckas; Blitz Brigade/Kult of Speed/Flyboyz; Dread Mob/Madcap Meks; Runt Swarm including O19. Pull simpler rules forward when dependencies are already satisfied. | Pending |
-| 17.P | Remaining included standard datasheets by dependency family; Legends and Forge World are excluded by user. Supply hull/multipart data, support ovals on grid anchors and keep unsupported cases unavailable rather than faking geometry. | Pending |
+| 17.P | Remaining included standard datasheets by dependency family; Legends and Forge World are excluded by user. Supply hull/multipart data, preserve oval metadata and use the authorized circle proxies on grid anchors; keep unknown footprints unavailable. | Pending |
 | 17.Q | Complete all Godot journeys, cross-detachment interactions, save/replay/ML validation, representative games and sanitized fuzzing. Fix the recorded legal-action wrapper retrieval performance issue and every newly discovered defect. | Pending |
 
 Selection tests must cover one, two and three distinct detachments, rejection of a fourth or duplicate, availability of each selected package's CP cards, duplicate ability selection and cumulative numerical effects. Printed conditions still determine whether effects apply; selecting three packages does not apply every rule universally.
@@ -142,6 +142,16 @@ The user requested shared validation with distinct commits. Final RLC0.4.17 pass
 [Orks army rules](orks-army-rules.md) completes shared current Waaagh Advance re-rolls, source-owned riled InSv/Assault/selected-Advance charge exception, both Command-start War Cry with exact next-turn-end lifetime, mandatory round-start selected-Warlord Da Boss CP, and user-supplied Warlord unit/model selection/requirements/prohibitions.648 assertions /650 entries,29 native sanitizer/leak cases, production Godot buttons/click suppression, finite Gym and preserved/game replays plus43 mutation runs pass. ROADMAP.md owns exact evidence. O01's shared army mechanism is complete, while actual keyword/profile/source adapters remain17.H–P. Legacy roster names infer no grants; all Forge World/Legends remain excluded. Next17.G resumes task6 with the included10 Leader/7 Support lists.
 
 
-##17.H1 current profile/loadout data
+## 17.H1 current profile/loadout data
 
 [Current unit data](orks-current-unit-data.md) supplies Beastboss, Beast Snagga Boyz and Squighog Boyz constructors, five current model profiles and12 unique weapon profiles. The raw HTML supplies InSv5+/6+ and the Hunter keyword header missing from the audit text extracts. Literal independent composition ranges, additional Thump Guns, shared physical Choppa/Stikka alternatives, exact keywords/Army Rules/attachment metadata and source target predicates are implemented. Current Squighog ovals are explicitly unavailable for placement until17.H3; no circular substitute is installed. These are data-stage APIs; production roster promotion and complete-card status wait for17.H2–H4. All54 standard cards remain planned, excluding every Forge World/Legends unit. ROADMAP.md owns executed evidence and the next subtask.
+
+
+## User geometry/workflow update —17.H2/H3
+
+Ovals retain original axis/shape metadata but use the source long axis as a temporary circle diameter under explicit user authority. Current Squighog75x42/90x52 bases therefore use75/90mm circles throughout geometry and rendering. Exact ovals are deferred; hull/multipart dimensions remain unsupplied and unsupported. This supersedes earlier circle-prohibition and unavailable-oval statements.17.H2 abilities and17.H3 proxies are edited together and share one final validation batch;17.H4 production roster promotion remains pending.
+
+
+## 17.H2/H3 completed adapter overlay
+
+[The ability report](orks-current-unit-rules.md) adds the five current source abilities and long-axis oval proxies, with real move/charge windows, shared army/unit limits, targets, hit/D/shock/mortal consumers and lifecycle/saves. All738 assertions have passing results across full/corrected runs;56 native sanitizer/leak cases, HTML comparison, five Godot controls, ML, completed legacy-root replays and20 mutation runs pass. Exact oval geometry is deferred under user policy; unknown hull/multipart dimensions remain unavailable.17.H4 production roster promotion remains next. Current complete-card gameplay and all remaining54-card work retain their roadmap owners.
