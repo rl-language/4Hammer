@@ -353,7 +353,12 @@ fun same_effective_damage(AttackSequenceInfo left, AttackSequenceInfo right, Mod
 fun declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration, ModifiedCharacteristic kind) -> RuleModifiers:
     let model = declared_model_index(board, source, declaration)
     assert(model >= 0, "declared source no longer exists")
-    return model_weapon_modifiers(board[source][model], declaration.slot.value, kind, declaration.borrowed_weapon, declaration.weapon_name, declaration.profile_name)
+    let result = model_weapon_modifiers(board[source][model], declaration.slot.value, kind, declaration.borrowed_weapon, declaration.weapon_name, declaration.profile_name)
+    # Squighog Boyz/Brutal Impact: every attack (ranged or melee) gains +1D
+    # after a completed charge this turn, within the ordinary addition step.
+    if kind.value == ModifiedCharacteristic::damage.value and board[source].has_charged and board[source].has_ability(AbilityKind::brutal_impact):
+        result.append(rule_modifier(ModifierOperation::add, 1))
+    return result
 
 # Hazardous counts actual selected physical weapons, not every simultaneously
 # permitted profile or target share (p.81; Nazdreg profile exception).

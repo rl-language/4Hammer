@@ -8171,9 +8171,9 @@ fun test_sources17e_actual_move_start_end_hooks() -> Bool:
     register_source_instance(board, start)
     register_source_instance(board, end)
     let sequence = move(board, unit_id(0), 0)
-    sequence.choose_source_event(board, unit_id(0), source17e_id(0))
+    sequence.choose_movement_source(board, unit_id(0), source17e_id(0))
     sequence.move_to(board, unit_id(0), board_position(7, 5))
-    sequence.choose_source_event(board, unit_id(0), source17e_id(0))
+    sequence.choose_movement_source(board, unit_id(0), source17e_id(0))
     return sequence.is_done() and board[0][0].effective_movement(6) == 10
 
 # Expired grants also leave casualty archives, so revival cannot resurrect a
@@ -9708,14 +9708,14 @@ fun test_orks17h1_factories_capture_composition() -> Bool:
 # No inherited Morgrim/Beastboss/monster-hunter identity or old ability grants.
 fun test_orks17h1_beastboss_keywords_and_army_metadata() -> Bool:
     let unit = make_orks_beastboss()
-    return unit[0].has_keyword(Keyword::orks) and unit[0].has_keyword(Keyword::infantry) and unit[0].has_keyword(Keyword::beast_snagga) and unit[0].has_keyword(Keyword::character) and unit[0].has_keyword(Keyword::warboss) and !unit[0].has_keyword(Keyword::beastboss) and unit[0].has_da_boss and unit_has_waaagh(unit) and unit[0].abilities.empty() and unit_matches_datasheet(unit, OrksDatasheet::beastboss) and unit.attachment_role.value == AttachmentRole::leader.value
+    return unit[0].has_keyword(Keyword::orks) and unit[0].has_keyword(Keyword::infantry) and unit[0].has_keyword(Keyword::beast_snagga) and unit[0].has_keyword(Keyword::character) and unit[0].has_keyword(Keyword::warboss) and !unit[0].has_keyword(Keyword::beastboss) and unit[0].has_da_boss and unit_has_waaagh(unit) and unit.has_ability(AbilityKind::dodge_dis) and unit.has_ability(AbilityKind::keep_huntin) and unit_matches_datasheet(unit, OrksDatasheet::beastboss) and unit.attachment_role.value == AttachmentRole::leader.value
 
 # Battleline/Beast Snagga/Mob/Orks are actual keywords on every member.
 fun test_orks17h1_snagga_keywords_and_metadata() -> Bool:
     let unit = make_orks_beast_snagga_boyz(2, 18, 0)
     let valid = unit.attachment_role.value == AttachmentRole::bodyguard.value and unit_has_waaagh(unit)
     for model in range(unit.models.size()):
-        valid = valid and unit[model].has_keyword(Keyword::battleline) and unit[model].has_keyword(Keyword::infantry) and unit[model].has_keyword(Keyword::beast_snagga) and unit[model].has_keyword(Keyword::mob) and unit[model].has_keyword(Keyword::orks) and !unit[model].has_keyword(Keyword::monster_hunters) and unit[model].abilities.empty() and model_matches_datasheet(unit[model], OrksDatasheet::beast_snagga_boyz)
+        valid = valid and unit[model].has_keyword(Keyword::battleline) and unit[model].has_keyword(Keyword::infantry) and unit[model].has_keyword(Keyword::beast_snagga) and unit[model].has_keyword(Keyword::mob) and unit[model].has_keyword(Keyword::orks) and !unit[model].has_keyword(Keyword::monster_hunters) and unit[model].has_ability(AbilityKind::mobbed) and model_matches_datasheet(unit[model], OrksDatasheet::beast_snagga_boyz)
     return valid
 
 # Explosives/Mobile are included, with no inherited infantry/squighog keyword.
@@ -9723,7 +9723,7 @@ fun test_orks17h1_squighog_keywords_and_metadata() -> Bool:
     let unit = make_orks_squighog_boyz(2, 6)
     let valid = unit_has_waaagh(unit)
     for model in range(unit.models.size()):
-        valid = valid and unit[model].has_keyword(Keyword::mounted) and unit[model].has_keyword(Keyword::beast_snagga) and unit[model].has_keyword(Keyword::explosives) and unit[model].has_keyword(Keyword::mobile) and unit[model].has_keyword(Keyword::orks) and !unit[model].has_keyword(Keyword::infantry) and !unit[model].has_keyword(Keyword::squighog_boyz) and unit[model].abilities.empty()
+        valid = valid and unit[model].has_keyword(Keyword::mounted) and unit[model].has_keyword(Keyword::beast_snagga) and unit[model].has_keyword(Keyword::explosives) and unit[model].has_keyword(Keyword::mobile) and unit[model].has_keyword(Keyword::orks) and !unit[model].has_keyword(Keyword::infantry) and !unit[model].has_keyword(Keyword::squighog_boyz) and unit[model].has_ability(AbilityKind::bomb_squig) and unit[model].has_ability(AbilityKind::brutal_impact)
     return valid
 
 # Beastboss has exactly two weapons, one combined six-attack melee profile.
@@ -9833,3 +9833,499 @@ fun test_orks17h1_data_stage_has_no_unsourced_special_grants() -> Bool:
     let snagga = make_orks_beast_snagga_boyz(1, 9, 0)
     let hog = make_orks_squighog_boyz(1, 3)
     return boss.unit_abilities.empty() and snagga.unit_abilities.empty() and hog.unit_abilities.empty() and !boss[0].grants_unit_riled_up and !hog[0].has_random_movement and !hog[0].has_deadly_demise
+
+
+# Current source fixture: circle-proxy Squighogs, real Beastboss/Snagga data,
+# one enemy6W/no-FNP Character. Printed sources are the three Orks card URLs.
+fun orks17h23_fixture() -> Board:
+    let board : Board
+    board.units.append(make_orks_beastboss())
+    board.units.append(make_orks_squighog_boyz(1, 3))
+    board.units.append(make_orks_beast_snagga_boyz(1, 9, 0))
+    let enemy = make_octavius()
+    enemy.owned_by_player1 = true
+    enemy[0].position = board_position(15, 14)
+    board.units.append(enemy)
+    board[0][0].position = board_position(5, 5)
+    for hog_index in range(board[1].models.size()):
+        board[1][hog_index].position = board_position(5 + (hog_index % 2) * 4, 14 + (hog_index / 2) * 4)
+    for boy_index in range(board[2].models.size()):
+        board[2][boy_index].position = board_position(10 + (boy_index % 3) * 2, 4 + (boy_index / 3) * 2)
+    board.identify_units()
+    board.capture_starting_strengths()
+    board.begin_phase(BattlePhase::movement)
+    register_orks_unit_rules(board)
+    return board
+
+# Actual movement event snapshot; bounded action IDs remain independent.
+fun orks17h23_move_event(Board board, Int source, Bool at_end, MovementKind kind) -> SourceEvent:
+    let event = source_event(SourceEventKind::move_start, board[source].identity, invalid_entity_identity(), invalid_entity_identity())
+    if at_end:
+        event.kind = SourceEventKind::move_end
+    event.movement = kind
+    return event
+
+# Resolve a stable printed source handle without relying on registration order.
+fun orks17h23_source(Board board, Int rule, Int source, Bool at_end) -> SourceInstanceID:
+    let result : SourceInstanceID
+    let kind = SourceEventKind::move_start
+    if at_end:
+        kind = SourceEventKind::move_end
+    for index in range(board.source_instances.size()):
+        if board.source_instances[index].rule.value == rule and board.source_instances[index].source_unit == board[source].identity and board.source_instances[index].trigger.value == kind.value:
+            result = index
+    return result
+
+# Repeated registration and bank changes preserve exactly two Keep windows
+# and one unit Bomb token; no token/ability is inferred from a legacy factory.
+fun test_orks17h23_registration_is_idempotent() -> Bool:
+    let board = orks17h23_fixture()
+    register_orks_unit_rules(board)
+    let original = board.source_instances.size() == 3
+    board.reserve_units.append(board[1])
+    board.units[1].models.clear()
+    register_orks_unit_rules(board)
+    return original and board.source_instances.size() == 3 and valid_source_foundations(board)
+
+# Keep Huntin': move start/end only, own Movement phase, never opposing turn.
+fun test_orks17h23_keep_windows_and_phase() -> Bool:
+    let board = orks17h23_fixture()
+    let start = collect_source_events(board, orks17h23_move_event(board, 0, false, MovementKind::advance))
+    let end = collect_source_events(board, orks17h23_move_event(board, 0, true, MovementKind::ordered_retreat))
+    board.current_player = true
+    let opponent = collect_source_events(board, orks17h23_move_event(board, 0, false, MovementKind::normal))
+    board.current_player = false
+    board.begin_phase(BattlePhase::shooting)
+    let outside = collect_source_events(board, orks17h23_move_event(board, 0, false, MovementKind::normal))
+    return start.size() == 1 and end.size() == 1 and opponent.empty() and outside.empty()
+
+# Range is base-to-base and self selection is legal; friendly Beast Snagga
+# is required. Spare IDs and offboard/non-Beast-Snagga/enemy units are illegal.
+fun test_orks17h23_keep_target_boundaries() -> Bool:
+    let board = orks17h23_fixture()
+    let handle = orks17h23_source(board, ORKS_KEEP_HUNTIN_RULE, 0, false)
+    ref instance = board.source_instances[handle.value]
+    let near = orks_move_target_valid(board, instance, unit_id(0)) and orks_move_target_valid(board, instance, unit_id(2))
+    board[2][0].position = board_position(13, 5)
+    for offset in range(board[2].models.size() - 1):
+        let index = offset + 1
+        board[2][index].position = board_position(20, 5 + index)
+    let far = !orks_move_target_valid(board, instance, unit_id(2))
+    board[2].off_battlefield = true
+    return near and far and !orks_move_target_valid(board, instance, unit_id(2)) and !orks_move_target_valid(board, instance, unit_id(3)) and !orks_move_target_valid(board, instance, unit_id(31))
+
+# A decline consumes neither the shared use counter nor shock/riled changes.
+fun test_orks17h23_keep_decline_spends_nothing() -> Bool:
+    let board = orks17h23_fixture()
+    board[0].battle_socked = true
+    board.current_decision_maker = true
+    let sequence = resolve_movement_sources(board, orks17h23_move_event(board, 0, false, MovementKind::normal))
+    sequence.finish_source_events(board)
+    return sequence.is_done() and board.current_decision_maker and board.source_uses.empty() and board[0].battle_socked and !unit_is_riled_up(board[0])
+
+# Accepted target clears shock/riles immediately and exhausts the end window.
+fun test_orks17h23_keep_accept_and_shared_windows() -> Bool:
+    let board = orks17h23_fixture()
+    board[2].battle_socked = true
+    let sequence = resolve_movement_sources(board, orks17h23_move_event(board, 0, false, MovementKind::normal))
+    sequence.choose_movement_source(board, source17e_id(0))
+    sequence.choose_keep_huntin_target(board, unit_id(2))
+    let ending = resolve_movement_sources(board, orks17h23_move_event(board, 0, true, MovementKind::normal))
+    return sequence.is_done() and ending.is_done() and !board[2].battle_socked and unit_is_riled_up(board[2]) and board.source_uses.size() == 1 and board.source_uses[0].round_uses.value == 1 and !board.current_decision_maker
+
+# Duplicate bosses share the army limit, opposing armies do not; next round
+# restores usage. This also specifies the future Squigosaur adapter's rule code.
+fun test_orks17h23_keep_shared_army_round() -> Bool:
+    let board = orks17h23_fixture()
+    let duplicate = make_orks_beastboss()
+    duplicate[0].position = board_position(5, 9)
+    board.units.append(duplicate)
+    let opposing = duplicate
+    opposing.owned_by_player1 = true
+    board.units.append(opposing)
+    board.identify_units()
+    register_orks_unit_rules(board)
+    let first = orks17h23_source(board, ORKS_KEEP_HUNTIN_RULE, 0, false)
+    let second = orks17h23_source(board, ORKS_KEEP_HUNTIN_RULE, 4, false)
+    let enemy = orks17h23_source(board, ORKS_KEEP_HUNTIN_RULE, 5, false)
+    commit_source_usage(board, board.source_instances[first.value])
+    let shared = !source_usage_available(board, board.source_instances[second.value]) and source_usage_available(board, board.source_instances[enemy.value])
+    board.current_round = board.current_round + 1
+    return shared and source_usage_available(board, board.source_instances[second.value])
+
+# Persist until the next own turn even if the boss dies or target embarks;
+# the opponent's turn must not end the accepted effect (appendix01.02.02).
+fun test_orks17h23_keep_duration_offboard_and_source_death() -> Bool:
+    let board = orks17h23_fixture()
+    let sequence = resolve_movement_sources(board, orks17h23_move_event(board, 0, false, MovementKind::normal))
+    sequence.choose_movement_source(board, source17e_id(0))
+    sequence.choose_keep_huntin_target(board, unit_id(2))
+    board[0][0].suffered_wounds = 6
+    board.reserve_units.append(board[2])
+    board.reserve_units.back().off_battlefield = true
+    board[2].models.clear()
+    board.current_player = true
+    board.start_turn_history()
+    let retained = unit_is_riled_up(board.reserve_units.back())
+    board.current_player = false
+    board.start_turn_history()
+    return retained and !unit_is_riled_up(board.reserve_units.back()) and board.source_effects.empty()
+
+# Actual move start/end integrations; the end hook appears only after a
+# completed move, and completing a start source removes its end opportunity.
+fun test_orks17h23_keep_actual_move_hooks() -> Bool:
+    let board = orks17h23_fixture()
+    let sequence = move(board, unit_id(0), 0)
+    sequence.finish_source_events(board, unit_id(0))
+    sequence.move_to(board, unit_id(0), board_position(6, 5))
+    sequence.choose_movement_source(board, unit_id(0), source17e_id(0))
+    sequence.choose_keep_huntin_target(board, unit_id(0), unit_id(0))
+    return sequence.is_done() and sequence.completed and unit_is_riled_up(board[0]) and board[0][0].position.x.value == 6
+
+# Dodge Dis! combines with other +1/-1 terms before the cumulative hit cap;
+# cancelling its contribution must not remove the other contribution.
+fun test_orks17h23_dodge_hit_pipeline_and_individual_choices() -> Bool:
+    let board = orks17h23_fixture()
+    configure_attack_info(board, 0, 3, false, false)
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let info = declared_attack_info(board, unit_id(0), unit_id(3), declaration, board.attack_info)
+    info.hit_roll_bonus = true
+    info.hit_roll_malus = true
+    board.attack_info = info
+    let options = attack_hit_choices(board, info)
+    let result = resolve_attack_dice(board, board[3], board[0], attack_test_count(1))
+    result.roll(board, board[3], board[0], attack_test_die(3))
+    result.roll(board, board[3], board[0], attack_test_die(1))
+    return info.dodge_dis_hit_bonus and info.total_hit_modifier() == 1 and get_hit_roll_bonus(board) == 1 and options.size() == 3 and result.is_done() and result.generated_wounds == 0
+
+# Attached unit attacks all receive Dodge Dis! until the boss's conferral
+# ends; unsupported old factories have no new grants (core pp66-67).
+fun test_orks17h23_dodge_attached_component_lifetime() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_orks_beast_snagga_boyz(1, 9, 0))
+    board.reserve_units.append(make_orks_beastboss())
+    board.identify_units()
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    board.units.append(board.reserve_units[0])
+    let target = make_octavius()
+    target.owned_by_player1 = true
+    board.units.append(target)
+    configure_attack_info(board, 0, 1, false, true)
+    let live = board.attack_info.dodge_dis_hit_bonus
+    board[0][10].suffered_wounds = 6
+    board[0][10].state = ModelState::pending_destruction
+    board[0][10].attachment_abilities_retained = true
+    configure_attack_info(board, 0, 1, false, true)
+    let retained = board.attack_info.dodge_dis_hit_bonus
+    board[0][10].attachment_abilities_retained = false
+    configure_attack_info(board, 0, 1, false, true)
+    return live and retained and !board.attack_info.dodge_dis_hit_bonus and !make_beastboss_morgrim().has_ability(AbilityKind::dodge_dis)
+
+# Bomb Squig: only completed Normal-move end in own Movement phase.
+fun test_orks17h23_bomb_timing_gates() -> Bool:
+    let board = orks17h23_fixture()
+    let start = resolve_movement_sources(board, orks17h23_move_event(board, 1, false, MovementKind::normal))
+    let advanced = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::advance))
+    let retreat = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::ordered_retreat))
+    board.current_player = true
+    let opponent = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::normal))
+    board.current_player = false
+    let normal = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::normal))
+    return start.is_done() and advanced.is_done() and retreat.is_done() and opponent.is_done() and can normal.choose_movement_source(board, source17e_id(0))
+
+# Bomb selects one live visible enemy within12 base inches; area crossing
+# only partially obscures under the user's visibility abstraction.
+fun test_orks17h23_bomb_target_boundaries_and_visibility() -> Bool:
+    let board = orks17h23_fixture()
+    let handle = orks17h23_source(board, ORKS_BOMB_SQUIG_RULE, 1, true)
+    ref instance = board.source_instances[handle.value]
+    board.terrain_areas.append(terrain_area(11, 13, 12, 15, false))
+    let visible = orks_move_target_valid(board, instance, unit_id(3)) and !orks_move_target_valid(board, instance, unit_id(1)) and !orks_move_target_valid(board, instance, unit_id(2))
+    board[3][0].position = board_position(25, 14)
+    let distant = !orks_move_target_valid(board, instance, unit_id(3))
+    board[3][0].position = board_position(15, 14)
+    board[3].off_battlefield = true
+    return visible and distant and !orks_move_target_valid(board, instance, unit_id(3)) and !orks_move_target_valid(board, instance, unit_id(31))
+
+# No legal target or declining the ability consumes nothing.
+fun test_orks17h23_bomb_decline_or_no_target_preserves_token() -> Bool:
+    let board = orks17h23_fixture()
+    let sequence = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::normal))
+    sequence.finish_source_events(board)
+    board[3].off_battlefield = true
+    let unavailable = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::normal))
+    return sequence.is_done() and unavailable.is_done() and board.source_uses.empty()
+
+# Spend the token at acceptance, even on a failed1/2; no Command re-roll or
+# extra CP cost is invented, and subsequent rounds cannot restore the token.
+fun test_orks17h23_bomb_failure_spends_token() -> Bool:
+    let board = orks17h23_fixture()
+    let sequence = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::normal))
+    sequence.choose_movement_source(board, source17e_id(0))
+    sequence.choose_bomb_squig_target(board, unit_id(3))
+    let spent_before_roll = board.source_uses.size() == 1 and board.source_uses[0].battle_uses.value == 1
+    sequence.roll(board, attack_test_die(2))
+    board.current_round = board.current_round + 1
+    let repeat = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::normal))
+    return spent_before_roll and sequence.is_done() and repeat.is_done() and board[3][0].suffered_wounds == 0 and board.command_points[0] == 0
+
+# On3+ use explicit D3 chance, then enemy-owned mortal allocation with no save.
+fun test_orks17h23_bomb_success_actual_mortal_allocation() -> Bool:
+    let board = orks17h23_fixture()
+    board.current_decision_maker = true
+    let sequence = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::normal))
+    sequence.choose_movement_source(board, source17e_id(0))
+    sequence.choose_bomb_squig_target(board, unit_id(3))
+    sequence.roll(board, attack_test_die(3))
+    let bounded = !can sequence.quantity(board, attack_test_die(4))
+    sequence.quantity(board, attack_test_die(3))
+    let opponent = board.current_decision_maker
+    for index in range(3):
+        sequence.select_mortal_model(board, damage_test_model(0))
+    return bounded and opponent and sequence.is_done() and board.current_decision_maker and board[3][0].suffered_wounds == 3 and board.source_effects.empty()
+
+# Ordinary FNP is offered for every generated mortal; preventing one does not
+# restore the token or change the other mortals (core pp24/81).
+fun test_orks17h23_bomb_uses_feel_no_pain() -> Bool:
+    let board = orks17h23_fixture()
+    board[3][0].profile = Profile::orks_beastboss
+    let sequence = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::normal))
+    sequence.choose_movement_source(board, source17e_id(0))
+    sequence.choose_bomb_squig_target(board, unit_id(3))
+    sequence.roll(board, attack_test_die(6))
+    sequence.quantity(board, attack_test_die(2))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    sequence.roll(board, attack_test_die(6))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    sequence.roll(board, attack_test_die(1))
+    return sequence.is_done() and board[3][0].suffered_wounds == 1 and board.source_uses[0].battle_uses.value == 1
+
+# Two units retain independent tokens; repeated registration preserves spent
+# unit usage after a bank transfer (source unit/battle scope).
+fun test_orks17h23_bomb_per_unit_usage() -> Bool:
+    let board = orks17h23_fixture()
+    let duplicate = make_orks_squighog_boyz(1, 3)
+    board.units.append(duplicate)
+    board.identify_units()
+    register_orks_unit_rules(board)
+    let first = orks17h23_source(board, ORKS_BOMB_SQUIG_RULE, 1, true)
+    let second = orks17h23_source(board, ORKS_BOMB_SQUIG_RULE, 4, true)
+    commit_source_usage(board, board.source_instances[first.value])
+    register_orks_unit_rules(board)
+    return !source_usage_available(board, board.source_instances[first.value]) and source_usage_available(board, board.source_instances[second.value]) and board.source_uses.size() == 1
+
+# End-of-Normal-move hook is offered before ordinary embarkation; skipping
+# the move cannot offer the end ability.
+fun test_orks17h23_bomb_actual_move_and_skip() -> Bool:
+    let board = orks17h23_fixture()
+    let skipped = move(board, unit_id(1), 0)
+    skipped.skip(board, unit_id(1))
+    let no_end = skipped.is_done() and board.source_uses.empty()
+    let moved = move(board, unit_id(1), 0)
+    moved.finish_move(board, unit_id(1))
+    moved.choose_movement_source(board, unit_id(1), source17e_id(0))
+    moved.choose_bomb_squig_target(board, unit_id(1), unit_id(3))
+    moved.roll(board, unit_id(1), attack_test_die(1))
+    return no_end and moved.is_done() and moved.completed and board.source_uses[0].battle_uses.value == 1
+
+# Mobbed requires engaged enemy Monster OR Vehicle; allies, infantry, reserve
+# units and destroyed targets are excluded. No declared-target restriction.
+fun test_orks17h23_mobbed_target_gates() -> Bool:
+    let board = orks17h23_fixture()
+    board[2].has_charged = true
+    board[3][0].position = board_position(10, 3)
+    let infantry = !orks_mobbed_target_valid(board, unit_id(2), unit_id(3))
+    board[3][0].keywords.append(Keyword::vehicle)
+    let vehicle = orks_mobbed_target_valid(board, unit_id(2), unit_id(3))
+    board[3][0].keywords.clear()
+    board[3][0].keywords.append(Keyword::monster)
+    let monster = orks_mobbed_target_valid(board, unit_id(2), unit_id(3))
+    board[3].off_battlefield = true
+    return infantry and vehicle and monster and !orks_mobbed_target_valid(board, unit_id(2), unit_id(3)) and !orks_mobbed_target_valid(board, unit_id(2), unit_id(2))
+
+# Exactly13 live combined members changes the penalty; corpses and starting
+# strength cannot satisfy the threshold (Mobbed; core p66).
+fun test_orks17h23_mobbed_strength_threshold() -> Bool:
+    let unit = make_orks_beast_snagga_boyz(1, 12, 0)
+    let large = orks_mobbed_penalty(unit) == 2
+    unit[0].suffered_wounds = 3
+    unit[0].state = ModelState::pending_destruction
+    return large and unit.starting_strenght == 13 and orks_mobbed_penalty(unit) == 1
+
+# A penalty changes a printed Leadership boundary; the opposing player owns
+# the shock roll, without Insane Bravery or Command Re-roll outside Command.
+fun test_orks17h23_mobbed_actual_shock_penalty() -> Bool:
+    let board = orks17h23_fixture()
+    board[2].has_charged = true
+    board[3][0].position = board_position(10, 3)
+    board[3][0].keywords.append(Keyword::vehicle)
+    let sequence = resolve_orks_mobbed(board, unit_id(2))
+    sequence.choose_mobbed_target(board, unit_id(3))
+    let owner = board.current_decision_maker and !can sequence.insane_bravery(board, true)
+    sequence.roll_pair(board, attack_test_die(3), attack_test_die(3))
+    return owner and sequence.is_done() and board[3].battle_socked and !board.current_decision_maker
+
+# Every eligible enemy must roll once; the charging player chooses their order.
+fun test_orks17h23_mobbed_multiple_enemies_once_each() -> Bool:
+    let board = orks17h23_fixture()
+    board[2].has_charged = true
+    board[3][0].position = board_position(10, 3)
+    board[3][0].keywords.append(Keyword::vehicle)
+    let second = board[3]
+    second.identity = invalid_entity_identity()
+    second[0].identity = invalid_entity_identity()
+    second[0].original_unit = invalid_entity_identity()
+    second[0].position = board_position(12, 3)
+    board.units.append(second)
+    board.identify_units()
+    let sequence = resolve_orks_mobbed(board, unit_id(2))
+    sequence.choose_mobbed_target(board, unit_id(4))
+    sequence.roll_pair(board, attack_test_die(1), attack_test_die(1))
+    let once = !can sequence.choose_mobbed_target(board, unit_id(4))
+    sequence.choose_mobbed_target(board, unit_id(3))
+    sequence.roll_pair(board, attack_test_die(6), attack_test_die(6))
+    return once and sequence.is_done() and board[4].battle_socked and !board[3].battle_socked
+
+# Brutal Impact is not restricted to melee: every ranged/melee/Jaws attack
+# after a completed charge gains+1D; merely declaring a charge grants nothing.
+fun test_orks17h23_brutal_all_profiles_and_charge_gate() -> Bool:
+    let board = orks17h23_fixture()
+    let ranged = make_declared_weapon(board, unit_id(1), 1, 0)
+    let melee = make_declared_weapon(board, unit_id(1), 1, 2)
+    let jaws = make_declared_weapon(board, unit_id(1), 1, 3)
+    let before = declaration_modifiers(board, unit_id(1), ranged, ModifiedCharacteristic::damage).empty()
+    record_charge_move(board, unit_id(1))
+    let ranged_info = declared_attack_info(board, unit_id(1), unit_id(3), ranged, board.attack_info)
+    let melee_info = declared_attack_info(board, unit_id(1), unit_id(3), melee, board.attack_info)
+    let jaw_info = declared_attack_info(board, unit_id(1), unit_id(3), jaws, board.attack_info)
+    return before and modified_characteristic(1, ModifiedCharacteristic::damage, ranged_info.damage_modifiers, false) == 2 and modified_characteristic(2, ModifiedCharacteristic::damage, melee_info.damage_modifiers, false) == 3 and modified_characteristic(2, ModifiedCharacteristic::damage, jaw_info.damage_modifiers, false) == 3
+
+# Source+1D belongs in addition before division/subtraction, and the same-turn
+# permission expires before the opponent turn (appendix02.02.01).
+fun test_orks17h23_brutal_arithmetic_and_turn_expiry() -> Bool:
+    let board = orks17h23_fixture()
+    board[1].has_charged = true
+    let divided = characteristic_modifier(ModifiedCharacteristic::damage, ModifierOperation::divide, 2)
+    board[1][1].characteristic_modifiers.append(divided)
+    let declaration = make_declared_weapon(board, unit_id(1), 1, 2)
+    let modifiers = declaration_modifiers(board, unit_id(1), declaration, ModifiedCharacteristic::damage)
+    let rounded = modified_characteristic(2, ModifiedCharacteristic::damage, modifiers, false) == 2
+    board.current_player = true
+    board.start_turn_history()
+    let expired = declaration_modifiers(board, unit_id(1), declaration, ModifiedCharacteristic::damage)
+    return rounded and modified_characteristic(2, ModifiedCharacteristic::damage, expired, false) == 1 and !board[1].has_charged
+
+# Long-axis circles preserve original axes while allowing placement/movement.
+# Shape metadata is immutable; stored positions remain whole quads.
+fun test_orks17h23_oval_proxy_edge_overlap_and_rotation() -> Bool:
+    let board : Board
+    let unit = make_orks_squighog_boyz(1, 3)
+    unit[0].position = board_position(1, 5)
+    let edge = !model_placement_valid(board, unit[0])
+    unit[0].position = board_position(3, 5)
+    unit[1].position = board_position(6, 5)
+    let overlap = model_bases_overlap(unit[0], unit[1])
+    unit[1].position = board_position(7, 5)
+    let separate = !model_bases_overlap(unit[0], unit[1])
+    let original = unit[0].distance(unit[1])
+    unit[0].geometry.rotation = 90000
+    return edge and overlap and separate and unit[0].distance(unit[1]) == original and profile_has_oval_base(unit[0].profile) and profile_base_width(unit[0].profile) == 52.0
+
+# Saved partial targeted source choice restores usage/owner/continuation.
+fun test_orks17h23_targeted_source_frame_round_trip() -> Bool:
+    let board = orks17h23_fixture()
+    let sequence = resolve_movement_sources(board, orks17h23_move_event(board, 0, false, MovementKind::normal))
+    sequence.choose_movement_source(board, source17e_id(0))
+    let restored = sequence
+    let parsed = from_string(restored, to_string(sequence))
+    restored.choose_keep_huntin_target(board, unit_id(2))
+    return parsed and restored.is_done() and unit_is_riled_up(board[2]) and board.source_uses.size() == 1 and valid_state_foundations(board)
+
+
+# Actual charge completion suspends for mandatory Mobbed, rather than applying
+# it to a failed/declaration-only attempt. A one-model fixture isolates timing.
+fun test_orks17h23_mobbed_actual_charge_hook() -> Bool:
+    let board = charge13_fixture()
+    board.begin_phase(BattlePhase::charge)
+    board[0][0].abilities.append(AbilityKind::mobbed)
+    board[1][0].keywords.append(Keyword::vehicle)
+    let sequence = charge(board, unit_id(0), ChargeKind::ordinary)
+    sequence.roll_pair(board, attack_test_die(4), attack_test_die(4))
+    sequence.keep_it(board, true)
+    sequence.select_charge_target(board, unit_id(1))
+    sequence.finish_charge_targets(board)
+    sequence.charge_move_to(board, board_position(11, 5))
+    let mandatory = !sequence.is_done() and board[0].has_charged and can sequence.resolve_mobbed(board)
+    sequence.resolve_mobbed(board)
+    sequence.choose_mobbed_target(board, unit_id(1))
+    sequence.roll_pair(board, attack_test_die(1), attack_test_die(1))
+    if can sequence.decline_crushing_impact(board):
+        sequence.decline_crushing_impact(board)
+    return mandatory and sequence.is_done() and board[1].battle_socked
+
+# Bomb casualties use ordinary source-known destruction handling and spill
+# remaining mortals into a new recipient (core pp24/87).
+fun test_orks17h23_bomb_destruction_spills() -> Bool:
+    let board = orks17h23_fixture()
+    board[3] = make_infernus_squad()
+    board[3].models.resize(2)
+    board[3].owned_by_player1 = true
+    for index in range(2):
+        board[3][index].position = board_position(15 + index * 2, 14)
+    board.identify_units()
+    let sequence = resolve_movement_sources(board, orks17h23_move_event(board, 1, true, MovementKind::normal))
+    sequence.choose_movement_source(board, source17e_id(0))
+    sequence.choose_bomb_squig_target(board, unit_id(3))
+    sequence.roll(board, attack_test_die(3))
+    sequence.quantity(board, attack_test_die(3))
+    for index in range(3):
+        sequence.select_mortal_model(board, damage_test_model(0))
+    return sequence.is_done() and board[3].models.size() == 1 and board[3].destroyed_models.value.size() == 1 and board[3][0].suffered_wounds == 1
+
+# Oval circle proxies use the same final-placement and rigid movement engine,
+# keeping both source axes and rejecting a proxy crossing the board edge.
+fun test_orks17h23_oval_proxy_actual_movement() -> Bool:
+    let board = orks17h23_fixture()
+    let sequence = move(board, unit_id(1), 0)
+    let edge = !can sequence.move_to(board, unit_id(1), board_position(1, 14))
+    sequence.move_to(board, unit_id(1), board_position(6, 14))
+    sequence.finish_source_events(board, unit_id(1))
+    return edge and sequence.is_done() and sequence.completed and board[1][0].position.x.value == 6 and profile_has_oval_base(board[1][0].profile) and profile_base_width(board[1][0].profile) == 52.0
+
+
+# At13 live models Mobbed's-2 turns a7 into5, failing Ld6; at12 its-1
+# turns the same7 into6 and passes. Test the real shock consumer, not only metadata.
+fun test_orks17h23_mobbed_minus_two_boundary() -> Bool:
+    let large = orks17h23_fixture()
+    large[2] = make_orks_beast_snagga_boyz(1, 12, 0)
+    large.identify_units()
+    large[2].has_charged = true
+    large[2][0].position = board_position(10, 4)
+    large[3][0].position = board_position(10, 3)
+    large[3][0].keywords.append(Keyword::vehicle)
+    let sequence = resolve_orks_mobbed(large, unit_id(2))
+    sequence.choose_mobbed_target(large, unit_id(3))
+    sequence.roll_pair(large, attack_test_die(3), attack_test_die(4))
+    let small = orks17h23_fixture()
+    small[2].has_charged = true
+    small[3][0].position = board_position(10, 3)
+    small[3][0].keywords.append(Keyword::vehicle)
+    let smaller = resolve_orks_mobbed(small, unit_id(2))
+    smaller.choose_mobbed_target(small, unit_id(3))
+    smaller.roll_pair(small, attack_test_die(3), attack_test_die(4))
+    return sequence.is_done() and smaller.is_done() and large[3].battle_socked and !small[3].battle_socked
+
+# Spending a Bomb token survives a saved Board and transfers to reserves;
+# a duplicate registration never restores the printed per-unit-battle limit.
+fun test_orks17h23_bomb_saved_usage_and_offboard_transfer() -> Bool:
+    let game = play()
+    game.board = orks17h23_fixture()
+    let handle = orks17h23_source(game.board, ORKS_BOMB_SQUIG_RULE, 1, true)
+    commit_source_usage(game.board, game.board.source_instances[handle.value])
+    let saved = play()
+    let parsed = set_state(saved, to_string(game))
+    saved.board.reserve_units.append(saved.board[1])
+    saved.board.reserve_units.back().off_battlefield = true
+    saved.board[1].models.clear()
+    register_orks_unit_rules(saved.board)
+    return parsed and !source_usage_available(saved.board, saved.board.source_instances[handle.value]) and saved.board.source_uses[0].battle_uses.value == 1

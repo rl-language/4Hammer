@@ -343,6 +343,7 @@ enum ModifierOrigin:
     engaged_target
     cover
     plunging_fire
+    dodge_dis
 
 enum ModifierSelectionKind:
     weapon_skill

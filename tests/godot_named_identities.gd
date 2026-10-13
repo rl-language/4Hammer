@@ -5,9 +5,9 @@ func _initialize():
 
 func check_named_identities():
 	var library = root.get_node("GlobalRules").library
-	assert(library.get_state_schema_version() == 29)
-	assert(library.get_observation_schema_version() == 29)
-	assert(library.get_action_schema_version() == 18)
+	assert(library.get_state_schema_version() == 30)
+	assert(library.get_observation_schema_version() == 30)
+	assert(library.get_action_schema_version() == 19)
 	var board = RLCBoard.make()
 	var attacker = library.make_hellblaster_squad()
 	var defender = library.make_infernus_squad()

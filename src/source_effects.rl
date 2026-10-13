@@ -322,29 +322,10 @@ fun commit_pending_source(Board board, PendingSourceEvents pending, SourceEventI
         target = pending[id.value].event.unit
     if instance.recipient.value == SourceTarget::target_unit.value:
         target = pending[id.value].event.target
-    let location = locate_source(board, target, invalid_entity_identity())
-    assert(location.found, "source effect recipient disappeared")
-    ref unit = source_bank_unit(board, location.bank, location.unit.value)
-    assert(has_live_damage_recipient(unit) or pending[id.value].event.kind.value == SourceEventKind::unit_destroyed.value, "source effect has no live recipient")
-    assert(board.next_source_effect.value + 1 < MAX_SOURCE_EFFECT_KEY and board.source_effects.has_capacity(), "source effect capacity exceeded")
-    board.next_source_effect = board.next_source_effect + 1
-    let effect : SourceEffect
-    effect.identity = board.next_source_effect
-    effect.source = pending[id.value].source
-    effect.target_unit = target
-    effect.unit_scope = instance.recipient.value != SourceTarget::source_model.value
-    effect.owner = instance.owner
-    effect.duration = instance.duration
-    effect.requires_live_source = instance.requires_live_source
-    effect.phase_stamp = board.phase_serial.value
-    effect.turn_stamp = board.turn_serial.value
-    effect.round_stamp = board.current_round.value
-    for model_index in range(unit.models.size()):
-        if unit[model_index].is_alive() and (instance.recipient.value != SourceTarget::source_model.value or unit[model_index].identity == instance.source_model):
-            install_source_grant(unit[model_index], instance.grant, effect.identity)
-            effect.recipients.append(unit[model_index].identity)
-    board.source_effects.append(effect)
-    commit_source_usage(board, instance)
+    let recipient_location = locate_source(board, target, invalid_entity_identity())
+    assert(recipient_location.found, "source effect recipient disappeared")
+    assert(has_live_damage_recipient(source_bank_unit(board, recipient_location.bank, recipient_location.unit.value)) or pending[id.value].event.kind.value == SourceEventKind::unit_destroyed.value, "source effect has no live recipient")
+    commit_source_effect_to_unit(board, instance, pending[id.value].source.value, target)
     pending[id.value].resolved = true
 
 # Remove a handle, not every equal-valued modifier. Archives are included so
@@ -695,3 +676,32 @@ fun collect_destruction_sources(Board board, SourceEvent model_event, Bool unit_
         for event in range(additional.size()):
             pending.append(additional[event])
     return pending
+
+
+# Shared installation infrastructure: an accepted source may choose a different
+# recipient (Beastboss/Keep Huntin'). Eligibility is checked by its caller.
+# Source-owned timed effects persist/expire in every bank (appendix01.02.02).
+fun commit_source_effect_to_unit(Board board, SourceInstance instance, Int source_index, EntityIdentity target):
+    let location = locate_source(board, target, invalid_entity_identity())
+    assert(location.found, "source effect recipient disappeared")
+    ref unit = source_bank_unit(board, location.bank, location.unit.value)
+    assert(!unit.models.empty(), "source effect has no recipient")
+    assert(board.next_source_effect.value + 1 < MAX_SOURCE_EFFECT_KEY and board.source_effects.has_capacity(), "source effect capacity exceeded")
+    board.next_source_effect = board.next_source_effect + 1
+    let effect : SourceEffect
+    effect.identity = board.next_source_effect
+    effect.source = source_index
+    effect.target_unit = target
+    effect.unit_scope = instance.recipient.value != SourceTarget::source_model.value
+    effect.owner = instance.owner
+    effect.duration = instance.duration
+    effect.requires_live_source = instance.requires_live_source
+    effect.phase_stamp = board.phase_serial.value
+    effect.turn_stamp = board.turn_serial.value
+    effect.round_stamp = board.current_round.value
+    for model_index in range(unit.models.size()):
+        if unit[model_index].is_alive() and (instance.recipient.value != SourceTarget::source_model.value or unit[model_index].identity == instance.source_model):
+            install_source_grant(unit[model_index], instance.grant, effect.identity)
+            effect.recipients.append(unit[model_index].identity)
+    board.source_effects.append(effect)
+    commit_source_usage(board, instance)

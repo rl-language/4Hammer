@@ -21,6 +21,7 @@ import modifier_choices
 import orks_army_rules
 import attachment_rules
 import orks_unit_data
+import orks_unit_rules
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.
@@ -712,6 +713,8 @@ fun configure_attack_info(Board board, Int source, Int target, Bool overwatch, B
         attack.only_hits_on_6 = true 
 
     attack.shooting_kind = board[source].shooting_kind
+    # Beastboss/Dodge Dis! also applies to the compatibility attack entrypoint.
+    attack.dodge_dis_hit_bonus = board[source].has_ability(AbilityKind::dodge_dis)
     # p.18 / appendix05.02.01: snapshot effective T without bounded clamping.
     # The storage capacity is engine infrastructure, not a tabletop maximum.
     let target_toughness = board[target].get_unit_toughtness()
@@ -1005,6 +1008,8 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     info.source_profile = board[source][model].profile
     # Damaged is bearer-local, refreshed for every new group (core24.39).
     info.damaged_hit_penalty = board[source][model].is_damaged()
+    # Beastboss/Dodge Dis! is a unit hit-roll contribution, not WS/BS.
+    info.dodge_dis_hit_bonus = board[source].has_ability(AbilityKind::dodge_dis)
     #02.02.02: permissions follow the actual bearer (carrier for Firing Deck),
     # not the chosen target or an unrelated model in a mixed unit.
     info.may_ignore_skill_modifiers = attack_permission_available(board, board[source][model], info.source.range() == 0, true)
@@ -1627,7 +1632,7 @@ act spawn_unit(ctx Board board) -> PickUnit:
 # Roll against any Leadership characteristic (p.9). Only a successful roll
 # in the Command Battle-shock step clears shock present at that step's start
 # (p.30). Insane Bravery is restricted to that step and once per battle (p.56).
-act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm Bool recover_shock) -> BattleShockTest:
+act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm Bool recover_shock, frm LinearlyDistributedInt<0, 3> penalty) -> BattleShockTest:
     if unit.empty():
         return
     frm previous_owner = board.current_decision_maker
@@ -1643,7 +1648,7 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         # Leadership/Battle-shock is absent from Command Re-roll's list (p.56).
         board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, false, unit.owned_by_player1)
         subaction*(board) board.current_pair_roll
-        if !unit.leadership_roll_succeeds(board.current_pair_roll.result.value + board.current_pair_roll.result2.value):
+        if !unit.leadership_roll_succeeds(max(1, board.current_pair_roll.result.value + board.current_pair_roll.result2.value - penalty.value)):
             unit.battle_socked = true
         else:
             if command_step and recover_shock:
@@ -1652,6 +1657,36 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         if command_step and recover_shock:
             unit.battle_socked = false
     subaction*(board) source_shock_end = resolve_source_event(board, source_event(SourceEventKind::shock_end, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
+    board.current_decision_maker = previous_owner
+
+# Existing callers have no extra penalty; Mobbed uses the same shock pipeline
+# with its printed-1/-2 roll modifier, including start/end source triggers.
+fun battle_shock_test(Board board, Unit unit, Bool command_step, Bool recover_shock) -> BattleShockTest:
+    let penalty : LinearlyDistributedInt<0, 3>
+    return battle_shock_test(board, unit, command_step, recover_shock, penalty)
+
+# Mobbed's owner orders all affected enemy units; each opponent controls its
+# own shock rules, then the charge controller is restored. Snapshot the13+
+# strength threshold once when this charge-end ability starts resolving.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz (Mobbed).
+act resolve_orks_mobbed(ctx Board board, frm UnitID source) -> OrksMobbed:
+    frm previous_owner = board.current_decision_maker
+    frm penalty : LinearlyDistributedInt<0, 3>
+    penalty = orks_mobbed_penalty(board[source])
+    frm pending : Bool[MAX_UNIT_COUNT]
+    frm remaining : UnitIterator
+    let target : UnitID
+    for index in range(board.units.size()):
+        target = index
+        pending[index] = orks_mobbed_target_valid(board, source, target)
+        remaining = remaining + int(pending[index])
+    while remaining.value > 0:
+        board.current_decision_maker = board[source].owned_by_player1
+        act choose_mobbed_target(frm UnitID shock_target) {shock_target.get() < board.units.size(), pending[shock_target.get()]}
+        pending[shock_target.get()] = false
+        remaining = remaining - 1
+        if orks_mobbed_target_valid(board, source, shock_target):
+            subaction*(board, board[shock_target]) shock = battle_shock_test(board, board[shock_target], false, false, penalty)
     board.current_decision_maker = previous_owner
 
 # Test each live friendly unit once when already shocked or at/below half
@@ -1744,7 +1779,54 @@ act command_phase(ctx Board board) -> CommandPhase:
     subaction*(board) abilities = resolve_timing_window(board, TimingWindow::command_abilities)
     board.current_decision_maker = board.current_player
 
-# Independent moves retain full Advance increments and per-model constraints
+# Movement-only dispatch allows targeted Keep Huntin'/Bomb Squig and ordinary
+# source grants to share controller ordering. Damage/destruction dispatch stays
+# separate so its action frame cannot recursively contain itself.
+# Sources: Orks/Beastboss Keep Huntin'; Orks/Squighog-Boyz Bomb Squig;
+# user Rules Sequencing; mortal allocation/destruction core pp24/87.
+act resolve_movement_sources(ctx Board board, frm SourceEvent trigger) -> MovementSourceResolution:
+    register_orks_unit_rules(board)
+    frm previous_owner = board.current_decision_maker
+    frm previous_candidates = board.active_source_events
+    frm pending = collect_source_events(board, trigger)
+    frm player = board.current_player
+    frm controllers : BInt<0, 3>
+    while controllers.value < 2:
+        board.current_decision_maker = player
+        while orks_move_sources_remaining(board, pending, player, false):
+            board.active_source_events = pending
+            actions:
+                act finish_source_events() {!orks_move_sources_remaining(board, pending, player, true)}
+                    break
+                act choose_movement_source(frm SourceEventID event) {orks_move_source_valid(board, pending, event, player)}
+                    frm source_index : SourceInstanceID
+                    source_index = pending[event.value].source.value
+                    if board.source_instances[source_index.value].rule.value == ORKS_KEEP_HUNTIN_RULE:
+                        act choose_keep_huntin_target(frm UnitID hunt_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], hunt_target)}
+                        commit_orks_keep_huntin(board, pending, event, player, hunt_target)
+                    else:
+                        if board.source_instances[source_index.value].rule.value == ORKS_BOMB_SQUIG_RULE:
+                            act choose_bomb_squig_target(frm UnitID bomb_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], bomb_target)}
+                            commit_source_usage(board, board.source_instances[source_index.value])
+                            pending[event.value].resolved = true
+                            frm location = locate_source(board, board.source_instances[source_index.value].source_unit, invalid_entity_identity())
+                            frm bomb_source : UnitID
+                            bomb_source = location.unit.value
+                            act roll(Dice bomb_result)
+                            if bomb_result.value >= 3:
+                                subaction* bomb_damage = evaluate_random_stat(dice_stat(3))
+                                frm amount : CombatCounter
+                                amount = bomb_damage.result.value
+                                subaction*(board) bomb_mortals = resolve_mortal_wounds(board, bomb_target, bomb_source, true, amount)
+                        else:
+                            commit_pending_source(board, pending, event, player)
+                    board.current_decision_maker = player
+        player = !player
+        controllers = controllers + 1
+    board.active_source_events = previous_candidates
+    board.current_decision_maker = previous_owner
+
+# Independent model movement preserves staged positions until full coherency.
 # (pp.12/32–33). Overwatch is exclusively an end-of-Movement timing action.
 # Independent model paths share the existing BoardPosition grid and ctx
 # contracts; stage positions until complete final coherency passes (pp.12/87).
@@ -1759,7 +1841,7 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
     move_start_event.movement = board[unit].pending_move_kind
     if move_start_event.movement == MovementKind::stationary:
         move_start_event.movement = MovementKind::normal
-    subaction*(board) source_start = resolve_source_event(board, move_start_event)
+    subaction*(board) source_start = resolve_movement_sources(board, move_start_event)
     frm original : Unit
     original = board[unit]
     frm candidate : Unit
@@ -1823,7 +1905,7 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
     if completed:
         frm move_end_event = source_event(SourceEventKind::move_end, board[unit].identity, invalid_entity_identity(), invalid_entity_identity())
         move_end_event.movement = kind
-        subaction*(board) source_end = resolve_source_event(board, move_end_event)
+        subaction*(board) source_end = resolve_movement_sources(board, move_end_event)
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
@@ -2148,10 +2230,19 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
     board[source].history.declared_charge_phase = board.phase_serial.value + 1
     if completed:
         record_charge_move(board, source)
-        if crushing_source_valid(board, source):
+        # Mobbed and Crushing Impact share the charge-end controller group;
+        # the charging player chooses their order (user Rules Sequencing).
+        frm mobbed_pending = board[source].has_ability(AbilityKind::mobbed)
+        frm crushing_pending = crushing_source_valid(board, source)
+        while mobbed_pending or crushing_pending:
             actions:
-                act decline_crushing_impact()
-                act crushing_impact()
+                act resolve_mobbed() {mobbed_pending}
+                    mobbed_pending = false
+                    subaction*(board) mobbed = resolve_orks_mobbed(board, source)
+                act decline_crushing_impact() {crushing_pending}
+                    crushing_pending = false
+                act crushing_impact() {crushing_pending, crushing_source_valid(board, source)}
+                    crushing_pending = false
                     subaction*(board) impact = resolve_crushing_impact(board, source)
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
@@ -2649,6 +2740,7 @@ act battle(ctx Board board) -> Battle:
     subaction*(board) attach_leaders = attach_leaders(board)
     board.capture_starting_strengths()
     register_orks_passive_rules(board)
+    register_orks_unit_rules(board)
     subaction*(board) transport_formations = declare_transport_passengers(board)
     subaction*(board) reserves = declare_strategic_reserves(board)
     subaction*(board) deploy = deploy(board)
@@ -2682,6 +2774,9 @@ fun main() -> Int:
 
 fun<T> pretty_string(Board b, T obj) -> String:
     if obj is GameChooseSourceEvent:
+        if obj.event.value < b.active_source_events.size():
+            return b.source_instances[b.active_source_events[obj.event.value].source.value].name.value
+    if obj is GameChooseMovementSource:
         if obj.event.value < b.active_source_events.size():
             return b.source_instances[b.active_source_events[obj.event.value].source.value].name.value
     if obj is GameChooseWindowSource:

@@ -36,6 +36,8 @@ cls AttackSequenceInfo:
     LinearlyDistributedInt<0, MAX_STAT_MODIFIER> melta_damage_bonus
     Bool precision_visibility_known
     Bool[32] precision_visible_targets
+    # Beastboss Dodge Dis!: separate contribution before the cumulative cap.
+    Bool dodge_dis_hit_bonus
     Bool hit_roll_bonus
     # Cover changes BS, separate from the clamped hit modifier (p.50).
     Bool target_has_cover
@@ -123,7 +125,7 @@ cls AttackSequenceInfo:
         return found
 
     fun total_hit_modifier() -> Int:
-        let result = int(self.hit_roll_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
+        let result = int(self.hit_roll_bonus) + int(self.dodge_dis_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
         let i = 0
         while i != self.profile_hit_roll_bonus.size():
             if self.profile_hit_roll_bonus[i] == self.source_profile:

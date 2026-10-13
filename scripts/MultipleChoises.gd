@@ -185,8 +185,18 @@ func on_state_change():
 		# Attack groups and melee counts use finite numeric domains. Offer each
 		# legal value explicitly; board/model selectors cannot represent them.
 		# Source instances use a bounded source selector, never a board UnitID.
-		if unwrapped is RLCGameChooseSourceEvent or unwrapped is RLCGameChooseWindowSource:
+		if unwrapped is RLCGameChooseSourceEvent or unwrapped is RLCGameChooseWindowSource or unwrapped is RLCGameChooseMovementSource:
 			make_choise("Resolve " + GlobalRules.action_to_pretty_string(action), action)
+			added += 1
+		# Targeted current Orks effects retain one-UnitID click discovery and also
+		# offer named buttons, so the selected effect is explicit to the player.
+		if unwrapped is RLCGameChooseKeepHuntinTarget or unwrapped is RLCGameChooseBombSquigTarget or unwrapped is RLCGameChooseMobbedTarget:
+			var target_id = unwrapped.get_member(0).get_id().get_value()
+			var target_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_units(), target_id)
+			var effect = "Keep Huntin'" if unwrapped is RLCGameChooseKeepHuntinTarget else "Bomb Squig"
+			if unwrapped is RLCGameChooseMobbedTarget:
+				effect = "Mobbed: Battle-shock"
+			make_choise(effect + ": " + RLCLib.convert_string(target_unit.get_name().get_value()), action)
 			added += 1
 		if unwrapped is RLCGameChooseAttackWeapon:
 			make_choise("Resolve " + GlobalRules.action_to_pretty_string(action), action)

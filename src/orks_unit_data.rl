@@ -31,8 +31,8 @@ fun equip_orks_profile(Model model, Weapon weapon, NamedWeaponProfile name, Int 
     set_named_weapon_profile(model, slot, name)
     model.weapon_profile_groups[slot] = group
 
-# Current Beastboss profile/equipment/keywords/core Army Rules only; Dodge
-# Dis!/Keep Huntin' source adapters are17.H2 before production roster switching.
+# Current Beastboss grants Dodge Dis!/Keep Huntin' explicitly; source instances
+# register after Board assigns identities, before actual movement.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
 fun make_orks_beastboss() -> Unit:
     let unit : Unit
@@ -43,6 +43,8 @@ fun make_orks_beastboss() -> Unit:
     model.keywords.append(Keyword::character)
     model.keywords.append(Keyword::warboss)
     model.has_da_boss = true
+    model.abilities.append(AbilityKind::dodge_dis)
+    model.abilities.append(AbilityKind::keep_huntin)
     equip_orks_profile(model, Weapon::orks_beastboss_shoota, NamedWeaponProfile::shoota, 0)
     equip_orks_profile(model, Weapon::orks_beastboss_klaw_and_beastchoppa, NamedWeaponProfile::beast_snagga_klaw_and_beastchoppa, 0)
     unit.models.append(model)
@@ -62,6 +64,7 @@ fun orks_snagga_model(Bool nob, Bool thump_gun) -> Model:
     model.keywords.append(Keyword::battleline)
     model.keywords.append(Keyword::beast_snagga)
     model.keywords.append(Keyword::mob)
+    model.abilities.append(AbilityKind::mobbed)
     equip_orks_profile(model, Weapon::orks_slugga, NamedWeaponProfile::slugga, 0)
     if nob:
         assert(!thump_gun, "Thump Gun belongs to a Boy, not a Nob")
@@ -75,7 +78,7 @@ fun orks_snagga_model(Bool nob, Bool thump_gun) -> Model:
     return model
 
 # Construct every printed count/optional-loadout choice, retaining the Boy's
-# Choppa and Slugga when adding a Thump Gun. Mobbed's hook follows in17.H2.
+# Choppa and Slugga when adding a Thump Gun; Mobbed follows actual charge completion.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz
 fun make_orks_beast_snagga_boyz(Int nobs, Int boys, Int thump_guns) -> Unit:
     assert(orks_snagga_composition_valid(nobs, boys, thump_guns), "illegal Beast Snagga composition/loadout")
@@ -92,7 +95,7 @@ fun make_orks_beast_snagga_boyz(Int nobs, Int boys, Int thump_guns) -> Unit:
 # Squighog equipment includes ranged+melee Stikka profiles as one physical
 # weapon, and jaws as Extra Attacks. Neither profile has inherited Lance/FNP.
 # The source gives75x42/90x52 ovals. User policy now permits temporary75/90mm
-# long-axis circles; retain both axes and explicit shape metadata.
+# long-axis circles; retain both axes and the explicit oval metadata.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
 fun orks_squighog_model(Bool nob) -> Model:
     let profile = Profile::orks_squighog_boy
@@ -103,8 +106,10 @@ fun orks_squighog_model(Bool nob) -> Model:
     model.keywords.append(Keyword::beast_snagga)
     model.keywords.append(Keyword::explosives)
     model.keywords.append(Keyword::mobile)
-    # User-authorized long-axis circle proxy; original oval axes stay metadata.
+    # User-authorized proxy: long-axis circle; original oval axes stay metadata.
     model.geometry.unsupported_footprint = false
+    model.abilities.append(AbilityKind::bomb_squig)
+    model.abilities.append(AbilityKind::brutal_impact)
     if nob:
         equip_orks_profile(model, Weapon::orks_slugga, NamedWeaponProfile::slugga, 0)
         equip_orks_profile(model, Weapon::orks_big_choppa, NamedWeaponProfile::big_choppa, 0)
@@ -115,8 +120,8 @@ fun orks_squighog_model(Bool nob) -> Model:
     equip_orks_profile(model, Weapon::orks_squig_jaws, NamedWeaponProfile::squig_s_jaws, 0)
     return model
 
-# Count/equipment data with user-authorized circle proxies. Bomb Squig/Brutal
-# Impact must be completed before production roster migration (17.H2/H4).
+# Current count/equipment/ability metadata; Bomb Squig instances require Board
+# identities. Oval proxies follow user policy; production promotion is17.H4.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
 fun make_orks_squighog_boyz(Int nobs, Int boys) -> Unit:
     assert(orks_squighog_composition_valid(nobs, boys), "illegal Squighog composition")

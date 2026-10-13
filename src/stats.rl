@@ -32,6 +32,11 @@ enum AbilityKind:
     shields_of_the_chapter 
     hover
     super_heavy_walker
+    dodge_dis
+    keep_huntin
+    mobbed
+    bomb_squig
+    brutal_impact
 
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value

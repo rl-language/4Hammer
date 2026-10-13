@@ -39,6 +39,9 @@ fun attack_hit_choices(Board board, AttackSequenceInfo info) -> AttackModifierCh
     let choices : AttackModifierChoices
     if info.hit_roll_bonus:
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::hit_bonus))
+    # Beastboss/Dodge Dis!: unit-wide +1, separately selectable under02.02.02.
+    if info.dodge_dis_hit_bonus:
+        choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::dodge_dis))
     if info.hit_roll_malus:
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, -1), ModifierOrigin::hit_penalty))
     for profile_index in range(info.profile_hit_roll_bonus.size()):
@@ -70,7 +73,7 @@ fun same_attack_modifier_choices(AttackModifierChoices left, AttackModifierChoic
 fun valid_attack_modifier_choice(AttackModifierChoice choice) -> Bool:
     let one : RuleModifiers
     one.append(choice.modifier)
-    return choice.origin.value >= 0 and choice.origin.value <= ModifierOrigin::plunging_fire.value and valid_rule_modifiers(one)
+    return choice.origin.value >= 0 and choice.origin.value <= ModifierOrigin::dodge_dis.value and valid_rule_modifiers(one)
 
 # Sequential two-choice inputs represent every subset of the original list,
 # without an exponential action payload. Declining/applying spends no CP or
