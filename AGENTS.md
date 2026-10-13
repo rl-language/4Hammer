@@ -289,6 +289,10 @@ Schemas are state/observation **17**, action **13**. Keep `NEXT_STATE_SCHEMA_VER
 
 Batch17.B is complete: 442 assertions /444 CTest entries, 16 focused native sanitizer cases, matching full headless Godot, completed gameplay/replay, ML and short mutation fuzzing pass. Consult the report/roadmap for artifacts and limits. Next is 17.C; do not mark detachments, their cards or datasheets implemented because their configuration/CP enum entries exist.
 
+## Supported Orks source scope
+
+The user excludes all Forge World and Warhammer Legends units, including Gargantuan Squiggoth. Implement only the54 standard datasheets from the67-card source audit. Retain historical audit rows/stable catalog codes as source records, with explicit excluded status; do not install excluded unit factories, abilities, permissions, weapons or geometry. Use generic core fixtures for modifier ignoring. Revisit capacity/geometry/permission requirements against included sources in the owning data batches; an excluded card is no longer a mandatory implementation dependency.
+
 ## Retire obsolete Orks implementation
 
 The user authorises stripping the previous Orks implementation: it is no longer authoritative and need not be preserved for compatibility. Remove obsolete runtime cards/effects as the new source-driven batches replace them. Old profile/factory names still used by core regression fixtures may remain temporarily as explicitly uncertified scaffolding until17.H replaces the actual data; do not preserve their obsolete faction permissions or certify them as current datasheets.

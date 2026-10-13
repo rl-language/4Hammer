@@ -2,6 +2,10 @@
 
 This is a requirements audit with per-batch implementation status below; it does not certify complete faction rules. The user-directed scope is: no unit/army/enhancement point accounting, no detachment-point accounting, up to **three distinct selected detachments per player**, and full **CP** accounting. Printed eligibility, timing, equipment, attachment, ability-use and stratagem restrictions still apply. Three detachments is the project's requested selection limit, not a claim about the published DP budget. Do not make War Horde consume three selection slots because the website labels it 3DP.
 
+## Current implementation scope
+
+The user now excludes all Forge World and Legends units. Only the54 standard datasheets are planned for implementation; the12 Legends and one Forge World rows remain audited source records with explicit excluded status. Stable catalog identities are retained. The requirements below record the original67-card scan; excluded-only requirements, including Gargantuan Squiggoth's Walking Bastion and Kill Tank's loadout/cover, are not obligations to implement those units. Generic core machinery can still be tested with explicit fixtures. Later capacities, geometry and permission coverage must be reviewed against the included54 rows.
+
 ## Sources and coverage
 
 Read the [Orks faction page](https://wahapedia.ru/wh40k11ed/factions/orks/) and **all 67 distinct linked datasheets** on 2026-10-12. All downloads succeeded; all datasheet cards were inspected for profiles, weapon profiles, core/army rules, special abilities, equipment options, composition, attachments, transports and base information. The inventory includes **54 standard, 12 Legends and one Forge World** datasheet; none was silently omitted. Older Boarding Actions packages are recorded as separate material and are outside this ordinary-game plan.
@@ -71,7 +75,7 @@ Each row is a separately reviewable batch, usually with smaller function/rule co
 | 17.M | Hit/kill provenance and post-shoot debuffs/reactions; add each affected datasheet independently. | Pending |
 | 17.N | Psychic budget/phase restrictions, Weirdboy and Kill Rig abilities, then Wurrband. | Pending |
 | 17.O | Complete remaining ordinary packages individually: Da Big Hunt; Green Tide/Bully Boyz/Shoota Boyz/Taktikal Brigade/Brute Bosses; Wreckas; Blitz Brigade/Kult of Speed/Flyboyz; Dread Mob/Madcap Meks; Runt Swarm including O19. Pull simpler rules forward when dependencies are already satisfied. | Pending |
-| 17.P | Remaining datasheets by dependency family, including the 12 Legends and Forge World entry. Supply hull/multipart data, support ovals on grid anchors and keep unsupported cases unavailable rather than faking geometry. | Pending |
+| 17.P | Remaining included standard datasheets by dependency family; Legends and Forge World are excluded by user. Supply hull/multipart data, support ovals on grid anchors and keep unsupported cases unavailable rather than faking geometry. | Pending |
 | 17.Q | Complete all Godot journeys, cross-detachment interactions, save/replay/ML validation, representative games and sanitized fuzzing. Fix the recorded legal-action wrapper retrieval performance issue and every newly discovered defect. | Pending |
 
 Selection tests must cover one, two and three distinct detachments, rejection of a fourth or duplicate, availability of each selected package's CP cards, duplicate ability selection and cumulative numerical effects. Printed conditions still determine whether effects apply; selecting three packages does not apply every rule universally.
