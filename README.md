@@ -6,6 +6,8 @@
 
 [Documentation](https://rl-language.github.io/4hammer.html) [paper](https://arxiv.org/abs/2505.13638)
 
+For the current rules engine, read the [Rulebook design and architecture guide](doc/rulebook-architecture.md). It maps the modules, state/action lifetimes, combat and movement pipelines, source effects, and Godot/ML integration. [ROADMAP.md](ROADMAP.md) tracks the edition migration and validated scope.
+
 ### Rationale
 
 **Warhammer 40,000 (10th edition)** is a non-deterministic, zero-sum board game requiring several hours to play. Successfully playing it necessitates:

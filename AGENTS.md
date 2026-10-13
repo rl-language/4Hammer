@@ -4,6 +4,8 @@ Your task is to modify the game rules requested by the user and validate their b
 
 Use the existing isolated checkout; do not create a Git worktree unless requested. Inspect existing changes before editing. Unlike environment onboarding, a rule-change task permits the necessary source and test changes.
 
+Read [the Rulebook design and architecture guide](doc/rulebook-architecture.md) for module responsibilities, frame/context ownership, identity, combat/movement/source pipelines and host integration. Keep it aligned when those structures change. ROADMAP.md remains the source of implementation status and validation evidence; the architecture guide does not certify pending mechanics.
+
 Preserve the existing quad-based game representation. Model positions, placement choices and movement destinations must remain on the whole-inch quad grid, using the existing BoardPosition action domain and Godot grid interactions. Do not introduce fractional model positions or migrate to continuous/non-quad coordinates during the edition update. Physical distance calculations may account for base sizes without changing the coordinate representation. A migration away from quads is deferred until the user explicitly requests it; document rules that the grid cannot faithfully express.
 
 Earlier task-specific schema versions and test counts below are historical completion records. Use the latest completed batch section and ROADMAP.md for current versions and validation.

@@ -1,5 +1,7 @@
 # 11th-edition rules migration roadmap
 
+[The Rulebook design and architecture guide](doc/rulebook-architecture.md) documents the current engine structure and execution paths. The guide is completed documentation work; this roadmap owns implementation status and validation.
+
 This roadmap tracks planning and implementation separately. Tasks 1–5 and 7–16 are complete within their documented scopes. Task6 attachment implementation remains unfinished; the Orks audit now supplies its Orks permission lists, while other factions still require data. Task17 implementation is pending, with its Orks source/requirements audit complete. Task8 retains the user-approved area-only visibility abstraction. Update status and record evidence as work is completed; do not mark a task complete merely because it compiles.
 
 User constraint: retain the quad-based game throughout this migration. A change to non-quad coordinates is a separate future task requiring explicit instruction. Base-aware physical measurements do not authorize fractional model positions, new coordinate action domains or changes to Godot's grid interactions.
