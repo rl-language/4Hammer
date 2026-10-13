@@ -46,6 +46,9 @@ cls Model:
     # Model-scoped arithmetic, not implicit unit-wide grants (appendix02.02.01).
     CharacteristicModifiers characteristic_modifiers
     Wounds suffered_wounds
+    # Core ability24.39: supplied threshold only; legacy fixtures grant none.
+    Bool has_damaged
+    Wounds damaged_threshold
     WeaponsVector weapons
     # Explicit rule data for supplied datasheets/fixtures, by weapon slot (pp.78–85).
     CheckedVector<WeaponRule, 8>[MAX_WEAPONS] additional_weapon_rules
@@ -207,6 +210,12 @@ cls Model:
     # Battle-shocked '-' OC is handled by the unit before this query (p.9).
     fun effective_objective_control() -> Int:
         return effective_characteristic_value(self.profile.control(), ModifiedCharacteristic::objective_control, self.characteristic_modifiers, false)
+
+    # Damaged X applies at equal-or-fewer remaining wounds, including retained
+    # Fight on Death models. Source: core ability24.39, reproduced in the
+    # Battlewagon tooltip: https://wahapedia.ru/wh40k11ed/the-rules/core-rules/#Damaged
+    fun is_damaged() -> Bool:
+        return self.has_damaged and self.wounds_left() <= self.damaged_threshold.value
 
     fun wounds_left() -> Int:
         return self.profile.wounds() - self.suffered_wounds.value

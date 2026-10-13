@@ -168,6 +168,7 @@ fun rerollable_dice_roll(Board board, Bool reroll, Bool reroll_1s, Bool cp_rerol
 fun rerollable_dice_roll(Board board, Bool reroll, Bool reroll_1s, Bool cp_rerollable, Bool current_player, UnitID target) -> RerollableDice:
     return rerollable_dice_roll(board, reroll, reroll_1s, cp_rerollable, current_player, target, true)
 
+# Damaged24.39 joins other hit increments before the cumulative cap (02.02.01).
 # Heavy requires own Shooting phase, no setup/engagement and <=3in per model
 # (p.82). Engaged source/target penalties are cumulative before the cap (pp.35/63).
 fun get_hit_roll_bonus(Board board) -> Int:
@@ -920,6 +921,8 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     let model = declared_model_index(board, source, weapon)
     assert(model >= 0, "declared source no longer exists")
     info.source_profile = board[source][model].profile
+    # Damaged is bearer-local, refreshed for every new group (core24.39).
+    info.damaged_hit_penalty = board[source][model].is_damaged()
     # Recompute each new group's battlefield T after earlier casualties/effects
     # (appendix05.02.01); target_info only preserves the enclosing rule choices.
     info.source_unit_id = source

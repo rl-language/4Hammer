@@ -7317,3 +7317,151 @@ fun test_named17c2c_profile_attack_kind_metadata_rejected() -> Bool:
     board[0][0].weapon_names[0] = NamedWeapon::stikka.value
     board[0][0].weapon_profile_names[0] = NamedWeaponProfile::stikka_melee.value
     return !valid_model_numeric_history(board[0][0])
+
+# Core24.39 Damaged X: equal-or-less remaining wounds; no implicit grants.
+fun test_damaged17c3_threshold_boundary_and_disabled() -> Bool:
+    let model = make_infernus_squad()[0]
+    model.damaged_threshold = 1
+    model.suffered_wounds = 1
+    if model.is_damaged():
+        return false
+    model.has_damaged = true
+    if !model.is_damaged():
+        return false
+    model.suffered_wounds = 0
+    return !model.is_damaged()
+
+# Every new group refreshes bearer status; wounds on another model do not leak.
+fun test_damaged17c3_bearer_scope_and_group_refresh() -> Bool:
+    let board = attack_declaration_fixture()
+    let other = board[0][0]
+    other.identity = 0
+    board[0].models.append(other)
+    board.identify_units()
+    board[0][0].has_damaged = true
+    board[0][0].damaged_threshold = 1
+    let initial = orks17c2b_info(board, 0)
+    board[0][0].suffered_wounds = 1
+    let damaged = orks17c2b_info(board, 0)
+    let declaration = make_declared_weapon(board, unit_id(0), 1, 0)
+    let healthy = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return !initial.damaged_hit_penalty and damaged.damaged_hit_penalty and !healthy.damaged_hit_penalty
+
+# Damaged subtracts before the +/-1 cap, rather than afterwards (02.02.01).
+fun test_damaged17c3_combined_modifiers_before_cap() -> Bool:
+    let board = attack_declaration_fixture()
+    board.attack_info.damaged_hit_penalty = true
+    board.attack_info.hit_roll_bonus = true
+    board.attack_info.profile_hit_roll_bonus.append(board.attack_info.source_profile)
+    if get_hit_roll_bonus(board) != 1:
+        return false
+    board.attack_info.profile_hit_roll_bonus.clear()
+    if get_hit_roll_bonus(board) != 0:
+        return false
+    board.attack_info.hit_roll_bonus = false
+    board.attack_info.hit_roll_malus = true
+    return get_hit_roll_bonus(board) == -1
+
+# Actual hit classification uses Damaged while natural6 remains critical (p.18).
+fun test_damaged17c3_actual_hit_threshold_and_critical() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].has_damaged = true
+    board[0][0].damaged_threshold = 1
+    board[0][0].suffered_wounds = 1
+    board.attack_info = orks17c2b_info(board, 0)
+    return classify_attack_hit(board, board.attack_info, attack_test_die(2), get_hit_roll_bonus(board)) == AttackRollResult::failed and classify_attack_hit(board, board.attack_info, attack_test_die(3), get_hit_roll_bonus(board)) == AttackRollResult::success and classify_attack_hit(board, board.attack_info, attack_test_die(6), get_hit_roll_bonus(board)) == AttackRollResult::critical
+
+# Grouping distinguishes modified hit rolls of otherwise identical bearers.
+fun test_damaged17c3_grouping_splits_damaged_and_healthy() -> Bool:
+    let board = attack_declaration_fixture()
+    let healthy = orks17c2b_info(board, 0)
+    let damaged = healthy
+    damaged.damaged_hit_penalty = true
+    return !attacks_are_identical(board, healthy, damaged)
+
+# A retained destroyed model remains Damaged while authorised to fight.
+fun test_damaged17c3_retained_fight_on_death_is_damaged() -> Bool:
+    let model = make_infernus_squad()[0]
+    model.has_damaged = true
+    model.damaged_threshold = 1
+    model.suffered_wounds = model.profile.wounds()
+    model.state = ModelState::fight_on_death
+    return model.is_damaged()
+
+# Firing Deck uses the carrier's Damaged status, not the passenger's (p.81).
+fun test_damaged17c3_firing_deck_uses_carrier_status() -> Bool:
+    let board = attack_declaration_fixture()
+    board.embarked_units.append(board[0])
+    board.embarked_units[0][0].has_damaged = true
+    board.embarked_units[0][0].damaged_threshold = 1
+    board.embarked_units[0][0].suffered_wounds = 1
+    let declaration = make_deck_declaration(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 0)
+    let healthy = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    board[0][0].has_damaged = true
+    board[0][0].damaged_threshold = 1
+    board[0][0].suffered_wounds = 1
+    let damaged = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return !healthy.damaged_hit_penalty and damaged.damaged_hit_penalty
+
+# Restore gates reject raw out-of-domain storage without inventing an X>0 rule.
+fun test_damaged17c3_invalid_threshold_metadata() -> Bool:
+    let model = make_infernus_squad()[0]
+    model.has_damaged = true
+    if !valid_model_numeric_history(model):
+        return false
+    model.damaged_threshold.value = -1
+    if valid_model_numeric_history(model):
+        return false
+    model.damaged_threshold.value = MAX_WOUNDS
+    return !valid_model_numeric_history(model)
+
+# Game serialization preserves both supplied threshold and gathered hit state.
+fun test_damaged17c3_saved_threshold_and_group_round_trip() -> Bool:
+    let state = play()
+    state.board = attack_declaration_fixture()
+    state.board[0][0].has_damaged = true
+    state.board[0][0].damaged_threshold = 1
+    state.board[0][0].suffered_wounds = 1
+    state.board.attack_info = orks17c2b_info(state.board, 0)
+    let restored = play()
+    return set_state(restored, to_string(state)) and restored.board[0][0].is_damaged() and restored.board.attack_info.damaged_hit_penalty and get_hit_roll_bonus(restored.board) == -1
+
+# Healing above X removes the penalty at the next group, overriding stale context.
+fun test_damaged17c3_healing_refresh_and_melee_consumer() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].has_damaged = true
+    board[0][0].damaged_threshold = 1
+    board[0][0].suffered_wounds = 1
+    board.attack_info = orks17c2b_info(board, 0)
+    if !board.attack_info.damaged_hit_penalty or get_hit_roll_bonus(board) != -1:
+        return false
+    board[0][0].suffered_wounds = 0
+    board.attack_info = orks17c2b_info(board, 0)
+    return !board.attack_info.damaged_hit_penalty and get_hit_roll_bonus(board) == 0
+
+# The actual hit/wound coroutine consumes the penalty; a nominal hit at BS2
+# becomes a miss and no wound-roll selector is offered (core24.39/p.18).
+fun test_damaged17c3_hit_batch_consumes_penalty() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].has_damaged = true
+    board[0][0].damaged_threshold = 1
+    board[0][0].suffered_wounds = 1
+    board.attack_info = orks17c2b_info(board, 0)
+    let batch = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
+    batch.roll(board, board[1], board[0], attack_test_die(2))
+    return batch.is_done() and batch.generated_hits.value == 0
+
+# Torrent still makes no hit roll; Damaged cannot reduce automatic hits (p.85).
+fun test_damaged17c3_torrent_keeps_automatic_hits() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons[0] = Weapon::pyreblaster
+    board[0][0].has_damaged = true
+    board[0][0].damaged_threshold = 1
+    board[0][0].suffered_wounds = 1
+    board.attack_info = orks17c2b_info(board, 0)
+    let batch = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
+    if board.current_state.value != CurrentStateDescription::wound_roll.value or batch.generated_hits.value != 1:
+        return false
+    batch.roll(board, board[1], board[0], attack_test_die(4))
+    return batch.is_done() and batch.generated_wounds.value == 1

@@ -26,6 +26,8 @@ cls AttackSequenceInfo:
     CheckedVector<WeaponRule, 32> selected_weapon_rules
     Bool indirect_stationary_visible
     Bool heavy_bonus
+    # Per-bearer group snapshot of core ability24.39, before the hit-roll cap.
+    Bool damaged_hit_penalty
     LinearlyDistributedInt<0, 3> engaged_hit_penalties
     UnitID source_unit_id # required
     UnitID target_unit_id # required
@@ -112,7 +114,7 @@ cls AttackSequenceInfo:
         return found
 
     fun total_hit_modifier() -> Int:
-        let result = int(self.hit_roll_bonus) - int(self.hit_roll_malus)
+        let result = int(self.hit_roll_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
         let i = 0
         while i != self.profile_hit_roll_bonus.size():
             if self.profile_hit_roll_bonus[i] == self.source_profile:
@@ -877,6 +879,8 @@ fun valid_state_foundations(Board board) -> Bool:
 # decisions or inferred observations (p.82 / user numeric-storage requirement).
 fun valid_model_numeric_history(Model model) -> Bool:
     if !valid_characteristic_modifiers(model.characteristic_modifiers):
+        return false
+    if model.damaged_threshold.value < 0 or model.damaged_threshold.value >= MAX_WOUNDS:
         return false
     if !valid_named_model_identity(model):
         return false
