@@ -95,7 +95,7 @@ cls AttackSequenceInfo:
 
     # A chosen duplicate is used alone, with its target-keyword condition (p.78).
     fun rule_applies(Board board, WeaponRule rule) -> Bool:
-        return board[self.target_unit_id].weapon_rule_applies(rule)
+        return source_grant_active(board, rule.source_effect) and board[self.target_unit_id].weapon_rule_applies(rule)
 
     fun max_weapon_parameter(Board board, WeaponRuleKind kind) -> Int:
         let result = 0
@@ -284,6 +284,7 @@ cls Board:
     fun start_turn_history():
         assert(self.turn_serial.value + 1 < MAX_TURN_SERIAL, "turn serial capacity exceeded")
         self.turn_serial = self.turn_serial + 1
+        refresh_source_effects(self, TimingWindow::none)
         let i = 0
         while i < self.units.size():
             self.units[i].reset_turn_history()
@@ -372,6 +373,7 @@ cls Board:
     fun begin_phase(BattlePhase phase):
         self.clear_phase_modifiers()
         self.timing.phase = phase
+        refresh_source_effects(self, TimingWindow::none)
         self.current_decision_maker = self.current_player
 
     # Window controllers follow the user-supplied order: active rules first,
@@ -386,6 +388,7 @@ cls Board:
     # Mission end rules follow non-mission rules (pp.28–30); actual mission
     # achievements are unavailable and remain task 17, not invented here.
     fun close_timing_window():
+        refresh_source_effects(self, self.timing.window)
         self.timing.stage = TimingStage::mission_rules
         self.timing.open = false
         self.timing.stage = TimingStage::closed
@@ -813,11 +816,13 @@ fun destroyed_stratagem_target(Unit target) -> Bool:
 # Check saved roots before restoring editor choices (appendix02.05.01/p.78).
 fun valid_weapon_condition(WeaponRule rule) -> Bool:
     let keyword : Keyword
-    return rule.target_condition.valid(max(keyword))
+    return rule.source_effect.value >= 0 and rule.source_effect.value < MAX_SOURCE_EFFECT_KEY and rule.kind.value >= 0 and rule.kind.value <= WeaponRuleKind::anti.value and rule.parameter.value >= 0 and rule.parameter.value < MAX_CHARACTERISTIC and rule.target_condition.valid(max(keyword))
 
 # Compatibility/integrity gate: configurations cannot bypass their bounded
 # policies; identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
+    if !valid_source_foundations(board):
+        return false
     if !valid_rule_modifiers(board.attack_info.skill_modifiers) or !valid_rule_modifiers(board.attack_info.ap_modifiers) or !valid_rule_modifiers(board.attack_info.damage_modifiers):
         return false
     for configured_player in range(2):

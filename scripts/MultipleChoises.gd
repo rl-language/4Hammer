@@ -162,6 +162,10 @@ func on_state_change():
 			added += 1
 		# Attack groups and melee counts use finite numeric domains. Offer each
 		# legal value explicitly; board/model selectors cannot represent them.
+		# Source instances use a bounded source selector, never a board UnitID.
+		if unwrapped is RLCGameChooseSourceEvent or unwrapped is RLCGameChooseWindowSource:
+			make_choise("Resolve " + GlobalRules.action_to_pretty_string(action), action)
+			added += 1
 		if unwrapped is RLCGameChooseAttackWeapon:
 			make_choise("Resolve " + GlobalRules.action_to_pretty_string(action), action)
 			added += 1

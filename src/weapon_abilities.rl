@@ -37,14 +37,14 @@ fun model_weapon_has_rule(Model model, Int slot, WeaponRuleKind kind) -> Bool:
 # Selected rules are immutable through resolution; applicability is target-specific (p.78).
 fun chosen_weapon_has_rule(Board board, UnitID target, WeaponAbilitySet rules, WeaponRuleKind kind) -> Bool:
     for i in range(rules.size()):
-        if rules[i].kind == kind and board[target].weapon_rule_applies(rules[i]):
+        if rules[i].kind == kind and source_grant_active(board, rules[i].source_effect) and board[target].weapon_rule_applies(rules[i]):
             return true
     return false
 
 # Numeric abilities select one instance, never sum/max duplicate instances (p.78).
 fun chosen_weapon_parameter(Board board, UnitID target, WeaponAbilitySet rules, WeaponRuleKind kind) -> Int:
     for i in range(rules.size()):
-        if rules[i].kind == kind and board[target].weapon_rule_applies(rules[i]):
+        if rules[i].kind == kind and source_grant_active(board, rules[i].source_effect) and board[target].weapon_rule_applies(rules[i]):
             return rules[i].parameter.value
     return 0
 

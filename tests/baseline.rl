@@ -7605,6 +7605,8 @@ fun test_incoming17c4a_saved_metadata_round_trip() -> Bool:
     let restored = play()
     return set_state(restored, to_string(state)) and restored.board[1][0].incoming_attack_modifiers.size() == 1 and restored.board[1][0].incoming_attack_modifiers[0].modifier.signed_amount() == 1 and valid_model_numeric_history(restored.board[1][0])
 
+# All67 source loadouts, including Kill Tank options, require at most13 stored
+# profiles; declarations include32 Firing Deck selections (p.81/Orks sources).
 fun test_physical17d_capacity_and_last_slot() -> Bool:
     # Capacity is model storage; actual final-slot legality is also checked
     # in the profile-selection regression below, using its live board.
@@ -7618,7 +7620,8 @@ fun test_physical17d_capacity_and_last_slot() -> Bool:
     let valid = MAX_WEAPONS == 13 and MAX_WEAPON_SCOPES == 14 and MAX_SELECTED_WEAPONS == MAX_UNIT_MODELS * MAX_WEAPONS + MAX_DECK_SELECTIONS and unit[0].weapons.size() == 13 and choices.size() == 13 and choices[12].value == 12
     return valid
 
-
+# Nazdreg allows its three separate ranged profiles; ordinary copies still
+# choose one profile (source UNIT COMPOSITION; appendix04.01.03).
 fun test_physical17d_nazdreg_scoped_profile_exception() -> Bool:
     let board = attack_declaration_fixture()
     board[0][0].weapons.clear()
@@ -7638,7 +7641,7 @@ fun test_physical17d_nazdreg_scoped_profile_exception() -> Bool:
     let outside = weapon_selection_valid(board, unit_id(0), 0, 13, false, selected, false)
     return permitted and last_slot and !outside
 
-
+# One Shot usage still belongs to a physical copy, independently of its name.
 fun test_physical17d_one_shot_copies_independent() -> Bool:
     let board = attack_declaration_fixture()
     board[0][0].weapons.clear()
@@ -7648,7 +7651,8 @@ fun test_physical17d_one_shot_copies_independent() -> Bool:
     consume_one_shot_profile(board[0][0], 0)
     return board[0][0].used_once_per_battle_weapon[0] and board[0][0].used_once_per_battle_weapon[1] and !board[0][0].used_once_per_battle_weapon[2] and !board[0][0].used_once_per_battle_weapon[3]
 
-
+# Hazardous is rolled per selected physical weapon, not per simultaneous
+# profile; independent copies and borrowed owners stay separate (p.81).
 fun test_physical17d_hazardous_physical_identity() -> Bool:
     let board = attack_declaration_fixture()
     board.identify_units()
@@ -7665,7 +7669,7 @@ fun test_physical17d_hazardous_physical_identity() -> Bool:
     declarations.append(third)
     return declared_hazardous_uses(declarations) == 2 and same_declared_physical_weapon(first, second) and !same_declared_physical_weapon(second, third)
 
-
+# Metadata cannot permit a nonexistent/Melee/ungrouped simultaneous profile.
 fun test_physical17d_profile_permission_restore_guard() -> Bool:
     let board = attack_declaration_fixture()
     board[0][0].simultaneous_ranged_profiles[12] = true
@@ -7675,7 +7679,7 @@ fun test_physical17d_profile_permission_restore_guard() -> Bool:
     board[0][0].simultaneous_ranged_profiles[0] = true
     return !valid_named_model_identity(board[0][0])
 
-
+# D3 inputs are actual faces1..3; intrinsic constants survive until modifiers.
 fun test_compound17d_d3_sum_and_intrinsic_constant() -> Bool:
     let expression = compound_stat(2, 3, 2)
     let sequence = evaluate_random_stat(expression)
@@ -7687,7 +7691,7 @@ fun test_compound17d_d3_sum_and_intrinsic_constant() -> Bool:
     sequence.quantity(attack_test_die(3))
     return sequence.is_done() and sequence.result.value == 7
 
-
+# Stompa3D6+3 A is generated individually at gathering (02.02.03/source row).
 fun test_compound17d_actual_stompa_attacks_gathering() -> Bool:
     let board = attack_declaration_fixture()
     board[0][0].weapons[0] = Weapon::stompa_supa_gatler_point_blank
@@ -7698,7 +7702,8 @@ fun test_compound17d_actual_stompa_attacks_gathering() -> Bool:
     gathering.quantity(board, attack_test_die(2))
     return gathering.is_done() and gathering.result.value == 12
 
-
+# Re-roll all original dice once, retain the intrinsic +3, then multiply
+# (01.05.02/02.02.03). One CP pays for the whole summed roll.
 fun test_compound17d_whole_roll_reroll_before_modifiers() -> Bool:
     let board = attack_declaration_fixture()
     board.command_points[0] = 1
@@ -7716,7 +7721,7 @@ fun test_compound17d_whole_roll_reroll_before_modifiers() -> Bool:
     sequence.reroll(board, attack_test_die(6))
     return sequence.is_done() and sequence.result.value == 42 and board.command_points[0] == 0
 
-
+# Actual allocated D6+2 includes intrinsic +2 before incoming reductions.
 fun test_compound17d_allocated_stompa_damage() -> Bool:
     let board = attack_declaration_fixture()
     board[1][0].profile = Profile::captain_octavius
@@ -7727,7 +7732,8 @@ fun test_compound17d_allocated_stompa_damage() -> Bool:
     damage.quantity(board, board[1], board[0], attack_test_die(2))
     return damage.is_done() and board[1][0].suffered_wounds == 3
 
-
+# Random movement still determines one entire unit's M (02.02.03), while
+# compound dice do not grant a Command Re-roll for movement characteristics.
 fun test_compound17d_unit_random_movement() -> Bool:
     let board = movement11_fixture()
     board[0][0].has_random_movement = true
@@ -7737,11 +7743,12 @@ fun test_compound17d_unit_random_movement() -> Bool:
     sequence.quantity(board, attack_test_die(3))
     return board[0].movement_override.value == 12 and can sequence.normal_move(board)
 
-
+# Different original shapes do not group just because replacement D is equal;
+# equivalent1D6 forms do (p.17/01.05.02/02.02.03).
 fun test_compound17d_random_shape_group_identity() -> Bool:
     return same_damage_characteristic(dice_stat(6), compound_stat(1, 6, 0)) and !same_damage_characteristic(compound_stat(2, 3, 0), compound_stat(1, 6, 0)) and !same_damage_characteristic(compound_stat(1, 6, 2), compound_stat(1, 6, 3))
 
-
+# Stored compound movement/demise survives save round trips with bounds intact.
 fun test_compound17d_saved_expressions() -> Bool:
     let state = play()
     state.board = attack_declaration_fixture()
@@ -7752,7 +7759,469 @@ fun test_compound17d_saved_expressions() -> Bool:
     let restored = play()
     return set_state(restored, to_string(state)) and stat_dice_count(restored.board[0][0].deadly_demise) == 2 and stat_intrinsic_constant(restored.board[0][0].random_movement) == 6
 
+# Typed source fixtures exercise infrastructure, not install uncertified Orks abilities.
+fun source17e_instance(Board board, Int unit, Int rule) -> SourceInstance:
+    board.identify_units()
+    let instance : SourceInstance
+    instance.rule = rule
+    instance.name.value = "Source fixture"s
+    instance.source_unit = board[unit].identity
+    instance.source_model = board[unit][0].identity
+    instance.owner = board[unit].owned_by_player1
+    instance.trigger = SourceEventKind::timing_window
+    instance.window = TimingWindow::movement_start
+    instance.optional = true
+    instance.grant = characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 2)
+    return instance
 
+fun source17e_id(Int value) -> SourceEventID:
+    let result : SourceEventID
+    result = value
+    return result
+
+fun source17e_trigger(Board board, SourceEventKind kind, Int unit) -> SourceEvent:
+    let result = source_event(kind, board[unit].identity, invalid_entity_identity(), invalid_entity_identity())
+    result.window = TimingWindow::movement_start
+    result.movement = MovementKind::normal
+    return result
+
+# Source instances share the user's current-player/opponent order with legacy
+# timing choices, rather than dispatching all sources before both players.
+fun test_sources17e_timing_controller_order() -> Bool:
+    let board = attack_declaration_fixture()
+    let own = source17e_instance(board, 0, 1)
+    let enemy = source17e_instance(board, 1, 2)
+    register_source_instance(board, own)
+    register_source_instance(board, enemy)
+    let sequence = resolve_timing_window(board, TimingWindow::movement_start)
+    if can sequence.choose_window_source(board, source17e_id(1)):
+        return false
+    sequence.choose_window_source(board, source17e_id(0))
+    if !board.current_decision_maker or board[0][0].effective_movement(6) != 8:
+        return false
+    sequence.choose_window_source(board, source17e_id(1))
+    return sequence.is_done() and !board.current_decision_maker and board[1][0].effective_movement(6) == 8
+
+# Passing optional effects spends nothing; mandatory source instances cannot
+# be skipped even when their only choice is a singleton (source/user sequencing).
+fun test_sources17e_optional_decline_and_mandatory() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    register_source_instance(board, instance)
+    let declined = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    declined.finish_source_events(board)
+    if !declined.is_done() or board.source_uses.size() != 0 or board.source_effects.size() != 0:
+        return false
+    board.source_instances[0].optional = false
+    let required = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    if can required.finish_source_events(board):
+        return false
+    required.choose_source_event(board, source17e_id(0))
+    return required.is_done() and board.source_effects.size() == 1
+
+# Duplicate per-army sources share usage, while players remain independent.
+fun test_sources17e_shared_army_limit_rechecks_pending() -> Bool:
+    let board = attack_declaration_fixture()
+    let first = source17e_instance(board, 0, 1)
+    first.limits.phase = 1
+    let second = first
+    register_source_instance(board, first)
+    register_source_instance(board, second)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(1))
+    return sequence.is_done() and board.source_effects.size() == 1 and !source_usage_available(board, first) and !source_usage_available(board, second)
+
+# Simultaneous phase/turn/round/battle limits are all enforced; new intervals
+# reset only their own counts, never the battle total (sourced Orks limits).
+fun test_sources17e_combined_interval_limits() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    instance.limits.phase = 2
+    instance.limits.turn = 3
+    instance.limits.round = 4
+    instance.limits.battle = 5
+    commit_source_usage(board, instance)
+    commit_source_usage(board, instance)
+    if source_usage_available(board, instance):
+        return false
+    board.begin_phase(BattlePhase::movement)
+    commit_source_usage(board, instance)
+    if source_usage_available(board, instance):
+        return false
+    board.start_turn_history()
+    commit_source_usage(board, instance)
+    if source_usage_available(board, instance):
+        return false
+    board.current_round = 1
+    board.begin_phase(BattlePhase::shooting)
+    commit_source_usage(board, instance)
+    board.start_turn_history()
+    board.begin_phase(BattlePhase::fight)
+    board.current_round = 2
+    return !source_usage_available(board, instance) and board.source_uses[0].battle_uses.value == 5
+
+# Equal grant values from different sources keep independent expiry handles.
+fun test_sources17e_overlapping_grants_expire_independently() -> Bool:
+    let board = attack_declaration_fixture()
+    let first = source17e_instance(board, 0, 1)
+    let second = source17e_instance(board, 0, 2)
+    second.duration = SourceDuration::next_own_turn
+    register_source_instance(board, first)
+    register_source_instance(board, second)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    sequence.choose_source_event(board, source17e_id(1))
+    if board[0][0].effective_movement(6) != 10:
+        return false
+    board.begin_phase(BattlePhase::shooting)
+    return board.source_effects.size() == 1 and board[0][0].effective_movement(6) == 8 and valid_source_grant(board.source_instances[0].grant) and valid_source_grant(board.source_instances[1].grant)
+
+# Next-own-turn effects survive the opponent's turn; duration belongs to the
+# granting player's next turn, not the recipient's owner (01.02.02).
+fun test_sources17e_next_own_turn_duration() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    instance.duration = SourceDuration::next_own_turn
+    register_source_instance(board, instance)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    board.current_player = true
+    board.start_turn_history()
+    if board[0][0].effective_movement(6) != 8:
+        return false
+    board.current_player = false
+    board.start_turn_history()
+    return board.source_effects.size() == 0 and board[0][0].effective_movement(6) == 6
+
+# Reserve/passenger transfers retain duration, and expiry reaches both banks
+# (01.02.02); no physical range is measured in this fixture.
+fun test_sources17e_expiry_in_reserve_and_passenger_banks() -> Bool:
+    let board = attack_declaration_fixture()
+    let own = source17e_instance(board, 0, 1)
+    let enemy = source17e_instance(board, 1, 2)
+    register_source_instance(board, own)
+    register_source_instance(board, enemy)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    sequence.choose_source_event(board, source17e_id(1))
+    board.embarked_units.append(board[1])
+    board.units.erase(1)
+    board.reserve_units.append(board[0])
+    board.units.erase(0)
+    board.begin_phase(BattlePhase::shooting)
+    return board.source_effects.size() == 0 and board.reserve_units[0][0].effective_movement(6) == 6 and board.embarked_units[0][0].effective_movement(6) == 6
+
+# Sources follow model identity after compaction; model grants do not affect
+# another constituent merely because it shares the unit (pp.66/87).
+fun test_sources17e_model_scope_and_stable_source() -> Bool:
+    let board = attack_declaration_fixture()
+    let other = board[0][0]
+    other.identity = 0
+    board[0].models.append(other)
+    board.identify_units()
+    let instance = source17e_instance(board, 0, 1)
+    instance.source_model = board[0][1].identity
+    instance.recipient = SourceTarget::source_model
+    register_source_instance(board, instance)
+    board[0].models.erase(0)
+    let relocated = board[0]
+    relocated.identity = 0
+    board[0].models.clear()
+    board[0].retired = true
+    board.identify_unit(relocated)
+    board.units.append(relocated)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    return sequence.is_done() and board[3][0].identity == instance.source_model and board[3][0].effective_movement(6) == 8
+
+# Offboard own rules require explicit permission, and external range triggers
+# stay unavailable even when that permission exists (01.02.04).
+fun test_sources17e_offboard_permission_and_range() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    instance.trigger = SourceEventKind::move_end
+    register_source_instance(board, instance)
+    let event = source17e_trigger(board, SourceEventKind::move_end, 0)
+    board.reserve_units.append(board[0])
+    board.units.erase(0)
+    if source_event_available(board, instance, event):
+        return false
+    instance.offboard_allowed = true
+    if !source_event_available(board, instance, event):
+        return false
+    instance.subject = SourceSubject::any_unit
+    instance.trigger_range = 6
+    event.unit = board[0].identity
+    return !source_event_available(board, instance, event)
+
+# The real attack selection hook resolves its source before weapon choices.
+fun test_sources17e_actual_attack_selection_hook() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    instance.trigger = SourceEventKind::attack_selection
+    instance.grant = characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::add, 2)
+    register_source_instance(board, instance)
+    let sequence = attack(board, unit_id(0), unit_id(1), false, false)
+    if can sequence.select_weapon(board, attack_test_slot(0)):
+        return false
+    sequence.choose_source_event(board, source17e_id(0))
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    return declaration_fixed_attacks(board, unit_id(0), declaration, 0) == 4 and can sequence.select_weapon(board, attack_test_slot(0))
+
+# Source-only destruction hooks retain their victim and resolve at the printed
+# release point; unrelated deaths can trigger an eligible observer (p.87).
+fun test_sources17e_actual_destruction_observer_hook() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    instance.trigger = SourceEventKind::model_destroyed
+    instance.subject = SourceSubject::enemy_unit
+    instance.grant = characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 1)
+    register_source_instance(board, instance)
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 2, board[1][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    if board[1][0].state.value != ModelState::pending_destruction.value:
+        return false
+    let empty : DamageJobs
+    let cleanup = resolve_damage_jobs(board, empty, true, unit_id(0))
+    cleanup.choose_destruction_unit(board, unit_id(1))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    cleanup.choose_source_event(board, source17e_id(0))
+    let modifiers = model_weapon_modifiers(board[0][0], 0, ModifiedCharacteristic::strength, false)
+    return cleanup.is_done() and board[1].models.size() == 0 and modified_characteristic(4, ModifiedCharacteristic::strength, modifiers, false) == 5
+
+# Expired weapon-rule snapshots do not resurrect a grant after phase cleanup.
+fun test_sources17e_weapon_rule_snapshot_expiry() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    instance.grant = source_weapon_grant(weapon_rule(WeaponRuleKind::heavy))
+    register_source_instance(board, instance)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    if !info.has_weapon_rule(board, WeaponRuleKind::heavy):
+        return false
+    board.begin_phase(BattlePhase::shooting)
+    return !info.has_weapon_rule(board, WeaponRuleKind::heavy)
+
+# Passive auras update when either unit moves, and drop immediately with the
+# source; offboard recipients do not receive range-based effects (01.02.04).
+fun test_sources17e_live_aura_range_and_source() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1].owned_by_player1 = false
+    let instance = source17e_instance(board, 0, 1)
+    instance.aura = true
+    instance.optional = false
+    instance.recipient = SourceTarget::event_unit
+    instance.subject = SourceSubject::friendly_unit
+    instance.duration = SourceDuration::battle
+    instance.trigger_range = 6
+    register_source_instance(board, instance)
+    if board[1][0].effective_movement(6) != 8:
+        return false
+    board[1][0].position.x = 20
+    refresh_source_effects(board, TimingWindow::none)
+    if board[1][0].effective_movement(6) != 6:
+        return false
+    board[1][0].position.x = 10
+    refresh_source_effects(board, TimingWindow::none)
+    if board[1][0].effective_movement(6) != 8:
+        return false
+    board[0][0].suffered_wounds = 2
+    refresh_source_effects(board, TimingWindow::none)
+    return board.source_effects.size() == 0 and board[1][0].effective_movement(6) == 6
+
+# Overlapping auras never erase another source's equal-valued arithmetic grant.
+fun test_sources17e_aura_overlap_and_disable() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1].owned_by_player1 = false
+    let instance = source17e_instance(board, 0, 1)
+    instance.aura = true
+    instance.optional = false
+    instance.recipient = SourceTarget::event_unit
+    instance.subject = SourceSubject::friendly_unit
+    instance.duration = SourceDuration::battle
+    instance.trigger_range = 6
+    register_source_instance(board, instance)
+    instance = source17e_instance(board, 1, 2)
+    instance.aura = true
+    instance.optional = false
+    instance.recipient = SourceTarget::event_unit
+    instance.subject = SourceSubject::friendly_unit
+    instance.duration = SourceDuration::battle
+    instance.trigger_range = 6
+    register_source_instance(board, instance)
+    if board[0][0].effective_movement(6) != 10:
+        return false
+    board.source_instances[0].disabled = true
+    refresh_source_effects(board, TimingWindow::none)
+    return board[0][0].effective_movement(6) == 8 and board[1][0].effective_movement(6) == 8
+
+# Unit grants reach a newly returned constituent once, without duplicating
+# the surviving member's original grant (p.88/01.02.02).
+fun test_sources17e_returned_constituent_refresh() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    instance.duration = SourceDuration::battle
+    register_source_instance(board, instance)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    let returned = board[0][0]
+    returned.identity = 0
+    returned.characteristic_modifiers.clear()
+    board[0].models.append(returned)
+    board.identify_unit(board[0])
+    refresh_source_effects(board, TimingWindow::none)
+    refresh_source_effects(board, TimingWindow::none)
+    return board[0][0].characteristic_modifiers.size() == 1 and board[0][1].characteristic_modifiers.size() == 1 and board[0][1].effective_movement(6) == 8
+
+# Source/effect/usage identities survive full-game serialization and invalid
+# source references are rejected by the save gate (bounded infrastructure).
+fun test_sources17e_saved_records_and_invalid_reference() -> Bool:
+    let state = play()
+    state.board = attack_declaration_fixture()
+    let instance = source17e_instance(state.board, 0, 1)
+    instance.limits.battle = 2
+    register_source_instance(state.board, instance)
+    let sequence = resolve_source_event(state.board, source17e_trigger(state.board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(state.board, source17e_id(0))
+    let restored = play()
+    if !set_state(restored, to_string(state)) or restored.board.source_effects.size() != 1 or restored.board.source_uses[0].battle_uses.value != 1 or restored.board[0][0].effective_movement(6) != 8:
+        return false
+    restored.board.source_effects[0].source.value = 63
+    return !valid_source_foundations(restored.board)
+
+# Model/unit limits key the printed subject rather than flattening everything
+# into one per-army counter (Orks source restriction wording).
+fun test_sources17e_unit_model_and_player_use_keys() -> Bool:
+    let board = attack_declaration_fixture()
+    let first = source17e_instance(board, 0, 1)
+    first.use_scope = SourceUseScope::unit
+    first.limits.battle = 1
+    let second = source17e_instance(board, 1, 1)
+    second.use_scope = SourceUseScope::unit
+    second.limits.battle = 1
+    commit_source_usage(board, first)
+    if source_usage_available(board, first) or !source_usage_available(board, second):
+        return false
+    first.use_scope = SourceUseScope::model
+    return source_usage_available(board, first) and board.source_uses.size() == 1
+
+# Source-installed incoming D reaches the actual allocated damage consumer.
+fun test_sources17e_incoming_damage_grant_consumer() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    instance.recipient = SourceTarget::target_unit
+    instance.grant = incoming_attack_modifier(ModifiedCharacteristic::damage, ModifierOperation::subtract, 1, IncomingAttackScope::ranged)
+    register_source_instance(board, instance)
+    let event = source17e_trigger(board, SourceEventKind::timing_window, 0)
+    event.target = board[1].identity
+    let trigger = resolve_source_event(board, event)
+    trigger.choose_source_event(board, source17e_id(0))
+    board.attack_info.damage_modifiers.append(rule_modifier(ModifierOperation::replace, 2))
+    let damage = resolve_attack_damage(board, board[1], board[0], attack_test_count(0), attack_test_count(1))
+    damage.allocate_mortal(board, board[1], board[0], damage_test_model(0))
+    return damage.is_done() and board[1][0].suffered_wounds == 1
+
+# Named/physical source weapon rules retain17.C2c conjunctive scope and do
+# not become bearer-wide merely because a generic event installed them.
+fun test_sources17e_named_physical_weapon_rule_scope() -> Bool:
+    let board = named17c2c_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    let grant = source_weapon_grant(weapon_rule(WeaponRuleKind::precision))
+    grant.weapon_scope = 1
+    grant.physical_scope = true
+    grant.weapon_name = board[0][0].weapon_names[0]
+    instance.grant = grant
+    register_source_instance(board, instance)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    return model_weapon_has_rule(board[0][0], 0, WeaponRuleKind::precision) and model_weapon_has_rule(board[0][0], 1, WeaponRuleKind::precision) and !model_weapon_has_rule(board[0][0], 2, WeaponRuleKind::precision)
+
+# Live aura eligibility rechecks compound target keywords, not only geometry.
+fun test_sources17e_aura_keyword_condition_refresh() -> Bool:
+    let board = attack_declaration_fixture()
+    board[1].owned_by_player1 = false
+    board[1][0].keywords.append(Keyword::vehicle)
+    let instance = source17e_instance(board, 0, 1)
+    instance.aura = true
+    instance.optional = false
+    instance.recipient = SourceTarget::event_unit
+    instance.subject = SourceSubject::friendly_unit
+    instance.duration = SourceDuration::battle
+    instance.trigger_range = 6
+    append_keyword_condition(instance.recipient_condition, KeywordClause::all, Keyword::vehicle)
+    register_source_instance(board, instance)
+    if board[0][0].effective_movement(6) != 6 or board[1][0].effective_movement(6) != 8:
+        return false
+    board[1][0].keywords.pop()
+    refresh_source_effects(board, TimingWindow::none)
+    return board[1][0].effective_movement(6) == 6
+
+# Actual move-start/end events preserve independent source handles and expose
+# choices around the movement endpoint rather than inventing phase triggers.
+fun test_sources17e_actual_move_start_end_hooks() -> Bool:
+    let board = movement11_fixture()
+    let start = source17e_instance(board, 0, 1)
+    start.trigger = SourceEventKind::move_start
+    let end = source17e_instance(board, 0, 2)
+    end.trigger = SourceEventKind::move_end
+    register_source_instance(board, start)
+    register_source_instance(board, end)
+    let sequence = move(board, unit_id(0), 0)
+    sequence.choose_source_event(board, unit_id(0), source17e_id(0))
+    sequence.move_to(board, unit_id(0), board_position(7, 5))
+    sequence.choose_source_event(board, unit_id(0), source17e_id(0))
+    return sequence.is_done() and board[0][0].effective_movement(6) == 10
+
+# Expired grants also leave casualty archives, so revival cannot resurrect a
+# former phase effect (p.88/01.02.02).
+fun test_sources17e_archived_grant_expiry() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    register_source_instance(board, instance)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    board[0].remove_model(0)
+    board.begin_phase(BattlePhase::shooting)
+    return board[0].destroyed_models.value[0].characteristic_modifiers.size() == 0 and board.source_effects.size() == 0
+
+# Phase effects expire after that phase's end effects/mission work, before the
+# following turn-end window (01.02.02; core pp.28–30).
+fun test_sources17e_phase_end_expiry_before_turn_end() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    register_source_instance(board, instance)
+    let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
+    sequence.choose_source_event(board, source17e_id(0))
+    let end = resolve_timing_window(board, TimingWindow::movement_end)
+    return end.is_done() and board.source_effects.size() == 0 and board[0][0].effective_movement(6) == 6
+
+# Shock-end sources resolve after the two original dice and before the caller
+# regains its decision owner (p.9/30/source event infrastructure).
+fun test_sources17e_actual_shock_end_hook() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 1)
+    instance.trigger = SourceEventKind::shock_end
+    register_source_instance(board, instance)
+    let sequence = battle_shock_test(board, board[0], false, false)
+    sequence.roll_pair(board, board[0], attack_test_die(6), attack_test_die(6))
+    sequence.choose_source_event(board, board[0], source17e_id(0))
+    return sequence.is_done() and board[0][0].effective_movement(6) == 8
+
+# Saved effect-key corruption cannot turn an unrelated manual modifier into a
+# persisting source grant (source ownership/expiry infrastructure).
+fun test_sources17e_forged_modifier_handle_rejected() -> Bool:
+    let board = attack_declaration_fixture()
+    board.identify_units()
+    let modifier = characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 2)
+    modifier.source_effect = 1
+    board[0][0].characteristic_modifiers.append(modifier)
+    return !valid_source_foundations(board)
+
+# Actual2D6 Deadly Demise rolls two fresh dice per nearby unit, then resolves
+# each mortal job while retaining the exploding model (core p.80/Stompa).
 fun test_compound17d_actual_two_dice_deadly_demise() -> Bool:
     let board = damage_test_fixture()
     board[1][0].has_deadly_demise = true

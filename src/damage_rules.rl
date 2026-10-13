@@ -202,7 +202,7 @@ fun destruction_unit_valid(Board board, UnitID unit, Bool player, Bool finish, U
 # Trigger presence determines retention, not merely taking attack damage
 # (p.87). Existing faction hooks retain their legacy definitions until task 17.
 fun has_destruction_trigger(Board board, UnitID source, Bool source_known, Model model, Bool fight_on_death) -> Bool:
-    return carrier_has_passengers(board, model.identity) or fight_on_death or model.has_deadly_demise or model.has_keyword(Keyword::master_of_possession) or (source_known and source.get() < board.units.size() and model.is_character() and board[source].has_ability(AbilityKind::feeder_tendrils))
+    return has_source_destruction_trigger(board, source, source_known, model) or carrier_has_passengers(board, model.identity) or fight_on_death or model.has_deadly_demise or model.has_keyword(Keyword::master_of_possession) or (source_known and source.get() < board.units.size() and model.is_character() and board[source].has_ability(AbilityKind::feeder_tendrils))
 
 # Raw lost wounds are committed only after all prevention for that application.
 # Snapshot provenance before removal so deferred hooks cannot target a new slot
@@ -223,3 +223,18 @@ fun commit_wound_loss(Board board, DamageJob job, ModelID model, Int lost, Bool 
             board[job.target][model].destruction_fight_roll = board.attack_info.fight_on_death_roll
         else:
             board[job.target].remove_model(model.get())
+
+# Source-backed death events require retention just like other destruction
+# effects (p.87); generic grants resolve through the source dispatcher.
+fun has_source_destruction_trigger(Board board, UnitID attacker, Bool known, Model model) -> Bool:
+    if board.source_instances.size() == 0:
+        return false
+    let found = false
+    let location = locate_source(board, invalid_entity_identity(), model.identity)
+    if location.found:
+        let event = source_event(SourceEventKind::model_destroyed, source_bank_unit(board, location.bank, location.unit.value).identity, invalid_entity_identity(), model.identity)
+        if known and attacker.get() < board.units.size():
+            event.target = board[attacker].identity
+        for index in range(board.source_instances.size()):
+            found = found or source_event_available(board, board.source_instances[index], event)
+    return found

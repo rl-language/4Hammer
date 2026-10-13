@@ -16,6 +16,30 @@ import fight_rules
 import core_stratagem_rules
 import transport_rules
 import firing_deck_rules
+import source_effects
+
+# User-supplied sequencing: turn owner's source instances in their chosen
+# order, then the opponent's. Declining optional sources spends no usage.
+# Actual faction grants remain source data; this dispatcher installs typed grants.
+act resolve_source_event(ctx Board board, frm SourceEvent trigger) -> SourceEventResolution:
+    frm previous_owner = board.current_decision_maker
+    frm previous_candidates = board.active_source_events
+    frm pending = collect_source_events(board, trigger)
+    frm player = board.current_player
+    frm controllers : BInt<0, 3>
+    while controllers.value < 2:
+        board.current_decision_maker = player
+        while source_events_remaining(board, pending, player, false):
+            board.active_source_events = pending
+            actions:
+                act finish_source_events() {!source_events_remaining(board, pending, player, true)}
+                    break
+                act choose_source_event(frm SourceEventID event) {pending_source_valid(board, pending, event, player)}
+                    commit_pending_source(board, pending, event, player)
+        player = !player
+        controllers = controllers + 1
+    board.active_source_events = previous_candidates
+    board.current_decision_maker = previous_owner
 
 # Wound thresholds use the printed equality boundaries (p.18). The user-
 # supplied appendix 02.02.01 caps cumulative roll modifiers at +/-1; a bonus
@@ -330,6 +354,11 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             act resolve_destruction_model(frm ModelID dying_model) {dying_model.get() < board[dying_unit].models.size(), destruction_ready(board[dying_unit][dying_model], finish_attacks, finished_source)}
             event.model = dying_model
             casualty = board[event.unit][event.model]
+            frm destroying_identity : EntityIdentity
+            destroying_identity = 0
+            if casualty.destroying_unit_known:
+                destroying_identity = board[casualty.destroying_unit].identity
+            subaction*(board) source_destruction = resolve_source_event(board, source_event(SourceEventKind::model_destroyed, board[event.unit].identity, destroying_identity, casualty.identity))
             board[event.unit][event.model].destruction_pending = false
             absent_source.owned_by_player1 = !board[event.unit].owned_by_player1
             retaliation = 0
@@ -443,6 +472,7 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             application = current_job.amount
         subaction*(board) prevention = prevent_wound_loss(board, current_job.target, recipient, application)
         commit_wound_loss(board, current_job, recipient, prevention.lost.value, current_job.from_attack and board.attack_info.fight_on_death and current_job.target.get() == previous_target.get())
+        refresh_source_effects(board, TimingWindow::none)
         if !(current_job.kind == DamageKind::normal):
             current_job.amount = current_job.amount - 1
             if current_job.kind == DamageKind::devastating:
@@ -1087,6 +1117,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             act roll(Dice grant_face)
             board[source][grant_model.value].destruction_attack_suppressed = grant_face.value < board[source][grant_model.value].destruction_fight_roll.value
         grant_model = grant_model + 1
+    subaction*(board) source_selection = resolve_source_event(board, source_event(SourceEventKind::attack_selection, board[source].identity, board[target].identity, invalid_entity_identity()))
     frm declarations : DeclaredWeapons
     frm model : ModelIterator
     frm hazardous_uses : HazardousUses
@@ -1109,6 +1140,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             break
         act choose_attack_target(UnitID unit) {target_has_unresolved_weapons(declarations, unit)}
         target = unit
+        subaction*(board) source_targeted = resolve_source_event(board, source_event(SourceEventKind::attack_targeted, board[source].identity, board[target].identity, invalid_entity_identity()))
         configure_attack_info(board, source.get(), target.get(), overwatch, melee)
         subaction*(board) strats = use_attack_stratagems(board, source, target, melee)
         frm target_info = board.attack_info
@@ -1136,6 +1168,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     hazardous_uses = declared_hazardous_uses(declarations)
     subaction*(board) hazards = resolve_hazards(board, source, hazardous_uses)
 
+    subaction*(board) source_finished = resolve_source_event(board, source_event(SourceEventKind::attack_end, board[source].identity, board[target].identity, invalid_entity_identity()))
     board.timing.active_player = previous_active
     board[source].shooting_kind = previous_kind
     board.current_decision_maker = previous_owner
@@ -1466,6 +1499,11 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
     # Exactly two controller groups; bounded frame storage supports ML inference.
     frm count : BInt<0, 3>
     frm resolved : Bool[9]
+    frm previous_candidates = board.active_source_events
+    frm source_trigger : SourceEvent
+    source_trigger.kind = SourceEventKind::timing_window
+    source_trigger.window = window
+    frm pending = collect_source_events(board, source_trigger)
     while count < 2:
         let i = 0
         while i < 9:
@@ -1475,10 +1513,13 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
         board.timing.controller = player
         if count == 1:
             board.timing.stage = TimingStage::opposing_player_rules
-        while timing_rules_remaining(board, window, player, resolved):
+        while timing_rules_remaining(board, window, player, resolved) or source_events_remaining(board, pending, player, false):
+            board.active_source_events = pending
             actions:
-                act finish_timing_rules() {!(window == TimingWindow::turn_end) or !has_incoherent_units(board, player)}
+                act finish_timing_rules() {(!(window == TimingWindow::turn_end) or !has_incoherent_units(board, player)) and !source_events_remaining(board, pending, player, true)}
                     break
+                act choose_window_source(frm SourceEventID event) {pending_source_valid(board, pending, event, player)}
+                    commit_pending_source(board, pending, event, player)
                 act choose_timing_rule(frm TimingRule rule) {
                     !resolved[int(rule.value)],
                     timing_rule_available(board, window, player, rule)
@@ -1514,6 +1555,7 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
         board.update_objective_control(false)
     if window == TimingWindow::command_end:
         board.score()
+    board.active_source_events = previous_candidates
     board.close_timing_window()
 
 enum Player:
@@ -1545,6 +1587,7 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         return
     frm previous_owner = board.current_decision_maker
     board.current_decision_maker = unit.owned_by_player1
+    subaction*(board) source_shock_start = resolve_source_event(board, source_event(SourceEventKind::shock_start, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
     frm auto_pass = false
     if command_step and board.timing.phase == BattlePhase::command and unit.owned_by_player1 == board.current_player and !board.has_used_insane_bravery[int(unit.owned_by_player1)] and board.can_target_strat(unit.owned_by_player1, Stratagem::insane_bravery, unit):
         act insane_bravery(Bool do_it)
@@ -1563,6 +1606,7 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
     else:
         if command_step and recover_shock:
             unit.battle_socked = false
+    subaction*(board) source_shock_end = resolve_source_event(board, source_event(SourceEventKind::shock_end, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
     board.current_decision_maker = previous_owner
 
 # Test each live friendly unit once when already shocked or at/below half
@@ -1666,6 +1710,11 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
     frm previous_active = board.timing.active_player
     frm previous_mover : UnitID
     previous_mover = board.moving_unit
+    frm move_start_event = source_event(SourceEventKind::move_start, board[unit].identity, invalid_entity_identity(), invalid_entity_identity())
+    move_start_event.movement = board[unit].pending_move_kind
+    if move_start_event.movement == MovementKind::stationary:
+        move_start_event.movement = MovementKind::normal
+    subaction*(board) source_start = resolve_source_event(board, move_start_event)
     frm original : Unit
     original = board[unit]
     frm candidate : Unit
@@ -1726,6 +1775,10 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
         # surge in this phase (p.70); stationary never enters this action.
         board[unit].history.last_move_phase = board.phase_serial.value + 1
         board[unit].history.made_move_this_turn = true
+    if completed:
+        frm move_end_event = source_event(SourceEventKind::move_end, board[unit].identity, invalid_entity_identity(), invalid_entity_identity())
+        move_end_event.movement = kind
+        subaction*(board) source_end = resolve_source_event(board, move_end_event)
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
@@ -2587,6 +2640,12 @@ fun main() -> Int:
     return 1
 
 fun<T> pretty_string(Board b, T obj) -> String:
+    if obj is GameChooseSourceEvent:
+        if obj.event.value < b.active_source_events.size():
+            return b.source_instances[b.active_source_events[obj.event.value].source.value].name.value
+    if obj is GameChooseWindowSource:
+        if obj.event.value < b.active_source_events.size():
+            return b.source_instances[b.active_source_events[obj.event.value].source.value].name.value
     if obj is GameSelectWeapon:
         if !(b.get_current_attacking_model().weapons.size() > obj.weapon_id.value):
             return to_string(obj)
