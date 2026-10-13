@@ -5,8 +5,8 @@ func _initialize():
 
 func check_incoming():
 	var library = root.get_node("GlobalRules").library
-	assert(library.get_state_schema_version() == 28)
-	assert(library.get_observation_schema_version() == 28)
+	assert(library.get_state_schema_version() == 29)
+	assert(library.get_observation_schema_version() == 29)
 	assert(library.get_action_schema_version() == 18)
 	var model = library.make_infernus_squad()
 	var bearer = library.get(model.get_models(), 0)

@@ -133,6 +133,9 @@ enum Keyword:
     # Faction keyword from the current Orks datasheets (Orks faction URL).
     orks
     warlord
+    # Current Beastboss / Beast Snagga Boyz keywords (source card URLs below).
+    warboss
+    battleline
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value
@@ -382,6 +385,62 @@ enum Profile:
         Float base_size = 40.0
 
 
+    # Current11th-edition HTML profiles, including the separate InSv boxes.
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
+    # Earlier enum entries remain stable legacy test data, not current cards.
+    orks_beastboss:
+        Int movement = 6
+        Int thoughness = 6
+        Int save = 4
+        Int invuln_save = 5
+        Int feel_no_pain = 6
+        Int wounds = 6
+        Int leadership = 6
+        Int control = 1
+        Float base_size = 50.0
+    orks_beast_snagga_boy:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Int wounds = 1
+        Int leadership = 7
+        Int control = 2
+        Float base_size = 32.0
+    orks_beast_snagga_nob:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 2
+        Float base_size = 32.0
+    orks_squighog_boy:
+        Int movement = 10
+        Int thoughness = 6
+        Int save = 4
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 2
+        Float base_size = 75.0
+    orks_nob_on_smasha_squig:
+        Int movement = 10
+        Int thoughness = 6
+        Int save = 4
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Int wounds = 4
+        Int leadership = 7
+        Int control = 2
+        Float base_size = 90.0
+
     fun equal(Profile other) -> Bool:
         return self.value == other.value
 
@@ -391,6 +450,16 @@ fun write_in_observation_tensor(Profile obj, Int observer_id, Vector<Float> outp
 
 fun size_as_observation_tensor(Profile kind) -> Int:
     return 1
+
+# Source dimensions are immutable profile metadata, not a new stored float.
+# Squighog ovals require the17.H3 geometry kernel before fielding these models.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
+fun profile_base_width(Profile profile) -> Float:
+    if profile == Profile::orks_squighog_boy:
+        return 42.0
+    if profile == Profile::orks_nob_on_smasha_squig:
+        return 52.0
+    return profile.base_size()
 
 enum Stratagem:
     reroll:

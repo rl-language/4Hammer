@@ -179,6 +179,25 @@ fun weapon_rules(WeaponRule rule, WeaponRule rule2, WeaponRule rule3, WeaponRule
 
 # Legacy factories contained mixed AP signs. Preserve their magnitudes while
 # storing all AP as nonpositive values for the p.19 save-result calculation.
+# Literal slash/exclusion rules from these three Orks weapon tables.
+# MONSTER/VEHICLE means either; non-MONSTER/VEHICLE excludes both (02.05.01).
+# https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
+fun orks_monster_vehicle_rule(WeaponRuleKind kind, Int amount) -> WeaponRule:
+    let rule = weapon_rule(kind, amount)
+    let keyword : Keyword
+    assert(rule.target_condition.append(KeywordClause::any, Keyword::monster.value, max(keyword)), "keyword capacity")
+    assert(rule.target_condition.append(KeywordClause::any, Keyword::vehicle.value, max(keyword)), "keyword capacity")
+    return rule
+
+# Shoota/Slugga Lethal Hits exclude every unit with either listed keyword.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz
+fun orks_non_monster_vehicle_rule(WeaponRuleKind kind, Int amount) -> WeaponRule:
+    let rule = weapon_rule(kind, amount)
+    let keyword : Keyword
+    assert(rule.target_condition.append(KeywordClause::none, Keyword::monster.value, max(keyword)), "keyword capacity")
+    assert(rule.target_condition.append(KeywordClause::none, Keyword::vehicle.value, max(keyword)), "keyword capacity")
+    return rule
+
 enum Weapon:
     captain_storm_bolter:
         Int range = 24
@@ -757,6 +776,107 @@ enum Weapon:
         Int penetration = -3
         Stat damage = compound_stat(1, 6, 2)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::blast, 2))
+
+    # Current weapon tables for the17.H1 data adapters (not the old variants).
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
+    orks_beastboss_shoota:
+        Int range = 18
+        Stat attacks = raw_stat(2)
+        Int skill = 4
+        Int strenght = 4
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+    orks_beastboss_klaw_and_beastchoppa:
+        Int range = 0
+        Stat attacks = raw_stat(6)
+        Int skill = 2
+        Int strenght = 12
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::sustained_hit, 2))
+    orks_slugga:
+        Int range = 12
+        Stat attacks = raw_stat(1)
+        Int skill = 5
+        Int strenght = 4
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+    orks_thump_gun:
+        Int range = 18
+        Stat attacks = raw_stat(3)
+        Int skill = 5
+        Int strenght = 6
+        Int penetration = 0
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+    orks_choppa_standard:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 3
+        Int strenght = 5
+        Int penetration = -1
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules()
+    orks_choppa_hunter:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 3
+        Int strenght = 6
+        Int penetration = -2
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules()
+    orks_power_snappa:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 3
+        Int strenght = 8
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+    orks_saddlegit_shiv:
+        Int range = 9
+        Stat attacks = raw_stat(1)
+        Int skill = 4
+        Int strenght = 3
+        Int penetration = 0
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault))
+    orks_stikka_ranged:
+        Int range = 9
+        Stat attacks = raw_stat(1)
+        Int skill = 5
+        Int strenght = 5
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+    orks_big_choppa:
+        Int range = 0
+        Stat attacks = raw_stat(4)
+        Int skill = 3
+        Int strenght = 7
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::cleave, 2), orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+    orks_squig_jaws:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 4
+        Int strenght = 6
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::extra_attacks))
+    orks_stikka_melee:
+        Int range = 0
+        Stat attacks = raw_stat(3)
+        Int skill = 3
+        Int strenght = 5
+        Int penetration = -1
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
 
     # Magnitude lookup retains the first declared parameter, distinct from
     # presence for parameterless abilities (pp.80–85). Own copies exit once.

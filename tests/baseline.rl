@@ -9632,3 +9632,33 @@ fun test_attachment17g_capacity_boundary_and_dead_source() -> Bool:
     invalid.identify_unit(invalid.reserve_units[1])
     attach_reserved_unit(invalid, unit_id(2), unit_id(0), false)
     return boundary and dead and empty and !attachment_valid(invalid, unit_id(1), unit_id(0), false)
+
+fun orks17h1_profile_values(Profile profile, Int expected_movement, Int expected_toughness, Int expected_save, Int expected_invulnerable, Int expected_wounds, Int expected_leadership, Int expected_control, Int expected_fnp) -> Bool:
+    return profile.movement() == expected_movement and profile.thoughness() == expected_toughness and profile.save() == expected_save and profile.invuln_save() == expected_invulnerable and profile.wounds() == expected_wounds and profile.leadership() == expected_leadership and profile.control() == expected_control and profile.feel_no_pain() == expected_fnp
+
+# Whole printed weapon row: fixed A and D resolve without hidden chance input.
+fun orks17h1_weapon_values(Weapon weapon, Int expected_range_value, Int expected_attacks, Int expected_skill, Int expected_strength, Int expected_ap, Int expected_damage) -> Bool:
+    let generated = evaluate_random_stat(weapon.attacks())
+    let inflicted = evaluate_random_stat(weapon.damage())
+    return weapon.range() == expected_range_value and generated.is_done() and generated.result == expected_attacks and weapon.skill() == expected_skill and weapon.strenght() == expected_strength and weapon.penetration() == expected_ap and inflicted.is_done() and inflicted.result == expected_damage
+
+# Small declaration fixture with real current Snagga loadout metadata; geometry
+# is a circle fixture, not production roster integration or missing abilities.
+# Current HTML profile tables; pure data tests precede factory integration.
+fun test_orks17h1_beastboss_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_beastboss, 6, 6, 4, 5, 6, 6, 1, 6) and Profile::orks_beastboss.base_size() == 50.0
+
+fun test_orks17h1_snagga_profiles() -> Bool:
+    return orks17h1_profile_values(Profile::orks_beast_snagga_nob, 6, 5, 5, 6, 3, 7, 2, 10) and orks17h1_profile_values(Profile::orks_beast_snagga_boy, 6, 5, 5, 6, 1, 7, 2, 10)
+
+fun test_orks17h1_squighog_profiles() -> Bool:
+    return orks17h1_profile_values(Profile::orks_nob_on_smasha_squig, 10, 6, 4, 6, 4, 7, 2, 10) and orks17h1_profile_values(Profile::orks_squighog_boy, 10, 6, 4, 6, 3, 7, 2, 10)
+
+fun test_orks17h1_snagga_weapon_table() -> Bool:
+    return orks17h1_weapon_values(Weapon::orks_slugga, 12, 1, 5, 4, 0, 1) and orks17h1_weapon_values(Weapon::orks_thump_gun, 18, 3, 5, 6, 0, 2) and !Weapon::orks_thump_gun.has_rule(WeaponRuleKind::blast) and orks17h1_weapon_values(Weapon::orks_choppa_standard, 0, 3, 3, 5, -1, 1) and orks17h1_weapon_values(Weapon::orks_choppa_hunter, 0, 3, 3, 6, -2, 1) and orks17h1_weapon_values(Weapon::orks_power_snappa, 0, 3, 3, 8, -2, 2)
+
+# Profile alternatives share one physical Choppa; reject selecting both.
+fun test_orks17h1_squighog_weapon_table() -> Bool:
+    return orks17h1_weapon_values(Weapon::orks_saddlegit_shiv, 9, 1, 4, 3, 0, 1) and orks17h1_weapon_values(Weapon::orks_stikka_ranged, 9, 1, 5, 5, -1, 2) and orks17h1_weapon_values(Weapon::orks_big_choppa, 0, 4, 3, 7, -1, 2) and Weapon::orks_big_choppa.get_rule_parameter(WeaponRuleKind::cleave) == 2 and orks17h1_weapon_values(Weapon::orks_squig_jaws, 0, 3, 4, 6, -1, 2) and Weapon::orks_squig_jaws.has_rule(WeaponRuleKind::extra_attacks) and orks17h1_weapon_values(Weapon::orks_stikka_melee, 0, 3, 3, 5, -1, 2) and !Weapon::orks_stikka_melee.has_rule(WeaponRuleKind::lance)
+
+# Mounted models retain all equipment, including melee Stikka absent before.

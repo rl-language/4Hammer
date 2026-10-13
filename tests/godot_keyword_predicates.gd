@@ -5,9 +5,9 @@ func _initialize():
 
 func check_keyword_predicates():
 	var library = root.get_node("GlobalRules").library
-	assert(library.get_state_schema_version() == 28)
+	assert(library.get_state_schema_version() == 29)
 	assert(library.get_action_schema_version() == 18)
-	assert(library.get_observation_schema_version() == 28)
+	assert(library.get_observation_schema_version() == 29)
 	# Build an ordinary Board directly, avoiding large coroutine wrappers;
 	# this still crosses the real Godot/native boundary and borrowed fields.
 	var board = RLCBoard.make()
