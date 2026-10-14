@@ -1528,8 +1528,8 @@ fun make_zarkan_deamonkin(UnitVector out, Bool owner) -> Faction:
     out.back().owned_by_player1 = owner
     return Faction::zarkan_daemonkin
 
-# Compatibility: identify the legacy Orks roster independently of Tyranids;
-# new Orks data/effects remain ROADMAP17.F–H (Orks faction page).
+# Historical core-test scaffold only. Public pick_army now uses the source-
+# backed make_orks_starter_roster; this old data grants no current Orks rules.
 fun make_morgrim_butchas(UnitVector out, Bool owner) -> Faction:
     out.append(make_beastboss_morgrim())
     out.back().owned_by_player1 = owner

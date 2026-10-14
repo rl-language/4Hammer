@@ -616,7 +616,7 @@ fun test_orks17b_roster_identities_and_armies() -> Bool:
     let chaos : UnitVector
     let orks : UnitVector
     let chaos_roster = make_zarkan_deamonkin(chaos, false)
-    let ork_roster = make_morgrim_butchas(orks, true)
+    let ork_roster = make_orks_starter_roster(orks, true)
     return chaos_roster == Faction::zarkan_daemonkin and ork_roster == Faction::morgrim_butchas and army_faction_for_roster(chaos_roster) == ArmyFaction::chaos_space_marines and army_faction_for_roster(ork_roster) == ArmyFaction::orks and army_faction_for_roster(Faction::strike_force_octavius) == ArmyFaction::space_marines and army_faction_for_roster(Faction::vengeful_brethren) == ArmyFaction::space_marines and army_faction_for_roster(Faction::insidious_infiltrators) == ArmyFaction::tyranids and army_faction_for_roster(Faction::tristraen_gilded_blade) == ArmyFaction::adeptus_custodes
 
 # Three distinct packages, even War Horde plus two others, use no DP budget.
@@ -654,11 +654,17 @@ fun test_orks17b_game_handoff_and_pending_selection_save() -> Bool:
     if !set_state(restored, to_string(state).to_indented_lines()) or get_current_player(restored) != 0 or can restored.choose_orks_detachment(OrksDetachment::war_horde):
         return false
     restored.choose_orks_detachment(OrksDetachment::green_tide)
+    if get_current_player(restored) != 0 or !can restored.choose_warlord_unit(unit_id(0)):
+        return false
+    restored.choose_warlord_unit(unit_id(0))
+    restored.choose_warlord_model(damage_test_model(0))
     if get_current_player(restored) != 1 or can restored.choose_orks_detachment(OrksDetachment::bully_boyz):
         return false
     restored.pick_morgrim_butcha()
     restored.choose_orks_detachment(OrksDetachment::bully_boyz)
     restored.finish_detachment_selection()
+    restored.choose_warlord_unit(unit_id(4))
+    restored.choose_warlord_model(damage_test_model(0))
     return restored.board.armies[0].detachments.size() == 3 and restored.board.armies[1].detachments.size() == 1 and restored.board.armies[0].reserve_budget == ReserveBudgetMode::point_free and restored.board.armies[1].reserve_budget == ReserveBudgetMode::point_free and valid_state_foundations(restored.board)
 
 # Up to three permits finishing with zero or two; no fourth decision remains.
@@ -10329,3 +10335,84 @@ fun test_orks17h23_bomb_saved_usage_and_offboard_transfer() -> Bool:
     saved.board[1].models.clear()
     register_orks_unit_rules(saved.board)
     return parsed and !source_usage_available(saved.board, saved.board.source_instances[handle.value]) and saved.board.source_uses[0].battle_uses.value == 1
+
+# Current starter selection exercises production Warlord/formation flow,
+# rather than the historical core-rule factory (Orks three current cards).
+fun orks17h4_configured_game() -> Game:
+    let game = play()
+    game.pick_morgrim_butcha()
+    game.choose_orks_detachment(OrksDetachment::war_horde)
+    game.finish_detachment_selection()
+    game.choose_warlord_unit(unit_id(0))
+    game.choose_warlord_model(damage_test_model(0))
+    game.pick_morgrim_butcha()
+    game.finish_detachment_selection()
+    game.choose_warlord_unit(unit_id(4))
+    game.choose_warlord_model(damage_test_model(0))
+    return game
+
+# Source-backed starter has25 models in four units per army; no points/DP.
+fun test_orks17h4_public_current_roster_profiles() -> Bool:
+    let game = play()
+    game.pick_morgrim_butcha()
+    ref reserves = game.board.reserve_units
+    return reserves.size() == 4 and reserves[0][0].profile == Profile::orks_beastboss and reserves[1].models.size() == 4 and reserves[2].models.size() == 10 and reserves[3].models.size() == 10 and reserves[1][0].profile == Profile::orks_nob_on_smasha_squig and reserves[2][0].profile == Profile::orks_beast_snagga_nob and reserves[2][1].weapons.size() == 4 and game.board.armies[0].reserve_budget == ReserveBudgetMode::point_free
+
+# Each player's actual selection owns all its units; only their CHARACTER
+# can be selected, using the user-supplied Warlord definition (17.F).
+fun test_orks17h4_both_rosters_and_warlords() -> Bool:
+    let game = orks17h4_configured_game()
+    let correct = game.board.reserve_units.size() == 8
+    for index in range(8):
+        correct = correct and game.board.reserve_units[index].owned_by_player1 == (index >= 4)
+    return correct and game.board.armies[0].warlord == game.board.reserve_units[0][0].identity and game.board.armies[1].warlord == game.board.reserve_units[4][0].identity and !can game.choose_warlord_unit(unit_id(0)) and can game.attach_unit(unit_id(0), unit_id(2)) and !can game.attach_unit(unit_id(0), unit_id(6))
+
+# Warlord is mandatory before opponent selection and survives a pending save.
+fun test_orks17h4_pending_warlord_save_and_handoff() -> Bool:
+    let game = play()
+    game.pick_morgrim_butcha()
+    game.finish_detachment_selection()
+    let pending = get_current_player(game) == 0 and !can game.pick_morgrim_butcha() and !can game.choose_warlord_unit(unit_id(1))
+    game.choose_warlord_unit(unit_id(0))
+    let restored = play()
+    let parsed = set_state(restored, to_string(game))
+    restored.choose_warlord_model(damage_test_model(0))
+    return pending and parsed and get_current_player(restored) == 1 and can restored.pick_morgrim_butcha() and restored.board.armies[0].warlord == restored.board.reserve_units[0][0].identity
+
+# Real formation selection transfers the Beastboss into its Snagga bodyguard;
+# permanent Warlord identity survives reserve-slot compaction (pp66–67).
+fun test_orks17h4_actual_attachment_preserves_warlord() -> Bool:
+    let game = orks17h4_configured_game()
+    let identity = game.board.armies[0].warlord
+    game.attach_unit(unit_id(0), unit_id(2))
+    ref combined = game.board.reserve_units[1]
+    return combined.models.size() == 11 and combined[10].identity == identity and combined[10].profile == Profile::orks_beastboss and combined.has_ability(AbilityKind::dodge_dis) and game.board.armies[0].warlord == identity and valid_state_foundations(game.board)
+
+# Both owners use source-first reserve IDs, including after first army merge.
+fun test_orks17h4_both_actual_attachments_and_save() -> Bool:
+    let game = orks17h4_configured_game()
+    game.attach_unit(unit_id(0), unit_id(2))
+    let opponent = can game.attach_unit(unit_id(3), unit_id(5)) and get_current_player(game) == 1
+    game.attach_unit(unit_id(3), unit_id(5))
+    let restored = play()
+    let parsed = set_state(restored, to_string(game))
+    return opponent and parsed and restored.board.reserve_units.size() == 6 and restored.board.reserve_units[1].models.size() == 11 and restored.board.reserve_units[4].models.size() == 11 and restored.board.reserve_units[4].owned_by_player1 and valid_state_foundations(restored.board)
+
+# Source registration occurs after actual formation choices, on the surviving
+# combined identities; printed abilities are available in the public battle.
+fun test_orks17h4_actual_formation_registers_current_sources() -> Bool:
+    let game = orks17h4_configured_game()
+    game.attach_unit(unit_id(0), unit_id(2))
+    game.done_attaching()
+    game.done_attaching()
+    return game.board.source_instances.size() >= 6 and game.board.reserve_units[1].has_ability(AbilityKind::mobbed) and game.board.reserve_units[1].has_ability(AbilityKind::keep_huntin) and game.board.reserve_units[0].has_ability(AbilityKind::bomb_squig) and valid_state_foundations(game.board)
+
+# No old Orks random movement/Demise/equipment is introduced by public picks.
+fun test_orks17h4_current_roster_no_legacy_grants() -> Bool:
+    let units : UnitVector
+    let roster = make_orks_starter_roster(units, true)
+    let clean = roster == Faction::morgrim_butchas
+    for unit_index in range(units.size()):
+        for model_index in range(units[unit_index].models.size()):
+            clean = clean and units[unit_index].unit_abilities.empty() and units[unit_index].owned_by_player1 == true
+    return clean and units[1][0].weapons[1].value == Weapon::orks_big_choppa.value and units[2][1].weapons[3].value == Weapon::orks_thump_gun.value

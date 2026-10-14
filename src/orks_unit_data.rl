@@ -121,7 +121,7 @@ fun orks_squighog_model(Bool nob) -> Model:
     return model
 
 # Current count/equipment/ability metadata; Bomb Squig instances require Board
-# identities. Oval proxies follow user policy; production promotion is17.H4.
+# identities. Oval proxies follow user policy; the public starter uses this adapter.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
 fun make_orks_squighog_boyz(Int nobs, Int boys) -> Unit:
     assert(orks_squighog_composition_valid(nobs, boys), "illegal Squighog composition")
@@ -134,3 +134,21 @@ fun make_orks_squighog_boyz(Int nobs, Int boys) -> Unit:
     configure_orks_attachment(unit, OrksDatasheet::squighog_boyz)
     unit.capture_starting_strength()
     return unit
+
+
+# Point-free current starter roster replaces the old public Morgrim data:
+# one Beastboss, four Squighogs and two ten-model Snagga units, each with its
+# permitted extra Thump Gun. This is a starter configuration, not all54 cards.
+# Sources: the three Orks card URLs above; prices are excluded by the user.
+fun make_orks_starter_roster(UnitVector out, Bool owner) -> Faction:
+    assert(out.size() + 4 <= MAX_UNIT_COUNT, "starter roster capacity exceeded")
+    out.append(make_orks_beastboss())
+    out.back().owned_by_player1 = owner
+    out.append(make_orks_squighog_boyz(1, 3))
+    out.back().owned_by_player1 = owner
+    for mob_index in range(2):
+        out.append(make_orks_beast_snagga_boyz(1, 9, 1))
+        out.back().owned_by_player1 = owner
+    # Keep the stable six-roster identifier/action API; its current Orks
+    # content is now explicit, rather than inferred from the old name.
+    return Faction::morgrim_butchas

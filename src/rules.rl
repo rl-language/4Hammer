@@ -2775,6 +2775,8 @@ fun main() -> Int:
     return 1
 
 fun<T> pretty_string(Board b, T obj) -> String:
+    if obj is GamePickMorgrimButcha:
+        return "Orks (current units)"s
     if obj is GameChooseSourceEvent:
         if obj.event.value < b.active_source_events.size():
             return b.source_instances[b.active_source_events[obj.event.value].source.value].name.value
@@ -2796,7 +2798,7 @@ fun<T> pretty_string(Board b, T obj) -> String:
 
 # Configure at most three distinct Orks packages; no DP accounting is performed
 # by user instruction (source: https://wahapedia.ru/wh40k11ed/factions/orks/).
-# Package effects are later ROADMAP batches, not manufactured here.
+# Package effects require their own ROADMAP batches; Get Stuck In is17.I1.
 act select_orks_detachments(ctx Board board, frm Bool detachment_player) -> SelectOrksDetachments:
     if board.armies[int(detachment_player)].faction != ArmyFaction::orks:
         return
@@ -2810,8 +2812,8 @@ act select_orks_detachments(ctx Board board, frm Bool detachment_player) -> Sele
                 let recorded = board.armies[int(detachment_player)].record_detachment(detachment)
                 assert(recorded, "legal detachment selection must be recorded")
 
-# The game sequence where players pick a legacy roster, then independent
-# detachment configuration. Point-free play is explicit user authority.
+# Select the current Orks starter (other rosters remain legacy fixtures), then
+# independent detachment configuration. Point-free play is user authority.
 # Assign entity identities as roster models enter state, before attachment or
 # casualty bookkeeping (attachments pp.66–67; destruction/returns pp.19/88).
 act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
@@ -2824,7 +2826,7 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
         act pick_zarkan_deamonkin()
         board.players_faction[int(current_player)] = make_zarkan_deamonkin(board.reserve_units, current_player)
         act pick_morgrim_butcha()
-        board.players_faction[int(current_player)] = make_morgrim_butchas(board.reserve_units, current_player)
+        board.players_faction[int(current_player)] = make_orks_starter_roster(board.reserve_units, current_player)
         act pick_tristean_gilded_blade()
         board.players_faction[int(current_player)] = make_tristrean_gilded_blade(board.reserve_units, current_player)
 

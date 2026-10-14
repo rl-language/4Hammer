@@ -29,6 +29,8 @@ func on_state_change():
 				make_choise("Done deploying army " + str(army), action)
 			elif unwrapped is RLCGameDestroyUnplaceableUnit:
 				make_choise("Destroy unplaceable unit", action)
+			elif unwrapped is RLCGamePickMorgrimButcha:
+				make_choise("Orks (current units)", action)
 			elif unwrapped is RLCGameFinishDetachmentSelection:
 				make_choise("Finish detachment selection", action)
 			else:

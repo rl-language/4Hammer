@@ -6,8 +6,8 @@ func _initialize():
 func check_unit_data():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 30)
-	assert(library.get_observation_schema_version() == 30)
+	assert(library.get_state_schema_version() == 31)
+	assert(library.get_observation_schema_version() == 31)
 	assert(library.get_action_schema_version() == 19)
 	var boss = library.make_orks_beastboss()
 	var bearer = library.get(boss.get_models(), 0)

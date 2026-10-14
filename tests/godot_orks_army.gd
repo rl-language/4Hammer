@@ -35,8 +35,8 @@ func check_offboard_clicks(rules, action):
 func check_orks_army():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 30)
-	assert(library.get_observation_schema_version() == 30)
+	assert(library.get_state_schema_version() == 31)
+	assert(library.get_observation_schema_version() == 31)
 	assert(library.get_action_schema_version() == 19)
 	var board = RLCBoard.make()
 	var faction = RLCArmyFaction.make()
