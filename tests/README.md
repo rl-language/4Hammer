@@ -1,35 +1,91 @@
-# Rule validation baseline
+# Rule validation
 
-Activate the repository's compatible environment first:
+All **931** deterministic rule assertions and their fixture helpers live in
+[python/baseline.py](python/baseline.py). They call Rulebook's generated ctypes
+bindings against the **existing Godot library**. Editing a Python test requires
+no Rulebook compilation. Rule changes still require the normal game build and
+matching regenerated bindings. There is no test-library build or build cache.
+
+Build the normal native Godot target and the metadata-only `python_wrapper`
+target once, then run:
 
 ```bash
 source /workspace/4hammer-venv/bin/activate
 python tools/run_rule_tests.py
 ```
 
-## CMake / CTest
-
-Use CMake's CTest runner to see each rule test individually. A tests-only configuration avoids Godot, SDK downloads and web builds:
+Defaults are `build/skirmish.py` and `build/librules_x86_64_linux_debug.so`.
+For artifacts elsewhere:
 
 ```bash
-source /workspace/4hammer-venv/bin/activate
-cmake -S . -B build-tests -DBUILD_GAME=OFF
+python tools/run_rule_tests.py \
+  --wrapper /path/to/godot-build/skirmish.py \
+  --library /path/to/godot-build/librules_x86_64_linux_debug.so
+```
+
+`FOURHAMMER_PYTHON_WRAPPER` and `FOURHAMMER_RULES_LIBRARY` provide equivalent
+defaults. The complete Godot extension supplies the rules library's runtime
+symbols; an existing standalone Rulebook library also works if its runtime is
+already linked. Missing artifacts and mismatched state/action/observation schema
+versions fail rather than triggering a build. Use matching compiler versions
+for the library and wrapper (currently **0.4.17**); rebuild both after ABI changes.
+
+## CMake / CTest
+
+CTest still reports each game assertion individually. A tests-only configuration
+uses an already built game; it downloads and compiles nothing:
+
+```bash
+cmake -S . -B build-tests -DBUILD_GAME=OFF \
+  -DRULE_TEST_WRAPPER="$PWD/build/skirmish.py" \
+  -DRULE_TEST_LIBRARY="$PWD/build/librules_x86_64_linux_debug.so"
 ctest --test-dir build-tests --output-on-failure -j 4
 ```
 
-For another virtual environment, activate it first; if CMake cached a different interpreter, configure with `-DPython3_EXECUTABLE=/path/to/venv/bin/python`. The commands shown use CMake/CTest 3.20+ (`--test-dir`); project configuration supports CMake 3.12+. Use matching `rl_language`/`rl_language_core` **0.4.17**. Each compilation uses four workers by default; set `-DRULE_TEST_COMPILER_JOBS=N` to change it. Debug tests are unoptimized. Use `-DRULE_TEST_OPTIMIZE=ON` only for optimized validation; CTest process parallelism (`ctest -j`) is separate from compiler workers.
+In a normal game build these paths default to that build directory. CTest lists
+**932 entries**:931 assertions and one `rules.bindings` fixture that checks the
+existing bindings/library. The fixture never invokes a compiler. Tests run in
+separate processes; the all-tests Python runner loads the library once and is
+faster for a full sweep. Generated wrappers use Python's ordinary bytecode
+loading; this does not cache/build a game library.
 
-`ctest -N --test-dir build-tests` lists the tests. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` runs a selected case. Labels `baseline`, `discrepancies` and `expected-failure` allow filtering with `-L`. CTest automatically includes the matching compilation fixture even for a single selected test. Each suite compiles once per invocation with precondition/bounds checks; each assertion runs in its own process. A failed compilation blocks its cases rather than using an old library.
+`ctest -N --test-dir build-tests` lists cases. Select one with
+`ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure`.
+Labels `baseline`, `discrepancies` and `expected-failure` remain available.
+Use `cmake --build build-tests --target test` for CMake's test target; CMake has
+no `--test` option. Reconfigure after adding/removing test declarations. Existing
+Python bodies can be edited and run immediately. Set `Python3_EXECUTABLE` if
+CMake selected a different interpreter. Compilation worker/optimization options
+belong to the game build, not to this runner.
 
-The current discovery lists **873 entries**:872 supported assertions and one compilation fixture. Empty suites do not register a compilation fixture. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
+[python/known_discrepancies.py](python/known_discrepancies.py) contains desired
+behavior for known defects; its names must match `known_discrepancies.json`.
+The manifest is currently empty. False discrepancy results are XFAIL/Skipped
+(exit77); unexpected passes fail and require promotion into baseline. Exceptions,
+non-Bool results, false baseline assertions and native crashes fail. Discovery
+uses Python ASTs without executing tests, rejects duplicate/parameterized tests
+and rejects an empty baseline. No compiled `test_*` functions are accepted.
 
-CTest is also available in a normal game configuration (`BUILD_GAME=ON`, the default), and Make/Ninja support `cmake --build build-tests --target test`. CMake itself has no `--test` command. Reconfigure after changing test declarations or the manifest; CMake also tracks these files for regeneration during a build. Generated libraries stay in the chosen build directory. The original Python runner below remains available.
+Fixtures use [python/bindings.py](python/bindings.py). `value_copy` preserves
+Rulebook's deep-copy semantics; ordinary Python assignment aliases. Native
+assignment handles bounded scalars and owning fields; field/container views keep
+parents alive. Enum alternatives use constructors, `can_*` checks use native
+preconditions, and fixed arrays use actual ctypes storage. Keep all fixtures and
+expectations in Python. [python_test_exports.rl](../src/python_test_exports.rl)
+only instantiates generic container/serialization operations for the public game
+library; it has no scenarios, rule expectations or assertions and is never called.
+If a future test needs an unexported generic operation, expose the primitive in
+that module and rebuild the Godot library once; subsequent test edits reuse it.
 
-The runner executes `rlc-test tests/baseline.rl -i src`, checks actual RUN/OK names and counts, then runs the known-discrepancy assertions in a separate process. It rejects a zero-test success, missing tests, crashes and unexpected passes. Separate processes avoid RLC 0.3.3's generated-module cache reusing a previous `sim` module.
+Runner contract tests:
 
-`baseline.rl` tests supported behavior, legality and state transitions. `known_discrepancies.rl` asserts desired behavior that currently fails; its manifest links each failure to a source rule, category and roadmap owner. These failures are reported as XFAIL, never as semantic passes. When fixing one, move its assertion into the passing suite and remove its manifest entry. Do not change the assertion to approve incorrect behavior or broadly skip a failing subsystem.
+```bash
+python -m unittest discover -s tests/python -p test_runner.py -v
+```
 
-The tests are a starting suite, not all 156 subsections. Later tasks add their page-linked boundaries, modes and workflow cases. Supply valid populated fixtures: `required_wound_roll` looks up the attacking unit even for a plain weapon; an empty board is not a valid attack state.
+The historical records below describe the validation mechanism and counts used
+at the time. The Python suite above supersedes `baseline.rl`, `rlc-test`, suite
+compilation fixtures and separate discrepancy-library compilation.
 
 ## Seeded gameplay and bindings
 
@@ -424,3 +480,27 @@ full public roster selection of these units remains17.Q. Use ROADMAP for the
 completed game, fixed replays,265 semantic-seed runs and78 action-mutation runs,
 coverage and diagnostic limits. Action/schema33/21 regeneration adds six Bool
 candidates and leaves coordinate bounds unchanged.
+
+
+## Python migration validation —2026-10-14
+
+All931 original baseline names are preserved and the native test sources are
+removed. Current game-only bindings were generated with RLC0.4.17, `-j4` and
+precondition/bound checks, without compiling a native library. The existing
+Godot extension at `/workspace/4hammer-validation/orks-p1/godot/librules.so`
+was loaded directly:
+
+- All-tests Python runner: **931 PASS,0 XFAIL,0 FAIL/XPASS**;
+  **23.24s** assertion execution, excluding library loading.
+- Individual CTest sweep: **932/932 PASS**, no skips, **201.68s** with`-j4`.
+- Host discovery/result/fixed-array ABI checks: **11 PASS**.
+- Actual Python edit proof: the original case passes and an edited copy fails;
+  both existing Godot libraries retain their original size/mtime.
+
+Logs, generated game bindings, CTest registration and edit proof are under
+`/workspace/4hammer-validation/python-rules`. No native compilation was performed
+for the migrated suite. Adding the binding export module requires the normal
+next Godot build to include those primitives; the existing tested library
+already provided them. Game schemas remain33/21/33. This validation establishes
+semantic migration and runner behavior; it adds no sanitizer/fuzzer or rendered
+Godot coverage.

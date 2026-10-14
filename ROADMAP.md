@@ -1027,3 +1027,48 @@ Fixed issues: source-effect/provenance validators now admit the new enum entries
  performance fixes retain their existing17.P/17.Q owners. All issues identified
  must be fixed and validated; do not turn documentation/table coverage into
  claims that these remaining mechanics are complete.
+
+
+### Python rule-test migration — complete
+
+User request: port all pure Rulebook tests to Python; explicitly reuse the
+existing Godot library and do not add a build cache. This changes test
+infrastructure, not the remaining17.P unit scope or17.Q integration ownership.
+
+- [x] Port all931 baseline assertions and all fixture helpers to
+  `tests/python/baseline.py`, preserving the original931 test names, rule/page
+  comments, legal/illegal branches, fixture mutations and expected results.
+  Remove both native test-source files. The empty discrepancy suite and explicit
+  manifest remain supported in Python.
+- [x] Preserve native deep copies, aliased/owned views, bounded field assignment,
+  enum constructors, unions, suspended frames and fixed-array ABI types/sizes
+  through the small Python adapter. Preserve overloaded fight-fixture behavior
+  with explicit Python dispatch. Runner exceptions are failures even in the
+  discrepancy suite; non-Bool returns, empty/duplicate/parameterized discovery
+  and missing/incompatible artifacts fail.
+- [x] Make CTest/CLI load the existing Godot extension through generated game
+  bindings. No test native library, test compilation fixture or build cache.
+  `python_wrapper` generates metadata only; it no longer builds another lib.so.
+  The game-only export module instantiates generic container/serialization
+  primitives RLC otherwise omits. It contains no test scenarios/expectations and
+  is never executed. New primitive exports require one ordinary Godot rebuild;
+  subsequent Python fixture/assertion edits reuse that build.
+- [x] Generate current game-only bindings with RLC0.4.17, `-j4`, debug flags,
+  without native compilation. Execute all931 assertions against the existing
+  `/workspace/4hammer-validation/orks-p1/godot/librules.so`: **931 PASS,
+  0 XFAIL,0 FAIL/XPASS**, **23.24s assertion execution**, library loading excluded.
+- [x] Host-runner/array-dispatch contract checks: **11 PASS**, including wrong
+  fixed-array length/element rejection before native entry and XFAIL/XPASS/
+  exception handling. Original test-name parity and zero remaining `.rl` test
+  files verified. Actual edited-Python pass/fail and unchanged-library proof is
+  recorded in `python-rules/edit-proof.log`: original case passes, edited case
+  fails, both existing native libraries retain their original size/mtime.
+- [x] Complete individual CTest sweep: **932/932 PASS** (931 assertions plus
+  one existing-binding check), **201.68s** wall time with`-j4`. No skipped cases
+  and no compilation. Final fixed-array guard is exercised by this sweep.
+
+Artifacts and logs: `/workspace/4hammer-validation/python-rules`. No native
+library rebuilt for the migrated assertions. Native sanitizer/fuzzer campaigns
+remain separate from semantic-test evidence; this infrastructure change does
+not claim new gameplay, sanitizer, rendered-Godot or remaining-unit coverage.
+The former RL runner/suite compilation records elsewhere are historical.

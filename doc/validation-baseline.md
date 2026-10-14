@@ -21,9 +21,9 @@ Logs, native executable, downloaded packages, traces, seeded input binaries and 
 
 ## Deterministic suite and discrepancies
 
-[The supported suite](../tests/baseline.rl) covers random-characteristic legality, failed/successful hit-stage transitions, equal Strength/Toughness, normal damage not spilling, ordinary mortal damage spilling, stable ownership, move-distance legality, declining rerolls, initial action legality, army-selection ownership and unit serialization.
+[The supported suite](../tests/python/baseline.py) covers random-characteristic legality, failed/successful hit-stage transitions, equal Strength/Toughness, normal damage not spilling, ordinary mortal damage spilling, stable ownership, move-distance legality, declining rerolls, initial action legality, army-selection ownership and unit serialization.
 
-[The desired-rule assertions](../tests/known_discrepancies.rl) and [manifest](../tests/known_discrepancies.json) reproduce these twelve problems:
+[The desired-rule assertions](../tests/python/known_discrepancies.py) and [manifest](../tests/known_discrepancies.json) reproduce these twelve problems:
 
 | Problem | Source | Classification / implementation owner |
 | --- | --- | --- |
