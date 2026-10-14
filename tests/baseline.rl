@@ -12047,3 +12047,225 @@ fun test_orks17all_dreadherder_invalid_owner_restoration() -> Bool:
     board.current_decision_maker = true
     let selection = orks_dreadherder_shooting(board, unit_id(0))
     return selection.is_done() and board.current_decision_maker
+
+
+#12 current version1.2 Orks card adapters. Each test cites its source card;
+# helper fixtures exercise actual declarations, rather than old army profiles.
+fun orks17p1_fixture(Unit source) -> Board:
+    let board = orks17h1_attack_board()
+    board[0] = source
+    for index in range(board[0].models.size()):
+        board[0][index].position = board_position(5 + (index % 4) * 2, 5 + (index / 4) * 2)
+    board[1][0].position = board_position(9, 5)
+    board.identify_units()
+    board.capture_starting_strengths()
+    board.begin_phase(BattlePhase::shooting)
+    configure_attack_info(board, 0, 1, false, false)
+    return board
+
+# Boyz: reusable literal-count fixture permits independently checked swaps.
+fun orks17p1_boy_equipment(Int nobs, Int boys) -> OrksBoyzLoadouts:
+    let equipment : OrksBoyzLoadouts
+    for index in range(nobs + boys):
+        let item : OrksBoyzLoadout
+        item.nob = index < nobs
+        equipment.append(item)
+    return equipment
+
+# Nobz: independent per-five equipment quotas, no point-tier restriction.
+fun orks17p1_nob_equipment(Int count) -> OrksNobLoadouts:
+    let equipment : OrksNobLoadouts
+    for index in range(count):
+        equipment.append(OrksNobLoadout::standard)
+    return equipment
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Boyz: printed profile/InSv/FNP/base.
+fun test_orks17p1_boy_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_boy, 6, 5, 5, 10, 1, 7, 2, 10) and Profile::orks_boy.base_size() == 32.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Boyz: printed profile/InSv/FNP/base.
+fun test_orks17p1_boyz_nob_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_boyz_nob, 6, 5, 5, 10, 3, 7, 2, 10) and Profile::orks_boyz_nob.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Nobz: printed profile/InSv/FNP/base.
+fun test_orks17p1_nob_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_nob, 6, 5, 4, 10, 3, 7, 1, 10) and Profile::orks_nob.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warboss: printed profile/InSv/FNP/base.
+fun test_orks17p1_warboss_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_warboss, 6, 6, 4, 5, 6, 6, 1, 10) and Profile::orks_warboss.base_size() == 50.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Bigboss: printed profile/InSv/FNP/base.
+fun test_orks17p1_bigboss_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_bigboss, 6, 5, 4, 10, 5, 7, 1, 10) and Profile::orks_bigboss.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Bannernob: printed profile/InSv/FNP/base.
+fun test_orks17p1_bannernob_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_bannernob, 6, 5, 4, 5, 4, 7, 3, 10) and Profile::orks_bannernob.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Stormboyz: printed profile/InSv/FNP/base.
+fun test_orks17p1_stormboy_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_stormboy, 12, 5, 5, 10, 1, 7, 1, 10) and Profile::orks_stormboy.base_size() == 32.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Stormboyz: printed profile/InSv/FNP/base.
+fun test_orks17p1_stormboy_nob_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_stormboy_nob, 12, 5, 5, 10, 3, 7, 1, 10) and Profile::orks_stormboy_nob.base_size() == 32.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warbikers: printed profile/InSv/FNP/base.
+fun test_orks17p1_warbiker_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_warbiker, 12, 6, 4, 6, 3, 7, 2, 10) and Profile::orks_warbiker.base_size() == 75.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warbikers: printed profile/InSv/FNP/base.
+fun test_orks17p1_biker_nob_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_biker_nob, 12, 6, 4, 6, 4, 7, 2, 10) and Profile::orks_biker_nob.base_size() == 75.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread: printed profile/InSv/FNP/base.
+fun test_orks17p1_deff_dread_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_deff_dread, 8, 9, 2, 6, 8, 7, 3, 10) and Profile::orks_deff_dread.base_size() == 60.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Killa-Kans: printed profile/InSv/FNP/base.
+fun test_orks17p1_killa_kan_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_killa_kan, 8, 7, 3, 6, 5, 8, 2, 10) and Profile::orks_killa_kan.base_size() == 60.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-Dakkarig: printed profile/InSv/FNP/base.
+fun test_orks17p1_big_mek_dakkarig_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_big_mek_dakkarig, 8, 8, 3, 5, 11, 7, 3, 10) and Profile::orks_big_mek_dakkarig.base_size() == 90.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss-on-Squigosaur: printed profile/InSv/FNP/base.
+fun test_orks17p1_beastboss_on_squigosaur_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_beastboss_on_squigosaur, 10, 9, 3, 5, 10, 6, 3, 5) and Profile::orks_beastboss_on_squigosaur.base_size() == 80.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Mozrog-Skragbad: printed profile/InSv/FNP/base.
+fun test_orks17p1_mozrog_skragbad_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_mozrog_skragbad, 10, 9, 3, 4, 10, 6, 3, 5) and Profile::orks_mozrog_skragbad.base_size() == 80.0
+
+# Boyz: literal1–2 Nobs/9–18 Boys, including intermediate compositions.
+fun test_orks17p1_boy_count_boundaries() -> Bool:
+    let small = orks17p1_boy_equipment(1, 9)
+    let large = orks17p1_boy_equipment(2, 18)
+    let intermediate = orks17p1_boy_equipment(2, 11)
+    let invalid = orks17p1_boy_equipment(1, 8)
+    return orks_boyz_loadout_valid(small) and orks_boyz_loadout_valid(large) and orks_boyz_loadout_valid(intermediate) and !orks_boyz_loadout_valid(invalid) and make_orks_boyz(large).models.size() == 20
+
+# Boyz: all three different replacements coexist at ten models.
+fun test_orks17p1_boy_independent_specials() -> Bool:
+    let equipment = orks17p1_boy_equipment(1, 9)
+    equipment[1].boy_gun = OrksBoyGunChoice::big_shoota
+    equipment[2].boy_gun = OrksBoyGunChoice::rokkit_launcha
+    equipment[3].boy_gun = OrksBoyGunChoice::burna
+    let valid = orks_boyz_loadout_valid(equipment)
+    let unit = make_orks_boyz(equipment)
+    equipment[4].boy_gun = OrksBoyGunChoice::burna
+    return valid and !orks_boyz_loadout_valid(equipment) and unit[1].weapons.size() == 3 and unit[2].weapons.size() == 4 and unit[3].weapons.size() == 3 and unit[2].weapon_profile_groups[2] == unit[2].weapon_profile_groups[3]
+
+# Boyz: per-ten TOTAL models means nineteen permits one, twenty permits two.
+fun test_orks17p1_boy_twenty_quota() -> Bool:
+    let equipment = orks17p1_boy_equipment(2, 18)
+    equipment[2].boy_gun = OrksBoyGunChoice::big_shoota
+    equipment[3].boy_gun = OrksBoyGunChoice::big_shoota
+    let valid = orks_boyz_loadout_valid(equipment)
+    equipment.erase(19)
+    return valid and !orks_boyz_loadout_valid(equipment)
+
+# Boyz: Big Choppa removes both Nob weapons; other swaps retain a gun.
+fun test_orks17p1_mixed_nob_weapons() -> Bool:
+    let equipment = orks17p1_boy_equipment(2, 9)
+    equipment[0].melee = OrksNobMeleeChoice::big_choppa
+    equipment[0].nob_gun = OrksNobGunChoice::none
+    equipment[1].melee = OrksNobMeleeChoice::power_klaw
+    equipment[1].nob_gun = OrksNobGunChoice::kombi_rokkit
+    let valid = orks_boyz_loadout_valid(equipment)
+    let unit = make_orks_boyz(equipment)
+    equipment[0].nob_gun = OrksNobGunChoice::kustom_shoota
+    return valid and unit[0].weapons.size() == 1 and unit[1].weapons.size() == 3 and unit[1].weapons[0].value == Weapon::orks_power_klaw.value and !orks_boyz_loadout_valid(equipment)
+
+# Nobz: independent Paired/heavy quotas per-five, all replacements exclusive.
+fun test_orks17p1_nob_independent_replacements() -> Bool:
+    let equipment = orks17p1_nob_equipment(5)
+    equipment[0] = OrksNobLoadout::paired_krumpas
+    equipment[1] = OrksNobLoadout::big_skorcha
+    equipment[2] = OrksNobLoadout::kustom_big_shoota
+    equipment[3] = OrksNobLoadout::big_choppa
+    equipment[4] = OrksNobLoadout::kombi_rokkit
+    let valid = orks_nobz_loadout_valid(equipment)
+    let unit = make_orks_nobz(equipment)
+    return valid and unit[0].paired_krumpas and unit[0].weapons.size() == 1 and unit[1].weapons[0].value == Weapon::orks_kustom_choppa.value and unit[2].weapons.size() == 2 and unit[3].weapons.size() == 1 and unit[4].weapons.size() == 3
+
+# Nobz: every restricted replacement rejects its second copy below ten.
+fun test_orks17p1_nob_quota_boundaries() -> Bool:
+    let valid = true
+    for kind in range(4):
+        let equipment = orks17p1_nob_equipment(10)
+        let choice : OrksNobLoadout
+        choice.value = kind + 2
+        equipment[0] = choice
+        equipment[1] = choice
+        valid = valid and orks_nobz_loadout_valid(equipment)
+        equipment.erase(9)
+        valid = valid and !orks_nobz_loadout_valid(equipment)
+    let too_small = orks17p1_nob_equipment(4)
+    let too_big = orks17p1_nob_equipment(11)
+    return valid and !orks_nobz_loadout_valid(too_small) and !orks_nobz_loadout_valid(too_big)
+
+# Deff-Dread: twenty independent permitted arm combinations, fixed Klaws retained.
+fun test_orks17p1_dread_all_arm_combinations() -> Bool:
+    let valid = true
+    for first_index in range(5):
+        for second_index in range(5):
+            if first_index != 1:
+                let first : OrksDreadArmChoice
+                first.value = first_index
+                let second : OrksDreadArmChoice
+                second.value = second_index
+                let unit = make_orks_deff_dread(first, second)
+                valid = valid and unit[0].weapons[0].value == Weapon::orks_dread_klaws.value and unit[0].weapon_profile_groups[1].value == 1 and unit[0].weapon_profile_groups[unit[0].weapons.size() - 1].value == 2
+    return valid
+
+# Deff-Dread: two Extra Klaws are distinct physical mandatory melee weapons.
+fun test_orks17p1_dread_two_extra_klaws() -> Bool:
+    let board = orks17p1_fixture(make_orks_deff_dread(OrksDreadArmChoice::extra_klaw, OrksDreadArmChoice::extra_klaw))
+    let selected : Bool[MAX_WEAPONS]
+    selected[1] = true
+    let other = weapon_selection_valid(board, unit_id(0), 0, 2, true, selected, false)
+    return other and board[0][0].weapons.size() == 3 and board[0][0].weapon_profile_groups[1] != board[0][0].weapon_profile_groups[2] and board[0][0].weapons[2].has_rule(WeaponRuleKind::extra_attacks)
+
+# Deff-Dread: Dread 'Ard affects incoming attack D, never non-attack mortal jobs.
+fun test_orks17p1_dread_incoming_damage() -> Bool:
+    let unit = make_orks_deff_dread()
+    let modifiers : RuleModifiers
+    let incoming = combined_incoming_modifiers(modifiers, unit[0].incoming_attack_modifiers, ModifiedCharacteristic::damage, true)
+    return modified_characteristic(3, ModifiedCharacteristic::damage, incoming, false) == 2 and modified_characteristic(1, ModifiedCharacteristic::damage, incoming, false) == 1 and unit[0].has_deadly_demise and stat_dice_count(unit[0].deadly_demise) == 0
+
+# Stormboyz/Warbikers/Kans: endpoints and printed keyword/Deep Strike metadata.
+fun test_orks17p1_mobile_unit_compositions() -> Bool:
+    let storm = make_orks_stormboyz(9, true)
+    let bikes = make_orks_warbikers(5)
+    let kans = make_orks_killa_kans(6)
+    return storm.models.size() == 10 and storm[0].weapons[1].value == Weapon::orks_power_klaw.value and storm.has_ability(AbilityKind::deep_strike) and storm.has_keyword(Keyword::fly) and bikes.models.size() == 6 and bikes.has_keyword(Keyword::speed_freeks) and kans.models.size() == 6 and kans.has_keyword(Keyword::grots) and !kans.has_keyword(Keyword::gretchin)
+
+# Warbikers: documented circular proxy preserves both source axes.
+fun test_orks17p1_biker_circle_proxy() -> Bool:
+    let unit = make_orks_warbikers(2)
+    return profile_has_oval_base(unit[0].profile) and profile_base_width(unit[0].profile) == 42.0 and unit[0].profile.base_size() == 75.0 and !unit[0].geometry.unsupported_footprint and unit[1].weapons.size() == 2 and unit[0].weapon_profile_groups[0] == unit[0].weapon_profile_groups[1]
+
+# Killa-Kans: all three gun profiles are alternatives of one physical weapon.
+fun test_orks17p1_kan_profile_exclusion() -> Bool:
+    let board = orks17p1_fixture(make_orks_killa_kans(3))
+    let selected : Bool[MAX_WEAPONS]
+    let first = weapon_selection_valid(board, unit_id(0), 0, 0, false, selected, false)
+    selected[0] = true
+    return first and !weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false) and !weapon_selection_valid(board, unit_id(0), 0, 2, false, selected, false)
+
+# Warboss/Bannernob/Bigboss: real Leader/Support roles and Da Boss only on Warboss.
+fun test_orks17p1_boss_attachment_metadata() -> Bool:
+    let leader = make_orks_warboss()
+    let support = make_orks_bigboss()
+    let banner = make_orks_bannernob()
+    return leader.attachment_role.value == AttachmentRole::leader.value and leader[0].has_da_boss and support.attachment_role.value == AttachmentRole::support.value and !support[0].has_da_boss and banner.attachment_role.value == AttachmentRole::support.value and support[0].weapons[1].has_rule(WeaponRuleKind::precision)
+
+# Mozrog/Dakkarig/Squigosaur: no invented Leader or Da Boss metadata.
+fun test_orks17p1_monster_and_mek_metadata() -> Bool:
+    let mozrog = make_orks_mozrog_skragbad()
+    let mek = make_orks_big_mek_dakkarig()
+    let squigo = make_orks_beastboss_on_squigosaur(true)
+    return mozrog.has_keyword(Keyword::epic_hero) and !mozrog.has_keyword(Keyword::warboss) and !mozrog[0].has_da_boss and !mek[0].has_da_boss and mek.has_keyword(Keyword::big_mek) and squigo[0].has_da_boss and squigo[0].weapons.size() == 5 and squigo.attachment_role.value != AttachmentRole::leader.value

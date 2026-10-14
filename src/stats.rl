@@ -38,6 +38,22 @@ enum AbilityKind:
     bomb_squig
     brutal_impact
     intimidating_motivation
+    ammo_runts
+    boss_ammo_runt
+    tide_of_muscle
+    never_too_busy_to_fight
+    get_out_da_way
+    might_is_right
+    sumfin_to_prove
+    waaagh_banner
+    rokkit_charge
+    high_speed_carnage
+    even_more_dakka
+    blitz_dem_gitz
+    thundering_stampede
+    boss_of_da_hunt
+    one_last_kill
+    da_bigger_dey_iz
 
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value
@@ -159,6 +175,7 @@ enum Keyword:
     warbikers
     deffkoptas
     jump_pack
+    grots
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value
@@ -464,6 +481,186 @@ enum Profile:
         Int control = 2
         Float base_size = 90.0
 
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Boyz
+    orks_boy:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 1
+        Int leadership = 7
+        Int control = 2
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Boyz
+    orks_boyz_nob:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 2
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
+    orks_nob:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Warboss
+    orks_warboss:
+        Int movement = 6
+        Int thoughness = 6
+        Int save = 4
+        Int wounds = 6
+        Int leadership = 6
+        Int control = 1
+        Int invuln_save = 5
+        Int feel_no_pain = 10
+        Float base_size = 50.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Bigboss
+    orks_bigboss:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 5
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Bannernob
+    orks_bannernob:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 4
+        Int leadership = 7
+        Int control = 3
+        Int invuln_save = 5
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Stormboyz
+    orks_stormboy:
+        Int movement = 12
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 1
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Stormboyz
+    orks_stormboy_nob:
+        Int movement = 12
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Warbikers
+    orks_warbiker:
+        Int movement = 12
+        Int thoughness = 6
+        Int save = 4
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 2
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 75.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Warbikers
+    orks_biker_nob:
+        Int movement = 12
+        Int thoughness = 6
+        Int save = 4
+        Int wounds = 4
+        Int leadership = 7
+        Int control = 2
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 75.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread
+    orks_deff_dread:
+        Int movement = 8
+        Int thoughness = 9
+        Int save = 2
+        Int wounds = 8
+        Int leadership = 7
+        Int control = 3
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 60.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Killa-Kans
+    orks_killa_kan:
+        Int movement = 8
+        Int thoughness = 7
+        Int save = 3
+        Int wounds = 5
+        Int leadership = 8
+        Int control = 2
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 60.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-Dakkarig
+    orks_big_mek_dakkarig:
+        Int movement = 8
+        Int thoughness = 8
+        Int save = 3
+        Int wounds = 11
+        Int leadership = 7
+        Int control = 3
+        Int invuln_save = 5
+        Int feel_no_pain = 10
+        Float base_size = 90.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss-on-Squigosaur
+    orks_beastboss_on_squigosaur:
+        Int movement = 10
+        Int thoughness = 9
+        Int save = 3
+        Int wounds = 10
+        Int leadership = 6
+        Int control = 3
+        Int invuln_save = 5
+        Int feel_no_pain = 5
+        Float base_size = 80.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Mozrog-Skragbad
+    orks_mozrog_skragbad:
+        Int movement = 10
+        Int thoughness = 9
+        Int save = 3
+        Int wounds = 10
+        Int leadership = 6
+        Int control = 3
+        Int invuln_save = 4
+        Int feel_no_pain = 5
+        Float base_size = 80.0
+
     fun equal(Profile other) -> Bool:
         return self.value == other.value
 
@@ -482,6 +679,8 @@ fun profile_base_width(Profile profile) -> Float:
         return 42.0
     if profile == Profile::orks_nob_on_smasha_squig:
         return 52.0
+    if profile == Profile::orks_warbiker or profile == Profile::orks_biker_nob:
+        return 42.0
     return profile.base_size()
 
 enum Stratagem:
@@ -660,4 +859,4 @@ enum Stratagem:
 # Original shape metadata survives the user-authorized long-axis circle proxy.
 # Sources: Orks/Squighog-Boyz75x42 and90x52mm; exact ovals are deferred.
 fun profile_has_oval_base(Profile profile) -> Bool:
-    return profile == Profile::orks_squighog_boy or profile == Profile::orks_nob_on_smasha_squig
+    return profile == Profile::orks_squighog_boy or profile == Profile::orks_nob_on_smasha_squig or profile == Profile::orks_warbiker or profile == Profile::orks_biker_nob

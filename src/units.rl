@@ -25,6 +25,9 @@ enum ModelState:
 cls Model:
     # Printed ordinary detachment options and source-owned timed permissions.
     # Generated lifecycle and bounded values preserve the inferred ML layout.
+    # Nobz wargear, not a weapon profile: only Kustom Krumpa gains its rerolls.
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
+    Bool paired_krumpas
     OrksEnhancement orks_enhancement
     EntityIdentity orks_upgrade_origin
     OrksEffectGrants orks_effects
