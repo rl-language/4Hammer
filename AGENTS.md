@@ -50,13 +50,13 @@ For each new or materially changed Rulebook `fun`/`act`, add a nearby comment ex
 
 ## Rules and toolchain
 
-Work from `/workspace/4Hammer` and activate `source /workspace/4hammer-venv/bin/activate` when that environment exists. Use `rl_language==0.4.17` and matching `rl_language_core==0.4.17`; the user requested parallel compilation. Use `-j 4`; keep debug builds unoptimized and reserve `-O2` for optimized validation/fuzzing. Duplicate variable names remain rejected. Earlier compiler versions/counts below are historical. The formerly reported Boolean-operand error at the `is_character` declaration was caused by a bare function name at its call site; invoke `destroyed.is_character()` explicitly. The corrected sources pass 45 tests with 8 expected failures. Earlier recorded checks used 0.3.3. Consult README.md for installation if the prepared environment is unavailable.
+Work from `/workspace/4Hammer` and activate `source /workspace/4hammer-venv/bin/activate` when that environment exists. Use `rl_language==0.4.18` and matching `rl_language_core==0.4.18`; the user requested parallel compilation. Use `-j 4`; keep debug builds unoptimized and reserve `-O2` for optimized validation/fuzzing. Duplicate variable names remain rejected. Earlier compiler versions/counts below are historical. The formerly reported Boolean-operand error at the `is_character` declaration was caused by a bare function name at its call site; invoke `destroyed.is_character()` explicitly. The corrected sources pass 45 tests with 8 expected failures. Earlier recorded checks used 0.3.3. Consult README.md for installation if the prepared environment is unavailable.
 
 `src/full_game.rl` defines the public `@classes` Game, faction selection and battle sequence. `src/rules.rl` implements phases/actions; `board.rl`, `units.rl`, `stats.rl`, `weapons.rl`, and `vector2d.rl` hold state and mechanics. `src/game_utils.rl` supplies the fuzzer and current-player classification. Keep legality preconditions, state transitions, player ownership, scoring, and finite action enumeration consistent. Nonterminal states must have legal actions. Chance decisions must remain classified as player `-1`; terminal states use `-4`.
 
 ## Rulebook Language guide
 
-Sources: [language tour](https://rl-language.github.io/language_tour.html), [language reference](https://rl-language.github.io/language-reference.html), [action library](https://rl-language.github.io/stdlib/action.html), and [bounded arguments](https://rl-language.github.io/stdlib/bounded_arg.html). These were read from the official published-site repository, https://github.com/rl-language/rl-language.github.io, when the website returned HTTP 403. Documentation may describe newer releases or contain incomplete examples: use this checkout and the installed 0.4.17 standard library (`/workspace/4hammer-venv/lib/rlc/stdlib`) to confirm syntax and behavior. Do not upgrade the compiler merely to match a documentation example.
+Sources: [language tour](https://rl-language.github.io/language_tour.html), [language reference](https://rl-language.github.io/language-reference.html), [action library](https://rl-language.github.io/stdlib/action.html), and [bounded arguments](https://rl-language.github.io/stdlib/bounded_arg.html). These were read from the official published-site repository, https://github.com/rl-language/rl-language.github.io, when the website returned HTTP 403. Documentation may describe newer releases or contain incomplete examples: use this checkout and the installed 0.4.18 standard library (`/workspace/4hammer-venv/lib/rlc/stdlib`) to confirm syntax and behavior. Do not upgrade the compiler merely to match a documentation example.
 
 ### Ordinary code and data
 
@@ -139,7 +139,7 @@ rlc-random examples/single_shooting_maximize.rl -i src --iterations 3 --max-acti
 
 The first is bounded gameplay, not a completed full game. Confirm the shooting scenarios finish rather than exhaust the action limit (this CLI shares the action budget across iterations). Use `tools/check_gameplay_baseline.py` for seeded completion, decision-owner checks, payload round trips and replay inputs. Also exercise Python JIT/wrapper behavior when public state/actions change; `tools/check_gym_baseline.py` provides a bounded check, and `examples/gym_jit_example.py` runs from the repository root.
 
-Build the sanitized fuzzer after changes. CMakeLists.txt defines target `rlc_rules_fuzzer`, output `rules_fuzzer`, with optimized/debug, precondition, bounds and sanitizer instrumentation. If a Godot-configured CMake build exists, build only that target rather than unrelated GUI/web/doc targets. Clang and its sanitizer runtime are required in addition to RLC. The current RLC 0.4.17 uses LLVM 21. Clang 21.1.8 and matching runtimes are prepared under `/workspace/4hammer-validation/toolchain21`; recreate them with `python tools/prepare_validation_clang21.py` on Debian 13 amd64. Its checksum pins come from verified LLVM repository metadata; runtime symlinks adapt Debian's layout without mixing versions. System GCC 14/libc headers, binutils and runtime dependencies must remain available. The older task-2 Clang 19 helper is historical and cannot link the current RLC fuzzer. Inspect linker diagnostics and require a runnable output: RLC may return zero even on link failure. See tests/README.md for the current commands and recorded result. The following direct build matches the RLC flags, avoids Godot dependencies, and successfully builds with RLC 0.4.13/Clang 21:
+Build the sanitized fuzzer after changes. CMakeLists.txt defines target `rlc_rules_fuzzer`, output `rules_fuzzer`, with optimized/debug, precondition, bounds and sanitizer instrumentation. If a Godot-configured CMake build exists, build only that target rather than unrelated GUI/web/doc targets. Clang and its sanitizer runtime are required in addition to RLC. The current RLC 0.4.18 uses LLVM 21. Clang 21.1.8 and matching runtimes are prepared under `/workspace/4hammer-validation/toolchain21`; recreate them with `python tools/prepare_validation_clang21.py` on Debian 13 amd64. Its checksum pins come from verified LLVM repository metadata; runtime symlinks adapt Debian's layout without mixing versions. System GCC 14/libc headers, binutils and runtime dependencies must remain available. The older task-2 Clang 19 helper is historical and cannot link the current RLC fuzzer. Inspect linker diagnostics and require a runnable output: RLC may return zero even on link failure. See tests/README.md for the current commands and recorded result. The following direct build matches the RLC flags, avoids Godot dependencies, and successfully builds with RLC 0.4.13/Clang 21:
 
 ```bash
 mkdir -p /workspace/4hammer-validation/corpus /workspace/4hammer-validation/artifacts
@@ -546,3 +546,46 @@ linkage; production pure-native build settings are unchanged. Godot rejects
 RTLD_DEEPBIND loading under ASAN; keep native sanitizer/leak validation enabled
 and separate. Fixed arrays need typed helpers/declarations, not direct generated
 getters; normalize expected UI labels with GlobalRules.strip_symbols.
+
+
+## Fourteen elite, Mek and Gretchin adapters —17.P2
+
+Read [the adapter guide](doc/orks-elites-meks-gretchin.md) and the latest
+ROADMAP section. Implement all fourteen related cards as one broad batch,
+then validate the final combined state. The three Python migration commits
+have been reverted at the user's request; keep native Rulebook assertions and
+individual CTest registration. Do not add a compilation cache or port tests
+back to Python. Compiler/core0.4.18 is installed; use four workers and keep
+debug builds unoptimized. The user authorizes parallel builds to try the new
+lower-memory compiler; report measured RSS and elapsed time without claiming
+a controlled speedup from unlike workloads.
+
+Healing must use one shared component frame for all banks, retain original
+model identities/weapon usage and clear death-only flags. Gretchin transport
+seats round the unit's actual Gretchin count up in pairs before adding ordinary
+attached seats. Mek repairs target an actual model, preserve separate hit
+contributions, reuse grant prototypes across turns and expire at next own
+Movement. Kustom Force Field is ranged-only allocation InSv. Pulsa keeps one
+target identity; Barrage reads successful hits; Shokk-boosta hazards count
+actual models. Keep Runtherd correction shared and destruction-based.
+
+Schema34/22/34 (next35) requires matching rebuilt clients. Executed validation
+and remaining work are recorded in ROADMAP.md; this batch has994 passing
+assertions and29/54 implemented cards, leaving25. Preserve quads, bounded
+state, generated lifecycle, CP accounting
+and excluded points/Forge World/Legends. The public roster picker and known
+performance/rendered integration fixes remain17.Q.
+
+
+17.P2 validation uses native Rulebook tests, not a Python migration or new
+build cache. All63 new assertions also pass optimized ASAN/UBSAN/leak checks;
+29-card HTML and67-card/41-edge permissions,120-frame storage audit, nine
+Godot controls,20-step finite Gym and a fresh697-action game pass. Actual
+parallel final native builds use about1.67/2.07GiB peak RSS for debug tests and
+optimized sanitized fuzzer. Their elapsed times are281.773/268.733s under
+concurrent validation, not a controlled speed comparison. Preserve Clang21
+resource lookup when invoking it via virtual-environment links; RLC can return
+zero after a linker failure, so require an actual runnable executable. The
+saved cloud install/start draft pins0.4.18 and includes the runtime links;
+saving the draft does not publish it. Follow the final ROADMAP evidence for
+mutation/replay scope and the remaining17.P/17.Q fixes.

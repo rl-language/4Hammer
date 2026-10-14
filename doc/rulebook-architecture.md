@@ -1,6 +1,6 @@
 # Rulebook design and architecture
 
-This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation through the ordinary detachment/frame-sharing work and the twelve-unit17.P1 sweep, using Rulebook compiler0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
+This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation through the ordinary detachment/frame-sharing work the twelve-unit17.P1 sweep and fourteen-unit17.P2 work, using Rulebook compiler0.4.18. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
 Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and [supplied appendix](11th-edition-supplied-appendix.md) for game rules. The architecture supports those rules, but its storage bounds, schemas and UI protocols are project decisions. [AGENTS.md](../AGENTS.md) records development constraints and the language conventions used here.
 
@@ -83,8 +83,8 @@ The module map below describes responsibility boundaries. Imports expose shared 
 | Terrain and objectives | [terrain_rules.rl](../src/terrain_rules.rl) | Visibility abstraction, area membership, cover, target conditions and objective/action eligibility |
 | Core stratagems and actions | [core_stratagem_rules.rl](../src/core_stratagem_rules.rl) | Core effect eligibility and phase-local action permissions; shared CP payment is on `Board` |
 | Transport and borrowed weapons | [transport_rules.rl](../src/transport_rules.rl), [firing_deck_rules.rl](../src/firing_deck_rules.rl) | Carrier/passenger links, embark/disembark setup, capacity, emergency setup and Firing Deck selections |
-| Current Orks data | [orks_unit_data.rl](../src/orks_unit_data.rl), [orks_infantry_data.rl](../src/orks_infantry_data.rl) | Source profiles/equipment/count validators, named physical alternatives, ability metadata and user-authorized oval proxies |
-| Current Orks unit abilities | [orks_unit_rules.rl](../src/orks_unit_rules.rl), [orks_datasheet_rules.rl](../src/orks_datasheet_rules.rl) | Identity-backed source registration and usage, ammo/Rokkit selections, declaration/gathering modifiers and live aura queries; rules.rl owns dispatch |
+| Current Orks data | [orks_unit_data.rl](../src/orks_unit_data.rl), [orks_infantry_data.rl](../src/orks_infantry_data.rl), [orks_elite_data.rl](../src/orks_elite_data.rl) | Source profiles/equipment/count validators, named physical alternatives, ability metadata and user-authorized oval proxies |
+| Current Orks unit abilities | [orks_unit_rules.rl](../src/orks_unit_rules.rl), [orks_datasheet_rules.rl](../src/orks_datasheet_rules.rl), [orks_elite_rules.rl](../src/orks_elite_rules.rl) | Identity-backed source registration and usage, ammo/Rokkit selections, declaration/gathering modifiers and live aura queries; rules.rl owns dispatch |
 | Orks army mechanics | [orks_army_rules.rl](../src/orks_army_rules.rl) | Explicit Waaagh!/Da Boss metadata, riled grants, War Cry start-window choices and pre-formation Warlord selection |
 | Source lifecycle | [source_effect_types.rl](../src/source_effect_types.rl), [source_effects.rl](../src/source_effects.rl) | Source/event/use/effect records, eligibility, typed grants, expiry, aura refresh and restore validation |
 
@@ -493,3 +493,31 @@ remain independently tracked in ROADMAP.md.
 ## Ordinary Orks package integration
 
 Read [the detachment design](orks-detachments.md) for the four package modules, staged option choices, source generations, explicit cargo dependencies, offboard processing, healing/replacement identity and flat reaction wrappers. These modules connect to the existing core pipelines; they do not replace combat, source expiry or transport storage with independent implementations. State/observation32, action20 and next-state33 require matching regenerated artifacts. ROADMAP.md supplies completion evidence.
+
+## Elite, Mek and Gretchin adapters
+
+[The fourteen-card guide](orks-elites-meks-gretchin.md) describes17.P2. Its
+Command-healing sources dispatch through the ordinary controller-ordered timing
+window. A single shared `OrksComponentHealing` frame serves battlefield and
+offboard healing, including the older detachment wrapper. Battlefield returns
+use original casualty identities and legal whole-quad placement; offboard
+returns check carrier capacity without external range measurements. Returning
+models retain physical weapon use and persisting effects and clear death-only
+flags. Gretchin seats round each unit's Gretchin count up in pairs, then add
+ordinary seats for attached models.
+
+Mek move-start/end sources measure from the actual bearer to the actual vehicle
+model. Repeated repairs reuse a recipient-model grant prototype but retain
+separate effect keys and individual hit contributions. Their duration expires
+at the start of next own Movement, after next Command. Ranged-only force-field
+saves enter allocation groups rather than permanent model InSv. Pulsa records
+one target identity for the phase; Barrage uses the successful-hit ledger.
+Shokk-boosta adds optional Advance choices and mandatory per-model move-end
+hazards. Runtherd correction owns a single shared frame and uses destruction
+without damage prevention. New single-owner frames stay with their callers.
+
+The hit-contribution/selection/result bounds include sixteen possible per-model
+grants plus four unit contributions and thirty other modifier choices. Schema
+34/22/34 requires matching state/action/observation clients. The implementation
+adds no continuous positions, custom lifecycle hooks or public roster picker.
+ROADMAP.md owns the executed checks and remaining17.P/17.Q obligations.

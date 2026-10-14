@@ -39,3 +39,8 @@ are available to native/Python/Godot callers and scenario/roster integration;
 arbitrary public roster selection remains17.Q.15 of54 included standard cards
 have adapters after this batch; the other39 still require their own data and
 abilities. A source-number comparison alone does not certify ability semantics.
+
+
+The subsequent [fourteen-card batch](orks-elites-meks-gretchin.md) extends
+adapter coverage to29/54; the15/54 count above records17.P1's own completion.
+ROADMAP.md owns the latest executed evidence and remaining25-card work.

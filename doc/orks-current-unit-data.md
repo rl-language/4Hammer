@@ -57,3 +57,9 @@ All709 CTest entries (707 assertions plus two fixtures),25 focused unoptimized n
 
 
 Combined17.H2/H3 adds31 regression cases and current abilities/circular proxies. All738 supported assertions have passing executed results across the initial full run and corrected affected rerun;56 focused native sanitizer/leak cases, HTML comparison, five Godot controls, ML, complete-game replays and fuzzing pass. Read [the ability report](orks-current-unit-rules.md) and ROADMAP.md for current evidence and the remaining17.H4 roster switch.
+
+
+Additional adapters are documented in [the twelve-card guide](orks-infantry-walkers.md)
+and [the fourteen-card guide](orks-elites-meks-gretchin.md). Current adapter
+coverage is29/54 standard cards; arbitrary public roster selection remains17.Q.
+The current three-family starter and exclusions above are unchanged.

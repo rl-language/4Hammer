@@ -1027,3 +1027,100 @@ Fixed issues: source-effect/provenance validators now admit the new enum entries
  performance fixes retain their existing17.P/17.Q owners. All issues identified
  must be fixed and validated; do not turn documentation/table coverage into
  claims that these remaining mechanics are complete.
+
+
+###17.P2 complete — fourteen elite, Mek and Gretchin adapters
+
+Flash Gitz, Meganobz, Mek, Big Mek, Big Mek in Mega Armour, Big Mek with Shokk
+Attack Gun, Painboy, Painboss, Breaka Boyz, Tankbustas, Warboss in Mega Armour,
+Gretchin, Runtherd and Zodgrod Wortsnagga use the same retrieved2026-10-12
+version1.2 cards. See [the adapter guide](doc/orks-elites-meks-gretchin.md).
+All source/tests were batched before expensive validation.25 data assertions
+and38 behavior assertions accompany17 model profiles,53 weapon rows, checked
+loadouts, attachment metadata and the complete printed abilities of these cards.
+Coverage is29/54 standard adapters, leaving25. Public roster selection remains
+17.Q; the existing current starter still contains three families.
+
+Implemented behavior includes all-bank Command healing, optional Orderly,
+original-casualty revival/weapon use/death-flag reset, actual Mek model repair
+range and next-own-Movement duration, separately ignorable cumulative repairs,
+ranged-only Force Field InSv, More Dakka and stronger-S protection, Shokk
+Advance/traversal/per-model hazards, hit-ledger Barrage, target-identity Pulsa,
+charge bonuses/mortals, objective securing, grouped Gretchin seats, Runtherd
+direct destruction and source-bound Super Runts. Shared healing serves the
+older detachment wrapper and offboard/embarked capacity checks. Repair source
+prototypes are reused across turns, with separate effect keys retained.
+
+The three Python-test migration commits are reverted. Native Rulebook tests
+and individual CTests remain; no build cache was introduced. Compiler/core
+0.4.18, four workers and parallel native builds are verified. Debug builds are
+unoptimized; the sanitized fuzzer uses separate-O2. Clang21 runtime/resource
+links are fixed for venv invocations; a compiler exit0 after failed linking was
+rejected until a nonempty runnable instrumented executable existed.
+
+Executed evidence —2026-10-14 (`/workspace/4hammer-validation/orks-p2`):
+
+- All994 final-source assertions pass, with no XFAIL/skip/discrepancy cases.
+  CTest registers995 entries including one compilation fixture. The fixture
+  passed, and the final994 individual cases pass in143.78s (`ctest-final.log`).
+  An initial992/994 run caught two fixture errors: imported attachments collided
+  with an unrelated enemy's old identities; a hazard test attempted a reroll
+  decision with no available reroll. Corrected fixtures re-identify the separate
+  enemy, assert valid identities and explicitly fund the declined CP reroll.
+  No game check was disabled.63/63 direct native cases also pass after correction.
+- All63 new assertions execute successfully in the final ASAN/UBSAN/leak fuzzer
+  as63 one-byte semantic seeds plus the empty initialization input:64 runs/26s
+  (`fuzzer/semantic-seeds.log`). These inputs exercise semantics, not actions.
+- Independent original-HTML comparison passes29 cards/37 model profiles/132
+  printed weapon rows (`source-check-final.log`). Attachment inventory remains
+  67 identities/41 edges, including all13 excluded cards checked.
+- Final frame audit passes120 action routines/68 shared context slots, with
+  no duplicated frames or nested re-entry (`frame-audit-final.log` and the
+  checked-in lifetime inventory). Game/Board are38,176/32,360 inline bytes.
+  The new shared healing and Runtherd frames have one slot each; remaining new
+  frames have one owner. No custom init/drop or unbounded stored numbers.
+- Matching generated header/C++/native artifacts pass nine Godot controls:
+  the new fourteen-card constructors/source/save/Pulsa/eight-selector test,
+  previous infantry/walkers, current data, unit rules, modifier ignoring,
+  detachments, attachments, weapons/sources and current roster/Warlord/save.
+  The new control passes again with the final native engine
+  (`godot-elites-final.log`, `godot-results.json`). Schema-aligned remaining
+  scripts were not all executed. Rules.gd/TraceManager.gd and production CMake
+  dependencies are unchanged. Validation reuses the matching debug test engine
+  with explicit installed libpython3.12 linkage/path; native sanitizer checks
+  remain separate from Godot's RTLD_DEEPBIND loader.
+-20-step Gym passes29,623 action candidates and15,457,965 finite observations
+  (`gym.log`), up236 candidates/+192,048 observations versus17.P1. There are
+  289 player-facing payload types;120 counts coroutine/frame routines. Whole-
+  quad x/y domains remain unchanged. Schemas34/22/34, next35 require matching
+  clients/policies.
+- Fresh current-root seed40000 completes697 legal actions, terminal owner-4,
+  including ownership and textual payload round trips (`gameplay.log`,
+  `replays`). Its input equals the prior697-action stream; a direct native
+  replay independently reaches the terminal state (`native-replay.log`). The
+  Python host journey remains slow and retains17.Q's performance owner.
+- Final optimized sanitized engine replays both preserved lifetime inputs and
+  the fresh completed697-action input with leaks enabled. The game replay
+  takes89.779s (`fuzzer/replays/results.json`). A separate one-byte semantic
+  mutation campaign finishes235 runs/61s, coverage16,115/features22,308. A
+  separate73-byte-seeded action campaign finishes85 runs/61s, coverage13,288/
+  features19,284 (`fuzzer/*-mutations.log`). Both finish without crash artifacts
+  or sanitizer failures. The fixture-assisted harness uses the current full
+  game/catalog and original action-fuzz loop; one-byte cases cannot execute an
+  action. Missing external-symbolizer warnings retain their17.Q diagnostics
+  owner, with addresses preserved and instrumentation enabled.
+- Final concurrent builds with four workers each take281.773s for the debug
+  test library and268.733s for the optimized sanitized fuzzer; measured peak
+  RSS is1,746,724/2,166,468KiB (about1.67/2.07GiB). These are successful native
+  builds under concurrent validation, not a controlled speedup or16x memory
+  comparison (`native-tests-final.json`, `native-fuzzer-corrected.json`).
+
+All newly identified implementation/fixture/binding/linking issues are fixed.
+The source matrix marks these14 completed adapters.17.P remains open for25
+standard cards. Arbitrary public roster selection, missing hull dimensions,
+full rendered journeys and measured wrapper/native performance/symbolizer work
+retain17.P/17.Q owners and must still be fixed and validated. This batch does
+not certify public full games containing every new card. No prices, Forge World,
+Legends, non-quad migration or custom lifecycle hooks were added. The reusable
+cloud install/start draft now pins0.4.18 and captures the validated runtime
+links; draft saving is separate from publication.

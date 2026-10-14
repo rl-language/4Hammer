@@ -17,11 +17,11 @@ cmake -S . -B build-tests -DBUILD_GAME=OFF
 ctest --test-dir build-tests --output-on-failure -j 4
 ```
 
-For another virtual environment, activate it first; if CMake cached a different interpreter, configure with `-DPython3_EXECUTABLE=/path/to/venv/bin/python`. The commands shown use CMake/CTest 3.20+ (`--test-dir`); project configuration supports CMake 3.12+. Use matching `rl_language`/`rl_language_core` **0.4.17**. Each compilation uses four workers by default; set `-DRULE_TEST_COMPILER_JOBS=N` to change it. Debug tests are unoptimized. Use `-DRULE_TEST_OPTIMIZE=ON` only for optimized validation; CTest process parallelism (`ctest -j`) is separate from compiler workers.
+For another virtual environment, activate it first; if CMake cached a different interpreter, configure with `-DPython3_EXECUTABLE=/path/to/venv/bin/python`. The commands shown use CMake/CTest 3.20+ (`--test-dir`); project configuration supports CMake 3.12+. Use matching `rl_language`/`rl_language_core` **0.4.18**. Each compilation uses four workers by default; set `-DRULE_TEST_COMPILER_JOBS=N` to change it. Debug tests are unoptimized. Use `-DRULE_TEST_OPTIMIZE=ON` only for optimized validation; CTest process parallelism (`ctest -j`) is separate from compiler workers.
 
 `ctest -N --test-dir build-tests` lists the tests. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` runs a selected case. Labels `baseline`, `discrepancies` and `expected-failure` allow filtering with `-L`. CTest automatically includes the matching compilation fixture even for a single selected test. Each suite compiles once per invocation with precondition/bounds checks; each assertion runs in its own process. A failed compilation blocks its cases rather than using an old library.
 
-The current discovery lists **873 entries**:872 supported assertions and one compilation fixture. Empty suites do not register a compilation fixture. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
+The current discovery lists **995 entries**:994 supported assertions and one compilation fixture. Empty suites do not register a compilation fixture. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
 
 CTest is also available in a normal game configuration (`BUILD_GAME=ON`, the default), and Make/Ninja support `cmake --build build-tests --target test`. CMake itself has no `--test` command. Reconfigure after changing test declarations or the manifest; CMake also tracks these files for regeneration during a build. Generated libraries stay in the chosen build directory. The original Python runner below remains available.
 
@@ -424,3 +424,19 @@ full public roster selection of these units remains17.Q. Use ROADMAP for the
 completed game, fixed replays,265 semantic-seed runs and78 action-mutation runs,
 coverage and diagnostic limits. Action/schema33/21 regeneration adds six Bool
 candidates and leaves coordinate bounds unchanged.
+
+
+## Current native Orks adapter validation —17.P2
+
+The Python migration was reverted at the user's request. Tests remain native
+Rulebook functions in `baseline.rl`, compiled once per CTest fixture and shown
+as individual cases. No new build cache is introduced. Compiler/core0.4.18
+support the verified four-worker parallel builds; debug tests remain
+unoptimized, with separate optimized sanitizer/fuzzer validation.
+
+Current discovery is995 entries:994 assertions and one nonempty-suite build
+fixture, with no discrepancies. All994 final-source assertions pass. The
+fourteen-card guide and latest ROADMAP section record the29-card HTML check,
+63 native sanitizer cases, Godot controls, frame/ML checks and fuzzer scope.
+Keep matching native/header clients for schema34/22/34 (next35). Broader
+rendered integration and the known wrapper/runtime performance work remain17.Q.
