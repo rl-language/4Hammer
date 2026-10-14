@@ -431,12 +431,14 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
   - [x] **17.E:** Stable source events/limits, owned timed grants, offboard/archive expiry, live unit auras and explicit editor source choices. Actual source abilities remain their later batches.
 - [x] **17.F:** Current Waaagh!/riled-up consumers, War Cry, Da Boss and user-supplied Warlord selection; source/profile metadata remains each actual datasheet's owner.
 - [x] **17.G:** Source-backed Orks Leader/Support attachments and task6 lifecycle, using the included10 Leader/7 Support permission lists.
-- [ ] **17.H:** Replace the existing three Orks unit families with current profiles, equipment and source-specific abilities; review included loadout capacities and oval geometry.
+- [x] **17.H:** Replace the existing three Orks unit families with current profiles, equipment and source-specific abilities; review included loadout capacities and oval geometry.
   - [x] **17.H1:** Current profiles, literal composition/loadout constructors, named physical profiles/Hunter restrictions and data/HTML cross-checks; keep incomplete adapters out of the production roster.
   - [x] **17.H2:** Each source-specific ability: Dodge Dis!, Keep Huntin', Mobbed, Bomb Squig and Brutal Impact, with actual event/target/damage/shock consumers.
   - [x] **17.H3:** User-authorized temporary circular proxies for supplied75x42/90x52 oval bases: preserve source axes, use75/90mm long-axis diameters consistently on existing quad anchors and in Godot; exact oval geometry deferred.
-  - [ ] **17.H4:** Promote completed current adapters into the existing Orks roster; validate actual selection, attachments, combat, saves and full games.
+  - [x] **17.H4:** Promote completed current adapters into the existing Orks roster; validate actual selection, attachments, combat, saves and full games.
 - [ ] **17.I–N:** War Horde one rule/card at a time; healing/revival; carrier permission/seating and Trukk; special/reactive movement; hit/kill provenance and post-attack effects; psychic systems and their units.
+  - [x] **17.I1:** War Horde Get Stuck In passive, actual selected-package/ORKS-unit/melee gating and duplicate Sustained Hits choice; implemented/tested alongside17.H4 with shared validation.
+  - [ ] **17.I2:** War Horde enhancements/upgrades, then the six CP cards individually; do not mark the detachment complete from its passive.
 - [ ] **17.O–P:** Remaining ordinary detachments and every remaining datasheet by dependency family. Include the additional Runt Swarm replacement/hit-interception systems. Preserve oval metadata and use the user-authorized long-axis circle approximation for now; hull/multipart dimensions remain explicit dependencies. Keep grid coordinates.
 - [ ] **17.Q:** Complete rendered/headless Godot journeys, combination tests, saves/replays/ML, representative full games and sanitized fuzzing. Fix the measured wrapper retrieval bottleneck and every identified new mistake.
 
@@ -444,7 +446,7 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
 
 **Audit verification:** exactly 67 unique unit rows match the faction page's linked datasheets, all downloads succeeded, all source-labelled records are 11th edition, and all requirement IDs resolve to the audit. The 40 ordinary CP-card rows match the source cards; Hulking Brutes records its optional +1CP, and Infested War Zone records its 2CP base. Batch17.A made only documentation changes; implementation tests were not rerun for that audit because no game or test code changed. Source snapshots/hashes are outside the checkout at `/workspace/4hammer-validation/orks-audit-2026-10-12`.
 
-Task6's Orks source deferral and shared mechanics are resolved in17.G; other factions still need permission data. **17.C4,17.D,17.E,17.F and17.G are complete as engine batches;17.H1–H3 are complete within the user-approved circle approximation. Next:17.H4, production roster promotion.**17.H remains in progress; exact ovals are deferred by user direction. Mark later batches complete only after their actual rule, binding and sanitizer validation. Missing dimensions, source ambiguities and preserved visibility limits remain explicit dependencies; ignoring prices does not authorise inventing alternate reserve percentages or removing CP restrictions.
+Task6's Orks source deferral and shared mechanics are resolved in17.G; other factions still need permission data. **17.C4–17.H and17.I1 are complete within their recorded scope and the user-approved circle approximation. Next:17.I2 (War Horde upgrades/cards), alongside17.J healing/revival where independent.** Exact ovals are deferred by user direction. Mark later batches complete only after their actual rule, binding and sanitizer validation. Missing dimensions, source ambiguities and preserved visibility limits remain explicit dependencies; ignoring prices does not authorise inventing alternate reserve percentages or removing CP restrictions.
 
 ### Batch17.B — implemented and validated
 
@@ -675,3 +677,83 @@ Fresh seed40000 completes **1,000 legal actions**, terminal owner-4, with payloa
 **Mistakes fixed:** new movement-source action names initially collided with nested destruction actions' frame/value argument forms; `choose_movement_source` now has its own source-ID payload and ordinary `roll` retains chance classification. A two-argument range call, deployment-zone fixture and Godot case-format expectation were corrected. Expensive tests were delayed until the combined edits were complete; only affected semantic cases were rerun after the fixture correction. All remaining identified defects retain mandatory owners.
 
 **17.H2 and17.H3 are complete within the user's temporary circle policy. Next:17.H4**, promote the three current adapters into the actual Orks roster and validate current Warlord, attachments, equipment, movement/combat, saves and complete games. Parent17.H/full production cards remain incomplete until that switch. All54 standard cards remain planned; Forge World/Legends and points/detachment prices remain excluded, CP retained. Exact ovals are deferred, while remaining datasheet abilities, missing hull geometry, full rendered journeys and wrapper performance retain their named owners.
+
+
+###17.H4/17.I1 combined implementation and validation —2026-10-14
+
+The public Orks starter now fields the completed current Beastboss, four-model
+Squighog unit and two ten-model Snagga mobs with one additional Thump Gun each.
+The stable Morgrim action/enum remains compatible; the editor labels it current
+Orks. Actual mandatory Warlord selection precedes opponent handoff, and formation
+attachments preserve Warlord/component identities after reserve-slot compaction.
+Historical Orks factories remain explicit core-test scaffolds, outside this
+public choice. Read `doc/orks-roster-war-horde.md`.
+
+War Horde Get Stuck In uses the cached faction definition: friendly ORKS units'
+melee attacks have Sustained Hits1. Source owner configuration, selected package,
+army faction, unit keyword union and melee profile gate the grant. Extra Attacks
+receive it; ranged attacks do not. Existing p78 duplicate selection chooses
+unconditional1 versus Beastboss's conditional2 before targets; no summation or
+automatic maximum is introduced. Ordinary declarations, critical-hit/wound
+consumers and saves carry the selected instance. No new action signature, stored
+float, custom init/drop, point/DP cost or terrain/visibility geometry is added.
+Rules.gd and TraceManager.gd are unchanged. State/observation31, action19, next32.
+
+Executed evidence (external outputs in `/workspace/4hammer-validation`):
+
+- Discovery: **757 CTest entries**,755 supported assertions plus two compilation
+  fixtures. Initial full run: **756/757**,411.18s, with only the new two-player
+  attachment fixture aborting; `task17h4i1-ctest.log`. Corrected affected rerun:
+  **19/19**,305.28s (18 assertions plus compilation),
+  `task17h4i1-ctest-corrected.log`. All755 assertions have passing executed results
+  across those runs; this is not a second full757-entry run.
+- Added17 focused regressions, all passing with unoptimized native Address,
+  UndefinedBehavior and LeakSanitizers: `task17h4i1-sanitized-final.log`, matching
+  `task17h4i1-sanitized/{libtests-final.so,driver-final}`. Earlier fixture failure
+  was corrected and all17 rerun; leak detection remains enabled outside the
+  sandbox because process inspection is required.
+- The roster-only prerequisite commit is independently type-checked in
+  `task17h4i1-roster-stage/type.{rl,log}`. Final code is freshly compiled by CTest,
+  native sanitizers, pure Godot and the optimized sanitized fuzzer withRLC0.4.17
+  and `-j 4`; debug builds remain unoptimized.
+- Fresh matching pure Godot header/native/C++ libraries in`task17h4i1-godot`;
+  three controls PASS: current production roster/Warlord/attachment/pending-save
+  and duplicate-choice journey (`task17h4i1-godot-roster-corrected.log`), current
+  data/proxies (`...-godot-data.log`) and unit-rule controls (`...-godot-rules.log`).
+  The initial60-second production journey timed out; the corrected180-second
+  budget passes. Full rendered/mouse journeys remain17.Q.
+- Independent cached HTML comparison PASS: three cards, five profiles,13 weapon
+  rows (`task17h4i1-source-tables.log`).20-step ML PASS: unchanged22,907 candidates
+  and28,980,462 finite observation values (`task17h4i1-gym.log`).
+- Actual current-root mixed matchup, seed40000: **1,158 legal actions**, completed
+  with terminal owner-4 (`task17h4i1-gameplay.log`). Two actual Orks starters, War
+  Horde selected for both owners, seed40001: **1,346 legal actions**, completed
+  with terminal owner-4 (`task17h4i1-orks-game.log`). The latter includes reserve
+  arrivals, real shooting/melee and Keep Huntin'/Bomb Squig/Mobbed. Both check
+  decision ownership and payload text round trips; traces/inputs are in
+  `task17h4i1-replays`. Python elapsed589.881s for the latter overlaps other
+  compilation/testing and is not a controlled performance comparison.
+- Fresh optimized sanitized fuzzer `task17h4i1-fuzzer` passes both preserved
+  deployment/geometry inputs (1.900s/6.975s), zero input (4.025s) and fresh mixed
+  completed game (66.051s); see `task17h4i1-preserved-{0,1}.log` and
+  `task17h4i1-replay-mixed.log`. Fresh two-Orks completed-game replay also PASS (54.076s), recorded separately
+  in`task17h4i1-replay-orks.log`. Short mutation campaign: **15 runs in69s**,
+  coverage14,452/features19,737, no failure artifacts; `task17h4i1-mutation.log`.
+  Fuzzing is crash/memory evidence, not semantic proof of the entire faction.
+
+Corrected mistakes: the new fixture incorrectly assumed attachment ownership
+changed only after `done_attaching`; actual formation choices alternate after
+each action, including attachment. Correct both fixture and Godot journey;
+production formation behavior is unchanged. Type-check corrections used the
+actual unit-level ability collection, explicit Weapon enum values and both
+shared contexts for the nested Select Weapons action. No failing check is
+disabled and no compiler-bug/minimal-file workflow is revived.
+
+**17.H (three current starter families) and17.I1 (passive only) are complete.**
+17.I2 still owns War Horde enhancements/upgrades and all six CP cards.17.J–P own
+remaining mechanics and the other51 included standard cards. All54 remain the
+plan; Forge World/Legends are excluded, CP retained, exact ovals deferred in
+favor of the user-approved circles. Unknown hull/multipart dimensions, full
+rendered journeys, mission/faction completion and wrapper-performance issues
+remain explicit dependencies with named owners. Every remaining identified
+issue must be fixed before its owning task is marked complete.

@@ -187,7 +187,7 @@ The project requires authored persistent numeric game/frame values to use `BInt`
 
 There is no z-coordinate action. Model elevation and terrain/path metadata retain their bounded domains. Physical calculations can reconstruct micrometre coordinates and use local floats while actual saved positions remain quads. `ModelHistory` stores bounded squared horizontal segment lengths plus vertical distance, then computes square roots on demand; it does not persist a float distance cache.
 
-The current full-game layout is state/observation schema **30**, action schema **19**, with next-state bound **31**. The validated catalog has **22,907** candidates and **28,980,462** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
+The current full-game layout is state/observation schema **31**, action schema **19**, with next-state bound **32**. The validated catalog has **22,907** candidates and **28,980,462** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
 
 ## Turn sequence and decision ownership
 
@@ -316,7 +316,7 @@ These constructors now carry current ability metadata. [The ability report](orks
 
 Dodge Dis! is a separate hit contribution in each attack snapshot, preserving pre-cap arithmetic and optional ignoring provenance. Brutal Impact adds a damage operation to every declared profile when the actual source unit has charged this turn. Mobbed runs all engaged enemy Monster/Vehicle shock tests after completed charge movement, with source-controller ordering and target-owned shock choices. Unit/component conferral reuses the existing attachment lifecycle.
 
-Squighog profiles retain original oval axes and `profile_has_oval_base`, while the user's updated policy permits75/90mm long-axis circle proxies through the common distance/overlap/setup/path/rendering consumers. Rotation leaves the proxy unchanged. Exact ovals are deferred; unknown hull/multipart geometry remains unsupported. Anchors stay on whole quads. Production roster promotion remains17.H4; the public legacy roster does not exercise these current adapters. Existing profile/weapon IDs remain historical fixtures. New ability values, hit provenance and action frames require matching schemas30/19/30, next31.
+Squighog profiles retain original oval axes and `profile_has_oval_base`, while the user's updated policy permits75/90mm long-axis circle proxies through the common distance/overlap/setup/path/rendering consumers. Rotation leaves the proxy unchanged. Exact ovals are deferred; unknown hull/multipart geometry remains unsupported. Anchors stay on whole quads. The public Orks starter now uses these current adapters with real Warlord and attachment decisions. Existing profile/weapon IDs remain historical fixtures. New ability values, hit provenance and action frames require matching schemas31/19/31, next32.
 
 ## Attached units
 
@@ -469,3 +469,9 @@ Current gaps include ignore-modifier consumers beyond WS/BS and hit rolls, full 
 For subsystem detail, use [attack declarations/dice](attack-declarations-dice.md), [damage/destruction](saves-damage-destruction.md), [movement/deployment](movement-deployment.md), [modifiers](model-characteristics.md), [physical weapons/compound dice](physical-weapons-compound-dice.md), [source effects](source-instances-effects.md) and [transports/Aircraft](transports-aircraft.md). Earlier reports contain historical schemas/test counts; current source and the latest roadmap completion section take precedence.
 
 For language syntax beyond this project's conventions, consult the official [language tour](https://rl-language.github.io/language_tour.html), [language reference](https://rl-language.github.io/language-reference.html) and [action library](https://rl-language.github.io/stdlib/action.html). Confirm version-sensitive behavior against the pinned compiler and its installed standard library.
+
+Current public Orks selection uses the current three-family starter, with real
+Warlord and attachment choices. War Horde Get Stuck In enters normal weapon
+declaration snapshots and duplicate-ability selection; it is not a timed aura.
+See [the roster/passive guide](orks-roster-war-horde.md). Other package effects
+remain independently tracked in ROADMAP.md.

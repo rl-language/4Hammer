@@ -155,3 +155,16 @@ Ovals retain original axis/shape metadata but use the source long axis as a temp
 ## 17.H2/H3 completed adapter overlay
 
 [The ability report](orks-current-unit-rules.md) adds the five current source abilities and long-axis oval proxies, with real move/charge windows, shared army/unit limits, targets, hit/D/shock/mortal consumers and lifecycle/saves. All738 assertions have passing results across full/corrected runs;56 native sanitizer/leak cases, HTML comparison, five Godot controls, ML, completed legacy-root replays and20 mutation runs pass. Exact oval geometry is deferred under user policy; unknown hull/multipart dimensions remain unavailable.17.H4 production roster promotion remains next. Current complete-card gameplay and all remaining54-card work retain their roadmap owners.
+
+
+##17.H4/17.I1 production integration
+
+The public starter now uses the three completed current families with mandatory
+Warlord selection, real attachments and saved identities. Get Stuck In supplies
+selected War Horde's friendly ORKS melee Sustained Hits1 through declaration and
+duplicate selection. Read [the roster/passive guide](orks-roster-war-horde.md)
+and ROADMAP.md for executed755-assertion,17-native-sanitizer, three-Godot, HTML,
+ML, two-current-game and fuzzer evidence. Earlier statements above about a
+pending roster switch describe historical batch scope. This certifies three
+families within the circle approximation and one detachment passive; other51
+standard cards, enhancements/cards and later mechanics retain their owners.

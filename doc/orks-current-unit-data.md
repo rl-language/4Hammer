@@ -1,6 +1,6 @@
 # Current Orks profiles and loadouts:17.H1
 
-This is the data step of17.H, covering Beastboss, Beast Snagga Boyz and Squighog Boyz. It adds current constructors in [orks_unit_data.rl](../src/orks_unit_data.rl), five model profiles and12 unique weapon profiles. 17.H2 adds their special abilities;17.H3 now uses user-authorized circular proxies for oval bases. Production roster promotion remains17.H4. All54 standard Orks units remain planned; Forge World/Legends and points/detachment prices are excluded.
+This is the data step of17.H, covering Beastboss, Beast Snagga Boyz and Squighog Boyz. It adds current constructors in [orks_unit_data.rl](../src/orks_unit_data.rl), five model profiles and12 unique weapon profiles. 17.H2 adds their special abilities;17.H3 now uses user-authorized circular proxies for oval bases. The public starter now uses these adapters (17.H4); see the roster/passive guide. All54 standard Orks units remain planned; Forge World/Legends and points/detachment prices are excluded.
 
 Sources are the retrieved11th-edition version1.2 HTML cards from2026-10-12:
 
@@ -36,7 +36,7 @@ The independent printed ranges are preserved, including intermediate totals. Pri
 
 Squighog Nobs have Big Choppa, Slugga and Squig's Jaws. Boys have Saddlegit's Shiv, Squig's Jaws and both ranged/melee Stikka profiles of one physical weapon. Jaws are Extra Attacks. Big Choppa has S7/Cleave2; the melee Stikka has no inherited Lance. Shoota/Slugga have conditional Lethal Hits excluding both MONSTER and VEHICLE; the combined Beastboss melee weapon has conditional Sustained Hits2 against either. Thump Gun has fixed3 attacks and Anti-Monster/Vehicle4+, with no inherited D3/Blast.
 
-Stored state continues to use bounded/linear integers, Bool and enums, with generated lifecycle. Constructor counts are checked transient inputs; starting strength/model/weapon vectors are bounded. The caller assigns owner and stable identities through the existing Board APIs before attachment/saving. UnitRole/permission metadata is configured explicitly. The five profiles and12 weapon entries change enum/keyword interpretation, so state/observation schemas are30, with next-state31 and action schema19 after17.H2/H3.
+Stored state continues to use bounded/linear integers, Bool and enums, with generated lifecycle. Constructor counts are checked transient inputs; starting strength/model/weapon vectors are bounded. The caller assigns owner and stable identities through the existing Board APIs before attachment/saving. UnitRole/permission metadata is configured explicitly. The five profiles and12 weapon entries change enum/keyword interpretation, so state/observation schemas are31, with next-state32 and action schema19 after17.H4/17.I1.
 
 ## Capacity review
 
@@ -46,9 +46,9 @@ These families require at most four stored profiles per model: Boy with addition
 
 - 17.H2 (implemented/tested): Dodge Dis!, shared once-per-army-round Keep Huntin', Mobbed, Bomb Squig and Brutal Impact, each with source lifetime, real timing/ownership/target choices and damage/shock integration.
 - 17.H3 (implemented/tested within user circle policy): use the user-authorized75/90mm circular proxies consistently; exact oval geometry is deferred.
-- 17.H4: switch the existing Orks roster to completed current adapters and validate actual Warlord, attachments, equipment, movement/combat and complete-game journeys.
+- 17.H4: the public starter uses the current adapters; actual Warlord, attachment, save, combat and complete-game validation is recorded in ROADMAP.md.
 
-The public legacy roster remains explicitly uncertified until that switch; this data step does not silently field an incomplete card. No current full card is marked complete. Healing/revival remains17.J and full rendered journeys/wrapper performance remain17.Q. [ROADMAP.md](../ROADMAP.md) records executed validation and the next subtask.
+The public starter fields these three current families. This does not certify the other51 included cards or other detachments. Read [the roster/passive guide](orks-roster-war-horde.md) for the production flow and War Horde scope. Healing/revival remains17.J and full rendered journeys/wrapper performance remain17.Q. [ROADMAP.md](../ROADMAP.md) records executed validation and the next subtask.
 
 
 ## 17.H1 executed validation (historical)

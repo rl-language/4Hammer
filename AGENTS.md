@@ -446,3 +446,37 @@ Movement source dispatch combines targeted sources with ordinary grants in contr
 Preserve original oval axes/shape metadata, using75/90mm circle proxies throughout geometry and rendering until exact ovals are requested. Unknown hull/multipart data remains unsupported. Keep quads, bounded/linear/Bool/enum numbers, generated lifecycle and Rules.gd/TraceManager.gd unchanged. Source-table, native and Godot checks validate current adapters; legacy public-root fuzzer/full games do not certify roster promotion.
 
 Current738 assertions /740 CTest entries have passing results across the initial739/740 run and corrected58/58 affected rerun;56 native sanitizer/leak cases, HTML tables, five Godot controls,20-step Gym, complete-game replays and20 mutation runs pass. ROADMAP.md owns exact logs, scope and corrected failures. Schemas30/19/30, next31;22,907 candidates /28,980,462 observations require matching policies. Compiler/core0.4.17, -j 4, unoptimized debug and separate-O2 fuzzing remain. Reuse compatible compiled Python bindings for Gym/gameplay; CTest's --pylib native library is not directly reusable in Godot, which needs the pure native build. LeakSanitizer may require execution outside the sandbox for process inspection; never disable its checks. Keep geometry/policy, ability/testing/binding and documentation commits separate and buildable.
+
+## Current Orks roster and War Horde passive —17.H4/17.I1
+
+Implement and validate these two batches together before the expensive shared
+checks. Read [the roster/passive guide](doc/orks-roster-war-horde.md). Public Orks
+selection now uses `make_orks_starter_roster`: Beastboss, four Squighogs and two
+ten-model Snagga mobs with one Thump Gun each. Preserve the stable roster/action
+identifier, label it current Orks, and exercise both players' actual mandatory
+Warlord choices, reserve-ID compaction, attachment provenance, saves and combat.
+Historical factories remain explicit core-test scaffolds; they must not be used
+as evidence of current production cards. Oval models keep source axes and use
+long-axis circles until exact geometry is authorized.
+
+Get Stuck In is selected War Horde's friendly ORKS-unit melee Sustained Hits1,
+including Extra Attacks. Gate it by source owner configuration, army faction,
+unit keyword union and weapon profile; use ordinary declaration snapshots and
+p78 duplicate selection. Beastboss conditional2 and unconditional1 are alternatives
+selected before targets, never summed or automatically maximized.17.I1 covers
+only this passive; enhancements/upgrades and six CP cards remain17.I2. Record
+actual validation before marking17.H4/17.I1 complete. State/observation31,
+action19; rebuild matching libraries/headers, preserve bounded ML state, whole
+quads and editor action shapes. All54 standard cards remain planned.
+
+
+17.H4/17.I1 executed evidence is in the latest ROADMAP.md section. All755
+assertions have passing results across initial756/757 and corrected19/19 runs;
+all17 new native sanitizer/leak cases, three Godot controls, HTML and unchanged
+finite ML dimensions pass. Actual current-root mixed and two-Orks War Horde
+games finish in1,158/1,346 legal actions. Read the exact replay/fuzzer evidence
+and limits there; never substitute the earlier legacy-root traces as current
+card validation. Next17.I2 upgrades/cards and independent17.J healing/revival
+may be edited together, with expensive validation after edits.17.I1 is not full
+War Horde completion, and the three starter families are not all54 cards.
+Keep focused commits with each rule's own coverage and cite its actual source.

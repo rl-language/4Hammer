@@ -569,3 +569,18 @@ All17 included Orks lists and41 edges match the independent source inventory;13 
 ## 17.H2/H3 source-ability and user-geometry overlay
 
 [Current Orks abilities](orks-current-unit-rules.md) implements the five special abilities on the three current data families through actual move/charge, hit/D, Battle-shock and mortal/FNP/destruction consumers, including per-army/unit limits and source/bank/save lifetimes. Ovals now retain supplied axes/shape metadata while using explicitly user-authorized long-axis circles on the unchanged quad grid; exact oval geometry is deferred, unknown hull/multipart data remains unsupported. Current738 assertions have passing results across the initial full/corrected affected runs, with56 sanitizer/leak cases, HTML checks, five Godot controls, ML and replay/fuzzer evidence in ROADMAP.md.17.H4 still owns production roster promotion; full current-card games and the other standard datasheets are not certified by legacy-root smoke runs. Forge World/Legends remain excluded; rendered/performance work remains17.Q.
+
+
+## Current Orks production roster and War Horde passive —17.H4/17.I1
+
+[The roster/passive guide](orks-roster-war-horde.md) promotes the three current
+Orks families into actual selection, Warlord and attachment flow and implements
+Get Stuck In melee Sustained Hits1 with source-owner/package/faction/unit-keyword
+gates. Existing declaration, duplicate-choice and critical-hit consumers resolve
+the grant. Actual current games finish in1,158 and1,346 legal actions;755 supported
+assertions have passing full/affected results, with17 native sanitizer cases,
+three Godot controls, HTML/ML and native replay/fuzzer evidence in ROADMAP.md.
+Earlier legacy-root results do not certify this switch. War Horde upgrades and
+CP cards, other standard datasheets, rendered journeys and wrapper performance
+remain later tasks. Circle proxies/quads and explicit missing geometry remain
+the user-approved scope; no price/DP system or Forge World/Legends is added.

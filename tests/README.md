@@ -21,7 +21,7 @@ For another virtual environment, activate it first; if CMake cached a different 
 
 `ctest -N --test-dir build-tests` lists the tests. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` runs a selected case. Labels `baseline`, `discrepancies` and `expected-failure` allow filtering with `-L`. CTest automatically includes the matching compilation fixture even for a single selected test. Each suite compiles once per invocation with precondition/bounds checks; each assertion runs in its own process. A failed compilation blocks its cases rather than using an old library.
 
-The current discovery lists **740 entries**:738 supported assertions and2 compilation fixtures. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
+The current discovery lists **757 entries**:755 supported assertions and2 compilation fixtures. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
 
 CTest is also available in a normal game configuration (`BUILD_GAME=ON`, the default), and Make/Ninja support `cmake --build build-tests --target test`. CMake itself has no `--test` command. Reconfigure after changing test declarations or the manifest; CMake also tracks these files for regeneration during a build. Generated libraries stay in the chosen build directory. The original Python runner below remains available.
 
@@ -357,3 +357,28 @@ python tools/check_godot_state.py --build-path /workspace/4hammer-validation/tas
 The HTML check passes3 cards/five profiles/13 weapon rows. New source-choice and prior data/attachment/ignoring/weapon-source Godot controls pass. CTest's Python-linked --pylib native library requires Python symbols and is not a direct substitute for Godot's pure native build; compatible Python wrappers can still be reused for Gym/gameplay without recompiling.
 
 Schemas30/19/30, next31, require matching bindings/policies.20-step Gym passes22,907 candidates/28,980,462 finite observations; coordinate domains are unchanged. Fresh legacy-roster gameplay completes1,000 legal actions and its matching optimized sanitized `task17h23-fuzzer` replay passes, alongside both lifetime inputs/zero input. Fresh mutation completes20 runs in66s without failures/artifacts. Native/Godot fixtures cover actual current abilities; production roster promotion remains17.H4 and broad/rendered/performance validation remains17.Q. Follow the user's combined-task workflow: complete both related edits and fixtures before costly builds, then rerun only checks affected by corrections.
+
+
+### Current Orks roster and War Horde passive (17.H4/17.I1)
+
+See [the roster/passive guide](../doc/orks-roster-war-horde.md) and ROADMAP.md.
+The new17 assertions cover public current-roster/Warlord/formation/save flow and
+Get Stuck In ownership, keyword/profile/package gates, duplicate choices, actual
+weapon declaration and critical-hit resolution. The new Godot control check is:
+
+```bash
+python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17h4i1-godot --script tests/godot_orks_roster.gd --timeout 180
+```
+
+The enlarged production selection/save journey exceeded the initial60-second
+budget on this machine; the corrected180-second run passes. Formation choices
+alternate after each action, including a successful attachment, rather than
+only after each player's finish choice. Never insert an extra finish before
+the opponent's immediate attachment decision.
+
+Fresh matching bindings use state/observation31 and action19. Three affected
+Godot controls, independent HTML tables and the20-step ML check pass; the latter
+retains22,907 candidates and28,980,462 finite observations. Exact rendered/mouse
+journeys and the known wrapper-performance work remain17.Q. Read the roadmap
+for full/affected CTest,17-case native sanitizer/leak and actual-roster complete
+game/fuzzer evidence; do not describe a partial rerun as a second full suite.

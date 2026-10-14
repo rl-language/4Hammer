@@ -1,6 +1,6 @@
 # Current Beast Snagga unit abilities:17.H2/H3
 
-This batch implements the five printed special abilities on Beastboss, Beast Snagga Boyz and Squighog Boyz, alongside the user-authorized temporary oval circle approximation. It follows the retrieved11th-edition version1.2 HTML cards from2026-10-12. Production roster promotion remains17.H4; all54 standard Orks cards remain planned, with Forge World/Legends excluded.
+This batch implements the five printed special abilities on Beastboss, Beast Snagga Boyz and Squighog Boyz, alongside the user-authorized temporary oval circle approximation. It follows the retrieved11th-edition version1.2 HTML cards from2026-10-12. The public starter now uses these adapters (17.H4); all54 standard Orks cards remain planned, with Forge World/Legends excluded.
 
 ## Source and behavior
 
@@ -31,3 +31,9 @@ The source75x42mm Boy and90x52mm Nob bases retain both axes and explicit oval me
 ## Validation and remaining work
 
 The combined batch has738 supported assertions with passing results across the initial739/740 full run and corrected58/58 affected rerun. All56 native sanitizer/leak cases, HTML tables, five Godot controls,20-step Gym, preserved/fresh complete-game replays and20 mutation runs pass. ROADMAP.md records exact logs and corrected fixture/environment errors.17.H4 must promote these adapters into the public roster and validate actual current selections, attachments, movement/combat and complete games. Full rendered journeys and wrapper retrieval performance remain17.Q. Current data APIs and focused semantic fixtures do not certify every remaining Orks card.
+
+
+17.H4 promotes these adapters through the public roster/Warlord/formation flow;
+17.I1 adds War Horde melee Sustained Hits1 through ordinary declaration snapshots.
+Read [the roster/passive guide](orks-roster-war-horde.md) and the latest ROADMAP.md
+evidence; earlier full-game records in this report used legacy roster data.
