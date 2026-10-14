@@ -15,12 +15,13 @@ fun passenger_model_permitted(Model carrier, Model passenger) -> Bool:
 
 # Stable carrier identity survives model compaction/reserve round trips;
 # passenger membership belongs to a TRANSPORT model, not its unit (p.64).
+# Gretchin Downtrodden rounds pairs once per passenger unit (Orks/Gretchin);
+# attached Characters retain ordinary seats. Core pp69-70 still limits cargo.
 fun passenger_space_used(Board board, EntityIdentity carrier) -> Int:
     let occupied = 0
     for passenger_index in range(board.embarked_units.size()):
         if board.embarked_units[passenger_index].embarked_transport == carrier:
-            for passenger_model in range(board.embarked_units[passenger_index].models.size()):
-                occupied = occupied + board.embarked_units[passenger_index][passenger_model].transport_space.value
+            occupied = occupied + orks_passenger_space(board.embarked_units[passenger_index])
     return occupied
 
 # Entire friendly units embark; no partial unit can exceed per-model capacity
@@ -28,11 +29,10 @@ fun passenger_space_used(Board board, EntityIdentity carrier) -> Int:
 fun transport_can_carry(Board board, Unit passenger, Unit carrier_unit, Int carrier_model) -> Bool:
     if passenger.empty() or carrier_model < 0 or carrier_model >= carrier_unit.models.size() or passenger.owned_by_player1 != carrier_unit.owned_by_player1 or passenger.identity == carrier_unit.identity or !carrier_unit[carrier_model].is_alive() or !board.embarked_units.has_capacity():
         return false
-    let required = passenger_space_used(board, carrier_unit[carrier_model].identity)
+    let required = passenger_space_used(board, carrier_unit[carrier_model].identity) + orks_passenger_space(passenger)
     for model_index in range(passenger.models.size()):
         if !passenger_model_permitted(carrier_unit[carrier_model], passenger[model_index]):
             return false
-        required = required + passenger[model_index].transport_space.value
     if required > carrier_unit[carrier_model].transport_capacity.value:
         return false
     # User directs us to assume a transport never embarks into another

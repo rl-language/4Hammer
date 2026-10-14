@@ -35,6 +35,8 @@ enum SourceDuration:
     next_own_turn
     battle
     end_next_turn
+    # Mek repair persists through Command, ending at the next own Movement start.
+    next_own_movement
 
 enum SourceTarget:
     source_unit

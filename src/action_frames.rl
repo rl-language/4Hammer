@@ -42,6 +42,9 @@ cls SharedActionFrames:
     OrksReactiveMove orks_reactive_move
     OrksSupportCard use_orks_support_card
     OrksSurly resolve_orks_surly
+    # Command/card healing and on-shock correction are sequential owners.
+    OrksComponentHealing heal_orks_component
+    OrksRuntherdShock orks_runtherd_shock
     OrksUnitHealing heal_orks_unit
     OrksWagonChargeEnd orks_wagon_charge_end
     OrksWagonMoveEnd orks_wagon_move_end

@@ -98,6 +98,8 @@ enum OrksEffectKind:
     ammo_runts_hit
     boss_ammo_hit
     rokkit_charge
+    clever_hit
+    pulsa_target
 
 cls OrksEffectGrant:
     SourceEffectKey source_effect
@@ -106,7 +108,7 @@ cls OrksEffectGrant:
     EntityIdentity associated_unit
 
 using OrksEnhancements = CheckedVector<OrksEnhancement, 4>
-using OrksEffectGrants = CheckedVector<OrksEffectGrant, 16>
+using OrksEffectGrants = CheckedVector<OrksEffectGrant, MAX_ORKS_MODEL_EFFECTS>
 
 # Attack-end reactions retain actual per-target hits/lost wounds, not merely
 # declarations. Stable identities survive model/unit bank transitions (p87).

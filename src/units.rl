@@ -329,6 +329,9 @@ cls PhaseModifiers:
     Bool counteroffensive
 
 cls Unit:
+    # Selected Big Mek Advance traverses models; clear after its move.
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek
+    Bool shokk_boosta_move
     # Immutable battle-start equipment for identical replacement units; not
     # current wounds/status and not a model-revival identity (Infested War Zone).
     Hidden<ModelVector> battle_start_models

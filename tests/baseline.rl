@@ -12606,6 +12606,10 @@ fun test_orks17p1_selected_fight_forwards_rokkit() -> Bool:
     sequence.use_rokkit_charge(board, true)
     return offered and !sequence.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::rokkit_charge) == 1
 
+
+# Fourteen current elite/support cards. Sources are the card URLs on every
+# profile and factory; explicit fixtures do not imply public roster coverage.
+
 # https://wahapedia.ru/wh40k11ed/factions/orks/Flash-Gitz: literal profile, InSv, absence of FNP and circular base.
 fun test_orks17p2_kaptin_profile() -> Bool:
     return orks17h1_profile_values(Profile::orks_kaptin, 6, 5, 4, 10, 3, 7, 1, 10) and Profile::orks_kaptin.base_size() == 40.0
@@ -12677,8 +12681,31 @@ fun test_orks17p2_zodgrod_wortsnagga_profile() -> Bool:
 # Imported, already identified attachments must not collide with the separate
 # enemy fixture's old IDs. Re-identify only that unrelated fresh component.
 # Infrastructure for stable identity/attachment invariants (core pp66/86/88).
+fun orks17p2_fixture(Unit source) -> Board:
+    let board = orks17p1_fixture(source)
+    board[1].identity = 0
+    for member_index in range(board[1].models.size()):
+        board[1][member_index].identity = 0
+        board[1][member_index].original_unit = 0
+    board.identify_units()
+    board.capture_starting_strengths()
+    assert(valid_state_foundations(board), "imported fixture identities must remain unique")
+    return board
+
 # Stable source lookup for the command/movement event fixtures, not game logic.
+fun orks17p2_source(Board board, Int rule) -> SourceInstance:
+    register_orks_unit_rules(board)
+    let result : SourceInstance
+    for index in range(board.source_instances.size()):
+        if board.source_instances[index].rule.value == rule:
+            result = board.source_instances[index]
+    return result
+
 # Snapshot an actual slot's current target-dependent attack characteristics.
+fun orks17p2_info(Board board, Int slot) -> AttackSequenceInfo:
+    let weapon = make_declared_weapon(board, unit_id(0), 0, slot)
+    return declared_attack_info(board, unit_id(0), unit_id(1), weapon, board.attack_info)
+
 # All fourteen constructors can be copied through an ordinary Game save.
 # Sources: each card's Unit Composition; state identity/serialization pp86/88.
 fun orks17p2_units() -> UnitVector:
@@ -12779,3 +12806,558 @@ fun test_orks17p2_tankbusta_physical_counts() -> Bool:
 
 # More Dakka's riled grant differs from plain Mek Kustom Dakka.
 # https://wahapedia.ru/wh40k11ed/factions/orks/{Mek,Big-Mek}
+fun test_orks17p2_more_dakka_and_mek_scope() -> Bool:
+    let board = orks17p2_fixture(make_orks_big_mek(false, false))
+    let plain = model_weapon_rules(board, unit_id(0), 0, 1)
+    orks17f_intrinsic_riled(board[0][0])
+    let riled = model_weapon_rules(board, unit_id(0), 0, 1)
+    let melee = model_weapon_rules(board, unit_id(0), 0, 0)
+    board[0] = make_orks_mek()
+    orks17f_intrinsic_riled(board[0][0])
+    let mek = model_weapon_rules(board, unit_id(0), 0, 0)
+    return chosen_weapon_has_rule(board, unit_id(1), plain, WeaponRuleKind::ignore_cover) and !chosen_weapon_has_rule(board, unit_id(1), plain, WeaponRuleKind::sustained_hit) and chosen_weapon_has_rule(board, unit_id(1), riled, WeaponRuleKind::sustained_hit) and !chosen_weapon_has_rule(board, unit_id(1), melee, WeaponRuleKind::ignore_cover) and chosen_weapon_has_rule(board, unit_id(1), mek, WeaponRuleKind::ignore_cover) and !chosen_weapon_has_rule(board, unit_id(1), mek, WeaponRuleKind::sustained_hit)
+
+# Flash Gitz's OR condition is live and only applies in own Shooting.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Flash-Gitz
+fun test_orks17p2_finderz_objective_or_and_phase() -> Bool:
+    let board = orks17p2_fixture(make_orks_flash_gitz(4))
+    for index in range(4):
+        board.set_objective_position(index, board_position(35, 25))
+    let none = orks17p2_info(board, 1).attack_penetration() == -1
+    board.set_objective_position(0, board[0][0].position)
+    let source = orks17p2_info(board, 1).attack_penetration() == -2
+    board.set_objective_position(0, board[1][0].position)
+    let target = orks17p2_info(board, 1).attack_penetration() == -2
+    board.current_player = true
+    return none and source and target and orks17p2_info(board, 1).attack_penetration() == -1
+
+# Unit incoming AP worsening also protects an attached Character; its
+# separate riled hit bonus is Fight-only (not a permanent profile change).
+# https://wahapedia.ru/wh40k11ed/factions/orks/Meganobz
+fun test_orks17p2_meganob_defence_and_riled_fight() -> Bool:
+    let board = orks17p2_fixture(make_orks_meganobz(2))
+    board[1] = make_orks_meganobz(2)
+    board.identify_units()
+    let incoming = orks17p2_info(board, 0).attack_penetration() == -1
+    let ordinary = orks17p2_info(board, 0).total_hit_modifier() == 0
+    orks17f_intrinsic_riled(board[0][0])
+    board.begin_phase(BattlePhase::fight)
+    return incoming and ordinary and orks17p2_info(board, 0).total_hit_modifier() == 1
+
+# Kustom Force Field is unit-wide only for ranged saves, and only equipped.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
+fun test_orks17p2_force_field_ranged_only() -> Bool:
+    let board = orks17p2_fixture(make_orks_big_mek_in_mega_armour(OrksMegaMekGun::kustom_shoota, OrksMegaMekExtra::force_field))
+    let info : AttackSequenceInfo
+    info.source = Weapon::captain_storm_bolter
+    let ranged = make_allocation_groups(board, board[0], info)
+    info.source = Weapon::relic_weapon
+    let melee = make_allocation_groups(board, board[0], info)
+    board[0][0].abilities.clear()
+    info.source = Weapon::captain_storm_bolter
+    let without = make_allocation_groups(board, board[0], info)
+    return ranged[0].invulnerable == 4 and melee[0].invulnerable == 10 and without[0].invulnerable == 10
+
+# Stronger incoming S uses the effective target T; equality is not enough.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Painboss
+fun test_orks17p2_hardy_bioniks_threshold() -> Bool:
+    let board = orks17p2_fixture(make_orks_big_mek(false, false))
+    board[1] = make_orks_painboss()
+    board.identify_units()
+    let strong = orks17p2_info(board, 0)
+    let penalty = required_wound_roll(board, strong)
+    board[1][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 5))
+    let equal = orks17p2_info(board, 0)
+    return strong.greater_strenght_wound_protection and penalty == 3 and required_wound_roll(board, equal) == 4
+
+# Actual printed attachment permission, independent of the public roster.
+fun orks17p2_attached(Unit bodyguard, Unit character) -> Unit:
+    let board : Board
+    board.reserve_units.append(bodyguard)
+    board.reserve_units.append(character)
+    board.identify_units()
+    assert(attachment_valid(board, unit_id(1), unit_id(0), false), "source card attachment fixture must be legal")
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    let unit = board.reserve_units[0]
+    mark_unit_offboard(unit, false)
+    return unit
+
+# Mounted Painboss changes ONLY its own type/M; Hardy Bioniks remains unit-wide.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Painboss
+fun test_orks17p2_painboss_actual_mounted_attachment() -> Bool:
+    let unit = orks17p2_attached(make_orks_squighog_boyz(1, 3), make_orks_painboss())
+    let bearer = unit.models.size() - 1
+    return !unit[bearer].has_keyword(Keyword::infantry) and unit[bearer].has_keyword(Keyword::mounted) and unit[bearer].has_keyword(Keyword::mobile) and unit[bearer].effective_movement(6) == 10 and unit[0].profile.movement() == 10 and unit.has_ability(AbilityKind::hardy_bioniks)
+
+# Source-wide field protection includes the actual attached Meganob bodyguard.
+fun test_orks17p2_force_field_actual_bodyguard() -> Bool:
+    let unit = orks17p2_attached(make_orks_meganobz(2), make_orks_big_mek_in_mega_armour(OrksMegaMekGun::kustom_shoota, OrksMegaMekExtra::force_field))
+    let board = orks17p2_fixture(unit)
+    let info : AttackSequenceInfo
+    info.source = Weapon::captain_storm_bolter
+    let groups = make_allocation_groups(board, board[0], info)
+    return groups.size() == 2 and groups[0].invulnerable == 4 and groups[1].invulnerable == 4
+
+# No own-unit, enemy-unit, other-SAG-unit or offboard proximity shortcut.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-With-Shokk-Attack-Gun
+fun test_orks17p2_support_shokka_eligibility() -> Bool:
+    let board = orks17p2_fixture(make_orks_big_mek_with_shokk_attack_gun())
+    let enemy = !orks_shokka_supported(board, board[0])
+    board[1].owned_by_player1 = false
+    board[1][0].keywords.append(Keyword::orks)
+    let friendly = orks_shokka_supported(board, board[0])
+    set_model_datasheet(board[1][0], OrksDatasheet::big_mek_with_shokk_attack_gun)
+    let excluded = !orks_shokka_supported(board, board[0])
+    set_model_datasheet(board[1][0], OrksDatasheet::boyz)
+    board[1].off_battlefield = true
+    return enemy and friendly and excluded and !orks_shokka_supported(board, board[0])
+
+# A healed vehicle model's bonus is not copied to another model in its unit.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Mek
+fun test_orks17p2_mek_repair_model_scope() -> Bool:
+    let board = orks17p2_fixture(make_orks_mek())
+    board[1] = make_orks_killa_kans(3)
+    board[1].owned_by_player1 = false
+    board[1][0].position = board_position(8, 5)
+    board[1][1].position = board_position(10, 5)
+    board[1][0].suffered_wounds = 4
+    board.identify_units()
+    board.begin_phase(BattlePhase::movement)
+    let instance = orks17p2_source(board, ORKS_MEK_REPAIR_RULE)
+    let sequence = repair_orks_vehicle(board, instance)
+    sequence.choose_mek_repair_unit(board, unit_id(1))
+    sequence.choose_mek_repair_model(board, damage_test_model(0))
+    sequence.quantity(board, attack_test_die(3))
+    return sequence.is_done() and board[1][0].suffered_wounds == 1 and model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 1 and model_orks_effect(board, board[1][1], OrksEffectKind::clever_hit) == 0
+
+fun test_orks17p2_mek_target_exclusions_and_bearer_range() -> Bool:
+    let board = orks17p2_fixture(make_orks_mek())
+    board[1] = make_orks_killa_kans(3)
+    board[1].owned_by_player1 = false
+    board[1][0].position = board_position(8, 5)
+    board[1][1].position = board_position(20, 5)
+    board.identify_units()
+    let instance = orks17p2_source(board, ORKS_MEK_REPAIR_RULE)
+    let valid = orks_mek_target_valid(board, instance, unit_id(1), damage_test_model(0)) and !orks_mek_target_valid(board, instance, unit_id(1), damage_test_model(1))
+    board[1][0].keywords.append(Keyword::aircraft)
+    let aircraft = !orks_mek_target_valid(board, instance, unit_id(1), damage_test_model(0))
+    board[1][0].keywords.erase(board[1][0].keywords.size() - 1)
+    board[1][0].keywords.append(Keyword::titanic)
+    return valid and aircraft and !orks_mek_target_valid(board, instance, unit_id(1), damage_test_model(0))
+
+# Mek's bonus survives next Command and expires BEFORE next Movement inputs.
+# Source: Mek Clever Know-wotz; persisting effects01.02.02.
+fun test_orks17p2_mek_bonus_precise_expiry() -> Bool:
+    let board = orks17p2_fixture(make_orks_mek())
+    board[1] = make_orks_killa_kans(3)
+    board[1].owned_by_player1 = false
+    board[1][0].position = board_position(8, 5)
+    board.identify_units()
+    board.begin_phase(BattlePhase::movement)
+    let instance = orks17p2_source(board, ORKS_MEK_REPAIR_RULE)
+    let repair = repair_orks_vehicle(board, instance)
+    repair.choose_mek_repair_unit(board, unit_id(1))
+    repair.choose_mek_repair_model(board, damage_test_model(0))
+    repair.quantity(board, attack_test_die(1))
+    board.turn_serial = board.turn_serial + 2
+    board.begin_phase(BattlePhase::command)
+    let during_command = model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 1
+    board.begin_phase(BattlePhase::movement)
+    return during_command and model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 0
+
+# Distinct repairs remain distinct modifiers before caps/optional ignoring.
+# Source: Mek; supplied modifiers02.02.01 and ignoring02.02.02.
+fun test_orks17p2_repair_contributions_and_full_choice_capacity() -> Bool:
+    let board = orks17p2_fixture(make_orks_killa_kans(3))
+    grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE, OrksEffectKind::clever_hit)
+    grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE + 10, OrksEffectKind::clever_hit)
+    let info = orks17p2_info(board, 0)
+    let independent = info.orks_unit_hit_modifiers.size() == 3 and info.total_hit_modifier() == 3
+    let choices : AttackModifierChoices
+    for index in range(MAX_ATTACK_MODIFIER_CHOICES):
+        choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::orks_datasheet))
+    let sequence = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::hit_roll, true)
+    for index in range(MAX_ATTACK_MODIFIER_CHOICES):
+        sequence.apply_attack_modifier(board, true)
+    return independent and sequence.is_done() and sequence.result.size() == MAX_ATTACK_MODIFIER_CHOICES and selected_hit_bonus(sequence.result) == 1
+
+# Ordinary model healing does not revive another model or spill to a neighbour.
+# Big Mek repair: same source as above; appendix02.02.04.
+fun test_orks17p2_repair_full_health_still_grants_bonus() -> Bool:
+    let board = orks17p2_fixture(make_orks_mek())
+    board[1] = make_orks_killa_kans(3)
+    board[1].owned_by_player1 = false
+    board[1][0].position = board_position(8, 5)
+    board.identify_units()
+    let instance = orks17p2_source(board, ORKS_MEK_REPAIR_RULE)
+    let repair = repair_orks_vehicle(board, instance)
+    repair.choose_mek_repair_unit(board, unit_id(1))
+    repair.choose_mek_repair_model(board, damage_test_model(0))
+    repair.quantity(board, attack_test_die(3))
+    return repair.is_done() and board[1].models.size() == 3 and board[1][0].suffered_wounds == 0 and model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 1
+
+# Mandatory Crude Surgery participates in the existing controller-order window;
+# its optional Orderly token can be declined and retained for another Command.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Painboy
+fun test_orks17p2_command_window_healing_and_decline_token() -> Bool:
+    let board = orks17p2_fixture(make_orks_painboy())
+    board[0][0].suffered_wounds = 2
+    board.begin_phase(BattlePhase::command)
+    let window = resolve_timing_window(board, TimingWindow::command_abilities)
+    if can window.finish_timing_rules(board):
+        return false
+    let event : SourceEventID
+    event = 0
+    window.choose_window_source(board, event)
+    window.use_grot_orderly(board, false)
+    window.choose_healed_model(board, damage_test_model(0))
+    window.choose_healed_model(board, damage_test_model(0))
+    window.finish_timing_rules(board)
+    let token = orks_elite_usage(board[0], board[0][0], ORKS_ORDERLY_RULE, true)
+    return window.is_done() and board[0][0].suffered_wounds == 0 and source_usage_available(board, token)
+
+# Healing sum3+D3 is determined before allocation and can exceed the old3 cap.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Painboy
+fun test_orks17p2_orderly_six_wounds_and_battle_token() -> Bool:
+    let unit = orks17p2_attached(make_orks_nobz(5), make_orks_painboy())
+    let board = orks17p2_fixture(unit)
+    board[0][0].suffered_wounds = 2
+    board[0][1].suffered_wounds = 2
+    board[0][2].suffered_wounds = 2
+    board.begin_phase(BattlePhase::command)
+    let instance = orks17p2_source(board, ORKS_SURGERY_RULE)
+    let sequence = orks_elite_command(board, instance)
+    sequence.use_grot_orderly(board, true)
+    sequence.quantity(board, attack_test_die(3))
+    for index in range(3):
+        sequence.choose_healed_model(board, damage_test_model(index))
+        sequence.choose_healed_model(board, damage_test_model(index))
+    let bearer = board[0].models.size() - 1
+    let token = orks_elite_usage(board[0], board[0][bearer], ORKS_ORDERLY_RULE, true)
+    return sequence.is_done() and !source_usage_available(board, token) and board[0][0].suffered_wounds == 0 and board[0][1].suffered_wounds == 0 and board[0][2].suffered_wounds == 0
+
+# The archive is a real original model and returns without stale death flags;
+# one wound is spent returning it, followed by two wounds restoring its W.
+# Unit-healing appendix02.02.04/01.02.03; Painboy source.
+fun test_orks17p2_healing_archive_restores_original_model() -> Bool:
+    let board = orks17p2_fixture(make_orks_nobz(5))
+    let identity = board[0][4].identity
+    board[0][4].used_once_per_battle_weapon[0] = true
+    board[0].damage(4, 3)
+    let count : BInt<0, 4>
+    count = 3
+    let healing = heal_orks_unit(board, unit_id(0), count)
+    healing.choose_healed_casualty(board, damage_test_model(0))
+    healing.place_returned_model(board, board_position(5, 7))
+    healing.choose_healed_model(board, damage_test_model(4))
+    healing.choose_healed_model(board, damage_test_model(4))
+    return healing.is_done() and board[0][4].identity == identity and board[0][4].suffered_wounds == 0 and board[0][4].used_once_per_battle_weapon[0] and !board[0][4].destruction_pending and board[0].destroyed_models.value.empty()
+
+# No old battlefield coordinates or range measurements apply in reserves.
+# Painboy Command self-healing works there via its own-unit ability01.02.04.
+fun test_orks17p2_offboard_command_heals_own_unit() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_orks_painboy())
+    board.identify_units()
+    mark_unit_offboard(board.reserve_units[0], true)
+    board.reserve_units[0][0].suffered_wounds = 2
+    board.begin_phase(BattlePhase::command)
+    let instance = orks17p2_source(board, ORKS_SURGERY_RULE)
+    let sequence = orks_elite_command(board, instance)
+    sequence.use_grot_orderly(board, false)
+    sequence.choose_healed_model(board, damage_test_model(0))
+    sequence.choose_healed_model(board, damage_test_model(0))
+    return sequence.is_done() and board.reserve_units[0][0].suffered_wounds == 0 and board.units.empty()
+
+# Painboss can heal its own offboard unit but cannot measure to another bank.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Painboss; appendix01.02.04.
+fun test_orks17p2_painboss_targets_banks_and_enemy() -> Bool:
+    let board = orks17p2_fixture(make_orks_painboss())
+    board[1] = make_orks_beast_snagga_boyz(1, 9, 0)
+    board[1][0].position = board_position(9, 5)
+    board[1].owned_by_player1 = false
+    board.reserve_units.append(make_orks_painboss())
+    board.identify_units()
+    let instance = orks17p2_source(board, ORKS_PAINBOSS_RULE)
+    let no_external = !orks_elite_heal_target(board, instance, SourceBank::battlefield, unit_id(0))
+    let self = orks_elite_heal_target(board, instance, SourceBank::reserves, unit_id(0))
+    return no_external and self and !orks_elite_heal_target(board, instance, SourceBank::battlefield, unit_id(1))
+
+# Optional once-per-battle Fix Dat and Push Dat share limits by original unit.
+fun test_orks17p2_healer_token_limits_and_registration_idempotence() -> Bool:
+    let board = orks17p2_fixture(make_orks_big_mek_in_mega_armour(OrksMegaMekGun::kustom_shoota, OrksMegaMekExtra::none))
+    let instance = orks17p2_source(board, ORKS_ARMOUR_REPAIR_RULE)
+    let count = board.source_instances.size()
+    register_orks_unit_rules(board)
+    let fresh = source_usage_available(board, instance)
+    commit_source_usage(board, instance)
+    board.phase_serial = board.phase_serial + 1
+    return fresh and board.source_instances.size() == count and !source_usage_available(board, instance)
+
+# Downtrodden rounds only source Gretchin, once for the whole passenger unit.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Gretchin
+fun test_orks17p2_gretchin_grouped_rounding_and_characters() -> Bool:
+    let ten = make_orks_gretchin(10)
+    let eleven = make_orks_gretchin(11)
+    let mixed = orks17p2_attached(eleven, make_orks_runtherd())
+    return orks_passenger_space(ten) == 5 and orks_passenger_space(eleven) == 6 and orks_passenger_space(make_orks_gretchin(20)) == 10 and orks_passenger_space(mixed) == 7 and mixed.models.size() == 12
+
+# Existing occupied seats and candidate units use the same grouped calculation.
+# Transport core p64 and Gretchin Downtrodden; explicit generic carrier fixture.
+fun test_orks17p2_gretchin_capacity_exact_and_overflow() -> Bool:
+    let board : Board
+    let carrier = make_orks_killa_kans(3)
+    carrier.models.resize(1)
+    carrier[0].keywords.append(Keyword::transport)
+    carrier[0].transport_permissions_known = true
+    carrier[0].transport_capacity = 5
+    carrier[0].permitted_passenger_keywords.append(Keyword::infantry)
+    board.units.append(carrier)
+    board.identify_units()
+    let ten = make_orks_gretchin(10)
+    let eleven = make_orks_gretchin(11)
+    return transport_can_carry(board, ten, board[0], 0) and !transport_can_carry(board, eleven, board[0], 0)
+
+# Gretchin secure actual controlled objectives at own Movement end, retaining
+# control after leaving; tied/uncontrolled markers do not become secured.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Gretchin
+fun test_orks17p2_gretchin_secure_objective_and_leave() -> Bool:
+    let board = orks17p2_fixture(make_orks_gretchin(10))
+    board[1][0].position = board_position(35, 25)
+    board.set_objective_position(0, board_position(5, 5))
+    board.begin_phase(BattlePhase::movement)
+    let instance = orks17p2_source(board, ORKS_SCAVENGERS_RULE)
+    secure_orks_gretchin_objectives(board, instance)
+    let secured = board.objectives[0].secured_by == ObjectiveController::army_0
+    mark_unit_offboard(board[0], true)
+    board.update_objective_control(true)
+    return secured and board.get_objective_controller(0) == 0
+
+# Source-bound Super Runts affects Scavenged Shivs, including improving WS by
+# subtraction. Zodgrod's own weapons are unchanged; loss of the source removes it.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Zodgrod-Wortsnagga
+fun test_orks17p2_zodgrod_shivs_and_source_lifetime() -> Bool:
+    let unit = orks17p2_attached(make_orks_gretchin(10), make_orks_zodgrod_wortsnagga())
+    let board = orks17p2_fixture(unit)
+    register_orks_passive_rules(board)
+    refresh_source_effects(board, TimingWindow::none)
+    let shiv = orks17p2_info(board, 1)
+    let riled = unit_is_riled_up(board[0])
+    let improved = shiv.attack_strength() == 3 and effective_attack_skill(board, shiv) == 4
+    let count = declaration_fixed_attacks(board, unit_id(0), make_declared_weapon(board, unit_id(0), 0, 1), 0)
+    board[0].remove_model(10)
+    refresh_source_effects(board, TimingWindow::none)
+    let gone = orks17p2_info(board, 1)
+    return riled and improved and count == 2 and gone.attack_strength() == 2 and !unit_is_riled_up(board[0])
+
+# Four ACTUAL Gretchin are required; the support is not one of the four.
+# Declining consumes no round usage and leaves shock unchanged.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Runtherd
+fun test_orks17p2_runtherd_threshold_and_decline() -> Bool:
+    let unit = orks17p2_attached(make_orks_gretchin(10), make_orks_runtherd())
+    let board = orks17p2_fixture(unit)
+    board[0].battle_socked = true
+    let declined = orks_runtherd_shock(board, board[0])
+    declined.use_runtherd(board, board[0], false)
+    let preserved = declined.is_done() and board[0].battle_socked and board.source_uses.empty()
+    while orks_live_gretchin(board[0]) > 3:
+        board[0].remove_model(0)
+    let no_fourth = orks_runtherd_shock(board, board[0])
+    return preserved and no_fourth.is_done() and board[0].models.size() == 4
+
+# Direct destruction bypasses even a hypothetical FNP, resolves removal, and
+# spends the unit's round token. No damage prevention roll is fabricated.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Runtherd
+fun test_orks17p2_runtherd_actual_destruction_and_round_limit() -> Bool:
+    let unit = orks17p2_attached(make_orks_gretchin(10), make_orks_runtherd())
+    let board = orks17p2_fixture(unit)
+    board[0].battle_socked = true
+    let sequence = orks_runtherd_shock(board, board[0])
+    sequence.use_runtherd(board, board[0], true)
+    sequence.quantity(board, board[0], attack_test_die(2))
+    sequence.choose_punished_gretchin(board, board[0], damage_test_model(0))
+    sequence.choose_punished_gretchin(board, board[0], damage_test_model(0))
+    let cleared = sequence.is_done() and !board[0].battle_socked and orks_live_gretchin(board[0]) == 8
+    board[0].battle_socked = true
+    let same_round = orks_runtherd_shock(board, board[0])
+    board.current_round = board.current_round + 1
+    let next_round = orks_runtherd_shock(board, board[0])
+    return cleared and same_round.is_done() and can next_round.use_runtherd(board, board[0], true)
+
+# The own-unit correction is available offboard, with no position inputs.
+# Runtherd; appendix01.02.04 and ordinary destruction.
+fun test_orks17p2_runtherd_offboard_correction() -> Bool:
+    let board : Board
+    board.reserve_units.append(orks17p2_attached(make_orks_gretchin(10), make_orks_runtherd()))
+    board.identify_units()
+    mark_unit_offboard(board.reserve_units[0], true)
+    board.reserve_units[0].battle_socked = true
+    let sequence = orks_runtherd_shock(board, board.reserve_units[0])
+    sequence.use_runtherd(board, board.reserve_units[0], true)
+    sequence.quantity(board, board.reserve_units[0], attack_test_die(1))
+    sequence.choose_punished_gretchin(board, board.reserve_units[0], damage_test_model(0))
+    return sequence.is_done() and !board.reserve_units[0].battle_socked and board.reserve_units[0].models.size() == 10 and board.units.empty()
+
+# Two Bomb Squig tokens, one per turn: unlike the Squighog single token.
+# https://wahapedia.ru/wh40k11ed/factions/orks/{Breaka-Boyz,Tankbustas}
+fun test_orks17p2_bomb_two_per_battle_one_per_turn() -> Bool:
+    let board = orks17p2_fixture(make_orks_breaka_boyz(false, 5, 5))
+    let instance = orks17p2_source(board, ORKS_BOMB_SQUIG_RULE)
+    let fresh = source_usage_available(board, instance)
+    commit_source_usage(board, instance)
+    let spent_turn = !source_usage_available(board, instance)
+    board.turn_serial = board.turn_serial + 1
+    let second = source_usage_available(board, instance)
+    commit_source_usage(board, instance)
+    board.turn_serial = board.turn_serial + 1
+    return fresh and spent_turn and second and !source_usage_available(board, instance)
+
+# Actual move-end selection still consumes a token on a failed detonation.
+# No new die conventions, FNP or mortal allocation kernel is introduced.
+fun test_orks17p2_breaka_actual_bomb_move_end() -> Bool:
+    let board = orks17p2_fixture(make_orks_breaka_boyz(false, 5, 5))
+    board.begin_phase(BattlePhase::movement)
+    let event = source_event(SourceEventKind::move_end, board[0].identity, invalid_entity_identity(), invalid_entity_identity())
+    event.movement = MovementKind::normal
+    let sequence = resolve_movement_sources(board, event)
+    sequence.choose_movement_source(board, source17e_id(0))
+    sequence.choose_bomb_squig_target(board, unit_id(1))
+    sequence.roll(board, attack_test_die(1))
+    let instance = orks17p2_source(board, ORKS_BOMB_SQUIG_RULE)
+    return sequence.is_done() and !source_usage_available(board, instance) and board[1][0].suffered_wounds == 0
+
+# Trophy Hunters joins addition before division/rounding and the12 cap.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
+fun test_orks17p2_trophy_hunters_charge_order_and_cap() -> Bool:
+    let unit = make_orks_breaka_boyz(false, 5, 5)
+    let bonus = charge_distance(unit, 5, ChargeKind::ordinary, false) == 6
+    unit.phase_modifiers.charge_roll.append(rule_modifier(ModifierOperation::divide, 2))
+    return bonus and charge_distance(unit, 6, ChargeKind::ordinary, false) == 4 and charge_distance(unit, 30, ChargeKind::ordinary, false) == 12
+
+# A Pulsa token belongs to the actual equipped bearer and marks one identity.
+# Printed M/V and24in, not line of sight; declining costs nothing.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
+fun test_orks17p2_pulsa_target_and_once_usage() -> Bool:
+    let board = orks17p2_fixture(make_orks_tankbustas(false, OrksTankbustaExtra::pulsa, 0))
+    board[1][0].keywords.append(Keyword::monster)
+    let sequence = orks_pulsa_selection(board, unit_id(0))
+    sequence.use_pulsa_rokkit(board, true)
+    sequence.choose_pulsa_target(board, unit_id(1))
+    let info = orks17p2_info(board, 1)
+    let marked = orks_pulsa_applies(board, board[0], board[1].identity)
+    let spent = !orks_pulsa_available(board, unit_id(0))
+    board.begin_phase(BattlePhase::charge)
+    return sequence.is_done() and marked and spent and info.attack_penetration() == -3 and !orks_pulsa_applies(board, board[0], board[1].identity)
+
+fun test_orks17p2_pulsa_decline_and_unavailable_target() -> Bool:
+    let board = orks17p2_fixture(make_orks_tankbustas(false, OrksTankbustaExtra::pulsa, 0))
+    let no_monster = orks_pulsa_selection(board, unit_id(0))
+    board[1][0].keywords.append(Keyword::vehicle)
+    let sequence = orks_pulsa_selection(board, unit_id(0))
+    sequence.use_pulsa_rokkit(board, false)
+    return no_monster.is_done() and sequence.is_done() and orks_pulsa_available(board, unit_id(0)) and board.source_uses.empty()
+
+# Retargeting to another enemy loses Pulsa even if it has the same keywords.
+fun test_orks17p2_pulsa_does_not_follow_replacement_target() -> Bool:
+    let board = orks17p2_fixture(make_orks_tankbustas(false, OrksTankbustaExtra::pulsa, 0))
+    board[1][0].keywords.append(Keyword::vehicle)
+    let sequence = orks_pulsa_selection(board, unit_id(0))
+    sequence.use_pulsa_rokkit(board, true)
+    sequence.choose_pulsa_target(board, unit_id(1))
+    let other = make_infernus_squad()
+    other.owned_by_player1 = true
+    board.units.append(other)
+    board.identify_units()
+    return orks_pulsa_applies(board, board[0], board[1].identity) and !orks_pulsa_applies(board, board[0], board[2].identity)
+
+# Barrage requires an actual hit; -1 turns a natural6 against Ld6 into failure.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
+fun test_orks17p2_rokkit_barrage_actual_hit_and_penalty() -> Bool:
+    let board = orks17p2_fixture(make_orks_tankbustas(false, OrksTankbustaExtra::none, 0))
+    begin_orks_attack(board)
+    let none = orks_rokkit_barrage(board, unit_id(0))
+    record_orks_hits(board, unit_id(1), 1)
+    let sequence = orks_rokkit_barrage(board, unit_id(0))
+    sequence.choose_rokkit_barrage_target(board, unit_id(1))
+    sequence.roll_pair(board, attack_test_die(2), attack_test_die(4))
+    return none.is_done() and sequence.is_done() and board[1].battle_socked
+
+# Pure Shokk traversal does not give terrain traversal or permit the same
+# passage in a Normal move. Final placement still uses the usual kernel.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek
+fun test_orks17p2_shokk_traversal_only_selected_advance() -> Bool:
+    let unit = make_orks_big_mek(false, false)
+    let ordinary = movement_policy(unit, unit[0], MovementKind::advance, false)
+    unit.shokk_boosta_move = true
+    let shokk = movement_policy(unit, unit[0], MovementKind::advance, false)
+    let normal = movement_policy(unit, unit[0], MovementKind::normal, false)
+    return !ordinary.traverse_enemies and shokk.traverse_enemies and !shokk.exclude_titanic and !shokk.exclude_monster_vehicle and !shokk.traverse_terrain and !normal.traverse_enemies
+
+# An optional advance roll can stay at its rolled value or change to6; the
+# actual move-end hazard source becomes mandatory only when Shokk was used.
+fun test_orks17p2_shokk_actual_selection_and_six() -> Bool:
+    let board = orks17p2_fixture(make_orks_big_mek(false, false))
+    board[1][0].position = board_position(25, 20)
+    board.begin_phase(BattlePhase::movement)
+    let sequence = movement(board, unit_id(0), false)
+    sequence.advance(board, true)
+    sequence.use_shokk_boosta(board, true)
+    sequence.roll(board, attack_test_die(2))
+    sequence.keep_it(board, true)
+    sequence.use_shokk_six(board, true)
+    let extra = board[0].shokk_boosta_move and can sequence.move_to(board, board_position(16, 5))
+    sequence.skip(board)
+    return extra and !board[0].shokk_boosta_move
+
+# The registered end effect rolls once for EACH model, not each weapon or
+# only the Big Mek. Existing HazardRolls is used, including Command Re-roll.
+fun test_orks17p2_shokk_hazards_mandatory_source() -> Bool:
+    let board = orks17p2_fixture(make_orks_big_mek(false, false))
+    board.command_points[0] = 1
+    board.begin_phase(BattlePhase::movement)
+    let inactive = orks17p2_source(board, ORKS_SHOKK_BOOST_RULE)
+    let event = source_event(SourceEventKind::move_end, board[0].identity, invalid_entity_identity(), invalid_entity_identity())
+    event.movement = MovementKind::advance
+    let unavailable = !source_event_available(board, inactive, event)
+    board[0].shokk_boosta_move = true
+    let sequence = resolve_movement_sources(board, event)
+    let pending = collect_source_events(board, event)
+    sequence.choose_movement_source(board, source17e_id(0))
+    sequence.roll(board, attack_test_die(6))
+    sequence.keep_batch(board)
+    return unavailable and pending.size() == 1 and sequence.is_done() and board[0][0].suffered_wounds == 0
+
+# Krushin' Impetus counts engaged MODELS and keeps the actual3+ threshold;
+# moving the one source out of engagement removes it from the roll count.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warboss-In-Mega-Armour
+fun test_orks17p2_impetus_actual_engaged_model_roll() -> Bool:
+    let board = orks17p2_fixture(make_orks_warboss_in_mega_armour())
+    board[1][0].position = board_position(6, 5)
+    let sequence = orks_krushin_impetus(board, unit_id(0))
+    sequence.choose_impetus_target(board, unit_id(1))
+    sequence.roll(board, attack_test_die(3))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    return sequence.is_done() and board[1][0].suffered_wounds == 1
+
+# Repeated start/end repairs retain separate modifiers but reuse their
+# prototype after expiry; the finite source arena must not grow each turn.
+# Orks/Mek Clever Know-wotz; appendix01.02.02.
+fun test_orks17p2_repair_reuses_prototype_across_turns() -> Bool:
+    let board = orks17p2_fixture(make_orks_mek())
+    board[1] = make_orks_killa_kans(3)
+    board[1].owned_by_player1 = false
+    board[1][0].position = board_position(8, 5)
+    board.identify_units()
+    board.begin_phase(BattlePhase::movement)
+    let instance = orks17p2_source(board, ORKS_MEK_REPAIR_RULE)
+    let original_sources = board.source_instances.size()
+    for turn_index in range(3):
+        if turn_index > 0:
+            board.turn_serial = board.turn_serial + 2
+            refresh_source_effects(board, TimingWindow::movement_start)
+        for boundary in range(2):
+            let repair = repair_orks_vehicle(board, instance)
+            repair.choose_mek_repair_unit(board, unit_id(1))
+            repair.choose_mek_repair_model(board, damage_test_model(0))
+            repair.quantity(board, attack_test_die(1))
+    return board.source_instances.size() == original_sources + 1 and model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 2 and valid_source_foundations(board)

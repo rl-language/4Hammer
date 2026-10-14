@@ -885,7 +885,7 @@ fun orks_model_grants_ability(Unit unit, Model model, AbilityKind kind) -> Bool:
 # Dreadherder grants the unit Lone Operative while within3in of a friendly
 # non-Big-Mek ORKS Walker; offboard units cannot measure this distance.
 fun orks_lone_operative(Board board, Unit unit) -> Bool:
-    if unit.is_lone_operative() or orks_snagga_following(board, unit):
+    if unit.is_lone_operative() or orks_snagga_following(board, unit) or orks_shokka_supported(board, unit):
         return true
     if unit.off_battlefield or !unit.attached_units.empty() or !unit_has_orks_enhancement(unit, OrksEnhancement::dreadherder):
         return false

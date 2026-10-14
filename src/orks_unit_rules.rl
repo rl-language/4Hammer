@@ -86,8 +86,15 @@ fun register_orks_unit_rules(Board board):
                     instance.optional = true
                     instance.use_scope = SourceUseScope::unit
                     instance.limits.battle = 1
+                    # Orks/{Breaka-Boyz,Tankbustas}/Bomb Squigs:
+                    # two tokens and a turn limit, unlike Squighog Boyz.
+                    if model_matches_datasheet(model, OrksDatasheet::breaka_boyz) or model_matches_datasheet(model, OrksDatasheet::tankbustas):
+                        instance.limits.battle = 2
+                        instance.limits.turn = 1
                     if !orks_unit_source_registered(board, instance):
                         let source = register_source_instance(board, instance)
+
+    register_orks_elite_rules(board)
 
 # Measured targets must be live battlefield units; no external range or LOS
 # exists to reserves/passengers (appendix01.02.04). Self-targeting is allowed

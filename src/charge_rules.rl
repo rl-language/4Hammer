@@ -58,10 +58,11 @@ fun charge_distance(Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
 fun charge_distance(Board board, Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
     return charge_distance_with_sources(unit, roll, kind, skies, orks_stampede_charge_bonus(board, unit))
 
-# The banner follows live combined membership; an aura is queried on the
-# battlefield only. Both join addition before division/rounding (02.02.01).
+# Banner/Trophy Hunters follow live combined membership; an aura is queried
+# on the battlefield only. All join addition before division (02.02.01).
+# https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
 fun charge_distance_with_sources(Unit unit, Int roll, ChargeKind kind, Bool skies, Int aura_bonus) -> Int:
-    let addition = aura_bonus + int(unit.has_ability(AbilityKind::waaagh_banner))
+    let addition = aura_bonus + int(unit.has_ability(AbilityKind::waaagh_banner)) + int(unit.has_ability(AbilityKind::trophy_hunters))
     let maximum = modified_dice_result(roll, unit.phase_modifiers.charge_roll, false, true, addition)
     if kind == ChargeKind::into_the_fray:
         maximum = min(6, maximum)

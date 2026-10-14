@@ -205,40 +205,17 @@ fun orks_heal_archive_valid(Board board, UnitID target, ModelID archive) -> Bool
 # Unit healing spends one wound at a time and stops at starting strength. It
 # returns original models/equipment with1W, never generates new identities.
 act heal_orks_unit(ctx Board board, frm UnitID target, frm BInt<0, 4> count) -> OrksUnitHealing:
-    frm previous_owner = board.current_decision_maker
-    board.current_decision_maker = board[target].owned_by_player1
     board.orks_selected_unit = target
-    while count > 0:
-        if orks_heal_wounded(board[target]):
-            act choose_healed_model(ModelID wounded) {wounded.get() < board[target].models.size(), board[target][wounded].is_alive(), board[target][wounded].suffered_wounds > 0}
-            board[target][wounded].suffered_wounds = board[target][wounded].suffered_wounds - 1
-        else:
-            frm available = false
-            let archive : ModelID
-            for archived in range(board[target].destroyed_models.value.size()):
-                archive = archived
-                available = available or orks_heal_archive_valid(board, target, archive)
-            if !available:
-                break
-            act choose_healed_casualty(frm ModelID casualty) {orks_heal_archive_valid(board, target, casualty)}
-            frm returned : Model
-            returned = board[target].destroyed_models.value[casualty.get()]
-            act place_returned_model(BoardPosition position) {orks_return_position_valid(board, target, returned, position, false)}
-            returned.position = position
-            returned.suffered_wounds = max(0, returned.profile.wounds() - 1)
-            returned.off_battlefield = false
-            returned.state = ModelState::normal
-            restore_attachment_provenance(board[target], returned)
-            board[target].models.append(returned)
-            board[target].destroyed_models.value.erase(casualty.get())
-            refresh_source_effects(board, TimingWindow::none)
-        count = count - 1
-    board.current_decision_maker = previous_owner
+    board.shared_actions.heal_orks_component = heal_orks_component(board, board[target], SourceBank::battlefield, count)
+    subaction*(board, board[target]) board.shared_actions.heal_orks_component
 
 # Breakin' Heads triggers when shock is newly gained, including on a psychic1;
 # its explicit exception permits the shocked target. Resolve D3 mortals before
 # removing shock (War Horde source card; p24 prevention/destruction pipeline).
 act orks_became_shocked(ctx Board board, frm UnitID target) -> OrksBecameShocked:
+    if target.get() < board.units.size():
+        board.shared_actions.orks_runtherd_shock = orks_runtherd_shock(board, board[target])
+        subaction*(board, board[target]) board.shared_actions.orks_runtherd_shock
     if target.get() >= board.units.size() or !board[target].battle_socked or !board[target].has_keyword(Keyword::orks) or !board[target].has_keyword(Keyword::infantry) or board[target].attached_units.empty() or !board.can_target_strat(board[target].owned_by_player1, Stratagem::orks_breakin_heads, board[target]):
         return
     frm previous_owner = board.current_decision_maker
@@ -880,6 +857,7 @@ fun orks_runt_maw_target(Board board, UnitID source, UnitID target) -> Bool:
 # Model destruction bypasses wound prevention, then runs ordinary destruction
 # triggers. It is not damage, and cannot retroactively add weapon Hazardous.
 act orks_shooting_option_end(ctx Board board, frm UnitID source) -> OrksShootingOptionEnd:
+    subaction*(board) barrage = orks_rokkit_barrage(board, source)
     if unit_has_orks_enhancement(board[source], OrksEnhancement::enhanced_runt_maw):
         frm target_available = false
         let target : UnitID
@@ -1167,6 +1145,8 @@ act orks_offboard_mortals(ctx Board board, ctx Unit unit, frm CombatCounter coun
 # Its own unmeasured target remains legal; casualties do not gain stale board
 # geometry. Save the phase death metadata for any later returning-model rule.
 act orks_offboard_breakin_heads(ctx Board board, ctx Unit unit) -> OrksOffboardBreakinHeads:
+    board.shared_actions.orks_runtherd_shock = orks_runtherd_shock(board, unit)
+    subaction*(board, unit) board.shared_actions.orks_runtherd_shock
     if !unit.battle_socked or unit.attached_units.empty() or !unit.has_keyword(Keyword::orks) or !unit.has_keyword(Keyword::infantry) or !board.can_target_strat(unit.owned_by_player1, Stratagem::orks_breakin_heads, unit):
         return
     let location = locate_source(board, unit.identity, invalid_entity_identity())
@@ -1251,7 +1231,12 @@ fun orks_offboard_return_capacity(Board board, Unit unit, Model model) -> Bool:
     if carrier.reserve:
         bank = SourceBank::reserves
     ref transport = source_bank_unit(board, bank, carrier.unit.get())[carrier.model]
-    return passenger_model_permitted(transport, model) and passenger_space_used(board, unit.embarked_transport) + model.transport_space.value <= transport.transport_capacity.value
+    if !unit.models.has_capacity():
+        return false
+    let candidate : Unit
+    candidate = unit
+    candidate.models.append(model)
+    return passenger_model_permitted(transport, model) and passenger_space_used(board, unit.embarked_transport) - orks_passenger_space(unit) + orks_passenger_space(candidate) <= transport.transport_capacity.value
 
 # Surly's3W exception changes remaining wounds; general returned-model rules
 # specify the offboard/embarked bank rather than inventing a death coordinate.

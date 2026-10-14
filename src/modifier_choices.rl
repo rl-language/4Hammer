@@ -84,7 +84,7 @@ fun valid_attack_modifier_choice(AttackModifierChoice choice) -> Bool:
 # source usage (02.02.02); restore the caller's ownership and UI context.
 act choose_attack_modifiers(ctx Board board, frm AttackModifierChoices choices, frm Bool player, frm ModifierSelectionKind kind, frm Bool permitted) -> ChooseAttackModifiers:
     frm result : SelectedAttackModifiers
-    frm index : LinearlyDistributedInt<0, 35>
+    frm index : LinearlyDistributedInt<0, MAX_ATTACK_MODIFIER_INDEX>
     frm previous_owner = board.current_decision_maker
     frm previous_choice = board.pending_modifier_choice
     frm previous_kind = board.pending_modifier_kind

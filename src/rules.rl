@@ -26,6 +26,7 @@ import orks_unit_data
 import orks_unit_rules
 import orks_datasheet_rules
 import orks_elite_data
+import orks_elite_rules
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.
@@ -1701,6 +1702,7 @@ act timing_objective_stratagem(ctx Board board) -> TimingObjectiveStratagem:
 # effects follow both groups at printed end windows (pp.28–30/32–38/54/57).
 # No mission rules or unspecified faction effects are synthesized.
 act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWindowResolution:
+    register_orks_unit_rules(board)
     board.open_timing_window(window)
     frm player = board.timing.active_player
     # Exactly two controller groups; bounded frame storage supports ML inference.
@@ -1740,7 +1742,18 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
                     resolved_orks[orks_rule.value] = true
                     resolve_orks_timing_rule(board, player, orks_rule)
                 act choose_window_source(frm SourceEventID event) {pending_source_valid(board, pending, event, player)}
-                    commit_pending_source(board, pending, event, player)
+                    frm chosen_source = board.source_instances[pending[event.value].source.value]
+                    if chosen_source.rule.value >= ORKS_SURGERY_RULE and chosen_source.rule.value <= ORKS_PAINBOSS_RULE:
+                        commit_source_usage(board, chosen_source)
+                        pending[event.value].resolved = true
+                        subaction*(board) elite_healing = orks_elite_command(board, chosen_source)
+                    else:
+                        if chosen_source.rule.value == ORKS_SCAVENGERS_RULE:
+                            secure_orks_gretchin_objectives(board, chosen_source)
+                            commit_source_usage(board, chosen_source)
+                            pending[event.value].resolved = true
+                        else:
+                            commit_pending_source(board, pending, event, player)
                 act choose_timing_rule(frm TimingRule rule) {
                     !resolved[int(rule.value)],
                     timing_rule_available(board, window, player, rule)
@@ -2029,7 +2042,23 @@ act resolve_movement_sources(ctx Board board, frm SourceEvent trigger) -> Moveme
                                 board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, bomb_target, bomb_source, true, amount)
                                 subaction*(board) board.shared_actions.resolve_mortal_wounds
                         else:
-                            commit_pending_source(board, pending, event, player)
+                            if board.source_instances[source_index.value].rule.value == ORKS_MEK_REPAIR_RULE:
+                                pending[event.value].resolved = true
+                                subaction*(board) mek_repair = repair_orks_vehicle(board, board.source_instances[source_index.value])
+                            else:
+                                if board.source_instances[source_index.value].rule.value == ORKS_SHOKK_BOOST_RULE:
+                                    pending[event.value].resolved = true
+                                    frm boost_location = locate_source(board, board.source_instances[source_index.value].source_unit, invalid_entity_identity())
+                                    frm boosting_unit : UnitID
+                                    boosting_unit = boost_location.unit.value
+                                    frm boost_hazards : HazardousUses
+                                    for member_index in range(board[boosting_unit].models.size()):
+                                        if board[boosting_unit][member_index].is_alive():
+                                            boost_hazards = boost_hazards + 1
+                                    board.shared_actions.resolve_hazards = resolve_hazards(board, boosting_unit, boost_hazards)
+                                    subaction*(board) board.shared_actions.resolve_hazards
+                                else:
+                                    commit_pending_source(board, pending, event, player)
                     board.current_decision_maker = player
         player = !player
         controllers = controllers + 1
@@ -2459,8 +2488,14 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
         # the charging player chooses their order (user Rules Sequencing).
         frm mobbed_pending = board[source].has_ability(AbilityKind::mobbed)
         frm crushing_pending = crushing_source_valid(board, source)
-        while mobbed_pending or crushing_pending:
+        frm impetus_pending = board[source].has_ability(AbilityKind::krushin_impetus)
+        while mobbed_pending or crushing_pending or impetus_pending:
             actions:
+                act resolve_krushin_impetus() {impetus_pending}
+                    impetus_pending = false
+                    subaction*(board) impetus = orks_krushin_impetus(board, source)
+                act decline_krushin_impetus() {impetus_pending}
+                    impetus_pending = false
                 act resolve_mobbed() {mobbed_pending}
                     mobbed_pending = false
                     board.shared_actions.resolve_orks_mobbed = resolve_orks_mobbed(board, source)
@@ -2588,8 +2623,15 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
                     board.shared_actions.orks_move_mode = orks_move_mode(board, id, kind)
                     subaction*(board) board.shared_actions.orks_move_mode
                     board[id].history.advance_allows_charge = unit_is_riled_up(board[id]) or orks_move_charge_permission(board, board[id], kind)
+                    if board.timing.phase == BattlePhase::movement and board[id].owned_by_player1 == board.current_player and board[id].has_ability(AbilityKind::shokk_boosta):
+                        act use_shokk_boosta(Bool boost_move)
+                        board[id].shokk_boosta_move = boost_move
                     board.current_roll = rerollable_dice_roll(board, unit_has_waaagh(board[id]), false, true, board[id].owned_by_player1, id)
                     subaction*(board) board.current_roll
+                    if board[id].shokk_boosta_move:
+                        act use_shokk_six(Bool change_to_six)
+                        if change_to_six:
+                            board.current_roll.result = 6
                     if orks_package(board, board[id], OrksDetachment::blitz_brigade) and board[id].has_keyword(Keyword::wagon):
                         act use_unstoppable_advance(Bool six_instead)
                         if six_instead:
@@ -2656,6 +2698,7 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
             # The move failed and returns all positions. Selection still has a
             # legal stationary/retry path through the phase loop (pp.12/32).
             board[id].history.move_kind = MovementKind::stationary
+    board[id].shokk_boosta_move = false
     if board[id].history.last_move_phase == board.phase_serial.value + 1 and !(board[id].history.move_kind == MovementKind::stationary) and has_live_model(board[id]):
         board.shared_actions.orks_wagon_move_end = orks_wagon_move_end(board, id)
         subaction*(board) board.shared_actions.orks_wagon_move_end

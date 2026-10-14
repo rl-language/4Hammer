@@ -41,9 +41,9 @@ cls AttackSequenceInfo:
     Bool dodge_dis_hit_bonus
     Bool hit_roll_bonus
     RuleModifiers orks_hit_modifiers
-    # Unit effects need at most three contributions in this batch; retain
-    # them separately from package terms for optional ignoring (02.02.02).
-    CheckedVector<RuleModifier, 4> orks_unit_hit_modifiers
+    # Preserve each repair source in addition to the four unit-rule slots;
+    # all modifiers are cumulative and individually ignorable (02.02.01/02).
+    CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS> orks_unit_hit_modifiers
     RuleModifiers orks_wound_modifiers
     Bool orks_fail_hits_three
     # Cover changes BS, separate from the clamped hit modifier (p.50).

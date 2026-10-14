@@ -363,8 +363,8 @@ cls AttackModifierChoice:
 
 # Sixteen authored operations plus distinct Cover/Plunging Fire increments;
 # the action payload remains one Bool, never a2^18 mask (02.02.02/pp.50/73).
-using AttackModifierChoices = CheckedVector<AttackModifierChoice, 34>
+using AttackModifierChoices = CheckedVector<AttackModifierChoice, MAX_ATTACK_MODIFIER_CHOICES>
 # Every offered choice may be kept (02.02.02), including more than18 separate
 # hit contributions. Match the actual choice envelope, not the old skill-only
 #16 authored operations plus Cover/Plunging Fire envelope.
-using SelectedAttackModifiers = CheckedVector<RuleModifier, 34>
+using SelectedAttackModifiers = CheckedVector<RuleModifier, MAX_ATTACK_MODIFIER_CHOICES>

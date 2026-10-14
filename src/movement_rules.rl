@@ -307,6 +307,12 @@ fun scouts_distance(Unit unit) -> Int:
 fun movement_policy(Unit unit, Model model, MovementKind kind, Bool skies) -> MovementGeometryPolicy:
     let policy : MovementGeometryPolicy
     policy.traverse_enemies = kind == MovementKind::desperate_escape
+    # Big Mek Shokk-boosta crosses all models, without granting terrain/FLY.
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek
+    if kind == MovementKind::advance and unit.shokk_boosta_move:
+        policy.traverse_enemies = true
+        policy.exclude_titanic = false
+        policy.exclude_monster_vehicle = false
     if unit.has_ability(AbilityKind::super_heavy_walker) and (kind == MovementKind::normal or kind == MovementKind::advance or kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape):
         policy.traverse_enemies = true
         policy.exclude_titanic = !(kind == MovementKind::desperate_escape)

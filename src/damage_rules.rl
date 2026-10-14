@@ -5,8 +5,10 @@ using AllocationGroupCounter = LinearlyDistributedInt<0, 33>
 
 # CHARACTER models each form their own group; other models combine exactly
 # when W/Sv/InSv agree, including no-invulnerable sentinels (p.19).
-fun allocation_group_matches(AllocationGroup group, Model model) -> Bool:
-    return !group.character and !model.is_character() and group.wounds.value == model.profile.wounds() and group.save.value == model.effective_save() and group.invulnerable.value == model.effective_invulnerable_save()
+# Attack-scoped InSv includes the RANGED-only Kustom Force Field (Orks/
+# Big-Mek-In-Mega-Armour), rather than a permanent model save.
+fun allocation_group_matches(AllocationGroup group, Model model, Int invulnerable) -> Bool:
+    return !group.character and !model.is_character() and group.wounds.value == model.profile.wounds() and group.save.value == model.effective_save() and group.invulnerable.value == invulnerable
 
 # PRECISION needs a CHARACTER visible to a bearer in the gathered attack
 # group, not any model from an unrelated weapon (p.84; visibility pp.24–25).
@@ -28,13 +30,13 @@ fun make_allocation_groups(Board board, Unit target, AttackSequenceInfo info) ->
             continue
         let group_index = -1
         for j in range(groups.size()):
-            if allocation_group_matches(groups[j], target[i]):
+            if allocation_group_matches(groups[j], target[i], orks_allocation_invulnerable(target, target[i], info)):
                 group_index = j
         if group_index < 0:
             let group : AllocationGroup
             group.wounds = target[i].profile.wounds()
             group.save = target[i].effective_save()
-            group.invulnerable = target[i].effective_invulnerable_save()
+            group.invulnerable = orks_allocation_invulnerable(target, target[i], info)
             group.character = target[i].is_character()
             groups.append(group)
             group_index = groups.size() - 1

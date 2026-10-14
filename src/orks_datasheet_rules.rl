@@ -53,6 +53,7 @@ fun commit_orks_ammo(Board board, UnitID source, Bool boss):
 act orks_datasheet_selection(ctx Board board, frm UnitID source) -> OrksDatasheetSelection:
     frm previous_owner = board.current_decision_maker
     board.current_decision_maker = board[source].owned_by_player1
+    subaction*(board) pulsa_selection = orks_pulsa_selection(board, source)
     if orks_ammo_available(board, source, false):
         act use_ammo_runts(Bool ammo_use)
         if ammo_use:
@@ -81,6 +82,7 @@ act orks_rokkit_selection(ctx Board board, frm UnitID source) -> OrksRokkitSelec
 # Sources: Orks/Boyz Tide of Muscle, Big-Mek-Dakkarig, Stormboyz.
 fun append_orks_datasheet_weapon_rules(Board board, UnitID source, Weapon selected, WeaponAbilitySet result):
     ref unit = board[source]
+    append_orks_elite_weapon_rules(unit, selected, result)
     if selected.range() == 0:
         if unit.has_charged and unit.has_ability(AbilityKind::tide_of_muscle):
             result.append(weapon_rule(WeaponRuleKind::letal_hits))
@@ -100,6 +102,7 @@ fun append_orks_datasheet_modifiers(Board board, UnitID source, DeclaredWeapon d
         return
     ref unit = board[source]
     ref model = unit[bearer]
+    append_orks_elite_modifiers(unit, declaration, kind, result)
     let addition = 0
     if declaration.weapon.range() == 0:
         if unit.has_charged and model.has_ability(AbilityKind::might_is_right):
@@ -134,6 +137,7 @@ fun orks_target_has_toughness_seven(Unit target) -> Bool:
 # Monster/Vehicle wound rerolls apply to all of that unit's melee attacks.
 # Sources: Orks/Bigboss, Boyz, Nobz, Warboss, Killa-Kans, Mozrog-Skragbad.
 fun append_orks_datasheet_attack_effects(Board board, UnitID source, UnitID target, DeclaredWeapon declaration, AttackSequenceInfo info):
+    append_orks_elite_attack_effects(board, source, target, declaration, info)
     let bearer = declared_model_index(board, source, declaration)
     ref unit = board[source]
     ref model = unit[bearer]
