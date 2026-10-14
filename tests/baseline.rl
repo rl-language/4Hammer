@@ -654,6 +654,8 @@ fun test_orks17b_game_handoff_and_pending_selection_save() -> Bool:
     if !set_state(restored, to_string(state).to_indented_lines()) or get_current_player(restored) != 0 or can restored.choose_orks_detachment(OrksDetachment::war_horde):
         return false
     restored.choose_orks_detachment(OrksDetachment::green_tide)
+    if can restored.finish_orks_options():
+        restored.finish_orks_options()
     if get_current_player(restored) != 0 or !can restored.choose_warlord_unit(unit_id(0)):
         return false
     restored.choose_warlord_unit(unit_id(0))
@@ -663,6 +665,8 @@ fun test_orks17b_game_handoff_and_pending_selection_save() -> Bool:
     restored.pick_morgrim_butcha()
     restored.choose_orks_detachment(OrksDetachment::bully_boyz)
     restored.finish_detachment_selection()
+    if can restored.finish_orks_options():
+        restored.finish_orks_options()
     restored.choose_warlord_unit(unit_id(4))
     restored.choose_warlord_model(damage_test_model(0))
     return restored.board.armies[0].detachments.size() == 3 and restored.board.armies[1].detachments.size() == 1 and restored.board.armies[0].reserve_budget == ReserveBudgetMode::point_free and restored.board.armies[1].reserve_budget == ReserveBudgetMode::point_free and valid_state_foundations(restored.board)
@@ -10343,10 +10347,14 @@ fun orks17h4_configured_game() -> Game:
     game.pick_morgrim_butcha()
     game.choose_orks_detachment(OrksDetachment::war_horde)
     game.finish_detachment_selection()
+    if can game.finish_orks_options():
+        game.finish_orks_options()
     game.choose_warlord_unit(unit_id(0))
     game.choose_warlord_model(damage_test_model(0))
     game.pick_morgrim_butcha()
     game.finish_detachment_selection()
+    if can game.finish_orks_options():
+        game.finish_orks_options()
     game.choose_warlord_unit(unit_id(4))
     game.choose_warlord_model(damage_test_model(0))
     return game
@@ -10372,6 +10380,8 @@ fun test_orks17h4_pending_warlord_save_and_handoff() -> Bool:
     let game = play()
     game.pick_morgrim_butcha()
     game.finish_detachment_selection()
+    if can game.finish_orks_options():
+        game.finish_orks_options()
     let pending = get_current_player(game) == 0 and !can game.pick_morgrim_butcha() and !can game.choose_warlord_unit(unit_id(1))
     game.choose_warlord_unit(unit_id(0))
     let restored = play()
@@ -10538,6 +10548,9 @@ fun test_orks17i1_board_and_declaration_save() -> Bool:
     let parsed = set_state(restored, to_string(game))
     return parsed and restored.board.armies[0].has_detachment(OrksDetachment::war_horde) and chosen_weapon_parameter(restored.board, unit_id(3), restored.board.attack.declarations[0].selected_rules, WeaponRuleKind::sustained_hit) == 1 and valid_state_foundations(restored.board)
 
+# Controlled source fixtures for all ordinary detachments. Tags added below
+# exercise future-card consumers; these are NOT production datasheet profiles.
+# Source: Orks ordinary Detachments, user enhancement/geometry policies.
 fun orks17all_fixture(OrksDetachment package) -> Board:
     let board = orks17h1_attack_board()
     board[0].models.resize(1)
@@ -10557,7 +10570,6 @@ fun orks17all_fixture(OrksDetachment package) -> Board:
 
 # Make a reserve roster with distinct identities for isolated enhancement
 # quota tests. Final army copy legality is exercised separately below.
-
 fun orks17all_option_board(Int count, OrksDetachment package, Bool characters) -> Board:
     let board : Board
     board.armies[0].faction = ArmyFaction::orks
@@ -10574,7 +10586,6 @@ fun orks17all_option_board(Int count, OrksDetachment package, Bool characters) -
     return board
 
 # Counterpart fixture metadata is literal, never inferred from a weapon name.
-
 fun orks17all_tag(Unit unit, OrksDatasheet tag):
     unit.roster_datasheet = tag.value
     for member in range(unit.models.size()):
@@ -10582,7 +10593,6 @@ fun orks17all_tag(Unit unit, OrksDatasheet tag):
 
 # User four-count policy includes each unique Upgrade once, however many
 # eligible models are in the original upgraded unit.
-
 fun test_orks17all_four_enhancement_limit() -> Bool:
     let board = orks17all_option_board(5, OrksDetachment::war_horde, true)
     apply_orks_option(board, unit_id(0), damage_test_model(0), OrksEnhancement::headwoppas_killchoppa, false)
@@ -10594,14 +10604,12 @@ fun test_orks17all_four_enhancement_limit() -> Bool:
     return !orks_option_selection_valid(board, unit_id(4), damage_test_model(0), OrksEnhancement::cybork_boosta, false) and !orks_any_option_available(board, false)
 
 # An ordinary enhancement cannot repeat or share a unit with another choice.
-
 fun test_orks17all_ordinary_unique_and_one_per_unit() -> Bool:
     let board = orks17all_option_board(2, OrksDetachment::war_horde, true)
     apply_orks_option(board, unit_id(0), damage_test_model(0), OrksEnhancement::headwoppas_killchoppa, false)
     return !orks_option_selection_valid(board, unit_id(1), damage_test_model(0), OrksEnhancement::headwoppas_killchoppa, false) and !orks_option_selection_valid(board, unit_id(0), damage_test_model(0), OrksEnhancement::follow_me_ladz, false) and orks_option_selection_valid(board, unit_id(1), damage_test_model(0), OrksEnhancement::follow_me_ladz, false)
 
 # Upgrade copies2/3 consume no extra count, but a fourth is prohibited.
-
 fun test_orks17all_upgrade_three_copies_non_character() -> Bool:
     let board = orks17all_option_board(4, OrksDetachment::green_tide, false)
     for index in range(3):
@@ -10610,7 +10618,6 @@ fun test_orks17all_upgrade_three_copies_non_character() -> Bool:
 
 # With four counted choices already taken, a second/third existing Upgrade
 # remains permitted. Ordinary options still require a Character.
-
 fun test_orks17all_duplicate_upgrade_excluded_from_four_total() -> Bool:
     let board = orks17all_option_board(6, OrksDetachment::green_tide, false)
     let second = board.armies[0].record_detachment(OrksDetachment::war_horde)
@@ -10626,7 +10633,6 @@ fun test_orks17all_duplicate_upgrade_excluded_from_four_total() -> Bool:
 
 # Neither an Epic bearer nor a unit containing another Epic model can take
 # an ordinary option or an Upgrade (explicit user authority).
-
 fun test_orks17all_epic_hero_and_containing_unit_excluded() -> Bool:
     let board = orks17all_option_board(2, OrksDetachment::green_tide, true)
     let second = board.armies[0].record_detachment(OrksDetachment::war_horde)
@@ -10640,7 +10646,6 @@ fun test_orks17all_epic_hero_and_containing_unit_excluded() -> Bool:
     return !orks_option_selection_valid(board, unit_id(0), damage_test_model(0), OrksEnhancement::ardboyz, false) and !orks_option_selection_valid(board, unit_id(1), damage_test_model(0), OrksEnhancement::follow_me_ladz, false)
 
 # Attachment cannot circumvent the Epic exclusion or merge two enhanced units.
-
 fun test_orks17all_attachment_enhancement_guard() -> Bool:
     let board = orks17all_option_board(3, OrksDetachment::war_horde, true)
     apply_orks_option(board, unit_id(0), damage_test_model(0), OrksEnhancement::follow_me_ladz, false)
@@ -10654,14 +10659,12 @@ fun test_orks17all_attachment_enhancement_guard() -> Bool:
 
 # Sources require their selected package, owner and actual model; spare IDs
 # must be safely rejected during finite candidate enumeration.
-
 fun test_orks17all_option_package_owner_and_spare_gates() -> Bool:
     let board = orks17all_option_board(1, OrksDetachment::green_tide, true)
     return !orks_option_selection_valid(board, unit_id(0), damage_test_model(0), OrksEnhancement::follow_me_ladz, false) and !orks_option_selection_valid(board, unit_id(0), damage_test_model(0), OrksEnhancement::ferocious_show_off, true) and !orks_option_selection_valid(board, unit_id(31), damage_test_model(0), OrksEnhancement::ferocious_show_off, false) and !orks_option_selection_valid(board, unit_id(0), damage_test_model(31), OrksEnhancement::ferocious_show_off, false)
 
 # Follow Me Ladz applies to the bearer/unit through keyed effective M, and
 # expires when its live source ceases to confer (p67/passive source lifetime).
-
 fun test_orks17all_follow_me_ladz_effective_movement() -> Bool:
     let board = orks17all_fixture(OrksDetachment::war_horde)
     board[0][0].orks_enhancement = OrksEnhancement::follow_me_ladz
@@ -10674,7 +10677,6 @@ fun test_orks17all_follow_me_ladz_effective_movement() -> Bool:
 
 # Headwoppa and Brutal But Kunnin modify effective melee AP/D only, not the
 # ranged profile, and Headwoppa requires an actual completed charge.
-
 fun test_orks17all_headwoppa_charge_melee_gate() -> Bool:
     let board = orks17all_fixture(OrksDetachment::war_horde)
     board[0][0].orks_enhancement = OrksEnhancement::headwoppas_killchoppa
@@ -10683,7 +10685,6 @@ fun test_orks17all_headwoppa_charge_melee_gate() -> Bool:
     return orks17c2b_info(board, 1).attack_penetration() == uncharged - 1 and orks17c2b_info(board, 0).attack_penetration() == board[0][0].weapons[0].penetration()
 
 # D addition enters the ordered outgoing characteristic pipeline.
-
 fun test_orks17all_brutal_but_kunnin_melee_damage() -> Bool:
     let board = orks17all_fixture(OrksDetachment::brute_bosses)
     board[0][0].orks_enhancement = OrksEnhancement::brutal_but_kunnin
@@ -10693,7 +10694,6 @@ fun test_orks17all_brutal_but_kunnin_melee_damage() -> Bool:
 
 # Cybork and It Came From Da Drops enter characteristic additions before
 # division/rounding; unrelated characteristics stay at their sourced values.
-
 fun test_orks17all_cybork_and_drops_characteristics() -> Bool:
     let board = orks17all_fixture(OrksDetachment::dread_mob)
     board[0][0].orks_enhancement = OrksEnhancement::cybork_boosta
@@ -10703,7 +10703,6 @@ fun test_orks17all_cybork_and_drops_characteristics() -> Bool:
 
 # Ardboyz's explicit4+ save replaces the printed characteristic; its source
 # component remains distinct from later attached Leaders (Green Tide card).
-
 fun test_orks17all_ardboyz_save_replacement() -> Bool:
     let board = orks17all_fixture(OrksDetachment::green_tide)
     board[0][0].orks_enhancement = OrksEnhancement::ardboyz
@@ -10713,7 +10712,6 @@ fun test_orks17all_ardboyz_save_replacement() -> Bool:
 
 # Green Tide's Boyz Sustained is independent of charged infantry Lethal, and
 # the latter keeps its NONE Monster/Vehicle target condition.
-
 fun test_orks17all_green_tide_sustained_and_lethal_targets() -> Bool:
     let board = orks17all_fixture(OrksDetachment::green_tide)
     orks17all_tag(board[0], OrksDatasheet::boyz)
@@ -10724,7 +10722,6 @@ fun test_orks17all_green_tide_sustained_and_lethal_targets() -> Bool:
     return infantry and !chosen_weapon_has_rule(board, unit_id(1), rules, WeaponRuleKind::letal_hits)
 
 # Bully Boyz adds Sustained only to its named Nob/Meganob group, in melee.
-
 fun test_orks17all_bully_boyz_named_melee_group() -> Bool:
     let board = orks17all_fixture(OrksDetachment::bully_boyz)
     let absent = !available_weapon_has_rule(board, unit_id(0), 0, 1, WeaponRuleKind::sustained_hit)
@@ -10733,7 +10730,6 @@ fun test_orks17all_bully_boyz_named_melee_group() -> Bool:
 
 # Shoota's Assault permission reaches actual shooting-mode and weapon gates;
 # riled+3 Range is gathered through the declaration characteristic pipeline.
-
 fun test_orks17all_shoota_assault_and_riled_range() -> Bool:
     let board = orks17all_fixture(OrksDetachment::shoota_boyz)
     board[0].history.advanced_this_turn = true
@@ -10746,7 +10742,6 @@ fun test_orks17all_shoota_assault_and_riled_range() -> Bool:
 
 # Throat-slittas preserves its no-Monster/Vehicle restriction independently
 # of Green Tide; ranged attacks cannot gain this melee Lethal source.
-
 fun test_orks17all_throat_slittas_target_exclusion() -> Bool:
     let board = orks17all_fixture(OrksDetachment::taktikal_brigade)
     # The actual Slugga already has Lethal Hits; use a neutral ranged weapon
@@ -10760,7 +10755,6 @@ fun test_orks17all_throat_slittas_target_exclusion() -> Bool:
 
 # Tellyporta excludes an attached unit with Vehicle membership, rather than
 # just checking its infantry bearer (Bully Boyz source card).
-
 fun test_orks17all_tellyporta_vehicle_exclusion() -> Bool:
     let board = orks17all_fixture(OrksDetachment::bully_boyz)
     board[0][0].orks_enhancement = OrksEnhancement::tellyporta_boss
@@ -10770,7 +10764,6 @@ fun test_orks17all_tellyporta_vehicle_exclusion() -> Bool:
 
 # Minefield Scouts6 requires not embarked, and every duplicate stays uniform
 # under the user's static-value policy (Runt Swarm source upgrade).
-
 fun test_orks17all_minefield_scouts_and_embarked_gate() -> Bool:
     let board = orks17all_fixture(OrksDetachment::runt_swarm)
     board[0][0].orks_enhancement = OrksEnhancement::minefield_detail
@@ -10780,7 +10773,6 @@ fun test_orks17all_minefield_scouts_and_embarked_gate() -> Bool:
 
 # Runt and Taktikal waivers affect their selected movement only; fallback
 # charge/shooting permissions survive subsequent source loss.
-
 fun test_orks17all_fallback_permissions_snapshot() -> Bool:
     let board = orks17all_fixture(OrksDetachment::taktikal_brigade)
     orks17all_tag(board[0], OrksDatasheet::boyz)
@@ -10792,7 +10784,6 @@ fun test_orks17all_fallback_permissions_snapshot() -> Bool:
 
 # Runt's Action permission is only an Advance/Fall Back waiver; being
 # shocked/starting a second action/after-shooting remain prohibitions.
-
 fun test_orks17all_runt_action_waiver_preserves_other_gates() -> Bool:
     let board = orks17all_fixture(OrksDetachment::runt_swarm)
     orks17all_tag(board[0], OrksDatasheet::gretchin)
@@ -10804,7 +10795,6 @@ fun test_orks17all_runt_action_waiver_preserves_other_gates() -> Bool:
 
 # Da Big Hunt AP applies versus actual Monster/Vehicle union only; a
 # friendly source in another selected package cannot borrow the benefit.
-
 fun test_orks17all_hunt_ap_target_condition() -> Bool:
     let board = orks17all_fixture(OrksDetachment::da_big_hunt)
     let ordinary = orks17c2b_info(board, 0).attack_penetration()
@@ -10813,7 +10803,6 @@ fun test_orks17all_hunt_ap_target_condition() -> Bool:
 
 # Unpredictable Genius rolls only for a single declared target; targeting
 # several enemies is legal and does not satisfy its conditional trigger.
-
 fun test_orks17all_madcap_single_target_condition() -> Bool:
     let declarations : DeclaredWeapons
     let first : DeclaredWeapon
@@ -10828,7 +10817,6 @@ fun test_orks17all_madcap_single_target_condition() -> Bool:
 
 # Try Dat Button table additions accumulate for distinct faces1/2, even
 # though those faces belong to the same band. S/AP use their ordered consumers.
-
 fun test_orks17all_button_cumulative_characteristics() -> Bool:
     let board = orks17all_fixture(OrksDetachment::dread_mob)
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
@@ -10842,7 +10830,6 @@ fun test_orks17all_button_cumulative_characteristics() -> Bool:
 
 # Speed Freeks receive real Assault and charge waivers on selected Advance,
 # keeping normal action restrictions when not Gretchin/Mind On Mission.
-
 fun test_orks17all_kult_advance_assault_and_charge() -> Bool:
     let board = orks17all_fixture(OrksDetachment::kult_of_speed)
     board[0][0].keywords.append(Keyword::speed_freeks)
@@ -10852,7 +10839,6 @@ fun test_orks17all_kult_advance_assault_and_charge() -> Bool:
     return board[0].can_charge and shooting_kind_valid(board, unit_id(0), ShootingKind::assault) and !board[0].allows_action_start()
 
 # Flyboyz riled Aircraft/Deffkoptas contribute a hit term before the+/-1 cap.
-
 fun test_orks17all_flyboyz_riled_hit_modifier() -> Bool:
     let board = orks17all_fixture(OrksDetachment::flyboyz)
     orks17all_tag(board[0], OrksDatasheet::deffkoptas)
@@ -10862,7 +10848,6 @@ fun test_orks17all_flyboyz_riled_hit_modifier() -> Bool:
 
 # Brute Warboss3+/riled2+ has no CP cost, closes after selecting its unit to
 # fight, and remains distinct from paid4+ permissions.
-
 fun test_orks17all_brute_death_thresholds() -> Bool:
     let board = orks17all_fixture(OrksDetachment::brute_bosses)
     board[0][0].keywords.append(Keyword::warboss)
@@ -10874,7 +10859,6 @@ fun test_orks17all_brute_death_thresholds() -> Bool:
 
 # Wurrband uses actual living unit models, with one extra S per full5; no
 # psychic ability is granted to non-Psyker or foreign-faction models.
-
 fun test_orks17all_wurrband_psychic_weapon_strength() -> Bool:
     let board = orks17all_fixture(OrksDetachment::wurrband)
     board[0][0].keywords.append(Keyword::psyker)
@@ -10884,7 +10868,6 @@ fun test_orks17all_wurrband_psychic_weapon_strength() -> Bool:
 
 # Explicit source metadata changes muster copy limits after force disposition:
 # Gretchin≤6 under Runt,≤3 otherwise. Replacement units are not re-mustered.
-
 fun test_orks17all_roster_three_and_six_copy_limits() -> Bool:
     let board = orks17all_option_board(4, OrksDetachment::runt_swarm, false)
     for slot in range(board.reserve_units.size()):
@@ -10895,7 +10878,6 @@ fun test_orks17all_roster_three_and_six_copy_limits() -> Bool:
 
 # Literal card actor fixtures keep applicability separate from expected effect.
 # They use controlled stats and tags, not fabricated production datasheets.
-
 fun orks17all_selected_card_fixture(Stratagem card, Bool melee) -> Board:
     let board = orks17all_fixture(card.orks_detachment())
     if melee:
@@ -10923,7 +10905,6 @@ fun orks17all_selected_card_fixture(Stratagem card, Bool melee) -> Board:
 
 # Real paid selection, source installation and declaration consumer for the
 # ranged/melee weapon-ability cards. Costs and same-unit reuse are checked.
-
 fun orks17all_selected_ability(Stratagem card, Bool melee, WeaponRuleKind expected, Int magnitude) -> Bool:
     let board = orks17all_selected_card_fixture(card, melee)
     let sequence = orks_attack_selection(board, unit_id(0), melee)
@@ -10933,8 +10914,1136 @@ fun orks17all_selected_ability(Stratagem card, Bool melee, WeaponRuleKind expect
     return sequence.is_done() and board.command_points[0] == 9 and chosen_weapon_has_rule(board, unit_id(1), rules, expected) and chosen_weapon_parameter(board, unit_id(1), rules, expected) == magnitude and !board.can_target_strat(false, card, board[0])
 
 # War Horde's optional melee Lethal is a sourced ability, not a hit modifier.
-
 fun test_orks17all_hit_em_harder_paid_ability() -> Bool:
     return orks17all_selected_ability(Stratagem::orks_hit_em_harder, true, WeaponRuleKind::letal_hits, 0)
 
 # Vehicle charged melee Cleave1 excludes Walkers at actual selection.
+fun test_orks17all_mow_em_down_paid_cleave() -> Bool:
+    return orks17all_selected_ability(Stratagem::orks_mow_em_down, true, WeaponRuleKind::cleave, 1)
+
+# Close-range Dakka grants Rapid1 when absent.
+fun test_orks17all_close_range_dakka_paid_rapid() -> Bool:
+    return orks17all_selected_ability(Stratagem::orks_close_range_dakka, false, WeaponRuleKind::rapid_fire, 1)
+
+# Existing Rapid magnitude is improved, not treated as another competing
+# instance, and its intrinsic value returns after this source expires.
+fun test_orks17all_close_range_existing_rapid_and_expiry() -> Bool:
+    let board = orks17all_selected_card_fixture(Stratagem::orks_close_range_dakka, false)
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::rapid_fire, 2))
+    let sequence = orks_attack_selection(board, unit_id(0), false)
+    sequence.choose_orks_attack_stratagem(board, Stratagem::orks_close_range_dakka)
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let enhanced = chosen_weapon_parameter(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::rapid_fire) == 3
+    board.begin_phase(BattlePhase::charge)
+    return enhanced and chosen_weapon_parameter(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::rapid_fire) == 2
+
+# Shoota Never Enough Dakka uses ordinary duplicate Sustained selection.
+fun test_orks17all_never_enough_dakka_paid_sustained() -> Bool:
+    return orks17all_selected_ability(Stratagem::orks_never_enough_dakka, false, WeaponRuleKind::sustained_hit, 1)
+
+# Kult's card affects ranged attacks only and spends its own source cost.
+fun test_orks17all_dakkastorm_paid_sustained() -> Bool:
+    return orks17all_selected_ability(Stratagem::orks_dakkastorm, false, WeaponRuleKind::sustained_hit, 1)
+
+# Green Tide Unbridled A+1 is a melee addition after charging; ranged A stays
+# unchanged, rather than being increased by the unit-wide grant.
+fun test_orks17all_unbridled_carnage_melee_only_attacks() -> Bool:
+    let board = orks17all_selected_card_fixture(Stratagem::orks_unbridled_carnage, true)
+    let before = make_declared_weapon(board, unit_id(0), 0, 1)
+    let attacks = declaration_fixed_attacks(board, unit_id(0), before, 0)
+    let sequence = orks_attack_selection(board, unit_id(0), true)
+    sequence.choose_orks_attack_stratagem(board, Stratagem::orks_unbridled_carnage)
+    let ranged = make_declared_weapon(board, unit_id(0), 0, 0)
+    return sequence.is_done() and declaration_fixed_attacks(board, unit_id(0), before, 0) == attacks + 1 and declaration_fixed_attacks(board, unit_id(0), ranged, 0) == 1
+
+# Armed rerolls1 when not riled, all hits when riled; neither path sums hit
+# modifiers or permits a second reroll of a single die.
+fun test_orks17all_armed_to_da_teef_riled_rerolls() -> Bool:
+    let board = orks17all_selected_card_fixture(Stratagem::orks_armed_to_da_teef, false)
+    let sequence = orks_attack_selection(board, unit_id(0), false)
+    sequence.choose_orks_attack_stratagem(board, Stratagem::orks_armed_to_da_teef)
+    let normal = orks17c2b_info(board, 0)
+    orks17f_intrinsic_riled(board[0][0])
+    let riled = orks17c2b_info(board, 0)
+    return normal.reroll1_hits and !normal.reroll_hits and riled.reroll1_hits and riled.reroll_hits
+
+# Kustom+1 wound is conditional on the actual target not being M/V.
+fun test_orks17all_kustom_dakka_non_vehicle_wound_bonus() -> Bool:
+    let board = orks17all_selected_card_fixture(Stratagem::orks_kustom_dakka, false)
+    let sequence = orks_attack_selection(board, unit_id(0), false)
+    sequence.choose_orks_attack_stratagem(board, Stratagem::orks_kustom_dakka)
+    let infantry = orks17c2b_info(board, 0).total_wound_modifier() == 1
+    board[1][0].keywords.append(Keyword::vehicle)
+    return infantry and orks17c2b_info(board, 0).total_wound_modifier() == 0
+
+# Glowin+1AP requires within9in; distant targets are not upgraded.
+fun test_orks17all_glowin_dakka_range_condition() -> Bool:
+    let board = orks17all_selected_card_fixture(Stratagem::orks_glowin_dakka, false)
+    let sequence = orks_attack_selection(board, unit_id(0), false)
+    sequence.choose_orks_attack_stratagem(board, Stratagem::orks_glowin_dakka)
+    let nearby = orks17c2b_info(board, 0).attack_penetration() == -1
+    board[1][0].position = board_position(30, 5)
+    return nearby and orks17c2b_info(board, 0).attack_penetration() == 0
+
+# Long Uncontrolled Bursts gives full hit rerolls only against FLY.
+fun test_orks17all_long_bursts_actual_fly_target() -> Bool:
+    let board = orks17all_selected_card_fixture(Stratagem::orks_long_uncontrolled_bursts, false)
+    let sequence = orks_attack_selection(board, unit_id(0), false)
+    sequence.choose_orks_attack_stratagem(board, Stratagem::orks_long_uncontrolled_bursts)
+    let grounded = !orks17c2b_info(board, 0).reroll_hits
+    board[1][0].keywords.append(Keyword::fly)
+    return grounded and orks17c2b_info(board, 0).reroll_hits
+
+# Vindictive's three actual choices retain their complete sourced combinations.
+fun test_orks17all_vindictive_three_modes_and_hazards() -> Bool:
+    let all_good = true
+    for index in range(3):
+        let board = orks17all_selected_card_fixture(Stratagem::orks_vindictive_artillerists, false)
+        let sequence = orks_attack_selection(board, unit_id(0), false)
+        sequence.choose_orks_attack_stratagem(board, Stratagem::orks_vindictive_artillerists)
+        let mode : OrksArtilleristMode
+        mode.value = index
+        sequence.choose_artillerist_mode(board, mode)
+        let rules = model_weapon_rules(board, unit_id(0), 0, 0)
+        all_good = all_good and sequence.is_done() and chosen_weapon_has_rule(board, unit_id(1), rules, WeaponRuleKind::letal_hits) == (index != 1) and chosen_weapon_has_rule(board, unit_id(1), rules, WeaponRuleKind::sustained_hit) == (index != 0) and chosen_weapon_has_rule(board, unit_id(1), rules, WeaponRuleKind::hazardous) == (index == 2)
+    return all_good
+
+# Supa-glowy's two tests are independent of ordinary Hazardous; selected
+# alternate profiles of the same physical weapon do not double either count.
+fun test_orks17all_supa_glowy_independent_hazard_counts() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::shoota_boyz)
+    board[0][0].orks_enhancement = OrksEnhancement::supa_glowy_fing
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::hazardous))
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let declarations : DeclaredWeapons
+    declarations.append(declaration)
+    declarations.append(declaration)
+    return chosen_weapon_parameter(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::anti) == 4 and chosen_weapon_has_rule(board, unit_id(1), declaration.selected_rules, WeaponRuleKind::devastating_wounds) and declared_hazardous_uses(declarations) == 3
+
+# A physical Supa-only weapon has two tests; an ordinary-only weapon has one.
+fun test_orks17all_hazard_types_not_interchangeable() -> Bool:
+    let declarations : DeclaredWeapons
+    let supa : DeclaredWeapon
+    supa.slot = 0
+    supa.selected_rules.append(weapon_rule(WeaponRuleKind::supa_hazardous))
+    declarations.append(supa)
+    let ordinary : DeclaredWeapon
+    ordinary.slot = 1
+    ordinary.selected_rules.append(weapon_rule(WeaponRuleKind::hazardous))
+    declarations.append(ordinary)
+    return declared_hazardous_uses(declarations) == 3 and MAX_HAZARDOUS_USES > 448 * 3
+
+# Speediest uses natural1/2/3 failures even under a large hit bonus; natural6
+# retains the ordinary critical outcome.
+fun test_orks17all_speediest_natural_faces() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::kult_of_speed)
+    board[1][0].keywords.append(Keyword::speed_freeks)
+    let sequence = orks_attack_targeted(board, unit_id(0), unit_id(1), false)
+    sequence.choose_orks_defence_stratagem(board, Stratagem::orks_speediest_freeks)
+    let info = orks17c2b_info(board, 0)
+    return classify_attack_hit(board, info, attack_test_die(3), 10, 2) == AttackRollResult::failed and classify_attack_hit(board, info, attack_test_die(4), 0, 2) == AttackRollResult::success and classify_attack_hit(board, info, attack_test_die(6), 0, 6) == AttackRollResult::critical
+
+# Hulking's optional extra1CP is committed atomically with its base cost;
+# choosing all ranged attacks grants protection even when S<=T.
+fun test_orks17all_hulking_surcharge_and_all_attack_protection() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::bully_boyz)
+    orks17all_tag(board[1], OrksDatasheet::nobz)
+    let sequence = orks_attack_targeted(board, unit_id(0), unit_id(1), false)
+    sequence.choose_orks_defence_stratagem(board, Stratagem::orks_hulking_brutes)
+    let unspent = board.command_points[1] == 10
+    sequence.choose_hulking_protection(board, true)
+    return unspent and sequence.is_done() and board.command_points[1] == 8 and orks17c2b_info(board, 0).total_wound_modifier() == -1
+
+# At1CP, the stronger option is illegal but the base option remains usable.
+fun test_orks17all_hulking_unaffordable_surcharge_no_partial_spend() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::bully_boyz)
+    orks17all_tag(board[1], OrksDatasheet::nobz)
+    board.command_points[1] = 1
+    let sequence = orks_attack_targeted(board, unit_id(0), unit_id(1), false)
+    sequence.choose_orks_defence_stratagem(board, Stratagem::orks_hulking_brutes)
+    let unaffordable = !can sequence.choose_hulking_protection(board, true) and board.command_points[1] == 1
+    sequence.choose_hulking_protection(board, false)
+    return unaffordable and board.command_points[1] == 0
+
+# Defensive4+ retains its source-owner snapshot and the riled+1 captured at
+# destruction; choosing one's own fight beforehand closes the card permission.
+fun test_orks17all_paid_fight_on_death_thresholds() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::war_horde)
+    board.begin_phase(BattlePhase::fight)
+    let sequence = orks_attack_targeted(board, unit_id(0), unit_id(1), true)
+    sequence.choose_orks_defence_stratagem(board, Stratagem::orks_orks_is_never_beaten)
+    let ordinary = orks_fight_death_threshold(board, board[1], board[1][0]) == 4
+    orks17f_intrinsic_riled(board[1][0])
+    return ordinary and orks_fight_death_threshold(board, board[1], board[1][0]) == 3
+
+# Actual damage rolls its faction permission NOW, retains a successful corpse,
+# and does not require rolling that same permission on the later selection.
+fun test_orks17all_actual_fight_on_death_damage_retention() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::war_horde)
+    board.begin_phase(BattlePhase::fight)
+    let defence = orks_attack_targeted(board, unit_id(0), unit_id(1), true)
+    defence.choose_orks_defence_stratagem(board, Stratagem::orks_orks_is_never_beaten)
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, board[1][0].wounds_left(), board[1][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    damage.roll(board, attack_test_die(4))
+    return damage.is_done() and board[1].models.size() == 1 and board[1][0].state == ModelState::fight_on_death and board[1][0].destruction_pending and board[1][0].destruction_fight_roll == 1
+
+# Crazed Rampage's Deff Dread+3 is not replaced by ordinary riled+1.
+fun test_orks17all_crazed_deff_dread_threshold() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::dread_mob)
+    board.begin_phase(BattlePhase::fight)
+    board[1][0].keywords.append(Keyword::walker)
+    orks17all_tag(board[1], OrksDatasheet::deff_dread)
+    let sequence = orks_attack_targeted(board, unit_id(0), unit_id(1), true)
+    sequence.choose_orks_defence_stratagem(board, Stratagem::orks_crazed_rampage)
+    return orks_fight_death_threshold(board, board[1], board[1][0]) == 1 and board.command_points[1] == 9
+
+# A retained all-dead unit can still receive its paid selection grant while
+# it attacks; ordinary corpses receive no permission by being archived.
+fun test_orks17all_retained_unit_stratagem_installation() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::war_horde)
+    board.begin_phase(BattlePhase::fight)
+    board[0][0].state = ModelState::fight_on_death
+    board[0][0].suffered_wounds = board[0][0].profile.wounds()
+    let sequence = orks_attack_selection(board, unit_id(0), true)
+    sequence.choose_orks_attack_stratagem(board, Stratagem::orks_hit_em_harder)
+    return sequence.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::melee_lethal) == 1 and valid_source_foundations(board)
+
+# Movement card selection spends before granting ordered M or advance dice
+# modifiers, and a failed/absent selection leaves CP/history unchanged.
+fun test_orks17all_fungus_fuel_effective_movement() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::war_horde)
+    board.begin_phase(BattlePhase::movement)
+    board[0][0].keywords.append(Keyword::mounted)
+    let sequence = orks_move_selection(board, unit_id(0), false)
+    sequence.choose_orks_move_stratagem(board, Stratagem::orks_fungus_fuel_injection)
+    return sequence.is_done() and board.command_points[0] == 9 and board[0][0].effective_movement(6) == 8
+
+# 'Ere We Go changes the Advance roll bonus, not M, and excludes other units.
+fun test_orks17all_ere_we_go_advance_bonus() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::green_tide)
+    board.begin_phase(BattlePhase::movement)
+    let sequence = orks_move_selection(board, unit_id(0), false)
+    sequence.choose_orks_move_stratagem(board, Stratagem::orks_ere_we_go)
+    return sequence.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::advance_plus_two) == 1 and board[0][0].effective_movement(6) == 6
+
+# Mobile is a real sourced keyword, expires after its phase and does not add
+# physical terrain features excluded by the user's area-only instruction.
+fun test_orks17all_stomping_mobile_and_expiry() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::dread_mob)
+    board.begin_phase(BattlePhase::charge)
+    board[0][0].keywords.append(Keyword::walker)
+    let sequence = orks_move_selection(board, unit_id(0), true)
+    sequence.choose_orks_move_stratagem(board, Stratagem::orks_stomping_juggernaut)
+    let granted = sequence.is_done() and board[0][0].has_keyword(Keyword::mobile)
+    board.begin_phase(BattlePhase::fight)
+    return granted and !board[0][0].has_keyword(Keyword::mobile)
+
+# Mind On Mission affects only selected Advance/Fall Back, does not waive
+# shock or after-shooting restrictions, and is not a new move type.
+fun test_orks17all_mind_on_mission_action_permission() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::taktikal_brigade)
+    board.begin_phase(BattlePhase::movement)
+    orks17all_tag(board[0], OrksDatasheet::kommandos)
+    let sequence = orks_move_mode(board, unit_id(0), MovementKind::advance)
+    sequence.mind_on_mission(board)
+    capture_orks_selected_move(board, unit_id(0), MovementKind::advance)
+    record_move(board, unit_id(0), MovementKind::advance)
+    return sequence.is_done() and board[0].allows_action_start() and board.command_points[0] == 9
+
+# Wimp-kickaz forces escaping and applies cumulative-1 only while its own
+# engaged source is riled, without affecting ordinary Advance rolls.
+fun test_orks17all_wimp_escape_and_riled_penalty() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::bully_boyz)
+    board[1][0].position = board_position(7, 5)
+    board[1][0].orks_enhancement = OrksEnhancement::wimp_kickaz
+    let forced = orks_forces_escape(board, board[0]) and orks_escape_penalty(board, board[0]) == 0
+    orks17f_intrinsic_riled(board[1][0])
+    return forced and orks_escape_penalty(board, board[0]) == 1
+
+# Hunt's accepted unit forces Desperate Escape and counts ALL engaged Snagga
+# units for its extra3 rolls against M/V (not just the unit that paid).
+fun test_orks17all_hunt_escape_all_engaged_snaggas() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::da_big_hunt)
+    board.begin_phase(BattlePhase::movement)
+    board[1][0].position = board_position(7, 5)
+    board[1][0].keywords.append(Keyword::beast_snagga)
+    board[0][0].keywords.append(Keyword::vehicle)
+    let reaction = orks_fallback_selection(board, unit_id(0))
+    reaction.choose_hunting_escape_unit(board, unit_id(1))
+    return reaction.is_done() and orks_forces_escape(board, board[0]) and orks_extra_escape_hazards(board, board[0]) == 3 and board.command_points[1] == 9
+
+# An explicit reactive six-inch maximum is not a modified M; Follow Me Ladz
+# cannot expand it to8, and roles/limits return to the caller after declining.
+fun test_orks17all_reactive_distance_not_m_characteristic() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::war_horde)
+    board[1][0].position = board_position(30, 5)
+    board[0][0].orks_enhancement = OrksEnhancement::follow_me_ladz
+    register_orks_option_passives(board)
+    let six : StatModifier
+    six = 6
+    let sequence = orks_reactive_move(board, unit_id(0), six, false)
+    let exact = can sequence.move_to(board, board_position(11, 5)) and !can sequence.move_to(board, board_position(12, 5))
+    sequence.skip(board)
+    return exact and sequence.is_done() and board[0].movement_distance_limit == 0 and board.current_decision_maker == false
+
+# Grove shielding pays for the separate Gretchin target, leaving the protected
+# infantry's own stratagem-target allowance available (Runt Swarm/Grot Shields).
+fun orks17all_grot_fixture() -> Board:
+    let board = orks17all_fixture(OrksDetachment::runt_swarm)
+    let grots = board[1]
+    grots.identity = 0
+    grots[0].identity = 0
+    grots[0].original_unit = 0
+    grots[0].position = board_position(12, 7)
+    orks17all_tag(grots, OrksDatasheet::gretchin)
+    board.units.append(grots)
+    board.identify_units()
+    let shield = orks_attack_targeted(board, unit_id(0), unit_id(1), false)
+    shield.choose_grot_shield_unit(board, unit_id(2))
+    return board
+
+fun test_orks17all_grot_shield_separate_cp_target() -> Bool:
+    let board = orks17all_grot_fixture()
+    return board.command_points[1] == 9 and board[2].history.stratagem_targeted_by_player[1] and !board[1].history.stratagem_targeted_by_player[1] and orks_grot_shield(board, board[1]) == 2
+
+# An original Lethal critical is cancelled, its separately generated Sustained
+# hit survives, and the shield suffers1 actual mortal via ordinary allocation.
+fun test_orks17all_grot_shield_original_lethal_and_sustained() -> Bool:
+    let board = orks17all_grot_fixture()
+    board.command_points[0] = 0
+    board.attack_info.source = Weapon::orks_slugga
+    board.attack_info.add_letal_hits()
+    board.attack_info.add_sustained_hits(1)
+    begin_orks_attack(board)
+    let dice = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
+    dice.roll(board, board[1], board[0], attack_test_die(6))
+    dice.use_lethal_hits(board, board[1], board[0], true)
+    dice.select_mortal_model(board, board[1], board[0], damage_test_model(0))
+    let intercepted = board[2][0].suffered_wounds == 1 and board[1][0].suffered_wounds == 0 and dice.generated_hits == 1 and dice.generated_wounds == 0
+    dice.roll(board, board[1], board[0], attack_test_die(1))
+    return intercepted and dice.is_done() and dice.generated_wounds == 0
+
+# Torrent has no successful HIT ROLL and therefore is not intercepted.
+fun test_orks17all_grot_shield_does_not_intercept_torrent() -> Bool:
+    let board = orks17all_grot_fixture()
+    board.command_points[0] = 0
+    board.attack_info.source = Weapon::pyreblaster
+    let dice = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
+    dice.roll(board, board[1], board[0], attack_test_die(1))
+    return dice.is_done() and board[2][0].suffered_wounds == 0 and dice.generated_hits == 1
+
+# Post-attack reactions distinguish hits from real wounds after prevention;
+# selecting a target alone does not trigger Gun-crazy or Goaded.
+fun test_orks17all_post_attack_ledger_actual_hits_and_wounds() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::wreckas)
+    orks17all_tag(board[1], OrksDatasheet::flash_gitz)
+    begin_orks_attack(board)
+    let no_hit = !orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_gun_crazy_show_offs, false)
+    record_orks_hits(board, unit_id(1), 1)
+    let hit = orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_gun_crazy_show_offs, false)
+    let other = board.armies[1].record_detachment(OrksDetachment::da_big_hunt)
+    board[1][0].keywords.append(Keyword::beast_snagga)
+    let not_wounded = !orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_goaded_into_action, false)
+    let job = damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 1, board[1][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 1, false)
+    return no_hit and hit and not_wounded and orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_goaded_into_action, false)
+
+# Grab It permanently records this turn's no-charge permission alongside its
+# objective-constrained normal move, rather than merely changing UI choices.
+fun test_orks17all_grab_it_charge_lock_expiry() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::wreckas)
+    grant_orks_effect(board, unit_id(0), unit_id(0), 300 + Stratagem::orks_grab_it.value, OrksEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
+    board.begin_phase(BattlePhase::charge)
+    let blocked = !charge_source_valid(board, unit_id(0), false)
+    board.turn_serial = board.turn_serial + 1
+    refresh_source_effects(board, TimingWindow::none)
+    return blocked and unit_orks_effect(board, board[0], OrksEffectKind::no_charge) == 0
+
+# New Infested units receive new unit/model identities and fresh usage/wounds;
+# the original destroyed archive is retained, not revived or overwritten.
+fun test_orks17all_infested_new_unit_identity_and_template() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::runt_swarm)
+    orks17all_tag(board[1], OrksDatasheet::gretchin)
+    board[1].capture_starting_strength()
+    let original_unit = board[1].identity
+    let original_model = board[1][0].identity
+    board[1][0].used_once_per_battle_weapon[0] = true
+    board[1][0].suffered_wounds = board[1][0].profile.wounds()
+    board[1].remove_model(0)
+    create_orks_replacement(board, unit_id(1))
+    ref replacement = board.reserve_units[0]
+    return board[1].identity == original_unit and board[1].destroyed_models.value[0].identity == original_model and replacement.identity != original_unit and replacement[0].identity != original_model and replacement[0].suffered_wounds == 0 and !replacement[0].used_once_per_battle_weapon[0] and replacement.is_generated_replacement and replacement.off_battlefield and replacement.history.strategic_reserve
+
+# Actual unit death has the current activation serial. An earlier attack's
+# casualty cannot spend Infested during a later enemy activation.
+fun test_orks17all_infested_current_activation_gate() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::runt_swarm)
+    orks17all_tag(board[1], OrksDatasheet::gretchin)
+    board[1].capture_starting_strength()
+    begin_orks_attack(board)
+    let job = damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 2, board[1][0].identity)
+    commit_wound_loss(board, job, damage_test_model(0), 2, false)
+    let current = orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_infested_war_zone, false)
+    begin_orks_attack(board)
+    return current and !orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_infested_war_zone, false)
+
+# Heal3 restores wounds individually before any non-Character revival.
+fun test_orks17all_heal_wounded_model_before_revival() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::kult_of_speed)
+    board[0][0].suffered_wounds = 1
+    let count : BInt<0, 4>
+    count = 3
+    let healing = heal_orks_unit(board, unit_id(0), count)
+    healing.choose_healed_model(board, damage_test_model(0))
+    return healing.is_done() and board[0][0].suffered_wounds == 0 and board[0].models.size() == 1
+
+# Revival retains identity/equipment/One Shot, uses phase-start coherency and
+# returns1W instead of creating a duplicate original model.
+fun test_orks17all_heal_revives_original_identity_and_usage() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::kult_of_speed)
+    let extra = board[0][0]
+    extra.identity = 0
+    extra.position = board_position(5, 7)
+    extra.used_once_per_battle_weapon[0] = true
+    board[0].models.append(extra)
+    board.identify_units()
+    board[0].capture_starting_strength()
+    board.begin_phase(BattlePhase::movement)
+    let identity = board[0][1].identity
+    board[0][1].suffered_wounds = board[0][1].profile.wounds()
+    board[0].remove_model(1)
+    let count : BInt<0, 4>
+    count = 1
+    let healing = heal_orks_unit(board, unit_id(0), count)
+    healing.choose_healed_casualty(board, damage_test_model(0))
+    healing.place_returned_model(board, board_position(5, 7))
+    return healing.is_done() and board[0].models.size() == 2 and board[0][1].identity == identity and board[0][1].wounds_left() == 1 and board[0][1].used_once_per_battle_weapon[0] and board[0].destroyed_models.value.empty()
+
+# Unit healing never returns a Character just because other models are full.
+fun test_orks17all_healing_excludes_character_casualties() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::kult_of_speed)
+    let extra = board[0][0]
+    extra.identity = 0
+    extra.keywords.append(Keyword::character)
+    extra.position = board_position(5, 7)
+    board[0].models.append(extra)
+    board.identify_units()
+    board[0].capture_starting_strength()
+    board.begin_phase(BattlePhase::movement)
+    board[0].remove_model(1)
+    return !orks_heal_archive_valid(board, unit_id(0), damage_test_model(0))
+
+# A first returned model cannot anchor another return if it was absent at
+# phase start; illegal new enemy engagements remain rejected.
+fun test_orks17all_return_phase_start_and_new_engagement_gates() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::kult_of_speed)
+    let returned = board[0][0]
+    let old = orks_return_position_valid(board, unit_id(0), returned, board_position(5, 7), false)
+    board[0].history.phase_start_members.clear()
+    let absent = !orks_return_position_valid(board, unit_id(0), returned, board_position(5, 7), false)
+    board[1][0].position = board_position(7, 7)
+    return old and absent and !orks_return_position_valid(board, unit_id(0), returned, board_position(5, 7), false)
+
+# A psychic1 shocks but still grants Fights First; its level is spent, and a
+# second same-phase use is unavailable (Wurrband/22.03.01).
+fun test_orks17all_visions_psychic_one_still_grants_effect() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::wurrband)
+    board[0][0].keywords.append(Keyword::psyker)
+    board[0].psyker_level = 1
+    board.begin_phase(BattlePhase::fight)
+    let psychic = use_orks_psychic(board, unit_id(0), true)
+    psychic.roll(board, attack_test_die(1))
+    return psychic.is_done() and board[0].battle_socked and fight_first_unit(board[0]) and board[0].orks_psychic_usage.spent == 1 and !orks_psychic_available(board, unit_id(0), true)
+
+# Warphead's once-per-ability phase restriction is separate from its level2
+# round budget. A new round restores budget; a phase alone does not.
+fun test_orks17all_warphead_psychic_round_budget() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::wurrband)
+    board[0][0].keywords.append(Keyword::psyker)
+    board[0][0].orks_enhancement = OrksEnhancement::warphead
+    board[0].orks_psychic_usage.round_stamp = board.current_round.value + 1
+    board[0].orks_psychic_usage.spent = 2
+    let spent = !orks_psychic_available(board, unit_id(0), false)
+    board.begin_phase(BattlePhase::fight)
+    let still_spent = !orks_psychic_available(board, unit_id(0), true)
+    board.current_round = board.current_round + 1
+    return spent and still_spent and orks_psychic_available(board, unit_id(0), true)
+
+# Roar uses the enemy's normal shock rules after the psychic roll, excludes
+# M/V, and consumes its own level even if the caster rolls a1.
+fun test_orks17all_roar_psychic_one_and_enemy_shock() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::wurrband)
+    board[0][0].keywords.append(Keyword::psyker)
+    board[0].psyker_level = 1
+    board.begin_phase(BattlePhase::movement)
+    let psychic = use_orks_psychic(board, unit_id(0), false)
+    psychic.roll(board, attack_test_die(1))
+    psychic.choose_roar_target(board, unit_id(1))
+    psychic.roll_pair(board, attack_test_die(1), attack_test_die(1))
+    return psychic.is_done() and board[0].battle_socked and board[1].battle_socked and board.current_decision_maker == false
+
+# Named plasma/slot lookalikes cannot acquire Snazzgun or Shokk-only upgrades.
+fun test_orks17all_supa_snazz_named_weapon_gate() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::wreckas)
+    board[0][0].orks_enhancement = OrksEnhancement::supa_snazz_dakka
+    let absent = !available_weapon_has_rule(board, unit_id(0), 0, 0, WeaponRuleKind::rapid_fire)
+    board[0][0].weapon_names[0] = NamedWeapon::snazzgun.value
+    let rules = model_weapon_rules(board, unit_id(0), 0, 0)
+    return absent and chosen_weapon_parameter(board, unit_id(1), rules, WeaponRuleKind::rapid_fire) == 1
+
+# Targetin' Squigs adds3 Range to the unit, excluding Torrent on the actual
+# selected weapon (the named source card, not every numbered slot).
+fun test_orks17all_targetin_squigs_torrent_exclusion() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::shoota_boyz)
+    board[0][0].orks_enhancement = OrksEnhancement::targetin_squigs
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let ordinary = declaration_weapon_range(board, unit_id(0), declaration) == 15
+    board[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::torrent))
+    let torrent = make_declared_weapon(board, unit_id(0), 0, 0)
+    return ordinary and declaration_weapon_range(board, unit_id(0), torrent) == 12
+
+# Ferocious uses current LIVE strength11+, not starting strength or corpses.
+fun test_orks17all_ferocious_live_eleven_boundary() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::green_tide)
+    board[0][0].orks_enhancement = OrksEnhancement::ferocious_show_off
+    let bearer = make_declared_weapon(board, unit_id(0), 0, 1)
+    let small = declaration_fixed_attacks(board, unit_id(0), bearer, 0)
+    let additional = board[0][0]
+    additional.identity = 0
+    additional.orks_enhancement = OrksEnhancement::none
+    for index in range(10):
+        board[0].models.append(additional)
+    board.identify_units()
+    let large = declaration_fixed_attacks(board, unit_id(0), bearer, 0) == small + 1
+    board[0].remove_model(10)
+    return large and declaration_fixed_attacks(board, unit_id(0), bearer, 0) == small
+
+# Proper Killy applies to its bearer, not every member of the unit.
+fun test_orks17all_proper_killy_bearer_reroll_scope() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::brute_bosses)
+    board[0][0].orks_enhancement = OrksEnhancement::proper_killy
+    let extra = board[0][0]
+    extra.identity = 0
+    extra.orks_enhancement = OrksEnhancement::none
+    board[0].models.append(extra)
+    board.identify_units()
+    let bearer = orks17c2b_info(board, 0)
+    let declaration = make_declared_weapon(board, unit_id(0), 1, 0)
+    let other = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return bearer.reroll1_hits and !other.reroll1_hits
+
+# Da Boss is Watchin' riles its own unit and consumes its army/battle token,
+# while the effect survives source death until the next own turn.
+fun test_orks17all_watchin_once_army_next_own_turn() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::war_horde)
+    board.begin_phase(BattlePhase::movement)
+    board[0][0].orks_enhancement = OrksEnhancement::da_boss_is_watchin
+    let sequence = orks_movement_abilities(board, unit_id(0))
+    sequence.choose_orks_movement_ability(board, OrksDetachmentAbility::da_boss_is_watchin)
+    let accepted = sequence.is_done() and unit_is_riled_up(board[0]) and !orks_movement_ability_available(board, unit_id(0))
+    board.turn_serial = board.turn_serial + 1
+    board.current_player = true
+    refresh_source_effects(board, TimingWindow::none)
+    let opponent_turn = unit_is_riled_up(board[0])
+    board.turn_serial = board.turn_serial + 1
+    board.current_player = false
+    refresh_source_effects(board, TimingWindow::none)
+    return accepted and opponent_turn and !unit_is_riled_up(board[0])
+
+# Reserve/passenger own abilities do not measure external range. Watchin'
+# installs a real persistent effect in the reserve bank with the same token.
+fun test_orks17all_offboard_watchin_own_unit() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::war_horde)
+    board.begin_phase(BattlePhase::movement)
+    board[0][0].orks_enhancement = OrksEnhancement::da_boss_is_watchin
+    let moved = reposition_unit(board, unit_id(0))
+    let before = orks_offboard_support_valid(board, SourceBank::reserves, unit_id(0), false, false)
+    let sequence = choose_orks_offboard_support(board, false, false)
+    sequence.choose_orks_support_bank(board, SourceBank::reserves)
+    sequence.choose_orks_offboard_unit(board, unit_id(0))
+    return moved and before and sequence.is_done() and unit_is_riled_up(board.reserve_units[0]) and !orks_offboard_support_valid(board, SourceBank::reserves, unit_id(0), false, false)
+
+# Visions can be used on its own offboard unit, but this never provides
+# visibility/range to enemy units for Roar or an attack.
+fun test_orks17all_offboard_visions_no_external_visibility() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::wurrband)
+    board[0][0].keywords.append(Keyword::psyker)
+    board[0].psyker_level = 1
+    let moved = reposition_unit(board, unit_id(0))
+    board.begin_phase(BattlePhase::fight)
+    let sequence = choose_orks_offboard_support(board, false, true)
+    sequence.choose_orks_support_bank(board, SourceBank::reserves)
+    sequence.choose_orks_offboard_unit(board, unit_id(0))
+    sequence.roll(board, attack_test_die(1))
+    return moved and sequence.is_done() and board.reserve_units[0].battle_socked and fight_first_unit(board.reserve_units[0]) and !unit_visible_to_unit(board, board.reserve_units[0], board[1])
+
+# Offboard Dread Power pays for the real reserve unit, and its phase target
+# history/persisting riled effect remain present on that unit.
+fun test_orks17all_offboard_dread_power_paid_target() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::dread_mob)
+    board.begin_phase(BattlePhase::movement)
+    board[0][0].keywords.append(Keyword::walker)
+    let moved = reposition_unit(board, unit_id(0))
+    let sequence = choose_orks_offboard_dread_power(board, false)
+    sequence.choose_orks_dread_bank(board, SourceBank::reserves)
+    sequence.choose_offboard_dread_unit(board, unit_id(0))
+    return moved and sequence.is_done() and board.command_points[0] == 9 and board.reserve_units[0].history.stratagem_targeted_by_player[0] and unit_is_riled_up(board.reserve_units[0])
+
+# Source attacks are grouped separately when Speediest's unmodified-face
+# failures differ, even if their final hit modifiers match (p17).
+fun test_orks17all_grouping_preserves_natural_face_gates() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::kult_of_speed)
+    let first = orks17c2b_info(board, 0)
+    let second = first
+    second.orks_fail_hits_three = true
+    return !attacks_are_identical(board, first, second)
+
+# Unpredictable6 changes effective target T until this activation ends, then
+# removes only its own key rather than every matching Toughness modifier.
+fun test_orks17all_madcap_toughness_scoped_expiry() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::madcap_meks)
+    board[0][0].keywords.append(Keyword::big_mek)
+    let initial = board[1].get_unit_toughtness()
+    let table = orks_unpredictable_genius(board, unit_id(0), unit_id(1))
+    table.roll(board, attack_test_die(6))
+    let changed = board[1].get_unit_toughtness() == initial - 1
+    remove_orks_scoped_effect(board, table.effect)
+    return table.is_done() and changed and board[1].get_unit_toughtness() == initial
+
+# Lifted adds FLY and removes cover only for the scoped activation; it does
+# not permanently write the target's intrinsic keywords.
+fun test_orks17all_madcap_lifted_keyword_and_cover() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::madcap_meks)
+    board[0][0].keywords.append(Keyword::big_mek)
+    let table = orks_unpredictable_genius(board, unit_id(0), unit_id(1))
+    table.roll(board, attack_test_die(5))
+    let lifted = board[1].has_keyword(Keyword::fly)
+    remove_orks_scoped_effect(board, table.effect)
+    return lifted and !board[1].has_keyword(Keyword::fly)
+
+# Madcap1's granted4+ keeps a better original save; it expires after shooting.
+fun test_orks17all_madcap_invulnerable_grant_and_expiry() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::madcap_meks)
+    board[0][0].keywords.append(Keyword::big_mek)
+    let initial = board[1][0].effective_invulnerable_save()
+    let table = orks_unpredictable_genius(board, unit_id(0), unit_id(1))
+    table.roll(board, attack_test_die(1))
+    let granted = board[1][0].effective_invulnerable_save() == 4
+    remove_orks_scoped_effect(board, table.effect)
+    return granted and board[1][0].effective_invulnerable_save() == initial
+
+# Temperamental's named-weapon Sustained2 belongs only to its bearer, not
+# a second model with a coincidentally matching weapon slot/name.
+fun test_orks17all_shokka_bearer_only_sustained() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::madcap_meks)
+    board[0][0].orks_enhancement = OrksEnhancement::temperamental_shokka
+    board[0][0].weapon_names[0] = NamedWeapon::shokk_attack_gun.value
+    let other = board[0][0]
+    other.identity = 0
+    other.orks_enhancement = OrksEnhancement::none
+    board[0].models.append(other)
+    board.identify_units()
+    let selection = orks_shokka_selection(board, unit_id(0))
+    selection.temperamental_shokka(board)
+    selection.roll(board, attack_test_die(6))
+    let first = model_weapon_rules(board, unit_id(0), 0, 0)
+    let second = model_weapon_rules(board, unit_id(0), 1, 0)
+    return selection.is_done() and chosen_weapon_parameter(board, unit_id(1), first, WeaponRuleKind::sustained_hit) == 2 and !chosen_weapon_has_rule(board, unit_id(1), second, WeaponRuleKind::sustained_hit)
+
+# An intentional1 result grants Torrent and destroys that exact bearer AFTER
+# shooting, compacting indices without killing the following model instead.
+fun test_orks17all_shokka_destroy_after_shot_identity() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::madcap_meks)
+    board[0][0].orks_enhancement = OrksEnhancement::temperamental_shokka
+    board[0][0].weapon_names[0] = NamedWeapon::shokk_attack_gun.value
+    let doomed = board[0][0].identity
+    let other = board[0][0]
+    other.identity = 0
+    other.orks_enhancement = OrksEnhancement::none
+    other.position = board_position(5, 7)
+    board[0].models.append(other)
+    board.identify_units()
+    let survivor = board[0][1].identity
+    let selection = orks_shokka_selection(board, unit_id(0))
+    selection.temperamental_shokka(board)
+    selection.roll(board, attack_test_die(1))
+    let torrent = available_weapon_has_rule(board, unit_id(0), 0, 0, WeaponRuleKind::torrent)
+    let end = orks_shooting_option_end(board, unit_id(0))
+    return torrent and end.is_done() and board[0].models.size() == 1 and board[0][0].identity == survivor and board[0].destroyed_models.value[0].identity == doomed
+
+# Smoky uses intentional circular-base line crossing for partial obscuration;
+# it never blocks visibility under the user's supplied approximation.
+fun test_orks17all_smoky_circle_crossing_and_visibility() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::kult_of_speed)
+    let blocker = make_orks_beast_snagga_boyz(1, 9, 0)
+    blocker.models.resize(1)
+    blocker[0].position = board_position(8, 5)
+    blocker[0].orks_enhancement = OrksEnhancement::smoky_gubbinz
+    board.units.append(blocker)
+    board.identify_units()
+    let obscured = orks_smoky_cover(board, board[0][0], board[1])
+    let visible = unit_visible_to_unit(board, board[0], board[1])
+    board[2][0].position = board_position(8, 10)
+    return obscured and visible and !orks_smoky_cover(board, board[0][0], board[1])
+
+# Blitz Wagon and Competitive Streak use normal charge rerolls; unrelated
+# ordinary units cannot receive this option by sharing their army package.
+fun test_orks17all_blitz_and_competitive_charge_rerolls() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::blitz_brigade)
+    let absent = !orks_charge_reroll(board, board[0])
+    board[0][0].keywords.append(Keyword::wagon)
+    let wagon = orks_charge_reroll(board, board[0])
+    board[1][0].orks_enhancement = OrksEnhancement::competitive_streak
+    return absent and wagon and orks_charge_reroll(board, board[1])
+
+# Impulsive lets its Aircraft ingress in round1 while the ordinary Aircraft
+# still waits for round2. This is not a price/reserve-limit exception.
+fun test_orks17all_impulsive_first_round_ingress_gate() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::flyboyz)
+    board.begin_phase(BattlePhase::movement)
+    board[0][0].keywords.append(Keyword::aircraft)
+    let ordinary = !orks_ingress_round_allowed(board, board[0])
+    board[0][0].orks_enhancement = OrksEnhancement::impulsive_recon
+    let fast = orks_ingress_round_allowed(board, board[0])
+    board[0].history.has_ingressed = true
+    return ordinary and fast and !orks_ingress_round_allowed(board, board[0])
+
+# Flyboss riles nearby Aircraft/Deffkoptas after actual ingress, excluding
+# ordinary infantry and enemy units regardless of their flying keywords.
+fun test_orks17all_flyboss_ingress_recipient_gate() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::flyboyz)
+    board[0][0].orks_enhancement = OrksEnhancement::flyboss
+    board[0][0].keywords.append(Keyword::aircraft)
+    let friendly = make_orks_beast_snagga_boyz(1, 9, 0)
+    friendly.models.resize(1)
+    friendly[0].position = board_position(8, 5)
+    orks17all_tag(friendly, OrksDatasheet::deffkoptas)
+    board.units.append(friendly)
+    board.identify_units()
+    orks_flyboss_ingress(board, unit_id(0))
+    return unit_is_riled_up(board[0]) and unit_is_riled_up(board[2]) and !unit_is_riled_up(board[1])
+
+# A phase start clears stale battlefield revival anchors in both offboard
+# banks; an arriving unit cannot claim it started the phase on the board.
+fun test_orks17all_offboard_phase_start_snapshots_clear() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::kult_of_speed)
+    let before = !board[0].history.phase_start_members.empty()
+    let moved = reposition_unit(board, unit_id(0))
+    board.begin_phase(BattlePhase::movement)
+    return before and moved and board.reserve_units[0].history.phase_start_members.empty() and board.reserve_units[0].history.phase_start_engagements.empty()
+
+# Named enhancement weapons use their exact printed characteristic/rule
+# profiles, with D3 interpreted as fixed3 only where the card prints3.
+fun test_orks17all_named_enhancement_weapon_profiles() -> Bool:
+    return orks17h1_weapon_values(Weapon::orks_da_gobshot_thunderbuss, 24, 6, 4, 7, -2, 2) and orks17h1_weapon_values(Weapon::orks_da_krunch, 24, 3, 4, 5, -1, 1) and orks17h1_weapon_values(Weapon::orks_eadbanger, 24, 2, 4, 6, -3, 3) and Weapon::orks_da_gobshot_thunderbuss.get_rule_parameter(WeaponRuleKind::rapid_fire) == 6 and Weapon::orks_da_krunch.get_rule_parameter(WeaponRuleKind::blast) == 3 and Weapon::orks_eadbanger.has_rule(WeaponRuleKind::precision)
+
+# Retained models keep riled status for their authorised attacks; ordinary
+# pending corpses cannot substitute for an active riled unit.
+fun test_orks17all_retained_riled_attack_status() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::bully_boyz)
+    orks17f_intrinsic_riled(board[0][0])
+    board[0][0].suffered_wounds = board[0][0].profile.wounds()
+    board[0][0].state = ModelState::fight_on_death
+    let retained = unit_is_riled_up(board[0])
+    board[0][0].state = ModelState::pending_destruction
+    return retained and !unit_is_riled_up(board[0])
+
+# Board/source/declaration history round trips include schema32 and the new
+# keyed fields. Incorrect enum values are rejected before any load commits.
+fun test_orks17all_detachment_state_save_and_invalid_enum() -> Bool:
+    let game = play()
+    game.board = orks17all_fixture(OrksDetachment::shoota_boyz)
+    grant_orks_effect(game.board, unit_id(0), unit_id(0), 300 + Stratagem::orks_never_enough_dakka.value, OrksEffectKind::ranged_sustained, 1, SourceDuration::phase, invalid_entity_identity())
+    let restored = play()
+    let good = set_state(restored, to_string(game)) and unit_orks_effect(restored.board, restored.board[0], OrksEffectKind::ranged_sustained) == 1
+    game.board[0][0].orks_enhancement.value = 99
+    return good and !set_state(restored, to_string(game)) and restored.board[0][0].orks_enhancement.value == 0
+
+# Minimal explicit transport metadata validates cargo consumers without
+# inventing Battlewagon/Morkanaut profiles or source base/hull sizes.
+fun orks17all_transport_fixture() -> Board:
+    let board = transport16_fixture()
+    board.armies[0].faction = ArmyFaction::orks
+    let package = board.armies[0].record_detachment(OrksDetachment::blitz_brigade)
+    board[0][0].keywords.append(Keyword::orks)
+    board[0][0].keywords.append(Keyword::wagon)
+    for member in range(board[1].models.size()):
+        board[1][member].keywords.append(Keyword::orks)
+    board.command_points[0] = 10
+    return board
+
+# Blitzboss retains a BETTER native save, grants+2 M only while this bearer
+# is cargo, and removes both keyed grants after disembark/death.
+fun test_orks17all_blitzboss_cargo_lifetime_and_better_save() -> Bool:
+    let board = orks17all_transport_fixture()
+    board[1][0].orks_enhancement = OrksEnhancement::blitzboss
+    let original_inv = board[0][0].effective_invulnerable_save()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    let cargo = board[0][0].effective_movement(6) == 8 and board[0][0].effective_invulnerable_save() == min(5, original_inv)
+    board.embarked_units[0].embarked_transport = 0
+    refresh_source_effects(board, TimingWindow::none)
+    return cargo and board[0][0].effective_movement(6) == 6 and board[0][0].effective_invulnerable_save() == original_inv
+
+# Targetin' Gizmos requires an actual Big Mek in this carrier; riled changes
+# only the Sustained addition, and empty cargo ends both permissions.
+fun test_orks17all_targetin_gizmos_actual_cargo_and_riled() -> Bool:
+    let board = orks17all_transport_fixture()
+    board[0][0].orks_enhancement = OrksEnhancement::targetin_gizmos
+    board[1][0].keywords.append(Keyword::big_mek)
+    let empty = !available_weapon_has_rule(board, unit_id(0), 0, 0, WeaponRuleKind::ignore_cover)
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    let cover = available_weapon_has_rule(board, unit_id(0), 0, 0, WeaponRuleKind::ignore_cover)
+    orks17f_intrinsic_riled(board[0][0])
+    let sustained = available_weapon_has_rule(board, unit_id(0), 0, 0, WeaponRuleKind::sustained_hit)
+    board.embarked_units[0].embarked_transport = 0
+    return empty and cover and sustained and !available_weapon_has_rule(board, unit_id(0), 0, 0, WeaponRuleKind::ignore_cover)
+
+# Boss Boomer borrows the actual Warboss's ability and its distinct shared
+# army-round counter, rather than treating its text as Keep Huntin'.
+fun test_orks17all_boss_boomer_borrowed_ability_dependency() -> Bool:
+    let board = orks17all_transport_fixture()
+    board[0][0].orks_enhancement = OrksEnhancement::boss_boomer
+    board[1][0].keywords.append(Keyword::warboss)
+    board[1][0].abilities.append(AbilityKind::intimidating_motivation)
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    let borrowed = board[0][0].has_ability(AbilityKind::intimidating_motivation)
+    let sources = collect_source_events(board, orks17h23_move_event(board, 0, false, MovementKind::normal))
+    let registered = sources.size() == 1 and board.source_instances[sources[0].source.value].rule.value == ORKS_INTIMIDATING_RULE
+    board.embarked_units[0].embarked_transport = 0
+    refresh_source_effects(board, TimingWindow::none)
+    let ceased = collect_source_events(board, orks17h23_move_event(board, 0, false, MovementKind::normal)).empty()
+    return borrowed and registered and ceased and !board[0][0].has_ability(AbilityKind::intimidating_motivation)
+
+# Readied triggers only after WAGON Normal completion; its passengers get
+# Assault setup with charging permitted, rather than ordinary Rapid lock.
+fun test_orks17all_readied_assault_disembark_permission() -> Bool:
+    let board = orks17all_transport_fixture()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    record_move(board, unit_id(0), MovementKind::normal)
+    let card = orks_wagon_move_end(board, unit_id(0))
+    card.readied_brawlers(board)
+    let carrier = find_passenger_carrier(board, board.embarked_units[0].embarked_transport)
+    return card.is_done() and board.command_points[0] == 9 and required_disembark_mode(board, board.embarked_units[0], carrier) == DisembarkMode::assault
+
+# Keep It Runnin' is a whole-unit6in exception, allows an already-selected
+# unit, and respects actual carrier capacity rather than normal after-move3in.
+fun test_orks17all_keep_running_six_inch_whole_unit_embark() -> Bool:
+    let board = orks17all_transport_fixture()
+    board.begin_phase(BattlePhase::fight)
+    board[1][0].position = board_position(14, 10)
+    board[1][1].position = board_position(14, 12)
+    board[1].history.fight_eligible_phase = board.phase_serial.value + 1
+    let eligible = orks_end_card_valid(board, unit_id(1), Stratagem::orks_keep_it_runnin, false, TimingWindow::fight_end)
+    let card = orks_package_window(board, unit_id(1), false, TimingWindow::fight_end)
+    card.choose_orks_window_stratagem(board, Stratagem::orks_keep_it_runnin)
+    card.choose_fight_end_transport(board, unit_id(0))
+    card.choose_fight_end_carrier_model(board, damage_test_model(0))
+    return eligible and card.is_done() and board[1].retired and board.embarked_units.size() == 1 and board.embarked_units[0].models.size() == 2
+
+# Wurrband transport contributors are actual models, not their weighted
+# transport-space usage (one carrier's psychic weapon strength).
+fun test_orks17all_psychic_passenger_count_not_seats() -> Bool:
+    let board = orks17all_transport_fixture()
+    board[1][0].transport_space = 3
+    board[1][1].transport_space = 2
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    return embarked_models_for_psyker(board, board[0][0].identity) == 2 and passenger_space_used(board, board[0][0].identity) == 5
+
+# Dreadherder measures from its bearer, grants a turn-long reroll to the
+# selected Walker and does not require that bearer to shoot first.
+fun test_orks17all_dreadherder_before_other_units_shoot() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::dread_mob)
+    board[0][0].orks_enhancement = OrksEnhancement::dreadherder
+    let walker = make_orks_beast_snagga_boyz(1, 9, 0)
+    walker.models.resize(1)
+    walker[0].keywords.append(Keyword::walker)
+    walker[0].position = board_position(7, 5)
+    board.units.append(walker)
+    board.identify_units()
+    let available = orks_dreadherder_available(board, unit_id(0))
+    let selection = orks_dreadherder_shooting(board, unit_id(0))
+    selection.choose_dreadherder_target(board, unit_id(2))
+    let granted = unit_orks_effect(board, board[2], OrksEffectKind::reroll_hits_ones) == 1
+    board.begin_phase(BattlePhase::fight)
+    return available and granted and !board[0].has_shoot and unit_orks_effect(board, board[2], OrksEffectKind::reroll_hits_ones) == 1
+
+# A successful Surly returns its original identity with3W at a nearest legal
+# quad. Its once-per-army token prevents another source/attempt this battle.
+fun test_orks17all_surly_original_identity_three_wounds() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::brute_bosses)
+    let boss = make_octavius()
+    boss.owned_by_player1 = true
+    boss[0].position = board_position(12, 5)
+    boss[0].keywords.append(Keyword::orks)
+    boss[0].keywords.append(Keyword::warboss)
+    boss[0].orks_enhancement = OrksEnhancement::surly_as_a_squiggoth
+    board[1] = boss
+    board.identify_units()
+    let identity = board[1][0].identity
+    board[1][0].suffered_wounds = board[1][0].profile.wounds()
+    board[1][0].destroyed_phase = board.phase_serial.value + 1
+    board[1].remove_model(0)
+    let revival = resolve_orks_surly(board, unit_id(1), true)
+    revival.choose_surly_casualty(board, damage_test_model(0))
+    revival.roll(board, attack_test_die(2))
+    revival.place_surly_model(board, board_position(12, 5))
+    return revival.is_done() and board[1][0].identity == identity and board[1][0].wounds_left() == 3 and board[1].destroyed_models.value.empty() and !source_usage_available(board, orks_option_usage(board[1], board[1][0], OrksEnhancement::surly_as_a_squiggoth))
+
+# Returned passengers need a real available seat; no-trigger destruction on
+# lack of seats cannot start another death explosion/recursion (01.02.03).
+fun test_orks17all_offboard_return_capacity_gate() -> Bool:
+    let board = orks17all_transport_fixture()
+    embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    let returned = board.embarked_units[0][0]
+    board.embarked_units[0].remove_model(0)
+    let available = orks_offboard_return_capacity(board, board.embarked_units[0], returned)
+    board[0][0].transport_capacity = 1
+    return available and !orks_offboard_return_capacity(board, board.embarked_units[0], returned)
+
+# At a full source arena, a disabled/dead unreferenced slot can be reused only
+# with a new generation; a frozen pending event must never activate the new
+# occupant even when owner/rule/type happen to match (identity infrastructure).
+fun test_orks17all_source_arena_reuse_rejects_stale_generation() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::war_horde)
+    let instance : SourceInstance
+    instance.rule = 470
+    instance.owner = false
+    instance.source_unit = board[0].identity
+    instance.window = TimingWindow::command_start
+    instance.optional = true
+    instance.grant = riled_up_grant()
+    for slot in range(MAX_SOURCE_INSTANCES):
+        let handle = register_source_instance(board, instance)
+    let event : SourceEvent
+    event.kind = SourceEventKind::timing_window
+    event.window = TimingWindow::command_start
+    let frozen = collect_source_events(board, event)
+    let old_generation = board.source_instances[0].generation
+    board.source_instances[0].disabled = true
+    let reused = register_source_instance(board, instance)
+    let choice : SourceEventID
+    choice = 0
+    return frozen.size() == MAX_SOURCE_INSTANCES and reused.value == 0 and board.source_instances[0].generation != old_generation and !pending_source_valid(board, frozen, choice, false) and valid_source_foundations(board)
+
+# Slot recycling protects every ordinary reserve/passenger return slot. It
+# applies only to NEW replacements, never compacts or redirects ordinary units.
+fun test_orks17all_replacement_slot_reservation_protection() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::runt_swarm)
+    while board.units.size() < MAX_UNIT_COUNT:
+        let empty : Unit
+        empty.retired = true
+        board.units.append(empty)
+    let reserved = make_orks_beast_snagga_boyz(1, 9, 0)
+    reserved.models.resize(1)
+    reserved.has_return_slot = true
+    reserved.return_slot = 2
+    board.reserve_units.append(reserved)
+    return orks_replacement_slot(board) == 3 and battlefield_entry_available(board, board.reserve_units[0])
+
+# A live Surly end-phase archive cannot be evicted by a replacement arriving
+# into a full arena before its mandatory revival chance (source lifecycle).
+fun test_orks17all_replacement_slot_pending_surly_protection() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::brute_bosses)
+    let boss = make_octavius()
+    boss[0].orks_enhancement = OrksEnhancement::surly_as_a_squiggoth
+    board.units.append(boss)
+    board.identify_units()
+    board[2][0].destroyed_phase = board.phase_serial.value + 1
+    board[2].remove_model(0)
+    while board.units.size() < MAX_UNIT_COUNT:
+        let empty : Unit
+        empty.retired = true
+        board.units.append(empty)
+    return orks_replacement_slot(board) == 3
+
+# The largest native permission list still has room for exactly one card-
+# added bodyguard. Re-applying the same permission does not append a duplicate.
+fun test_orks17all_extra_leader_permission_seven_slot_envelope() -> Bool:
+    let board = orks17all_option_board(1, OrksDetachment::taktikal_brigade, true)
+    orks17all_tag(board.reserve_units[0], OrksDatasheet::big_mek)
+    configure_orks_attachment(board.reserve_units[0], OrksDatasheet::big_mek)
+    let original = board.reserve_units[0].permitted_bodyguards.size()
+    apply_orks_option(board, unit_id(0), damage_test_model(0), OrksEnhancement::kill_kommanda, false)
+    let added = board.reserve_units[0].permitted_bodyguards.size() == original + 1
+    orks_extra_bodyguard_permission(board.reserve_units[0], OrksDatasheet::kommandos)
+    return added and board.reserve_units[0].permitted_bodyguards.size() == original + 1 and MAX_BODYGUARD_TYPES == 7
+
+# Kill Kommanda's attached bearer gets Stealth/Infiltrators; bodyguard death
+# ends that conditional active conferral, including a still-archived component.
+fun test_orks17all_kill_kommanda_bearer_attachment_condition() -> Bool:
+    let board = orks17all_option_board(2, OrksDetachment::taktikal_brigade, true)
+    orks17all_tag(board.reserve_units[0], OrksDatasheet::big_mek)
+    configure_orks_attachment(board.reserve_units[0], OrksDatasheet::big_mek)
+    apply_orks_option(board, unit_id(0), damage_test_model(0), OrksEnhancement::kill_kommanda, false)
+    orks17all_tag(board.reserve_units[1], OrksDatasheet::kommandos)
+    board.reserve_units[1].attachment_role = AttachmentRole::bodyguard
+    let bearer = board.reserve_units[0][0].identity
+    attach_reserved_unit(board, unit_id(0), unit_id(1), false)
+    let index = board.reserve_units[0].find_model(bearer)
+    let attached = orks_model_grants_ability(board.reserve_units[0], board.reserve_units[0][index], AbilityKind::stealth)
+    let bodyguard = 1 - index
+    board.reserve_units[0].remove_model(bodyguard)
+    return attached and !orks_model_grants_ability(board.reserve_units[0], board.reserve_units[0][0], AbilityKind::stealth)
+
+# Source-marker ownership follows which player selected Wreckas. The target's
+# objective can qualify even when the shooter was not within an objective.
+fun test_orks17all_wrecka_target_objective_reroll() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::wreckas)
+    orks17all_tag(board[0], OrksDatasheet::flash_gitz)
+    board.mission_scoring = MissionScoringMode::legacy_four_markers
+    let location = board.get_objectives_locations()[0]
+    board[1][0].position = location
+    return orks17c2b_info(board, 0).reroll1_hits
+
+# Flyboss can make an otherwise non-Character Aircraft eligible for Warlord
+# selection, but it remains an Upgrade and cannot be combined with another.
+fun test_orks17all_flyboss_character_upgrade_muster() -> Bool:
+    let board = orks17all_option_board(1, OrksDetachment::flyboyz, false)
+    board.reserve_units[0][0].keywords.append(Keyword::aircraft)
+    apply_orks_option(board, unit_id(0), damage_test_model(0), OrksEnhancement::flyboss, false)
+    return board.reserve_units[0].has_keyword(Keyword::character) and board.reserve_units[0][0].has_keyword(Keyword::character) and !orks_option_selection_valid(board, unit_id(0), damage_test_model(0), OrksEnhancement::impulsive_recon, false)
+
+# Optional declines do not consume army tokens, CP or phase-target history.
+fun test_orks17all_optional_declines_leave_usage_unspent() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::war_horde)
+    board[0][0].orks_enhancement = OrksEnhancement::da_boss_is_watchin
+    board.begin_phase(BattlePhase::movement)
+    let ability = orks_movement_abilities(board, unit_id(0))
+    ability.finish_orks_movement_abilities(board)
+    return ability.is_done() and board.source_uses.empty() and board.command_points[0] == 10 and orks_movement_ability_available(board, unit_id(0))
+
+# A source effect installed in reserves keeps its duration and is removed at
+# the next OWN turn, not merely because the opposing turn starts.
+fun test_orks17all_offboard_effect_boundary_and_save() -> Bool:
+    let game = play()
+    game.board = orks17all_fixture(OrksDetachment::war_horde)
+    game.board.begin_phase(BattlePhase::movement)
+    game.board[0][0].orks_enhancement = OrksEnhancement::da_boss_is_watchin
+    let moved = reposition_unit(game.board, unit_id(0))
+    let ability = choose_orks_offboard_support(game.board, false, false)
+    ability.choose_orks_support_bank(game.board, SourceBank::reserves)
+    ability.choose_orks_offboard_unit(game.board, unit_id(0))
+    let restored = play()
+    let saved = set_state(restored, to_string(game))
+    restored.board.current_player = true
+    restored.board.turn_serial = restored.board.turn_serial + 1
+    refresh_source_effects(restored.board, TimingWindow::none)
+    let persists = unit_is_riled_up(restored.board.reserve_units[0])
+    restored.board.current_player = false
+    restored.board.turn_serial = restored.board.turn_serial + 1
+    refresh_source_effects(restored.board, TimingWindow::none)
+    return moved and saved and persists and !unit_is_riled_up(restored.board.reserve_units[0])
+
+
+# Flyin' Headbutt replaces demise and must apply its8 rolled mortals BEFORE
+# removing the destroyed Aircraft; this guards the work stack's LIFO order.
+fun test_orks17all_headbutt_mortals_before_aircraft_removal() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::flyboyz)
+    board[0][0].keywords.append(Keyword::aircraft)
+    board[0][0].has_deadly_demise = true
+    board[0][0].deadly_demise = raw_stat(6)
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(0), unit_id(1), true, true, 30, board[0][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(1))
+    let empty : DamageJobs
+    let cleanup = resolve_damage_jobs(board, empty, true, unit_id(1))
+    cleanup.choose_destruction_unit(board, unit_id(0))
+    cleanup.resolve_destruction_model(board, damage_test_model(0))
+    cleanup.flyin_headbutt(board)
+    cleanup.choose_headbutt_target(board, unit_id(1))
+    cleanup.roll(board, attack_test_die(4))
+    for face in range(7):
+        cleanup.roll(board, attack_test_die(1))
+    let retained = board[0].models.size() == 1 and can cleanup.select_mortal_model(board, damage_test_model(0))
+    cleanup.select_mortal_model(board, damage_test_model(0))
+    return retained and cleanup.is_done() and board[0].models.size() == 0 and board[1][0].suffered_wounds == 1 and board.command_points[0] == 9
+
+# Impulsive's first-own-Movement exception does not authorize another phase
+# or the opponent's turn. Normal round2 ingress remains unaffected.
+fun test_orks17all_impulsive_own_movement_only() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::flyboyz)
+    board[0][0].keywords.append(Keyword::aircraft)
+    board[0][0].orks_enhancement = OrksEnhancement::impulsive_recon
+    let wrong_phase = !orks_ingress_round_allowed(board, board[0])
+    board.begin_phase(BattlePhase::movement)
+    let own = orks_ingress_round_allowed(board, board[0])
+    board.current_player = true
+    return wrong_phase and own and !orks_ingress_round_allowed(board, board[0])
+
+# Dread Power spends CP on the selected Walker and keeps its riled effect
+# through the opposing turn until the start of its next own turn.
+fun test_orks17all_dread_power_battlefield_duration() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::dread_mob)
+    board[0][0].keywords.append(Keyword::walker)
+    board.begin_phase(BattlePhase::movement)
+    let valid = orks_support_card_valid(board, unit_id(0), Stratagem::orks_dread_power, false, TimingWindow::none)
+    let card = use_orks_support_card(board, unit_id(0), Stratagem::orks_dread_power)
+    board.current_player = true
+    board.turn_serial = board.turn_serial + 1
+    refresh_source_effects(board, TimingWindow::none)
+    let persists = unit_is_riled_up(board[0])
+    board.current_player = false
+    board.turn_serial = board.turn_serial + 1
+    refresh_source_effects(board, TimingWindow::none)
+    return valid and card.is_done() and board.command_points[0] == 9 and persists and !unit_is_riled_up(board[0])
+
+# Mob Mentality pays on13+-model infantry; its separate visible nearby ORKS
+# beneficiary auto-passes the command shock roll without a chance decision.
+fun test_orks17all_mob_mentality_separate_beneficiary() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::green_tide)
+    let mob = make_orks_beast_snagga_boyz(1, 12, 0)
+    mob.owned_by_player1 = false
+    board[0] = mob
+    board[1].owned_by_player1 = false
+    board.identify_units()
+    for index in range(board[0].models.size()):
+        board[0][index].position = board_position(5 + index % 4, 5 + index / 4)
+    board.begin_phase(BattlePhase::command)
+    let valid = orks_support_card_valid(board, unit_id(0), Stratagem::orks_mob_mentality, false, TimingWindow::command_start)
+    let card = use_orks_support_card(board, unit_id(0), Stratagem::orks_mob_mentality)
+    card.choose_mob_mentality_target(board, unit_id(1))
+    board[1].battle_socked = true
+    let penalty : LinearlyDistributedInt<0, 8>
+    let shock = battle_shock_test(board, board[1], true, true, penalty)
+    return valid and card.is_done() and shock.is_done() and !board[1].battle_socked and board.command_points[0] == 9 and board[0].history.used_stratagem_this_phase
+
+# Delicious heals each distinct chosen nearby infantry by3, with one buggy
+# payment; another selection of an already healed unit is illegal.
+fun test_orks17all_delicious_distinct_units_one_payment() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::kult_of_speed)
+    orks17all_tag(board[0], OrksDatasheet::rukkatrukk_squigbuggies)
+    board[1].owned_by_player1 = false
+    board[1][0].position = board_position(7, 5)
+    board[1][0].suffered_wounds = 1
+    board.begin_phase(BattlePhase::movement)
+    let card = use_orks_support_card(board, unit_id(0), Stratagem::orks_delicious_eating_squigs)
+    card.choose_squig_healing_unit(board, unit_id(1))
+    card.choose_healed_model(board, damage_test_model(0))
+    let no_repeat = !(can card.choose_squig_healing_unit(board, unit_id(1)))
+    card.finish_eating_squigs(board)
+    return no_repeat and card.is_done() and board[1][0].suffered_wounds == 0 and board.command_points[0] == 9
+
+# A dead offboard Surly returns to its original reserve unit with3W and its
+# original identity. No battlefield measurement/setup choice is generated.
+fun test_orks17all_offboard_surly_original_return() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::brute_bosses)
+    board[0][0].orks_enhancement = OrksEnhancement::surly_as_a_squiggoth
+    let identity = board[0][0].identity
+    let moved = reposition_unit(board, unit_id(0))
+    board.reserve_units[0][0].suffered_wounds = board.reserve_units[0][0].profile.wounds()
+    board.reserve_units[0][0].destroyed_phase = board.phase_serial.value + 1
+    board.reserve_units[0].remove_model(0)
+    let revival = resolve_orks_offboard_surly(board, board.reserve_units[0], damage_test_model(0))
+    revival.roll(board, board.reserve_units[0], attack_test_die(2))
+    return moved and revival.is_done() and board.reserve_units[0][0].identity == identity and board.reserve_units[0][0].wounds_left() == 3 and board.reserve_units[0][0].off_battlefield
+
+# Invalid Dreadherder entry must preserve its caller's decision owner.
+fun test_orks17all_dreadherder_invalid_owner_restoration() -> Bool:
+    let board = orks17all_fixture(OrksDetachment::dread_mob)
+    board.current_decision_maker = true
+    board.begin_phase(BattlePhase::movement)
+    board.current_decision_maker = true
+    let selection = orks_dreadherder_shooting(board, unit_id(0))
+    return selection.is_done() and board.current_decision_maker
