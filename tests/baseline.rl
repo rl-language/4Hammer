@@ -12605,3 +12605,177 @@ fun test_orks17p1_selected_fight_forwards_rokkit() -> Bool:
     let offered = can sequence.use_rokkit_charge(board, true)
     sequence.use_rokkit_charge(board, true)
     return offered and !sequence.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::rokkit_charge) == 1
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Flash-Gitz: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_kaptin_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_kaptin, 6, 5, 4, 10, 3, 7, 1, 10) and Profile::orks_kaptin.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Flash-Gitz: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_flash_git_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_flash_git, 6, 5, 4, 10, 3, 7, 1, 10) and Profile::orks_flash_git.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Meganobz: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_meganob_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_meganob, 5, 6, 2, 10, 3, 7, 1, 10) and Profile::orks_meganob.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Mek: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_mek_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_mek, 6, 5, 5, 10, 4, 7, 1, 10) and Profile::orks_mek.base_size() == 32.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_big_mek_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_big_mek, 6, 5, 3, 10, 6, 7, 1, 10) and Profile::orks_big_mek.base_size() == 50.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_big_mek_in_mega_armour_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_big_mek_in_mega_armour, 5, 6, 2, 10, 5, 7, 1, 10) and Profile::orks_big_mek_in_mega_armour.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-With-Shokk-Attack-Gun: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_big_mek_with_shokk_attack_gun_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_big_mek_with_shokk_attack_gun, 6, 5, 4, 10, 5, 7, 1, 10) and Profile::orks_big_mek_with_shokk_attack_gun.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Painboy: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_painboy_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_painboy, 6, 5, 5, 10, 3, 7, 1, 10) and Profile::orks_painboy.base_size() == 32.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Painboss: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_painboss_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_painboss, 6, 5, 4, 6, 4, 7, 1, 10) and Profile::orks_painboss.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_breaka_boy_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_breaka_boy, 6, 5, 4, 10, 2, 7, 1, 10) and Profile::orks_breaka_boy.base_size() == 32.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_breaka_nob_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_breaka_nob, 6, 5, 4, 10, 3, 7, 1, 10) and Profile::orks_breaka_nob.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_tankbusta_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_tankbusta, 6, 5, 4, 10, 2, 7, 1, 10) and Profile::orks_tankbusta.base_size() == 32.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_tankbusta_nob_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_tankbusta_nob, 6, 5, 4, 10, 3, 7, 1, 10) and Profile::orks_tankbusta_nob.base_size() == 40.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warboss-In-Mega-Armour: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_warboss_in_mega_armour_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_warboss_in_mega_armour, 5, 7, 2, 5, 7, 6, 1, 10) and Profile::orks_warboss_in_mega_armour.base_size() == 50.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Gretchin: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_gretchin_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_gretchin, 6, 2, 6, 10, 1, 8, 1, 10) and Profile::orks_gretchin.base_size() == 25.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Runtherd: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_runtherd_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_runtherd, 6, 5, 5, 10, 3, 7, 1, 10) and Profile::orks_runtherd.base_size() == 32.0
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Zodgrod-Wortsnagga: literal profile, InSv, absence of FNP and circular base.
+fun test_orks17p2_zodgrod_wortsnagga_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_zodgrod_wortsnagga, 6, 5, 5, 6, 5, 7, 1, 10) and Profile::orks_zodgrod_wortsnagga.base_size() == 50.0
+
+# Imported, already identified attachments must not collide with the separate
+# enemy fixture's old IDs. Re-identify only that unrelated fresh component.
+# Infrastructure for stable identity/attachment invariants (core pp66/86/88).
+# Stable source lookup for the command/movement event fixtures, not game logic.
+# Snapshot an actual slot's current target-dependent attack characteristics.
+# All fourteen constructors can be copied through an ordinary Game save.
+# Sources: each card's Unit Composition; state identity/serialization pp86/88.
+fun orks17p2_units() -> UnitVector:
+    let units : UnitVector
+    units.append(make_orks_flash_gitz(4))
+    units.append(make_orks_meganobz(2))
+    units.append(make_orks_mek())
+    units.append(make_orks_big_mek(false, false))
+    units.append(make_orks_big_mek_in_mega_armour(OrksMegaMekGun::kustom_shoota, OrksMegaMekExtra::none))
+    units.append(make_orks_big_mek_with_shokk_attack_gun())
+    units.append(make_orks_painboy())
+    units.append(make_orks_painboss())
+    units.append(make_orks_breaka_boyz(false, 5, 5))
+    units.append(make_orks_tankbustas(false, OrksTankbustaExtra::none, 0))
+    units.append(make_orks_warboss_in_mega_armour())
+    units.append(make_orks_gretchin(10))
+    units.append(make_orks_runtherd())
+    units.append(make_orks_zodgrod_wortsnagga())
+    return units
+
+fun test_orks17p2_all_factories_round_trip() -> Bool:
+    let game = play()
+    game.board.reserve_units = orks17p2_units()
+    game.board.identify_units()
+    game.board.capture_starting_strengths()
+    register_orks_passive_rules(game.board)
+    register_orks_unit_rules(game.board)
+    refresh_source_effects(game.board, TimingWindow::none)
+    let restored = play()
+    return set_state(restored, to_string(game)) and restored.board.reserve_units.size() == 14 and valid_state_foundations(restored.board)
+
+# Literal counts include intermediate sizes, not just priced5/10 tiers.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Flash-Gitz
+fun test_orks17p2_flash_gitz_counts_and_physical_guns() -> Bool:
+    let unit = make_orks_flash_gitz(5)
+    let valid = unit.models.size() == 6 and unit[0].profile == Profile::orks_kaptin and unit[1].profile == Profile::orks_flash_git and make_orks_flash_gitz(9).models.size() == 10
+    return valid and unit[0].weapons.size() == 4 and unit[0].weapon_profile_groups[0] == 1 and unit[0].weapon_profile_groups[1] == 1 and unit[0].weapon_profile_groups[2] == 1
+
+# Combined replacement removes BOTH original weapons; all five choices coexist.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Meganobz
+fun test_orks17p2_meganob_mixed_replacements() -> Bool:
+    let equipment : OrksMeganobLoadouts
+    let choice : OrksMeganobLoadout
+    for index in range(5):
+        choice.value = index
+        equipment.append(choice)
+    let unit = make_orks_meganobz(equipment)
+    return unit.models.size() == 5 and unit[0].weapons.size() == 3 and unit[1].weapons[0].value == Weapon::orks_meganobz_killsaw.value and unit[2].weapons.size() == 4 and unit[3].weapons[0].value == Weapon::orks_meganobz_killsaw.value and unit[4].weapons.size() == 1 and unit[4].weapons[0].has_rule(WeaponRuleKind::twin_linked)
+
+fun test_orks17p2_meganob_composition_and_invalid_enum() -> Bool:
+    let equipment : OrksMeganobLoadouts
+    equipment.resize(1)
+    let invalid = !orks_meganob_loadout_valid(equipment)
+    equipment.resize(6)
+    let valid = orks_meganob_loadout_valid(equipment)
+    equipment[0].value = 5
+    return invalid and valid and !orks_meganob_loadout_valid(equipment) and make_orks_meganobz(2).models.size() == 2
+
+# Independent Big Mek weapon swaps and all twelve Mega Mek choices.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
+fun test_orks17p2_mega_mek_all_equipment() -> Bool:
+    let gun : OrksMegaMekGun
+    let extra : OrksMegaMekExtra
+    let valid = true
+    for gun_index in range(4):
+        gun.value = gun_index
+        for extra_index in range(3):
+            extra.value = extra_index
+            let unit = make_orks_big_mek_in_mega_armour(gun, extra)
+            let expected_slots = 2
+            if gun_index == 0:
+                expected_slots = 3
+            if gun_index == 2:
+                expected_slots = 4
+            valid = valid and unit[0].weapons.size() == expected_slots + int(extra_index == 1) and unit.has_ability(AbilityKind::kustom_force_field) == (extra_index == 2) and unit[0].transport_space == 2
+    return valid
+
+fun test_orks17p2_big_mek_independent_swaps() -> Bool:
+    let standard = make_orks_big_mek(false, false)
+    let changed = make_orks_big_mek(true, true)
+    return standard[0].weapons[0].value == Weapon::orks_big_mek_power_klaw.value and standard[0].weapons[1].value == Weapon::orks_big_mek_kustom_mega_blasta.value and changed[0].weapons[0].value == Weapon::orks_big_mek_drilla.value and changed[0].weapons[1].has_rule(WeaponRuleKind::anti)
+
+# Two distinct Boy swaps are legal; neither can consume the same Boy.
+# Nob's replacement means two pistols, never two Hammer profiles as well.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
+fun test_orks17p2_breaka_full_replacements() -> Bool:
+    let unit = make_orks_breaka_boyz(true, 0, 1)
+    return unit.models.size() == 6 and unit[0].weapons.size() == 3 and unit[0].weapons[1].value == unit[0].weapons[2].value and unit[1].weapons.size() == 1 and unit[1].weapons[0].value == Weapon::orks_breaka_boyz_knucklebustas.value and unit[2].weapons[0].has_rule(WeaponRuleKind::hazardous) and unit[3].hunter_profile_conditions[1].target_condition.size() > 0 and !orks_breaka_loadout_valid(1, 1) and !orks_breaka_loadout_valid(-1, 5) and !orks_breaka_loadout_valid(5, 6)
+
+# Nob keeps one pistol when replacing the other; the extra launcher is a
+# second physical family with independently chosen Standard/Hunter profile.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
+fun test_orks17p2_tankbusta_physical_counts() -> Bool:
+    let standard = make_orks_tankbustas(false, OrksTankbustaExtra::none, 0)
+    let changed = make_orks_tankbustas(true, OrksTankbustaExtra::additional_launcher, 2)
+    let pulsa = make_orks_tankbustas(false, OrksTankbustaExtra::pulsa, 4)
+    return standard[0].weapons.size() == 3 and standard[0].weapons[1].value == standard[0].weapons[2].value and changed[0].weapons.size() == 4 and changed[3].weapons.size() == 5 and changed[3].weapon_profile_groups[1].value != changed[3].weapon_profile_groups[3].value and pulsa[5].has_ability(AbilityKind::pulsa_rokkit) and !pulsa[1].has_ability(AbilityKind::pulsa_rokkit) and pulsa[5].weapons.size() == 3
+
+# More Dakka's riled grant differs from plain Mek Kustom Dakka.
+# https://wahapedia.ru/wh40k11ed/factions/orks/{Mek,Big-Mek}

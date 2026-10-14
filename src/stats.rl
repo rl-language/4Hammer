@@ -54,6 +54,27 @@ enum AbilityKind:
     boss_of_da_hunt
     one_last_kill
     da_bigger_dey_iz
+    finderz_keeperz
+    arrogant_invulnerability
+    krumpin_time
+    more_dakka
+    kustom_dakka
+    shokk_boosta
+    fix_dat_armour_up
+    kustom_force_field
+    support_shokka
+    crude_surgery
+    catch_dat_red_bit
+    push_dat_bit_back_in
+    hardy_bioniks
+    clever_know_wotz
+    trophy_hunters
+    rokkit_barrage
+    pulsa_rokkit
+    krushin_impetus
+    thievin_scavengers
+    thatll_learn_ya
+    super_runts
 
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value
@@ -176,6 +197,7 @@ enum Keyword:
     deffkoptas
     jump_pack
     grots
+    runtherd
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value
@@ -660,6 +682,210 @@ enum Profile:
         Int invuln_save = 4
         Int feel_no_pain = 5
         Float base_size = 80.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Flash-Gitz
+    orks_kaptin:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Flash-Gitz
+    orks_flash_git:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Meganobz
+    orks_meganob:
+        Int movement = 5
+        Int thoughness = 6
+        Int save = 2
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Mek
+    orks_mek:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 4
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek
+    orks_big_mek:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 3
+        Int wounds = 6
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 50.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
+    orks_big_mek_in_mega_armour:
+        Int movement = 5
+        Int thoughness = 6
+        Int save = 2
+        Int wounds = 5
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-With-Shokk-Attack-Gun
+    orks_big_mek_with_shokk_attack_gun:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 5
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Painboy
+    orks_painboy:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Painboss
+    orks_painboss:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 4
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
+    orks_breaka_boy:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 2
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
+    orks_breaka_nob:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
+    orks_tankbusta:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 2
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
+    orks_tankbusta_nob:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 4
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Warboss-In-Mega-Armour
+    orks_warboss_in_mega_armour:
+        Int movement = 5
+        Int thoughness = 7
+        Int save = 2
+        Int wounds = 7
+        Int leadership = 6
+        Int control = 1
+        Int invuln_save = 5
+        Int feel_no_pain = 10
+        Float base_size = 50.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Gretchin
+    orks_gretchin:
+        Int movement = 6
+        Int thoughness = 2
+        Int save = 6
+        Int wounds = 1
+        Int leadership = 8
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 25.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Runtherd
+    orks_runtherd:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Zodgrod-Wortsnagga
+    orks_zodgrod_wortsnagga:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 5
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 50.0
 
     fun equal(Profile other) -> Bool:
         return self.value == other.value
