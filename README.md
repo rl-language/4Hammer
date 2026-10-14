@@ -128,13 +128,11 @@ Since it is a adversarial setup, players can always reduce the opponent score by
 Activate the compatible Python environment, then configure and run individual tests through CTest:
 
 ```bash
-cmake -S . -B build-tests -DBUILD_GAME=OFF \
-  -DRULE_TEST_WRAPPER="$PWD/build/skirmish.py" \
-  -DRULE_TEST_LIBRARY="$PWD/build/librules_x86_64_linux_debug.so"
+cmake -S . -B build-tests -DBUILD_GAME=OFF
 ctest --test-dir build-tests --output-on-failure -j 4
 ```
 
-Python tests reuse the already built Godot library; changing a test needs no Rulebook compilation. Build the game and its metadata-only `python_wrapper` target first. This configuration adds no Godot or web build. See [tests/README.md](tests/README.md) for selecting tests and how expected failures are reported.
+This configuration needs no Godot or web build. See [tests/README.md](tests/README.md) for selecting tests and how expected failures are reported.
 
 ### Running Graphical Mode
 

@@ -428,32 +428,28 @@ The full-game fuzzer reads choices while `index + 8 < input.size()`, maps each t
 
 | Check | What it establishes | Entry points |
 | --- | --- | --- |
-| Deterministic rule assertions | Intended boundaries, ownership, legal/illegal inputs and actual state effects | [Python baseline](../tests/python/baseline.py), [known discrepancies](../tests/python/known_discrepancies.py) and manifest |
-| CTest fixtures | Python test discovery, existing Godot library checks and isolated assertion execution | [RuleTests.cmake](../cmake/RuleTests.cmake), [ctest_rules.py](../tools/ctest_rules.py) |
+| Deterministic rule assertions | Intended boundaries, ownership, legal/illegal inputs and actual state effects | [baseline.rl](../tests/baseline.rl), [known discrepancies](../tests/known_discrepancies.rl) and manifest |
+| CTest fixtures | Test discovery, matching wrapper/native compilation and isolated assertion execution | [RuleTests.cmake](../cmake/RuleTests.cmake), [ctest_rules.py](../tools/ctest_rules.py) |
 | Native sanitizer cases | Ownership, cleanup, bounds and undefined-behavior checks on focused paths | Prepared native drivers documented in [tests/README.md](../tests/README.md) |
 | Seeded game and Gym | Completion, legal-action/text round trips, owner protocol and finite observation layout | [check_gameplay_baseline.py](../tools/check_gameplay_baseline.py), [check_gym_baseline.py](../tools/check_gym_baseline.py) |
 | Godot interaction checks | Matching bindings, selectors, labels and the exercised controls | [check_godot_state.py](../tools/check_godot_state.py), `tests/godot_*.gd` |
 | Fuzzer replay/mutation | Preserved failures and robustness across legal action sequences | `game_utils.rl:fuzz`, CMake target `rlc_rules_fuzzer`, [fuzz regressions](../tests/fuzz-regressions/README.md) |
 
-CMake discovers zero-argument Python `test_*` functions returning Bool. Its fixture loads the existing Godot library through matching generated ctypes bindings; it never builds a test library or uses a build cache. Each assertion runs in its own process. `python tools/run_rule_tests.py` loads the library once to run the full suite faster. Both runners reject an empty baseline; known false discrepancy assertions are XFAIL/Skipped, unexpected passes require promotion, and exceptions/crashes fail. The current discrepancy manifest is empty.
+CMake discovers zero-argument `test_*() -> Bool` functions. Each suite's fixture generates a Python wrapper and matching native library once per CTest invocation, validates its declarations, then runs each test in a separate process. The baseline rejects zero tests. Known false discrepancy assertions are XFAIL/Skipped; an unexpected pass requires promotion, and crashes/failures fail the run. The current discrepancy manifest is empty.
 
-All fixture setup and rule expectations are Python. [The adapter](../tests/python/bindings.py) preserves deep native copies, bounded assignment, mutable references with owner retention, enum constructors and fixed-array ABI dispatch. Python assignment aliases; explicit `value_copy` recreates Rulebook value-copy semantics. [The export module](../src/python_test_exports.rl) instantiates only generic container/serialization operations for the game build; it contains no test scenarios or assertions and is never executed. This is required because RLC omits unused generic method instantiations from native bindings.
-
-For individual checks against an existing game build:
+For debug checks in the prepared cloud environment:
 
 ```bash
 source /workspace/4hammer-venv/bin/activate
 cmake -S . -B /workspace/4hammer-validation/current-tests \
-  -DBUILD_GAME=OFF \
-  -DRULE_TEST_WRAPPER=/path/to/godot-build/skirmish.py \
-  -DRULE_TEST_LIBRARY=/path/to/godot-build/librules_x86_64_linux_debug.so
+  -DBUILD_GAME=OFF -DRULE_TEST_COMPILER_JOBS=4
 ctest --test-dir /workspace/4hammer-validation/current-tests \
   --output-on-failure -j 4
 ```
 
-Test edits require no Rulebook compilation. Changes to game sources, exported primitives or ABI require the ordinary Godot build and matching wrapper generation; schema mismatch and missing artifacts fail without an automatic rebuild. Use matching `rl_language`/`rl_language_core`0.4.17 and `-j 4`; debug builds remain unoptimized. Native sanitizer/fuzzer builds still use the matching Clang/LLVM runtime documented in tests/README.md.
+The compiler worker count and CTest process count are independent. Debug compilation remains unoptimized; enable `RULE_TEST_OPTIMIZE` or `-O2` only for separate optimized validation. Direct builds use matching `rl_language`/`rl_language_core` 0.4.17 and `-j 4`. Sanitized fuzzer builds additionally require the matching Clang/LLVM runtime documented in tests/README.md.
 
-Freeze test declarations before registering the final CTest suite. Reconfigure CMake after discovery changes. Use explicit fixture metadata to prove a consumer works; a game using legacy armies may never exercise a new source ability. A sanitizer pass proves different properties from a semantic assertion, and a short mutation campaign cannot certify the entire rules edition. Documentation-only changes need link/source checks rather than repeating expensive engine builds.
+Freeze test declarations before compiling/registering the final suite. Reconfigure CMake after discovery changes. Use explicit fixture metadata to prove a consumer works; a game using legacy armies may never exercise a new source ability. A sanitizer pass proves different properties from a semantic assertion, and a short mutation campaign cannot certify the entire rules edition. Documentation-only changes need link/source checks rather than repeating expensive engine builds.
 
 ## Extending the engine
 

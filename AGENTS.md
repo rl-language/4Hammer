@@ -126,11 +126,9 @@ The all-actions panel offers an enumeration-based fallback, but does not establi
 
 ## Validation after rule changes
 
-Deterministic rule assertions and fixture helpers are now Python-only: `tests/python/baseline.py`, with desired-rule discrepancy assertions in `tests/python/known_discrepancies.py` and the explicit JSON manifest. Add legal/illegal choices and relevant boundaries/state transitions there. Preserve source/page citations. Use the generated Rulebook ctypes bindings against the **existing Godot library**; never compile a native test library or add a build cache. `python tools/run_rule_tests.py` loads it once for a full sweep. Supply `--wrapper`/`--library` when the game artifacts are outside `build/`, or use `FOURHAMMER_PYTHON_WRAPPER`/`FOURHAMMER_RULES_LIBRARY`. Test-only edits require no library compilation.
+Prefer the individual CMake/CTest rule checks: activate the compatible environment, configure `cmake -S . -B build-tests -DBUILD_GAME=OFF`, then run `ctest --test-dir build-tests --output-on-failure -j 4`. CTest discovers each zero-argument Bool assertion, compiles each suite once using fixtures and runs each case in isolation. Known discrepancy false results are Skipped/XFAIL, not passes; unexpected passes and crashes fail. Reconfigure after test/manifest changes. See [tests/README.md](tests/README.md); keep the existing Python runner functional.
 
-For individual CTest cases, configure `cmake -S . -B build-tests -DBUILD_GAME=OFF -DRULE_TEST_WRAPPER=/absolute/path/skirmish.py -DRULE_TEST_LIBRARY=/absolute/path/librules.so`, then run `ctest --test-dir build-tests --output-on-failure -j 4`. Discovery reads Python ASTs, and the `rules.bindings` fixture only loads/checks existing artifacts; it never invokes a compiler. Reconfigure after adding/removing declarations. False discrepancies are Skipped/XFAIL; unexpected passes, exceptions, non-Bool results and crashes fail. A zero-test success is not validation. Keep the all-tests runner functional and run its host contract tests after runner changes; see [tests/README.md](tests/README.md).
-
-Use `value_copy` for Rulebook value-copy semantics and ordinary Python assignment only for intended aliases. The adapter keeps field/vector/frame owners alive, uses deep native assignment and handles enum constructors, union alternatives and real ctypes fixed arrays. Keep fixture logic and expectations in Python. `src/python_test_exports.rl` only exposes generic container/serialization primitives that RLC would otherwise omit from the game library; it contains no test assertions or fixtures and is never called. When a genuinely new generic primitive is needed, instantiate it there and rebuild the normal Godot game once, keeping wrapper/native artifacts compatible. `python_wrapper` generates metadata only. Native fuzzing/sanitizer validation remains separate; Python semantic passes alone do not establish native memory safety. Historical references below to `baseline.rl`, `rlc-test` and suite compilation fixtures describe the former system.
+Add focused deterministic regression tests for changed mechanics, including legal/illegal actions and relevant boundaries or state transitions. The deterministic entrypoint is `tests/baseline.rl`, with desired-rule discrepancy assertions in `tests/known_discrepancies.rl` and their explicit manifest. `rlc-test` discovers zero-argument `test_*` functions returning Bool. Run `python tools/run_rule_tests.py`, or run `rlc-test tests/baseline.rl -i src` and the separate discrepancy check. Verify actual RUN/OK counts: a zero-test success is not validation. Use Python checks where appropriate for bindings or action enumeration.
 
 Run these existing headless smoke checks from the repository root:
 
@@ -548,17 +546,3 @@ linkage; production pure-native build settings are unchanged. Godot rejects
 RTLD_DEEPBIND loading under ASAN; keep native sanitizer/leak validation enabled
 and separate. Fixed arrays need typed helpers/declarations, not direct generated
 getters; normalize expected UI labels with GlobalRules.strip_symbols.
-
-
-## Python rule-test migration completed
-
-All931 original tests and their fixtures now live in`tests/python/baseline.py`;
-`tests/baseline.rl` and`tests/known_discrepancies.rl` are removed. Use the current
-validation instructions above and`ROADMAP.md`, not historical native-test build
-commands below earlier task records. Tests directly reuse the Godot library,
-with no build cache or test native library. Executed evidence:931/931 Python
-PASS in23.24s (loading excluded),932/932 individual CTest PASS in201.68s,11 host
-contract checks PASS and an actual Python edit pass/fail proof with both native
-libraries unchanged. Artifacts:`/workspace/4hammer-validation/python-rules`.
-Game schemas remain33/21/33; no game-rule behavior was changed. Remaining17.P
-units and17.Q integration/performance retain their ROADMAP owners.
