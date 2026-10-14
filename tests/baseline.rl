@@ -10416,3 +10416,124 @@ fun test_orks17h4_current_roster_no_legacy_grants() -> Bool:
         for model_index in range(units[unit_index].models.size()):
             clean = clean and units[unit_index].unit_abilities.empty() and units[unit_index].owned_by_player1 == true
     return clean and units[1][0].weapons[1].value == Weapon::orks_big_choppa.value and units[2][1].weapons[3].value == Weapon::orks_thump_gun.value
+
+# War Horde fixture selects the actual package for source's owner. Source:
+# https://wahapedia.ru/wh40k11ed/factions/orks/#Get-Stuck-In
+fun orks17i1_fixture() -> Board:
+    let board = orks17h23_fixture()
+    board.armies[0].faction = ArmyFaction::orks
+    let selected = board.armies[0].record_detachment(OrksDetachment::war_horde)
+    assert(selected, "fixture must select War Horde")
+    return board
+
+# Get Stuck In applies to every friendly ORKS melee weapon, including Jaws.
+fun test_orks17i1_melee_main_extra_and_ranged_gate() -> Bool:
+    let board = orks17i1_fixture()
+    let main = model_weapon_rules(board, unit_id(1), 1, 2)
+    let jaws = model_weapon_rules(board, unit_id(1), 1, 3)
+    let ranged = model_weapon_rules(board, unit_id(1), 1, 1)
+    return chosen_weapon_parameter(board, unit_id(3), main, WeaponRuleKind::sustained_hit) == 1 and chosen_weapon_parameter(board, unit_id(3), jaws, WeaponRuleKind::sustained_hit) == 1 and !chosen_weapon_has_rule(board, unit_id(3), ranged, WeaponRuleKind::sustained_hit) and available_weapon_has_rule(board, unit_id(1), 1, 3, WeaponRuleKind::sustained_hit)
+
+# Merely belonging to Orks, or selecting another package, grants no passive.
+fun test_orks17i1_requires_selected_war_horde() -> Bool:
+    let board = orks17i1_fixture()
+    board.armies[0].detachments.clear()
+    let absent = !war_horde_melee_rule_applies(board, unit_id(2), Weapon::orks_choppa_standard)
+    let other = board.armies[0].record_detachment(OrksDetachment::da_big_hunt)
+    return absent and other and !war_horde_melee_rule_applies(board, unit_id(2), Weapon::orks_choppa_standard)
+
+# Unit/army keywords are both required; opponent selection does not leak.
+fun test_orks17i1_faction_keyword_and_opponent_gate() -> Bool:
+    let board = orks17i1_fixture()
+    let opponent = !war_horde_melee_rule_applies(board, unit_id(3), Weapon::orks_choppa_standard)
+    for index in range(board[2].models.size()):
+        board[2][index].keywords.clear()
+    let keyword = !war_horde_melee_rule_applies(board, unit_id(2), Weapon::orks_choppa_standard)
+    board.armies[0].faction = ArmyFaction::space_marines
+    return opponent and keyword and !war_horde_melee_rule_applies(board, unit_id(1), Weapon::orks_choppa_standard)
+
+# Friendly is source owner, independent of whose turn/decision it currently is.
+fun test_orks17i1_owner_not_active_player() -> Bool:
+    let board = orks17i1_fixture()
+    board.current_player = true
+    board.current_decision_maker = true
+    let friendly = war_horde_melee_rule_applies(board, unit_id(1), Weapon::orks_big_choppa)
+    board[1].owned_by_player1 = true
+    let unavailable = !war_horde_melee_rule_applies(board, unit_id(1), Weapon::orks_big_choppa)
+    board.armies[1].faction = ArmyFaction::orks
+    let selected = board.armies[1].record_detachment(OrksDetachment::war_horde)
+    return friendly and unavailable and selected and war_horde_melee_rule_applies(board, unit_id(1), Weapon::orks_big_choppa)
+
+# This is a unit-keyword rule, not an individual bearer-keyword requirement.
+fun test_orks17i1_unit_keyword_union_and_three_packages() -> Bool:
+    let board = orks17i1_fixture()
+    board[2][1].keywords.clear()
+    let second = board.armies[0].record_detachment(OrksDetachment::da_big_hunt)
+    let third = board.armies[0].record_detachment(OrksDetachment::green_tide)
+    let rules = model_weapon_rules(board, unit_id(2), 1, 1)
+    return second and third and !board[2][1].has_keyword(Keyword::orks) and chosen_weapon_parameter(board, unit_id(3), rules, WeaponRuleKind::sustained_hit) == 1 and board.armies[0].detachments.size() == 3
+
+# A critical hit really produces one ordinary extra hit which rolls to wound;
+# a non-critical does not. Get Stuck In is not a Lethal Hits grant (p84).
+fun test_orks17i1_actual_critical_hit_consumer() -> Bool:
+    let board = orks17i1_fixture()
+    let declaration = make_declared_weapon(board, unit_id(1), 1, 2)
+    board.attack_info = declared_attack_info(board, unit_id(1), unit_id(3), declaration, board.attack_info)
+    let dice = resolve_attack_dice(board, board[3], board[1], attack_test_count(1))
+    dice.roll(board, board[3], board[1], attack_test_die(6))
+    let extra = dice.generated_hits == 2 and dice.generated_wounds == 0
+    dice.roll(board, board[3], board[1], attack_test_die(1))
+    dice.roll(board, board[3], board[1], attack_test_die(1))
+    return extra and dice.is_done() and dice.generated_wounds == 0
+
+# Beastboss conditional2 and detachment1 remain alternatives chosen BEFORE
+# targets; the controlling player may choose1, never a summed3 (p78).
+fun test_orks17i1_beastboss_duplicate_choose_one_and_save() -> Bool:
+    let board = orks17i1_fixture()
+    let rules = model_weapon_rules(board, unit_id(0), 0, 1)
+    let selection = choose_weapon_abilities(board, rules)
+    let index : WeaponAbilityChoice
+    index = rules.size() - 1
+    let legal = can selection.choose_weapon_ability(board, index)
+    let restored = selection
+    let parsed = from_string(restored, to_string(selection))
+    restored.choose_weapon_ability(board, index)
+    board[3][0].keywords.append(Keyword::vehicle)
+    return legal and parsed and restored.is_done() and chosen_weapon_parameter(board, unit_id(3), restored.chosen, WeaponRuleKind::sustained_hit) == 1
+
+# Selecting the intrinsic2 retains its Monster/Vehicle condition; declining
+# the unconditional1 cannot silently fall back to it against ordinary targets.
+fun test_orks17i1_beastboss_duplicate_choose_two_condition() -> Bool:
+    let board = orks17i1_fixture()
+    let rules = model_weapon_rules(board, unit_id(0), 0, 1)
+    let selection = choose_weapon_abilities(board, rules)
+    let index : WeaponAbilityChoice
+    index = 0
+    selection.choose_weapon_ability(board, index)
+    let ordinary = chosen_weapon_parameter(board, unit_id(3), selection.chosen, WeaponRuleKind::sustained_hit) == 0
+    board[3][0].keywords.append(Keyword::monster)
+    return selection.is_done() and ordinary and chosen_weapon_parameter(board, unit_id(3), selection.chosen, WeaponRuleKind::sustained_hit) == 2
+
+# Actual Select Weapons forwards the duplicate choice into saved declarations.
+# This regression prevents a helper-only passive which real combat never uses.
+fun test_orks17i1_actual_weapon_selection_and_snapshot() -> Bool:
+    let board = orks17i1_fixture()
+    let declarations : DeclaredWeapons
+    let sequence = declare_model_weapons(board, declarations, unit_id(0), damage_test_model(0), true)
+    sequence.select_weapon(board, declarations, attack_test_slot(1))
+    let waiting = declarations.size() == 1 and !sequence.is_done()
+    let index : WeaponAbilityChoice
+    index = 1
+    sequence.choose_weapon_ability(board, declarations, index)
+    sequence.skip(board, declarations)
+    return waiting and sequence.is_done() and declarations[0].selected_rules.size() == 1 and declarations[0].current_target_rules[0].parameter == 1
+
+# Chosen rules remain serialized declaration snapshots; loading a current
+# army retains both package configuration and its actual melee passive.
+fun test_orks17i1_board_and_declaration_save() -> Bool:
+    let game = play()
+    game.board = orks17i1_fixture()
+    game.board.attack.declarations.append(make_declared_weapon(game.board, unit_id(1), 1, 3))
+    let restored = play()
+    let parsed = set_state(restored, to_string(game))
+    return parsed and restored.board.armies[0].has_detachment(OrksDetachment::war_horde) and chosen_weapon_parameter(restored.board, unit_id(3), restored.board.attack.declarations[0].selected_rules, WeaponRuleKind::sustained_hit) == 1 and valid_state_foundations(restored.board)
