@@ -1,5 +1,6 @@
 import rules
 import game_utils
+import python_test_exports
 
 # a whole game, including army selection
 @classes
