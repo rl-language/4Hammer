@@ -89,12 +89,15 @@ rlc(skirmish_rules_wasm32
 	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks --target=wasm32-unknown-emscripten --abort-symbol rlc_abort
 )
 
-rlc(python_wrapper
-	OPTIMIZE
-	PYTHON skirmish.py
-	INPUT src/full_game.rl
-	EXTRA_ARGS --emit-precondition-checks --emit-bound-checks
-)
+# Metadata only: Python tests load the same library linked by Godot. The rlc
+# PYTHON convenience target also builds lib.so, which would duplicate it.
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/skirmish.py
+    COMMAND rlc ${CMAKE_CURRENT_SOURCE_DIR}/src/full_game.rl --python
+      --emit-precondition-checks --emit-bound-checks -j 4
+      -o ${CMAKE_CURRENT_BINARY_DIR}/skirmish.py -MD
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/full_game.rl
+    DEPFILE ${CMAKE_CURRENT_BINARY_DIR}/skirmish.py.dep)
+add_custom_target(python_wrapper ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/skirmish.py)
 
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/librules_web_release.wasm
