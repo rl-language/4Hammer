@@ -110,7 +110,7 @@ act play() -> Game:
     subaction*(board) battle = battle(board)
 ```
 
-The nested frames form the active call chain. For example, `Game` may be suspended inside a battle, turn, Shooting phase, attack, allocation and dice sequence. `subaction*` forwards the child's inputs through the parent until the child finishes. The star form is widely used here; a single-step `subaction` has different delegation semantics.
+The nested frames form the active call chain. For example, `Game` may be suspended inside a battle, turn, Shooting phase, attack, allocation and dice sequence. `subaction*` forwards the child's inputs through the parent until the child finishes. All current game delegations use this form; a single-step `subaction` has different delegation semantics.
 
 ### Sharing frames with disjoint active lifetimes
 
@@ -487,3 +487,7 @@ Warlord and attachment choices. War Horde Get Stuck In enters normal weapon
 declaration snapshots and duplicate-ability selection; it is not a timed aura.
 See [the roster/passive guide](orks-roster-war-horde.md). Other package effects
 remain independently tracked in ROADMAP.md.
+
+## Ordinary Orks package integration
+
+Read [the detachment design](orks-detachments.md) for the four package modules, staged option choices, source generations, explicit cargo dependencies, offboard processing, healing/replacement identity and flat reaction wrappers. These modules connect to the existing core pipelines; they do not replace combat, source expiry or transport storage with independent implementations. State/observation32, action20 and next-state33 require matching regenerated artifacts. ROADMAP.md supplies completion evidence.

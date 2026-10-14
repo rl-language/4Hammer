@@ -438,8 +438,10 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
   - [x] **17.H4:** Promote completed current adapters into the existing Orks roster; validate actual selection, attachments, combat, saves and full games.
 - [ ] **17.I–N:** War Horde one rule/card at a time; healing/revival; carrier permission/seating and Trukk; special/reactive movement; hit/kill provenance and post-attack effects; psychic systems and their units.
   - [x] **17.I1:** War Horde Get Stuck In passive, actual selected-package/ORKS-unit/melee gating and duplicate Sustained Hits choice; implemented/tested alongside17.H4 with shared validation.
-  - [ ] **17.I2:** War Horde enhancements/upgrades, then the six CP cards individually; do not mark the detachment complete from its passive.
+  - [x] **17.I2:** War Horde enhancements/upgrades and all six CP cards, validated in the combined ordinary-detachment batch below.
 - [ ] **17.O–P:** Remaining ordinary detachments and every remaining datasheet by dependency family. Include the additional Runt Swarm replacement/hit-interception systems. Preserve oval metadata and use the user-authorized long-axis circle approximation for now; hull/multipart dimensions remain explicit dependencies. Keep grid coordinates.
+  - [x] **17.O:** All15 ordinary detachment passives,38 enhancements/upgrades and40 CP cards, including Runt Swarm replacements/interception; see combined completion evidence below.
+  - [ ] **17.P:** The remaining51 standard datasheet adapters, actual carrier seating/permissions and source-specific unit rules; shared package mechanics do not complete their data.
 - [ ] **17.Q:** Complete rendered/headless Godot journeys, combination tests, saves/replays/ML, representative full games and sanitized fuzzing. Fix the measured wrapper retrieval bottleneck and every identified new mistake.
 
 **Confirmed work that must be fixed:**17.D resolves the eight-slot Stompa capacity defect with a reviewed13-profile envelope; actual unit loadout quotas/data remain pending; 17.C1 resolves the former positive-OR-only weapon/Hunter predicate defect; other scoped condition consumers remain pending; transport permission OR-lists and universal integer seat costs cannot implement all nine included carrier requirements or grouped Gretchin rounding. Static attack-characteristic getters and boolean bonuses lack several modifier consumers. 17.E resolves generic source-instance event/use/effect tracking alongside legacy timing groups; source-specific reactive movement/shooting handlers remain17.L/M. Healing/revival, psychic budgets, post-shoot hit ledgers, Kommandos formation splitting and Runt Swarm replacement/hit interception need implementation. Thirty datasheets require oval/hull/multipart footprint work or additional dimensions. Batch17.B resolves the point-dependent reserve gate through explicit point-free public configuration. These are requirements from source/code inspection, not newly passing tests.
@@ -758,6 +760,38 @@ rendered journeys, mission/faction completion and wrapper-performance issues
 remain explicit dependencies with named owners. Every remaining identified
 issue must be fixed before its owning task is marked complete.
 
+### User-directed combined remaining-detachment batch —2026-10-14 (in progress)
+
+The user requests all remaining ordinary detachments in one implementation batch,
+including the rest of War Horde. Combine17.I2/17.O with necessary shared parts of
+17.J/L/M/N: all15 passives,38 enhancements/upgrades and40 stratagem effects, source
+and combination regressions, Godot controls and final grouped tests/fuzzing.
+Retain separate focused commits. This does not authorize invented datasheet
+profiles, points/DP costs or Boarding Actions/Forge World/Legends content.
+
+Supplied policy: at most4 counted enhancements; ordinary options unique; up to3
+copies per Upgrade with only its first instance counting. Epic Heroes and units
+containing attached Epic Heroes cannot take options. The accessible core page
+also requires a different unit per option. Roster copies are at most3, or6 for
+Battleline. All noncircular geometry uses an intentional circle approximation,
+annotated in code; Smoky Gubbinz uses circular-base sight crossings. Missing
+actual hull dimensions still belong to the datasheet adapters.
+
+Implementation/validation is in progress; do not mark15 detachments complete
+from configuration, partial helpers or CP tables. Every effect must reach its
+actual source window, preserve ownership/durations/provenance and pass its
+meaningful regressions. Group expensive checks after edits; type checking during
+implementation may diagnose source/signature issues without rerunning suites.
+
+The user additionally requests a complete action-frame lifetime audit. Move
+duplicated frames that cannot be active simultaneously into single Board context
+slots, preserving only necessary completed results in caller snapshots. Audit
+all action declarations and ordinary frame constructors, reject recursive
+re-entry, and check generated frame multiplicity with
+`tools/check_action_frame_storage.py`. Type checking has passed; final native,
+save/replay, Godot and sanitizer validation of the shared layout remains pending.
+Record measured layout sizes and executed results before marking this complete.
+
 ### Action-frame storage prerequisite —2026-10-14
 
 The user requests auditing every action and sharing types that cannot have two
@@ -776,3 +810,146 @@ evidence belongs to the following detachment batch. State/observation32,
 next33; action19 is unchanged by this storage refactor. Regenerate matching
 bindings. Generated lifecycle, bounded storage, quads and editor argument shapes
 are preserved. Wrapper retrieval performance remains17.Q.
+
+### Combined batch validation progress —2026-10-14
+
+The final shared layout's unoptimized native suite passes **872/872 assertions**
+in150.79s on the normal8MiB host stack (`shared-frames-ctest.log`). Bindings and
+native code were regenerated together; no assertion is skipped or disabled.
+The complete frame audit passes **111 declarations /66 single context slots**,
+no duplicate frame type in Game and no constructor re-entry, including ordinary
+helper paths. Native inline sizes are **Game34,544 bytes /Board28,752 bytes**
+(`shared-frames-layout.log`, `doc/action-frame-lifetimes.json`). The preceding
+partially reused-window layout measured Game771,696/Board81,448 bytes; this is
+a storage comparison, not a runtime speed benchmark.
+
+Independent source checks pass15 ordinary packages,38 enhancement identities
+(including13 Upgrades),40 stratagem identities/printed CP; three current-card
+tables/five profiles/13 weapon rows; and67 catalog identities/41 permitted
+attachment edges (`shared-frames-{orks,unit,attachment}-source.log`). The source
+check strips the separately checked UPGRADE heading badge from card names.
+Twenty-step Gym passes **29,381 candidates /15,095,745 finite observation values**
+(`shared-frames-gym.log`), schemas32/20/32, next33. This reduces the observation
+layout despite the added package decisions; matching policies/bindings remain
+required. The wrapper retrieval bottleneck remains17.Q.
+
+Final Godot,131 native sanitizer cases (117 new plus14 existing core
+frame/save/lifetime cases), complete games and optimized sanitized fuzzer checks
+are still running or pending. This progress record does not mark the detachment
+batch or final frame validation complete.
+
+Final-field-name native ASAN/UBSAN/leak validation passes **131/131**, including
+all117 new package assertions and14 existing core frame/save/lifetime cases
+(`shared-frames-sanitized-run.log`, `orks-detachments-sanitized/driver-final`).
+Leak detection remains enabled; execution used the permitted external process
+inspection environment. Both earlier shared-layout current-root games complete:
+mixed seed40000 in697 actions and two Orks/three-package/actual-enhancement
+seed40001 in836 actions (`shared-frames-gameplay.log`,
+`shared-frames-orks-game.log`, `orks-detachments-replays`). These recorded Python
+games precede the internal `member`→`member_index` binding rename; action ranks
+and argument shapes are unchanged, and their inputs still require final fuzzer
+replay. No controlled runtime speedup is claimed.
+
+Godot's C++ getter collision is fixed by renaming three persistent `member`
+fields; the corrected C++ build passes (`shared-frames-godot-cpp-fixed.log`).
+The preliminary option script incorrectly requested a getter for the raw army
+array, so it now calls the existing `army_for_player` helper. Final matching
+native Godot execution and sanitized fuzzer evidence remain pending.
+
+Focused source commits preserve prerequisite order: core serial frame storage
+(`0516a58`); ordinary package definitions/passive/source consumers with29 new
+regressions (`998479a`); actual core combat/movement/timing wiring with the
+remaining88 new regressions. The package prerequisite independently passes full
+Python code generation and the layout audit (`orks-package-foundation-stage`):
+111 declarations/66 single slots, Game29,448/Board28,088 bytes. Its first wrapper
+check revealed a narrow Mobbed penalty parameter against the widened shock
+signature; the prerequisite now uses the same bounded0–7 domain as the final
+source and passes code generation. No source-level compiler workaround is used.
+
+Final matching Godot native/header/C++ artifacts in `orks-detachments-godot`
+pass six controls: new detachment/options/pending save; current roster/both
+Warlords/attachments; current data/proxies; targeted unit rules; physical
+weapons/compound/source choices; and selective modifier ignoring. Logs are
+`shared-frames-godot-{options,roster,data,sources}-final.log`,
+`shared-frames-godot-{unit-rules,modifiers}-corrected.log`. The source/option
+production controls pass without Godot errors or leaked-instance reports.
+The initial unit-rule check retained obsolete31/19 schema assertions; every
+existing Godot fixture is now aligned to32/20. The modifier fixture also
+retained the obsolete18-choice generated class name; it now borrows the
+actual choice alias from a retained frame instead of naming its capacity.
+These are corrected test/binding mistakes; no assertion was disabled.
+Full rendered/mouse journeys remain17.Q.
+
+The final optimized sanitized fuzzer builds with compiler/core0.4.17, four
+workers and-O2 (`shared-frames-fuzzer-build.log`). All five fixed replays pass
+with leak detection: preserved deployment0.826s, geometry6.749s, zero6.715s;
+current mixed697-action input110.703s and two-Orks836-action input92.768s
+(`shared-frames-replay-{deployment,geometry,zero,mixed,orks}.log`). These timings
+overlap other validation and are not controlled speed comparisons. The first
+mutation corpus included the complete games, whose initialization exceeded the
+60-second budget. That preliminary campaign finished after seed initialization without mutations; final mutation
+uses two513-byte short seeds in `shared-frames-short-corpus`, with full games
+retained separately as completed fixed-input replay evidence.
+
+Four additional focused Godot controls also pass with the same final libraries:
+attachments, Orks army/Warlord rules, incoming modifiers and model
+characteristics (`shared-frames-godot_{attachments,orks_army,incoming_modifiers,
+model_characteristics}-final.log`). Other schema assertions were updated
+mechanically; unexecuted broad/rendered journeys remain17.Q.
+
+### Combined ordinary-detachment and action-frame completion —2026-10-14
+
+**17.I2 and17.O are complete within the supplied scope.** All15 ordinary
+passives,38 enhancements/upgrades and40 CP cards reach their real declaration,
+phase, movement, attack, destruction, transport/offboard and psychic windows.
+Shared healing/return, reaction movement/shooting, hit/wound provenance,
+replacement and psychic-budget mechanics support the packages. Actual units
+that exercise these outside the three current starter families remain17.P;
+their missing profiles, hull sizes, seating/permissions and unit rules are not
+invented or certified.17.I–N therefore retains its datasheet work. Exclude
+Boarding Actions, Forge World/Legends, points and detachment prices; track CP,
+max3 detachments and the supplied enhancement/copy limits.
+
+The requested complete frame audit is also complete:111 declarations,66 single
+context slots, no duplicate Game frame types and no constructor re-entry.
+Required completed results are retained in small caller snapshots. Native
+inline Game/Board storage is34,544/28,752 bytes; no runtime speedup is claimed.
+State/observation32, action20, next33 require matching regenerated bindings.
+Generated lifecycle, bounded persisted numbers, whole quads, circle proxies and
+Rules.gd/TraceManager.gd are preserved.
+
+Executed final-batch evidence:872/872 unoptimized CTest assertions;131/131
+final-field-name native ASAN/UBSAN/leak cases; source checks for78 cards/15
+packages and the existing unit/attachment tables;20-step finite Gym; two
+completed current-root games; all five final sanitized fixed replays; and
+**16 mutation runs in81s**, coverage20,048/features29,611, with no sanitizer
+failure or crash artifacts (`shared-frames-mutation-short.log`,
+`shared-frames-short-{corpus,artifacts}`). The preceding complete-game corpus
+consumed its budget during initialization (**3 runs/119s**, no mutations); it
+is not substituted for the final campaign. Its112-second slow-unit artifact
+remains in`shared-frames-artifacts` for the mandatory17.Q performance fix.
+The campaign warns that an external symbolizer is unavailable; instrumentation
+and leak detection remain enabled, with addresses retained in the log. Tooling
+for symbolic diagnostics also remains17.Q.
+
+All14 focused Godot controls pass with the final native/header/C++ build. The
+four last controls cover keyword predicates, named physical identities, Damaged
+and weapon characteristics (`shared-frames-godot_{keyword_predicates,
+named_identities,damaged,weapon_characteristics}-final.log`). The broader
+`godot_state.gd` and rendered/mouse journeys remain17.Q; their schema assertions
+are aligned but this batch does not claim they ran.
+
+The872-assertion full run and Python complete games precede only the three
+internal member→member_index binding renames. All117 new cases plus14 existing
+frame/save/lifetime cases pass final-source sanitizers, all selected Godot
+controls use regenerated final-source libraries, and both completed inputs pass
+the final optimized sanitized engine. No second full872-case run is claimed.
+No failing test was disabled. Corrected errors include source helper signatures,
+fixture weapon assumptions/formation handoff, package-window duplication,
+Godot reserved getters, outdated fixture schema/capacity names and oversized
+mutation initialization. Remaining issues retain their named fixing owners.
+
+Next17.P: implement the remaining standard unit families in dependency batches,
+using the completed package/shared mechanics and the source matrix.17.Q must
+still fix measured wrapper retrieval/native slow inputs and complete the full
+rendered journeys; task17 and the whole edition migration remain incomplete.

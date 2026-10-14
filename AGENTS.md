@@ -481,4 +481,37 @@ may be edited together, with expensive validation after edits.17.I1 is not full
 War Horde completion, and the three starter families are not all54 cards.
 Keep focused commits with each rule's own coverage and cite its actual source.
 
+## Orks enhancement selection supplied by the user
+
+Use the current core Select Enhancements rule together with the user's limits:
+at most four counted enhancements, one per different unit, ordinary options
+unique and on eligible CHARACTER bearers. An Upgrade may be on a non-CHARACTER
+unit where its card permits; at most three copies of each Upgrade, with the
+second and third copies excluded from the counted total. Epic Heroes and units
+containing attached Epic Heroes cannot take any enhancement or Upgrade. Apply
+these restrictions during selection and attachment; validate the final roster.
+Do not calculate prices. Configuration may precede attachment to supply extra
+Leader permissions and Flyboss CHARACTER membership; this is implementation
+ordering, not a change to the final tabletop roster restrictions.
+
+All noncircular footprints intentionally use circular proxies for now. Retain
+source shape/axis metadata and annotate the approximation at geometry adapters.
+Never fabricate an unknown hull size. The all-detachment batch remains in
+progress until ROADMAP.md records actual effect and integration checks; enum
+entries, eligibility tables and source extraction alone are not implementation.
+
+Use [the ordinary detachment design](doc/orks-detachments.md) for the four package modules, source generations, cargo/offboard effects and flat reaction wrappers. Distinct enhancement recipients are original muster units; attaching two already enhanced units does not select another enhancement. The supplied Epic Hero exclusion still applies to the resulting attached unit. Turn/round timing windows run sequentially; reuse their completed child frame rather than retaining one inactive copy per boundary. Validate save/replay fixtures on the normal host stack. Record actual Game/layout growth and remaining performance work under17.Q.
+
 Audit every new action frame's active lifetime before adding owning call-site storage. Frames that cannot have two simultaneous instances share one context slot in `Board.shared_actions` (or an existing direct Board slot); types with one existing owner can stay there. Check the entire descendant path for re-entry, including ordinary frame-producing helpers. Fully delegated siblings are sequential, but recursive descendants would invalidate sharing. Preserve required completed results in small caller-owned `frm` snapshots before another call overwrites the slot; do not copy whole frames. Run `python tools/check_action_frame_storage.py --wrapper <matching-wrapper.py> --output doc/action-frame-lifetimes.json` after regenerating bindings. Read the architecture guide's frame-sharing section; the static audit complements semantic, save/replay and sanitizer tests. Keep generated init/drop, bounded persisted fields and existing Godot action argument contracts.
+
+Godot generated classes already use `get_member(index)` for structural access. Avoid persistent fields named `member`, which generate a colliding zero-argument `get_member`; use descriptive names such as `member_index`. Transient local loop names do not create exported getters. Regenerate the native library and headers together after binding fixes.
+
+The combined ordinary-detachment and frame-sharing batch is complete within
+ROADMAP.md's final evidence:111 action declarations/66 shared slots, Game34,544
+inline bytes, schemas32/20/32 (next33); all15 passives/38 enhancements/40 CP cards.
+Next17.P owns the remaining51 standard datasheet adapters and their specific
+permissions/rules. Keep17.Q's measured wrapper retrieval/native slow-unit and
+full rendered journeys as mandatory fixes; sharing frames is not a demonstrated
+runtime speedup. Read the final roadmap section for test scope, corrected
+binding fixtures and sanitizer/replay evidence. Do not reintroduce duplicate
+serial frames or custom lifecycle hooks while adding the remaining units.
