@@ -29,6 +29,7 @@ fun model_weapon_rules(Board board, UnitID source, Int model, Int slot) -> Weapo
     for i in range(granted.size()):
         result.append(granted[i])
     append_orks_package_weapon_rules(board, source, model, slot, result)
+    append_orks_datasheet_weapon_rules(board, source, board[source][model].weapons[slot], result)
     return result
 
 # Selection/eligibility uses ability presence before the target is declared (p.78).

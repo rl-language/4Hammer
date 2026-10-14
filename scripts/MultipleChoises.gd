@@ -65,6 +65,12 @@ func on_state_change():
 				label = "Take to the skies" if unwrapped.get_member(0) else "Stay grounded"
 			if unwrapped is RLCGameWalkerMobile:
 				label = "Gain Mobile for this move" if unwrapped.get_member(0) else "Keep current keywords"
+			if unwrapped is RLCGameUseAmmoRunts:
+				label = "Use Ammo Runts (+1 ranged hit this phase)" if unwrapped.get_member(0) else "Keep Ammo Runts"
+			if unwrapped is RLCGameUseBossAmmoRunt:
+				label = "Use Boss Ammo Runt (bearer +1 ranged hit)" if unwrapped.get_member(0) else "Keep Boss Ammo Runt"
+			if unwrapped is RLCGameUseRokkitCharge:
+				label = "Rokkit Charge (+1 A/S, Hazardous)" if unwrapped.get_member(0) else "Fight without Rokkit Charge"
 			if unwrapped is RLCGameUseLethalHits:
 				label = "Automatically wound with this critical hit" if unwrapped.get_member(0) else "Roll to wound with this critical hit"
 			if unwrapped is RLCGameApplyAttackModifier:

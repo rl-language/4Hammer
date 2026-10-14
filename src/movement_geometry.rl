@@ -15,6 +15,8 @@ cls MovementGeometryPolicy:
     Bool free_vertical_movement
     # Super-heavy Walker crosses non-TITANIC models only (p.85).
     Bool exclude_titanic
+    # Nobz charge traversal excludes MONSTER/VEHICLE models individually.
+    Bool exclude_monster_vehicle
 
 # Check the entire circular footprint, not just its centre, against battlefield
 # edges. Unsupported footprints cannot silently become circular bases (p.12).
@@ -175,10 +177,11 @@ fun model_segment_valid(Board board, Unit unit, Model model, GeometryPoint start
         return false
     let i = 0
     while i < board.units.size():
-        if !board[i].off_battlefield and board[i].owned_by_player1 != unit.owned_by_player1 and (!policy.traverse_enemies or policy.exclude_titanic):
+        if !board[i].off_battlefield and board[i].owned_by_player1 != unit.owned_by_player1 and (!policy.traverse_enemies or policy.exclude_titanic or policy.exclude_monster_vehicle):
             let j = 0
             while j < board[i].models.size():
-                if !board[i][j].has_keyword(Keyword::aircraft) and (!policy.exclude_titanic or board[i][j].has_keyword(Keyword::titanic)) and segment_crosses_model(model, start, end, board[i][j]):
+                let blocks = !policy.traverse_enemies or (policy.exclude_titanic and board[i][j].has_keyword(Keyword::titanic)) or (policy.exclude_monster_vehicle and (board[i][j].has_keyword(Keyword::monster) or board[i][j].has_keyword(Keyword::vehicle)))
+                if !board[i][j].has_keyword(Keyword::aircraft) and blocks and segment_crosses_model(model, start, end, board[i][j]):
                     return false
                 j = j + 1
         i = i + 1

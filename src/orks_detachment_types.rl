@@ -95,6 +95,9 @@ enum OrksEffectKind:
     borrowed_keep_huntin
     borrowed_intimidation
     invulnerable_five
+    ammo_runts_hit
+    boss_ammo_hit
+    rokkit_charge
 
 cls OrksEffectGrant:
     SourceEffectKey source_effect

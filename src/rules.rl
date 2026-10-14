@@ -24,7 +24,7 @@ import orks_army_rules
 import attachment_rules
 import orks_unit_data
 import orks_unit_rules
-import orks_infantry_data
+import orks_datasheet_rules
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.
@@ -1290,6 +1290,10 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             board[source][grant_model.value].destruction_attack_suppressed = grant_face.value < board[source][grant_model.value].destruction_fight_roll.value
         grant_model = grant_model + 1
     board[source].history.wrecka_objective_selection = orks_near_any_objective(board, board[source])
+    # Source-specific free choices enter the same declaration snapshots as
+    # paid rules: Ammo Runts (Boyz/Nobz/Warboss).
+    if !melee:
+        subaction*(board) datasheet_selection = orks_datasheet_selection(board, source)
     subaction*(board) detachment_selection = orks_attack_selection(board, source, melee)
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::attack_selection, board[source].identity, board[target].identity, invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
@@ -2258,6 +2262,7 @@ act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
     board[source].history.fight_eligible_phase = board.phase_serial.value + 1
     board[source].history.consolidation_fight_pending = 0
     board.current_decision_maker = board[source].owned_by_player1
+    subaction*(board) rokkit_selection = orks_rokkit_selection(board, source)
     if epic_source_valid(board, source):
         actions:
             act decline_epic_challenge()
@@ -2391,7 +2396,7 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
     if original.has_keyword(Keyword::fly):
         act charge_take_to_skies(Bool do_it)
         skies = do_it
-    maximum = charge_distance(original, board.current_pair_roll.result.value + board.current_pair_roll.result2.value, kind, skies)
+    maximum = charge_distance(board, original, board.current_pair_roll.result.value + board.current_pair_roll.result2.value, kind, skies)
     frm target_selection_done = false
     while !target_selection_done:
         actions:

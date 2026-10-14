@@ -51,7 +51,18 @@ fun charge_target_valid(Board board, UnitID source, UnitID target, Int maximum, 
 # by Into the Fray's 6 cap (p.57). Flight reduces the move, not the dice roll
 # (p.71); HOVER removes that reduction for the whole unit (p.82).
 fun charge_distance(Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
-    let maximum = modified_dice_result(roll, unit.phase_modifiers.charge_roll, false, true)
+    return charge_distance_with_sources(unit, roll, kind, skies, 0)
+
+# Banner+1 and distinct Stampede+1 combine before ordered modifiers and caps.
+# Source: Orks/Bannernob; Beastboss-on-Squigosaur Thundering Stampede (Aura).
+fun charge_distance(Board board, Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
+    return charge_distance_with_sources(unit, roll, kind, skies, orks_stampede_charge_bonus(board, unit))
+
+# The banner follows live combined membership; an aura is queried on the
+# battlefield only. Both join addition before division/rounding (02.02.01).
+fun charge_distance_with_sources(Unit unit, Int roll, ChargeKind kind, Bool skies, Int aura_bonus) -> Int:
+    let addition = aura_bonus + int(unit.has_ability(AbilityKind::waaagh_banner))
+    let maximum = modified_dice_result(roll, unit.phase_modifiers.charge_roll, false, true, addition)
     if kind == ChargeKind::into_the_fray:
         maximum = min(6, maximum)
     if skies and !unit.has_ability(AbilityKind::hover):
@@ -84,6 +95,12 @@ fun charge_waypoint_valid(Board board, Unit original, ModelPath path, BoardPosit
     if skies and model.has_keyword(Keyword::fly):
         distance = horizontal_length(start, finish)
     let policy = charge_policy(model, skies)
+    # Nobz/Get Out da Way! affects this unit's CHARGE traversal only. A
+    # traversable target cannot waive final overlap/engagement restrictions.
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
+    if original.has_ability(AbilityKind::get_out_da_way) and !policy.traverse_enemies:
+        policy.traverse_enemies = true
+        policy.exclude_monster_vehicle = true
     return path_distance(model, path, skies) + distance <= float(maximum * MICROMETRES_PER_INCH) and model_segment_valid(board, original, model, start, finish, policy)
 
 # All targets must be engaged and every unselected enemy must be unengaged

@@ -6,7 +6,9 @@ import terrain_rules
 fun action_start_valid(Board board, UnitID source, Bool player) -> Bool:
     if source.get() >= board.units.size() or board[source].off_battlefield or board[source].owned_by_player1 != player or !has_live_model(board[source]) or !board[source].allows_action_start():
         return false
-    if board.is_in_melee(board[source]) and !board[source].has_keyword(Keyword::titanic):
+    # Boyz/Never Too Busy to Fight waives engagement alone; all other p58
+    # gates (shock, OC, shooting, movement and once/turn) stay in effect.
+    if board.is_in_melee(board[source]) and !board[source].has_keyword(Keyword::titanic) and !board[source].has_ability(AbilityKind::never_too_busy_to_fight):
         return false
     let control = false
     for i in range(board[source].models.size()):

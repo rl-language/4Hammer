@@ -12270,7 +12270,119 @@ fun test_orks17p1_monster_and_mek_metadata() -> Bool:
     let squigo = make_orks_beastboss_on_squigosaur(true)
     return mozrog.has_keyword(Keyword::epic_hero) and !mozrog.has_keyword(Keyword::warboss) and !mozrog[0].has_da_boss and !mek[0].has_da_boss and mek.has_keyword(Keyword::big_mek) and squigo[0].has_da_boss and squigo[0].weapons.size() == 5 and squigo.attachment_role.value != AttachmentRole::leader.value
 
-# Appendix02.02.02: every offered contribution can be retained, including34.
+# Ammo Runts: own Shooting only; battle-shock does not forbid free use.
+fun test_orks17p1_ammo_timing_and_owner() -> Bool:
+    let board = orks17p1_fixture(make_orks_boyz(1, 9))
+    board[0].battle_socked = true
+    let own = orks_ammo_available(board, unit_id(0), false)
+    board.current_player = true
+    let opponent = !orks_ammo_available(board, unit_id(0), false)
+    board.current_player = false
+    board.begin_phase(BattlePhase::fight)
+    return own and opponent and !orks_ammo_available(board, unit_id(0), false) and !orks_ammo_available(board, unit_id(1), false)
+
+# Ammo Runts: decline preserves token and caller owner, commit spends once.
+fun test_orks17p1_ammo_selection_and_limit() -> Bool:
+    let board = orks17p1_fixture(make_orks_boyz(1, 9))
+    board.current_decision_maker = true
+    let choice = orks_datasheet_selection(board, unit_id(0))
+    choice.use_ammo_runts(board, false)
+    let kept = choice.is_done() and board.current_decision_maker == true and orks_ammo_available(board, unit_id(0), false)
+    let accepted = orks_datasheet_selection(board, unit_id(0))
+    accepted.use_ammo_runts(board, true)
+    return kept and accepted.is_done() and board.current_decision_maker == true and !orks_ammo_available(board, unit_id(0), false) and unit_orks_effect(board, board[0], OrksEffectKind::ammo_runts_hit) == 1 and valid_state_foundations(board)
+
+# Ammo Runts: every member's ranged attack benefits; melee never does.
+fun test_orks17p1_ammo_ranged_scope() -> Bool:
+    let board = orks17p1_fixture(make_orks_nobz(5))
+    commit_orks_ammo(board, unit_id(0), false)
+    let ranged = make_declared_weapon(board, unit_id(0), 4, 1)
+    let gun = declared_attack_info(board, unit_id(0), unit_id(1), ranged, board.attack_info)
+    let melee = make_declared_weapon(board, unit_id(0), 4, 0)
+    let chop = declared_attack_info(board, unit_id(0), unit_id(1), melee, board.attack_info)
+    return gun.total_hit_modifier() == 1 and chop.total_hit_modifier() == 0 and attack_hit_choices(board, gun).size() == 1
+
+# Boss Ammo Runt: bearer-only when attached, separate token from Boyz Ammo.
+fun test_orks17p1_attached_ammo_tokens_and_scope() -> Bool:
+    let board : Board
+    board.reserve_units.append(make_orks_boyz(1, 9))
+    board.reserve_units.append(make_orks_warboss())
+    board.identify_units()
+    attach_reserved_unit(board, unit_id(1), unit_id(0), false)
+    attachment17g_battlefield(board)
+    board.begin_phase(BattlePhase::shooting)
+    configure_attack_info(board, 0, 0, false, false)
+    commit_orks_ammo(board, unit_id(0), false)
+    commit_orks_ammo(board, unit_id(0), true)
+    return unit_orks_effect(board, board[0], OrksEffectKind::ammo_runts_hit) == 1 and model_orks_effect(board, board[0][10], OrksEffectKind::boss_ammo_hit) == 1 and model_orks_effect(board, board[0][1], OrksEffectKind::boss_ammo_hit) == 0 and !orks_ammo_available(board, unit_id(0), true) and valid_state_foundations(board)
+
+# Ammo Runts: phase effect expires while battle usage remains spent.
+fun test_orks17p1_ammo_expiry_not_refresh() -> Bool:
+    let board = orks17p1_fixture(make_orks_nobz(5))
+    commit_orks_ammo(board, unit_id(0), false)
+    board.begin_phase(BattlePhase::charge)
+    let expired = unit_orks_effect(board, board[0], OrksEffectKind::ammo_runts_hit) == 0
+    board.begin_phase(BattlePhase::shooting)
+    return expired and !orks_ammo_available(board, unit_id(0), false)
+
+# Boyz/Tide of Muscle: charged melee gains Lethal even versus Monster.
+fun test_orks17p1_tide_charge_and_profile_scope() -> Bool:
+    let board = orks17p1_fixture(make_orks_boyz(1, 9))
+    let before = make_declared_weapon(board, unit_id(0), 1, 0)
+    board[0].has_charged = true
+    board[1][0].keywords.append(Keyword::monster)
+    let melee = make_declared_weapon(board, unit_id(0), 1, 0)
+    let ranged = make_declared_weapon(board, unit_id(0), 1, 2)
+    return !declared_weapon_has_kind(before, WeaponRuleKind::letal_hits) and chosen_weapon_has_rule(board, unit_id(1), melee.selected_rules, WeaponRuleKind::letal_hits) and !chosen_weapon_has_rule(board, unit_id(1), ranged.selected_rules, WeaponRuleKind::letal_hits)
+
+# Boyz/Never Too Busy: engagement alone waived; shock remains forbidden.
+fun test_orks17p1_boy_action_engagement_waiver() -> Bool:
+    let board = orks17p1_fixture(make_orks_boyz(1, 9))
+    board[1][0].position = board_position(6, 5)
+    let allowed = board.is_in_melee(board[0]) and action_start_valid(board, unit_id(0), false)
+    board[0].battle_socked = true
+    return allowed and !action_start_valid(board, unit_id(0), false)
+
+# Nobz/Paired Krumpas: only the bearer's Kustom Krumpa receives both rerolls.
+fun test_orks17p1_paired_krumpas_bearer_and_weapon() -> Bool:
+    let equipment = orks17p1_nob_equipment(5)
+    equipment[0] = OrksNobLoadout::paired_krumpas
+    let board = orks17p1_fixture(make_orks_nobz(equipment))
+    let paired = make_declared_weapon(board, unit_id(0), 0, 0)
+    let ordinary = make_declared_weapon(board, unit_id(0), 1, 0)
+    let yes = declared_attack_info(board, unit_id(0), unit_id(1), paired, board.attack_info)
+    let no = declared_attack_info(board, unit_id(0), unit_id(1), ordinary, board.attack_info)
+    return yes.reroll_hits and yes.reroll_wounds and !no.reroll_hits and !no.reroll_wounds
+
+# Warboss/Might Is Right: charge buffs only own melee+3A/+2S.
+fun test_orks17p1_warboss_charge_statistics() -> Bool:
+    let board = orks17p1_fixture(make_orks_warboss())
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let before = declaration_fixed_attacks(board, unit_id(0), declaration, 0)
+    board[0].has_charged = true
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    let gun = make_declared_weapon(board, unit_id(0), 0, 1)
+    return before == 6 and declaration_fixed_attacks(board, unit_id(0), declaration, 0) == 9 and info.attack_strength() == 9 and declaration_fixed_attacks(board, unit_id(0), gun, 0) == 4
+
+# Bigboss/Sumfin’: melee only, conferring source needed, corpse retention p67.
+fun test_orks17p1_bigboss_hit_source_loss() -> Bool:
+    let board = orks17p1_fixture(make_orks_bigboss())
+    let melee = make_declared_weapon(board, unit_id(0), 0, 1)
+    let gun = make_declared_weapon(board, unit_id(0), 0, 0)
+    let yes = declared_attack_info(board, unit_id(0), unit_id(1), melee, board.attack_info)
+    let no = declared_attack_info(board, unit_id(0), unit_id(1), gun, board.attack_info)
+    board[0][0].state = ModelState::pending_destruction
+    return yes.total_hit_modifier() == 1 and no.total_hit_modifier() == 0 and !board[0].has_ability(AbilityKind::sumfin_to_prove)
+
+# Bannernob: addition precedes division/rounding, twelve/Into the Fray caps.
+fun test_orks17p1_banner_order_and_caps() -> Bool:
+    let unit = make_orks_bannernob()
+    unit.phase_modifiers.charge_roll.append(rule_modifier(ModifierOperation::divide, 2))
+    let rounded = charge_distance(unit, 4, ChargeKind::ordinary, false) == 3
+    unit.phase_modifiers.charge_roll.clear()
+    return rounded and charge_distance(unit, 12, ChargeKind::ordinary, false) == 12 and charge_distance(unit, 6, ChargeKind::into_the_fray, false) == 6
+
+# Appendix02.02.02: every offered contribution can be kept, including all34.
 fun test_orks17p1_modifier_full_capacity_and_origin() -> Bool:
     let board = orks17p1_fixture(make_orks_bigboss())
     let choices : AttackModifierChoices
@@ -12280,3 +12392,216 @@ fun test_orks17p1_modifier_full_capacity_and_origin() -> Bool:
     for index in range(34):
         sequence.apply_attack_modifier(board, true)
     return sequence.is_done() and sequence.result.size() == 34 and selected_hit_bonus(sequence.result) == 1
+
+# Stormboyz/Rokkit Charge: optional pre-declaration+1A/S/Hazardous and expiry.
+fun test_orks17p1_rokkit_selection_and_hazardous() -> Bool:
+    let board = orks17p1_fixture(make_orks_stormboyz(4, false))
+    board.begin_phase(BattlePhase::fight)
+    board[0].has_charged = true
+    let choice = orks_rokkit_selection(board, unit_id(0))
+    choice.use_rokkit_charge(board, true)
+    let melee = make_declared_weapon(board, unit_id(0), 1, 1)
+    let info = declared_attack_info(board, unit_id(0), unit_id(1), melee, board.attack_info)
+    let yes = choice.is_done() and declaration_fixed_attacks(board, unit_id(0), melee, 0) == 4 and info.attack_strength() == 6 and declared_weapon_has_kind(melee, WeaponRuleKind::hazardous)
+    board.begin_phase(BattlePhase::shooting)
+    return yes and unit_orks_effect(board, board[0], OrksEffectKind::rokkit_charge) == 0
+
+# Stormboyz: declining and a non-charging fight grant nothing.
+fun test_orks17p1_rokkit_decline_and_no_charge() -> Bool:
+    let board = orks17p1_fixture(make_orks_stormboyz(4, true))
+    board.begin_phase(BattlePhase::fight)
+    let absent = orks_rokkit_selection(board, unit_id(0))
+    board[0].has_charged = true
+    let choice = orks_rokkit_selection(board, unit_id(0))
+    choice.use_rokkit_charge(board, false)
+    return absent.is_done() and choice.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::rokkit_charge) == 0
+
+# Warbikers/High Speed Carnage: charge+1S/D melee, not gun/uncharged.
+fun test_orks17p1_biker_charge_melee_damage() -> Bool:
+    let board = orks17p1_fixture(make_orks_warbikers(2))
+    board[0].has_charged = true
+    let melee = make_declared_weapon(board, unit_id(0), 1, 1)
+    let gun = make_declared_weapon(board, unit_id(0), 1, 0)
+    let chop = declared_attack_info(board, unit_id(0), unit_id(1), melee, board.attack_info)
+    let ranged = declared_attack_info(board, unit_id(0), unit_id(1), gun, board.attack_info)
+    return chop.attack_strength() == 6 and modified_characteristic(1, ModifiedCharacteristic::damage, chop.damage_modifiers, false) == 2 and ranged.attack_strength() == gun.weapon.strenght() and ranged.damage_modifiers.size() == 0
+
+# Nobz/Get Out da Way: only Charge traverses enemy Infantry, not Monster/Vehicle.
+fun test_orks17p1_nob_charge_traversal() -> Bool:
+    let board = orks17p1_fixture(make_orks_nobz(5))
+    board[0].models.resize(1)
+    board[1][0].position = board_position(7, 5)
+    let path : ModelPath
+    let infantry = charge_waypoint_valid(board, board[0], path, board_position(9, 5), 6, false)
+    board[1][0].keywords.append(Keyword::vehicle)
+    let vehicle = !charge_waypoint_valid(board, board[0], path, board_position(9, 5), 6, false)
+    board[0][0].keywords.append(Keyword::fly)
+    return infantry and vehicle and charge_waypoint_valid(board, board[0], path, board_position(9, 5), 6, true)
+
+# Killa-Kans/Spiteful Power Trip: every live target model's T matters.
+fun test_orks17p1_kans_mixed_toughness_and_dead_model() -> Bool:
+    let board = orks17p1_fixture(make_orks_killa_kans(3))
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    let ordinary = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    let high = make_orks_beastboss_on_squigosaur(false)
+    board[1].models.append(high[0])
+    board.identify_units()
+    let mixed = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    board[1][1].state = ModelState::pending_destruction
+    let dead = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
+    return ordinary.total_hit_modifier() == 1 and mixed.total_hit_modifier() == 0 and dead.total_hit_modifier() == 1
+
+# Dakkarig/Blitz Dem Gitz: declared non-Monster/Vehicle only, own Shooting.
+fun test_orks17p1_blitz_target_and_gathering() -> Bool:
+    let board = orks17p1_fixture(make_orks_big_mek_dakkarig())
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
+    declaration.targeted[1] = true
+    let gathered = gather_weapon_count(board, unit_id(0), unit_id(1), declaration, false)
+    let extra = gathered.is_done() and gathered.result == 14
+    board[1][0].keywords.append(Keyword::vehicle)
+    let vehicle = gather_weapon_count(board, unit_id(0), unit_id(1), declaration, false)
+    board[1][0].keywords.clear()
+    board.current_player = true
+    let other_turn = gather_weapon_count(board, unit_id(0), unit_id(1), declaration, false)
+    return extra and vehicle.result == 8 and other_turn.result == 8
+
+# Dakkarig/Even More Dakka: riled ranged Sustained1, no melee grant.
+fun test_orks17p1_dakkarig_riled_profile_scope() -> Bool:
+    let board = orks17p1_fixture(make_orks_big_mek_dakkarig())
+    let before = make_declared_weapon(board, unit_id(0), 0, 0)
+    orks17f_intrinsic_riled(board[0][0])
+    let gun = make_declared_weapon(board, unit_id(0), 0, 0)
+    let feet = make_declared_weapon(board, unit_id(0), 0, 2)
+    return !declared_weapon_has_kind(before, WeaponRuleKind::sustained_hit) and declared_weapon_has_kind(gun, WeaponRuleKind::sustained_hit) and !declared_weapon_has_kind(feet, WeaponRuleKind::sustained_hit)
+
+# Squigosaur/Mozrog: Hunter target restrictions and D6+1 intrinsic expression.
+fun test_orks17p1_monster_hunters_and_random_damage() -> Bool:
+    let board = orks17p1_fixture(make_orks_mozrog_skragbad())
+    let declaration = make_declared_weapon(board, unit_id(0), 0, 3)
+    board[1][0].position = board_position(7, 5)
+    let ordinary = !declaration_target_valid(board, unit_id(0), declaration, unit_id(1), true)
+    board[1][0].keywords.append(Keyword::monster)
+    let allowed = declaration_target_valid(board, unit_id(0), declaration, unit_id(1), true)
+    return ordinary and allowed and stat_dice_count(declaration.weapon.damage()) == 1 and stat_dice_sides(declaration.weapon.damage()) == 6 and stat_intrinsic_constant(declaration.weapon.damage()) == 1
+
+# Stampede aura: self qualifies, identical auras never stack; enemy/offboard don't.
+fun test_orks17p1_stampede_aura_sources() -> Bool:
+    let board = orks17p1_fixture(make_orks_beastboss_on_squigosaur(false))
+    let other = make_orks_beastboss_on_squigosaur(false)
+    other[0].position = board_position(8, 5)
+    board.units.append(other)
+    board.identify_units()
+    let own = orks_stampede_charge_bonus(board, board[0]) == 1 and charge_distance(board, board[0], 5, ChargeKind::ordinary, false) == 6
+    board[0].off_battlefield = true
+    return own and orks_stampede_charge_bonus(board, board[0]) == 0
+
+# Conditional Lone Operative: nearby Snagga, excluding MONSTER CHARACTER union.
+fun test_orks17p1_snagga_following_live_and_distance() -> Bool:
+    let board = orks17p1_fixture(make_orks_mozrog_skragbad())
+    let before = !orks_lone_operative(board, board[0])
+    let snagga = make_orks_beast_snagga_boyz(1, 9, 0)
+    snagga.models.resize(1)
+    snagga[0].position = board_position(8, 5)
+    board.units.append(snagga)
+    board.identify_units()
+    let near = orks_lone_operative(board, board[0])
+    board[2][0].position = board_position(12, 5)
+    let far = !orks_lone_operative(board, board[0])
+    board[2][0].position = board_position(8, 5)
+    board[2].off_battlefield = true
+    return before and near and far and !orks_lone_operative(board, board[0])
+
+# Mozrog/Da Bigger Dey Iz: unit-wide melee wound rerolls only vs Mon/Vehicle.
+fun test_orks17p1_mozrog_wound_rerolls_scope() -> Bool:
+    let board = orks17p1_fixture(make_orks_mozrog_skragbad())
+    let melee = make_declared_weapon(board, unit_id(0), 0, 2)
+    let before = declared_attack_info(board, unit_id(0), unit_id(1), melee, board.attack_info)
+    board[1][0].keywords.append(Keyword::vehicle)
+    let yes = declared_attack_info(board, unit_id(0), unit_id(1), melee, board.attack_info)
+    let ranged = make_declared_weapon(board, unit_id(0), 0, 0)
+    let no = declared_attack_info(board, unit_id(0), unit_id(1), ranged, board.attack_info)
+    return !before.reroll_wounds and yes.reroll_wounds and !no.reroll_wounds
+
+# Mozrog/One Last Kill: printed2+ in Fight before its unit has fought.
+fun test_orks17p1_mozrog_death_timing_threshold() -> Bool:
+    let board = orks17p1_fixture(make_orks_mozrog_skragbad())
+    let shooting = orks_fight_death_threshold(board, board[0], board[0][0]) == 0
+    board.begin_phase(BattlePhase::fight)
+    let fight = orks_fight_death_threshold(board, board[0], board[0][0]) == 2
+    board[0].has_fought = true
+    return shooting and fight and orks_fight_death_threshold(board, board[0], board[0][0]) == 0
+
+# All twelve adapters survive actual Game serialization with physical groups.
+fun test_orks17p1_all_unit_saved_round_trip() -> Bool:
+    let state = play()
+    state.board.reserve_units.append(make_orks_boyz(1, 9))
+    state.board.reserve_units.append(make_orks_nobz(5))
+    state.board.reserve_units.append(make_orks_warboss())
+    state.board.reserve_units.append(make_orks_bigboss())
+    state.board.reserve_units.append(make_orks_bannernob())
+    state.board.reserve_units.append(make_orks_stormboyz(4, true))
+    state.board.reserve_units.append(make_orks_warbikers(2))
+    state.board.reserve_units.append(make_orks_deff_dread())
+    state.board.reserve_units.append(make_orks_killa_kans(3))
+    state.board.reserve_units.append(make_orks_big_mek_dakkarig())
+    state.board.reserve_units.append(make_orks_beastboss_on_squigosaur(true))
+    state.board.reserve_units.append(make_orks_mozrog_skragbad())
+    state.board.identify_units()
+    let restored = play()
+    let saved = set_state(restored, to_string(state))
+    return saved and restored.board.reserve_units.size() == 12 and restored.board.reserve_units[6][0].weapon_profile_groups[0] == restored.board.reserve_units[6][0].weapon_profile_groups[1] and restored.board.reserve_units[11][0].profile == Profile::orks_mozrog_skragbad and valid_state_foundations(restored.board)
+
+# Mozrog: FNP is resolved first, then2+ at destruction; retained fighter has
+# already passed its permission roll and does not roll that permission again.
+fun test_orks17p1_mozrog_actual_death_success() -> Bool:
+    let board = orks17p1_fixture(make_orks_mozrog_skragbad())
+    board.begin_phase(BattlePhase::fight)
+    board[0][0].suffered_wounds = 9
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(0), unit_id(1), true, true, 1, board[0][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(1))
+    damage.roll(board, attack_test_die(1))
+    damage.roll(board, attack_test_die(2))
+    return damage.is_done() and board[0][0].state == ModelState::fight_on_death and board[0][0].destruction_fight_roll == 1 and board[0][0].destruction_pending
+
+# Mozrog: saving the wound means no destroy-time permission roll.
+fun test_orks17p1_mozrog_fnp_prevents_death() -> Bool:
+    let board = orks17p1_fixture(make_orks_mozrog_skragbad())
+    board.begin_phase(BattlePhase::fight)
+    board[0][0].suffered_wounds = 9
+    let jobs : DamageJobs
+    jobs.append(damage_job(DamageKind::normal, unit_id(0), unit_id(1), true, true, 1, board[0][0].identity))
+    let damage = resolve_damage_jobs(board, jobs, false, unit_id(1))
+    damage.roll(board, attack_test_die(5))
+    return damage.is_done() and board[0][0].is_alive() and !board[0][0].destruction_pending
+
+# Actual Attack delegates the new decision before weapon declaration; refusing
+# a free token restores source ownership and leaves ordinary weapon inputs.
+fun test_orks17p1_attack_forwards_ammo_selection() -> Bool:
+    let board = orks17p1_fixture(make_orks_warboss())
+    board.current_decision_maker = true
+    let sequence = attack(board, unit_id(0), unit_id(1), false, false)
+    let offered = can sequence.use_boss_ammo_runt(board, true)
+    sequence.use_boss_ammo_runt(board, false)
+    return offered and !sequence.is_done() and orks_ammo_available(board, unit_id(0), true) and board.current_decision_maker == false
+
+# Ammo effect and original battle usage survive the real save codec.
+fun test_orks17p1_ammo_saved_provenance() -> Bool:
+    let state = play()
+    state.board = orks17p1_fixture(make_orks_nobz(5))
+    commit_orks_ammo(state.board, unit_id(0), false)
+    let restored = play()
+    let saved = set_state(restored, to_string(state))
+    return saved and unit_orks_effect(restored.board, restored.board[0], OrksEffectKind::ammo_runts_hit) == 1 and !orks_ammo_available(restored.board, unit_id(0), false) and valid_state_foundations(restored.board)
+
+
+# Stormboyz: actual selected-fight frame offers the choice before FightKind.
+fun test_orks17p1_selected_fight_forwards_rokkit() -> Bool:
+    let board = orks17p1_fixture(make_orks_stormboyz(4, true))
+    board.begin_phase(BattlePhase::fight)
+    board[0].has_charged = true
+    board[0].history.fight_eligible_phase = board.phase_serial.value + 1
+    let sequence = selected_fight(board, unit_id(0))
+    let offered = can sequence.use_rokkit_charge(board, true)
+    sequence.use_rokkit_charge(board, true)
+    return offered and !sequence.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::rokkit_charge) == 1

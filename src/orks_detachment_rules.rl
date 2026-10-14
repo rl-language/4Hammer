@@ -482,6 +482,7 @@ fun append_orks_attack_effects(Board board, UnitID source, UnitID target, Declar
     let bearer = declared_model_index(board, source, weapon)
     ref model = unit[bearer]
     let ranged = weapon.weapon.range() > 0
+    append_orks_datasheet_attack_effects(board, source, target, weapon, info)
     if orks_package(board, unit, OrksDetachment::da_big_hunt) and unit.has_keyword(Keyword::beast_snagga) and (victim.has_keyword(Keyword::monster) or victim.has_keyword(Keyword::vehicle)):
         info.ap_modifiers.append(rule_modifier(ModifierOperation::add, -1))
     if ranged and orks_package(board, unit, OrksDetachment::flyboyz) and unit_is_riled_up(unit) and unit.has_keyword(Keyword::orks) and (unit.has_keyword(Keyword::aircraft) or orks_type(unit, OrksDatasheet::deffkoptas)):
@@ -884,7 +885,7 @@ fun orks_model_grants_ability(Unit unit, Model model, AbilityKind kind) -> Bool:
 # Dreadherder grants the unit Lone Operative while within3in of a friendly
 # non-Big-Mek ORKS Walker; offboard units cannot measure this distance.
 fun orks_lone_operative(Board board, Unit unit) -> Bool:
-    if unit.is_lone_operative():
+    if unit.is_lone_operative() or orks_snagga_following(board, unit):
         return true
     if unit.off_battlefield or !unit.attached_units.empty() or !unit_has_orks_enhancement(unit, OrksEnhancement::dreadherder):
         return false
@@ -930,6 +931,10 @@ fun orks_fight_death_threshold(Board board, Unit unit, Model model) -> Int:
     if unit.has_fought or model.state == ModelState::fight_on_death:
         return 0
     let threshold = 0
+    # Mozrog/One Last Kill: destroy-time2+ only in Fight before selection.
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Mozrog-Skragbad
+    if board.timing.phase == BattlePhase::fight and model.has_ability(AbilityKind::one_last_kill):
+        threshold = 2
     if orks_package(board, unit, OrksDetachment::brute_bosses) and model.has_keyword(Keyword::warboss):
         threshold = 3 - int(unit_is_riled_up(unit))
     if board.timing.phase == BattlePhase::fight:
@@ -1047,6 +1052,8 @@ fun grant_orks_model_effect(Board board, UnitID source, ModelID bearer, Int rule
     instance.recipient = SourceTarget::source_model
     instance.duration = SourceDuration::phase
     instance.name.value = "Temperamental Shokka"s
+    if kind.value == OrksEffectKind::boss_ammo_hit.value:
+        instance.name.value = "Boss' Ammo Runt"s
     let effect : OrksEffectGrant
     effect.kind = kind
     effect.amount = 1

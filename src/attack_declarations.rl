@@ -363,6 +363,7 @@ fun declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration
     if kind.value == ModifiedCharacteristic::damage.value and board[source].has_charged and board[source].has_ability(AbilityKind::brutal_impact):
         result.append(rule_modifier(ModifierOperation::add, 1))
     append_orks_declaration_modifiers(board, source, declaration, kind, result)
+    append_orks_datasheet_modifiers(board, source, declaration, kind, result)
     return result
 
 # Hazardous counts actual selected physical weapons, not every simultaneously
