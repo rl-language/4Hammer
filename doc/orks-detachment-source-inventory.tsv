@@ -1,0 +1,79 @@
+kind	detachment	name	CP	upgrade	source
+enhancement	War Horde	Headwoppa's Killchoppa		False	https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+enhancement	War Horde	Da Boss is Watchin'		False	https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+enhancement	War Horde	Kunnin' But Brutal		False	https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+enhancement	War Horde	Follow Me Ladz		False	https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+enhancement	Green Tide	Ferocious Show-off		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Green-Tide
+enhancement	Green Tide	'Ardboyz UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Green-Tide
+enhancement	Bully Boyz	Wimp-kickaz UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Bully-Boyz
+enhancement	Bully Boyz	Tellyporta Boss		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Bully-Boyz
+enhancement	Runt Swarm	Extra Sneaky UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Runt-Swarm
+enhancement	Runt Swarm	Minefield Detail UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Runt-Swarm
+enhancement	Shoota Boyz	Supa-glowy Fing		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Shoota-Boyz
+enhancement	Shoota Boyz	Targetin' Squigs		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Shoota-Boyz
+enhancement	Taktikal Brigade	Kill Kommanda		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Taktikal-Brigade
+enhancement	Taktikal Brigade	Throat-slittas UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Taktikal-Brigade
+enhancement	Wreckas	Kaptin's Hat		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Wreckas
+enhancement	Wreckas	Supa-snazz Dakka UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Wreckas
+enhancement	Da Big Hunt	Glory Hog		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Da-Big-Hunt
+enhancement	Da Big Hunt	It Came from da Drops		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Da-Big-Hunt
+enhancement	Madcap Meks	Mekwaaagh! Mastermind		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Madcap-Meks
+enhancement	Madcap Meks	Temperamental Shokka UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Madcap-Meks
+enhancement	Madcap Meks	Enhanced Runt-maw UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Madcap-Meks
+enhancement	Dread Mob	Cybork Boosta		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Dread-Mob
+enhancement	Dread Mob	Dreadherder		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Dread-Mob
+enhancement	Blitz Brigade	Targetin' Gizmos UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Blitz-Brigade
+enhancement	Blitz Brigade	Boss Boomer UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Blitz-Brigade
+enhancement	Kult of Speed	Smoky Gubbinz UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Kult-of-Speed
+enhancement	Kult of Speed	Competitive Streak		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Kult-of-Speed
+enhancement	Flyboyz	Flyboss UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Flyboyz
+enhancement	Flyboyz	Impulsive Recon UPGRADE		True	https://wahapedia.ru/wh40k11ed/factions/orks/#Flyboyz
+enhancement	Brute Bosses	Surly as a Squiggoth		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Brute-Bosses
+enhancement	Brute Bosses	Brutal But Kunnin'		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Brute-Bosses
+enhancement	Brute Bosses	Blitzboss		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Brute-Bosses
+enhancement	Brute Bosses	Proper Killy		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Brute-Bosses
+enhancement	Brute Bosses	Morgog's Finkin' Cap		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Brute-Bosses
+enhancement	Brute Bosses	Da Gobshot Thunderbuss		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Brute-Bosses
+enhancement	Wurrband	Da Krunch		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Wurrband
+enhancement	Wurrband	'Eadbanger		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Wurrband
+enhancement	Wurrband	Warphead		False	https://wahapedia.ru/wh40k11ed/factions/orks/#Wurrband
+stratagem	War Horde	BREAKIN' HEADS	1		https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+stratagem	War Horde	HIT 'EM HARDER	1		https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+stratagem	War Horde	ORKS IS NEVER BEATEN	1		https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+stratagem	War Horde	MOW 'EM DOWN	1		https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+stratagem	War Horde	FUNGUS-FUEL INJECTION	1		https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+stratagem	War Horde	CLOSE-RANGE DAKKA	1		https://wahapedia.ru/wh40k11ed/factions/orks/#War-Horde
+stratagem	Green Tide	UNBRIDLED CARNAGE	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Green-Tide
+stratagem	Green Tide	MOB MENTALITY	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Green-Tide
+stratagem	Green Tide	'ERE WE GO	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Green-Tide
+stratagem	Bully Boyz	TOO ARROGANT TO DIE	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Bully-Boyz
+stratagem	Bully Boyz	ARMED TO DA TEEF	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Bully-Boyz
+stratagem	Bully Boyz	HULKING BRUTES	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Bully-Boyz
+stratagem	Runt Swarm	INFESTED WAR ZONE	2		https://wahapedia.ru/wh40k11ed/factions/orks/#Runt-Swarm
+stratagem	Runt Swarm	SCARPER!	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Runt-Swarm
+stratagem	Runt Swarm	GROT SHIELDS	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Runt-Swarm
+stratagem	Shoota Boyz	KUSTOM DAKKA	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Shoota-Boyz
+stratagem	Shoota Boyz	GLOWIN' DAKKA	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Shoota-Boyz
+stratagem	Shoota Boyz	NEVER ENOUGH DAKKA	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Shoota-Boyz
+stratagem	Taktikal Brigade	DUBIOUS RESTRAINT	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Taktikal-Brigade
+stratagem	Taktikal Brigade	MIND MOSTLY ON THE MISSION	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Taktikal-Brigade
+stratagem	Taktikal Brigade	WHILE THEIR BACKS ARE TURNED	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Taktikal-Brigade
+stratagem	Wreckas	DRIVE-BY BUSTIN'	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Wreckas
+stratagem	Wreckas	GRAB IT	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Wreckas
+stratagem	Wreckas	GUN-CRAZY SHOW-OFFS	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Wreckas
+stratagem	Da Big Hunt	WHERE D'YA FINK YOU'RE GOING?	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Da-Big-Hunt
+stratagem	Da Big Hunt	GOADED INTO ACTION	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Da-Big-Hunt
+stratagem	Da Big Hunt	INSTINCTIVE HUNTERS	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Da-Big-Hunt
+stratagem	Madcap Meks	VINDICTIVE ARTILLERISTS	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Madcap-Meks
+stratagem	Dread Mob	CRAZED RAMPAGE	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Dread-Mob
+stratagem	Dread Mob	DREAD POWER	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Dread-Mob
+stratagem	Dread Mob	STOMPING JUGGERNAUT	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Dread-Mob
+stratagem	Blitz Brigade	KEEP IT RUNNIN'	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Blitz-Brigade
+stratagem	Blitz Brigade	READIED BRAWLERS	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Blitz-Brigade
+stratagem	Blitz Brigade	IMPENDING KRUNCH	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Blitz-Brigade
+stratagem	Kult of Speed	DELICIOUS EATING SQUIGS	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Kult-of-Speed
+stratagem	Kult of Speed	DAKKASTORM	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Kult-of-Speed
+stratagem	Kult of Speed	SPEEDIEST FREEKS	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Kult-of-Speed
+stratagem	Flyboyz	FLYIN' HEADBUTT	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Flyboyz
+stratagem	Flyboyz	LONG, UNCONTROLLED BURSTS	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Flyboyz
+stratagem	Flyboyz	WHIRLIGIG EVASION	1		https://wahapedia.ru/wh40k11ed/factions/orks/#Flyboyz
