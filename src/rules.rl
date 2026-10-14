@@ -107,8 +107,10 @@ fun evaluate_random_stat(Stat stat, Int modifier) -> RollStat:
 # Re-roll targets the controlling unit and spends before replacement (p.56).
 act evaluate_weapon_characteristic(ctx Board board, frm Stat stat, frm StatModifier extra, frm Bool player, frm UnitID target, frm RuleModifiers modifiers, frm ModifiedCharacteristic characteristic_kind) -> WeaponStatRoll:
     let zero : StatModifier
-    subaction* initial = evaluate_random_stat(stat, zero)
-    frm result = initial.result
+    board.shared_actions.evaluate_random_stat = evaluate_random_stat(stat, zero)
+    subaction* board.shared_actions.evaluate_random_stat
+    frm initial_result_snapshot_1 = board.shared_actions.evaluate_random_stat.result
+    frm result = initial_result_snapshot_1
     if stat_dice_count(stat) > 0:
         frm maximum : Dice
         maximum = stat_dice_sides(stat)
@@ -272,13 +274,15 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
     else:
         board.current_state = CurrentStateDescription::hit_roll
         frm hit_rerolls = !board.attack_info.only_hits_on_6 and !(board.attack_info.shooting_kind == ShootingKind::indirect and board.attack_info.has_weapon_rule(board, WeaponRuleKind::indirect_fire))
-        subaction*(board) hits = collect_attack_dice(board, count, board.attack_info.reroll_hits and hit_rerolls, board.attack_info.reroll1_hits and hit_rerolls, hit_rerolls, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+        board.shared_actions.collect_attack_dice = collect_attack_dice(board, count, board.attack_info.reroll_hits and hit_rerolls, board.attack_info.reroll1_hits and hit_rerolls, hit_rerolls, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+        subaction*(board) board.shared_actions.collect_attack_dice
+        frm hits_pool_snapshot_1 = board.shared_actions.collect_attack_dice.pool
         # Lethal Hits is optional per critical hit; mixed choices within a
         # batch must remain possible without an exponential action domain (p.82).
         frm lethal_wounds : CombatCounter
         frm lethal_remaining : CombatCounter
         if board.attack_info.has_weapon_rule(board, WeaponRuleKind::letal_hits):
-            lethal_remaining = hits.pool.faces[5]
+            lethal_remaining = hits_pool_snapshot_1.faces[5]
         while lethal_remaining > 0:
             board.current_decision_maker = source_unit.owned_by_player1
             act use_lethal_hits(Bool automatically_wound)
@@ -297,29 +301,35 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                 frm skill_options = attack_skill_choices(board, board.attack_info)
                 frm hit_options = attack_hit_choices(board, board.attack_info)
                 frm ordinary_remaining : CombatCounter
-                ordinary_remaining = hits.pool.faces[hit_face.value - 1]
+                ordinary_remaining = hits_pool_snapshot_1.faces[hit_face.value - 1]
                 frm selection_kind = ModifierSelectionKind::weapon_skill
                 if board.attack_info.source.range() > 0:
                     selection_kind = ModifierSelectionKind::ballistic_skill
                 while ordinary_remaining > 0:
-                    subaction*(board) skills = choose_attack_modifiers(board, skill_options, source_unit.owned_by_player1, selection_kind, board.attack_info.may_ignore_skill_modifiers)
-                    subaction*(board) increments = choose_attack_modifiers(board, hit_options, source_unit.owned_by_player1, ModifierSelectionKind::hit_roll, board.attack_info.may_ignore_hit_modifiers)
-                    let selected_outcome = classify_attack_hit(board, board.attack_info, hit_face, selected_hit_bonus(hit_face.value, increments.result), selected_attack_skill(board.attack_info, skills.result))
+                    board.shared_actions.choose_attack_modifiers = choose_attack_modifiers(board, skill_options, source_unit.owned_by_player1, selection_kind, board.attack_info.may_ignore_skill_modifiers)
+                    subaction*(board) board.shared_actions.choose_attack_modifiers
+                    frm skills_result_snapshot_2 = board.shared_actions.choose_attack_modifiers.result
+                    board.shared_actions.choose_attack_modifiers = choose_attack_modifiers(board, hit_options, source_unit.owned_by_player1, ModifierSelectionKind::hit_roll, board.attack_info.may_ignore_hit_modifiers)
+                    subaction*(board) board.shared_actions.choose_attack_modifiers
+                    frm increments_result_snapshot_3 = board.shared_actions.choose_attack_modifiers.result
+                    let selected_outcome = classify_attack_hit(board, board.attack_info, hit_face, selected_hit_bonus(hit_face.value, increments_result_snapshot_3), selected_attack_skill(board.attack_info, skills_result_snapshot_2))
                     if selected_outcome == AttackRollResult::success:
                         add_attack_count(generated_hits, 1)
                     ordinary_remaining = ordinary_remaining - 1
                 continue
             let outcome = classify_attack_hit(board, board.attack_info, hit_face, get_hit_roll_bonus(board))
             if outcome == AttackRollResult::critical:
-                add_attack_count(generated_hits, hits.pool.faces[hit_face.value - 1].value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
+                add_attack_count(generated_hits, hits_pool_snapshot_1.faces[hit_face.value - 1].value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
                 add_attack_count(generated_wounds, lethal_wounds.value)
-                add_attack_count(generated_hits, hits.pool.faces[hit_face.value - 1].value - lethal_wounds.value)
+                add_attack_count(generated_hits, hits_pool_snapshot_1.faces[hit_face.value - 1].value - lethal_wounds.value)
             else:
                 if outcome == AttackRollResult::success:
-                    add_attack_count(generated_hits, hits.pool.faces[hit_face.value - 1].value)
+                    add_attack_count(generated_hits, hits_pool_snapshot_1.faces[hit_face.value - 1].value)
     if generated_hits > 0:
         board.current_state = CurrentStateDescription::wound_roll
-        subaction*(board) wounds = collect_attack_dice(board, generated_hits, board.attack_info.reroll_wounds or board.attack_info.has_weapon_rule(board, WeaponRuleKind::twin_linked), board.attack_info.reroll1_wounds, true, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+        board.shared_actions.collect_attack_dice = collect_attack_dice(board, generated_hits, board.attack_info.reroll_wounds or board.attack_info.has_weapon_rule(board, WeaponRuleKind::twin_linked), board.attack_info.reroll1_wounds, true, source_unit.owned_by_player1, board.attack_info.source_unit_id)
+        subaction*(board) board.shared_actions.collect_attack_dice
+        frm wounds_pool_snapshot_4 = board.shared_actions.collect_attack_dice.pool
         frm wound_result : Dice
         frm wound_index : BInt<0, 7>
         while wound_index.value < 6:
@@ -329,9 +339,9 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
             if outcome == AttackRollResult::failed:
                 continue
             if outcome == AttackRollResult::critical and board.attack_info.has_weapon_rule(board, WeaponRuleKind::devastating_wounds):
-                add_attack_count(generated_critical_wounds, wounds.pool.faces[wound_result.value - 1].value)
+                add_attack_count(generated_critical_wounds, wounds_pool_snapshot_4.faces[wound_result.value - 1].value)
             else:
-                add_attack_count(generated_wounds, wounds.pool.faces[wound_result.value - 1].value)
+                add_attack_count(generated_wounds, wounds_pool_snapshot_4.faces[wound_result.value - 1].value)
     board.current_state = CurrentStateDescription::none
 
 # Declare the target owner's full allocation order before saves (p.19). Even
@@ -393,16 +403,20 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             destroying_identity = 0
             if casualty.destroying_unit_known:
                 destroying_identity = board[casualty.destroying_unit].identity
-            subaction*(board) source_destruction = resolve_source_event(board, source_event(SourceEventKind::model_destroyed, board[event.unit].identity, destroying_identity, casualty.identity), casualty.destroyed_whole_unit)
+            board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::model_destroyed, board[event.unit].identity, destroying_identity, casualty.identity), casualty.destroyed_whole_unit)
+            subaction*(board) board.shared_actions.resolve_source_event
             board[event.unit][event.model].destruction_pending = false
             board[event.unit][event.model].destroyed_whole_unit = false
             absent_source.owned_by_player1 = !board[event.unit].owned_by_player1
             retaliation = 0
             if casualty.destroying_unit_known:
-                subaction*(board, board[casualty.destroying_unit], casualty) triggered = on_model_destroyed(board, board[casualty.destroying_unit], casualty)
-                retaliation = triggered.generated_mortal
+                board.shared_actions.on_model_destroyed = on_model_destroyed(board, board[casualty.destroying_unit], casualty)
+                subaction*(board, board[casualty.destroying_unit], casualty) board.shared_actions.on_model_destroyed
+                frm triggered_generated_mortal_snapshot_2 = board.shared_actions.on_model_destroyed.generated_mortal
+                retaliation = triggered_generated_mortal_snapshot_2
             else:
-                subaction*(board, absent_source, casualty) uncredited = on_model_destroyed(board, absent_source, casualty)
+                board.shared_actions.on_model_destroyed = on_model_destroyed(board, absent_source, casualty)
+                subaction*(board, absent_source, casualty) board.shared_actions.on_model_destroyed
             # Retain physical presence through the triggered effects; removal
             # is queued beneath their mortal jobs (Deadly Demise p.80).
             if casualty.state == ModelState::pending_destruction:
@@ -431,8 +445,10 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             frm emergency_multiplier : LinearlyDistributedInt<1, 4>
             emergency_multiplier = hazard_mortal_multiplier(board[emergency_slot])
             board.current_state = CurrentStateDescription::hazardous_roll
-            subaction*(board) emergency_hazards = collect_attack_dice(board, emergency_hazard_count, false, false, true, board[emergency_slot].owned_by_player1, emergency_slot)
-            emergency_hazard_count = (emergency_hazards.pool.faces[0].value + emergency_hazards.pool.faces[1].value) * emergency_multiplier.value
+            board.shared_actions.collect_attack_dice = collect_attack_dice(board, emergency_hazard_count, false, false, true, board[emergency_slot].owned_by_player1, emergency_slot)
+            subaction*(board) board.shared_actions.collect_attack_dice
+            frm emergency_hazards_pool_snapshot_4 = board.shared_actions.collect_attack_dice.pool
+            emergency_hazard_count = (emergency_hazards_pool_snapshot_4.faces[0].value + emergency_hazards_pool_snapshot_4.faces[1].value) * emergency_multiplier.value
             jobs.append(current_job)
             jobs.append(damage_job(DamageKind::emergency_setup, emergency_slot, current_job.target, true, false, 0, current_job.recipient))
             if emergency_hazard_count > 0:
@@ -477,10 +493,12 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
                 while nearby.value > 0:
                     nearby = nearby - 1
                     if has_live_damage_recipient(board[nearby.value]) and board[nearby.value].distance(casualty) <= 6.0:
-                        subaction* demise_amount = evaluate_random_stat(casualty.deadly_demise)
+                        board.shared_actions.evaluate_random_stat = evaluate_random_stat(casualty.deadly_demise)
+                        subaction* board.shared_actions.evaluate_random_stat
+                        frm demise_amount_result_snapshot_5 = board.shared_actions.evaluate_random_stat.result
                         let affected : UnitID
                         affected = nearby.value
-                        jobs.append(damage_job(DamageKind::mortal, affected, current_job.target, true, false, demise_amount.result.value, invalid_entity_identity()))
+                        jobs.append(damage_job(DamageKind::mortal, affected, current_job.target, true, false, demise_amount_result_snapshot_5.value, invalid_entity_identity()))
             continue
         if current_job.kind == DamageKind::remove_destroyed:
             let removed = board[current_job.target].find_model(current_job.recipient)
@@ -506,13 +524,15 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
         application = 1
         if current_job.kind == DamageKind::normal:
             application = current_job.amount
-        subaction*(board) prevention = prevent_wound_loss(board, current_job.target, recipient, application)
-        commit_wound_loss(board, current_job, recipient, prevention.lost.value, current_job.from_attack and board.attack_info.fight_on_death and current_job.target.get() == previous_target.get())
+        board.shared_actions.prevent_wound_loss = prevent_wound_loss(board, current_job.target, recipient, application)
+        subaction*(board) board.shared_actions.prevent_wound_loss
+        frm prevention_lost_snapshot_6 = board.shared_actions.prevent_wound_loss.lost
+        commit_wound_loss(board, current_job, recipient, prevention_lost_snapshot_6.value, current_job.from_attack and board.attack_info.fight_on_death and current_job.target.get() == previous_target.get())
         refresh_source_effects(board, TimingWindow::none)
         if !(current_job.kind == DamageKind::normal):
             current_job.amount = current_job.amount - 1
             if current_job.kind == DamageKind::devastating:
-                if prevention.lost > 0:
+                if prevention_lost_snapshot_6 > 0:
                     current_job.recipient = identity
                 else:
                     if current_job.recipient.value == identity.value and board[current_job.target].find_model(identity) >= 0 and board[current_job.target][board[current_job.target].find_model(identity)].suffered_wounds == 0:
@@ -534,7 +554,8 @@ fun invalid_entity_identity() -> EntityIdentity:
 act resolve_mortal_wounds(ctx Board board, frm UnitID target, frm UnitID source, frm Bool source_known, frm CombatCounter amount) -> MortalWounds:
     frm jobs : DamageJobs
     jobs.append(damage_job(DamageKind::mortal, target, source, source_known, false, amount.value, invalid_entity_identity()))
-    subaction*(board) damage = resolve_damage_jobs(board, jobs, false, source)
+    board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, source)
+    subaction*(board) board.shared_actions.resolve_damage_jobs
 
 # Ordered group saves use ascending rerolled results; evaluate each against
 # the live current group's characteristics, then apply that attack alone (p.19).
@@ -564,13 +585,15 @@ act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit
                         precision = group
                         use_precision = true
         board.current_state = CurrentStateDescription::save_roll
-        subaction*(board) saves = collect_attack_dice(board, generated_wounds, false, false, true, target.owned_by_player1, board.attack_info.target_unit_id)
+        board.shared_actions.collect_attack_dice = collect_attack_dice(board, generated_wounds, false, false, true, target.owned_by_player1, board.attack_info.target_unit_id)
+        subaction*(board) board.shared_actions.collect_attack_dice
+        frm saves_pool_snapshot_1 = board.shared_actions.collect_attack_dice.pool
         frm face : BInt<1, 8>
         face = 1
         frm order_index : AllocationGroupCounter
         frm active_group : AllocationGroupID
         while face.value <= 6 and has_live_attack_recipient(target):
-            if saves.pool.faces[face.value - 1] == 0:
+            if saves_pool_snapshot_1.faces[face.value - 1] == 0:
                 face = face + 1
                 continue
             if use_precision and !allocation_group_alive(target, groups[precision.value]):
@@ -588,18 +611,21 @@ act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit
             act allocate_wound(frm ModelID id) {allocation_model_valid(target, groups[active_group.value], id)}
             frm die : Dice
             die = face.value
-            saves.pool.faces[face.value - 1] = saves.pool.faces[face.value - 1] - 1
+            saves_pool_snapshot_1.faces[face.value - 1] = saves_pool_snapshot_1.faces[face.value - 1] - 1
             if attack_save_succeeds(groups[active_group.value], die, board.attack_info.attack_penetration(target[id])):
                 continue
             board.current_state = CurrentStateDescription::damage_roll
             # Merge the allocated model's incoming D before the per-attack roll
             # arithmetic/floor (p.19, appendix02.02.01/02.02.03).
             frm normal_modifiers = combined_incoming_modifiers(board.attack_info.damage_modifiers, target[id].incoming_attack_modifiers, ModifiedCharacteristic::damage, board.attack_info.source.range() == 0)
-            subaction*(board) normal_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, normal_modifiers, ModifiedCharacteristic::damage)
+            board.shared_actions.evaluate_weapon_characteristic = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, normal_modifiers, ModifiedCharacteristic::damage)
+            subaction*(board) board.shared_actions.evaluate_weapon_characteristic
+            frm normal_amount_result_snapshot_2 = board.shared_actions.evaluate_weapon_characteristic.result
             frm jobs : DamageJobs
             jobs.clear()
-            jobs.append(damage_job(DamageKind::normal, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, normal_amount.result.value, target[id].identity))
-            subaction*(board) normal_damage = resolve_damage_jobs(board, jobs, false, board.attack_info.source_unit_id)
+            jobs.append(damage_job(DamageKind::normal, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, normal_amount_result_snapshot_2.value, target[id].identity))
+            board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, board.attack_info.source_unit_id)
+            subaction*(board) board.shared_actions.resolve_damage_jobs
     while generated_critical_wounds > 0 and has_live_attack_recipient(target):
         board.current_decision_maker = target.owned_by_player1
         board.current_state = CurrentStateDescription::mortal_wound
@@ -609,11 +635,14 @@ act resolve_attack_damage(ctx Board board, ctx Unit target, ctx Unit source_unit
         # Devastating attacks use the allocated recipient's D modifiers before
         # conversion to mortal wound loss, not on each wound separately (p.80).
         frm critical_modifiers = combined_incoming_modifiers(board.attack_info.damage_modifiers, target[critical_model].incoming_attack_modifiers, ModifiedCharacteristic::damage, board.attack_info.source.range() == 0)
-        subaction*(board) critical_amount = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, critical_modifiers, ModifiedCharacteristic::damage)
+        board.shared_actions.evaluate_weapon_characteristic = evaluate_weapon_characteristic(board, board.attack_info.source.damage(), board.attack_info.melta_damage_bonus.value, source_unit.owned_by_player1, board.attack_info.source_unit_id, critical_modifiers, ModifiedCharacteristic::damage)
+        subaction*(board) board.shared_actions.evaluate_weapon_characteristic
+        frm critical_amount_result_snapshot_4 = board.shared_actions.evaluate_weapon_characteristic.result
         frm critical_jobs : DamageJobs
         critical_jobs.clear()
-        critical_jobs.append(damage_job(DamageKind::devastating, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, critical_amount.result.value, critical_recipient))
-        subaction*(board) mortal_damage = resolve_damage_jobs(board, critical_jobs, false, board.attack_info.source_unit_id)
+        critical_jobs.append(damage_job(DamageKind::devastating, board.attack_info.target_unit_id, board.attack_info.source_unit_id, true, true, critical_amount_result_snapshot_4.value, critical_recipient))
+        board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, critical_jobs, false, board.attack_info.source_unit_id)
+        subaction*(board) board.shared_actions.resolve_damage_jobs
         generated_critical_wounds = generated_critical_wounds - 1
     board.current_decision_maker = previous_owner
     board.current_state = CurrentStateDescription::none
@@ -628,9 +657,12 @@ act resolve_hazards(ctx Board board, frm UnitID unit, frm HazardousUses count) -
     frm multiplier : LinearlyDistributedInt<1, 4>
     multiplier = hazard_mortal_multiplier(board[unit])
     board.current_state = CurrentStateDescription::hazardous_roll
-    subaction*(board) hazards = collect_attack_dice(board, amount, false, false, true, board[unit].owned_by_player1, unit)
-    amount = (hazards.pool.faces[0].value + hazards.pool.faces[1].value) * multiplier.value
-    subaction*(board) mortals = resolve_mortal_wounds(board, unit, unit, false, amount)
+    board.shared_actions.collect_attack_dice = collect_attack_dice(board, amount, false, false, true, board[unit].owned_by_player1, unit)
+    subaction*(board) board.shared_actions.collect_attack_dice
+    frm hazards_pool_snapshot_1 = board.shared_actions.collect_attack_dice.pool
+    amount = (hazards_pool_snapshot_1.faces[0].value + hazards_pool_snapshot_1.faces[1].value) * multiplier.value
+    board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, unit, unit, false, amount)
+    subaction*(board) board.shared_actions.resolve_mortal_wounds
 
 # Preserve the existing one-attack entrypoint for fixtures and legacy callers;
 # dice use the same batch pipeline as declared groups (pp.17–18).
@@ -688,14 +720,16 @@ act resolve_weapon(ctx Board board,
         rapid_fire_attacks = board.attack_info.source.get_rule_parameter(WeaponRuleKind::rapid_fire)
 
     board.current_state = CurrentStateDescription::quantity_roll
-    subaction* attacks_roll = evaluate_random_stat(board.attack_info.source.attacks(),  rapid_fire_attacks)
+    board.shared_actions.evaluate_random_stat = evaluate_random_stat(board.attack_info.source.attacks(),  rapid_fire_attacks)
+    subaction* board.shared_actions.evaluate_random_stat
+    frm attacks_roll_result_snapshot_1 = board.shared_actions.evaluate_random_stat.result
 
     if board.attack_info.has_weapon_rule(board, WeaponRuleKind::blast):
-       attacks_roll.result = attacks_roll.result + board[target].models.size() / 5
+       attacks_roll_result_snapshot_1 = attacks_roll_result_snapshot_1 + board[target].models.size() / 5
 
 
     frm current_attack : RandomStatResult
-    while current_attack != attacks_roll.result:
+    while current_attack != attacks_roll_result_snapshot_1:
         ref target_unit = board[target]
         subaction* (board, board[target], board[source]) attack = single_attack(board, board[target], board[source])
 
@@ -841,7 +875,8 @@ act use_attack_stratagems(ctx Board board,
                 # instead of repeatedly damaging model zero (pp.24/81).
                 frm pact_damage : CombatCounter
                 pact_damage = board.current_roll.result.value
-                subaction*(board) pact_mortals = resolve_mortal_wounds(board, source, source, false, pact_damage)
+                board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, source, source, false, pact_damage)
+                subaction*(board) board.shared_actions.resolve_mortal_wounds
             act select_ability(Bool use_letal_hits)
             if use_letal_hits:
                 board.attack_info.add_letal_hits()
@@ -876,7 +911,8 @@ act use_attack_stratagems(ctx Board board,
             # the faction rule itself still awaits task-17 source validation.
             frm offering_jobs : DamageJobs
             offering_jobs.append(damage_job(DamageKind::normal, source, source, false, false, 1, board[source][model].identity))
-            subaction*(board) offering = resolve_damage_jobs(board, offering_jobs, false, source)
+            board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, offering_jobs, false, source)
+            subaction*(board) board.shared_actions.resolve_damage_jobs
             board.attack_info.profile_hit_roll_bonus.append(Profile::aranis_zarkan)
             board.attack_info.profile_wound_roll_bonus.append(Profile::aranis_zarkan)
 
@@ -907,9 +943,11 @@ act declare_model_weapons(ctx Board board, ctx DeclaredWeapons declarations, frm
                 declarations.append(make_declared_weapon(board, source, current_model.get(), weapon_id.value))
                 selected[weapon_id.value] = true
                 # Duplicate ability choice happens before target declarations (p.78).
-                subaction*(board) ability_choices = choose_weapon_abilities(board, declarations.back().selected_rules)
-                declarations.back().selected_rules = ability_choices.chosen
-                declarations.back().current_target_rules = ability_choices.chosen
+                board.shared_actions.choose_weapon_abilities = choose_weapon_abilities(board, declarations.back().selected_rules)
+                subaction*(board) board.shared_actions.choose_weapon_abilities
+                frm ability_choices_chosen_snapshot_1 = board.shared_actions.choose_weapon_abilities.chosen
+                declarations.back().selected_rules = ability_choices_chosen_snapshot_1
+                declarations.back().current_target_rules = ability_choices_chosen_snapshot_1
                 # One Shot is consumed by selection, even if no target remains (p.83).
                 if declared_weapon_has_kind(declarations.back(), WeaponRuleKind::one_shot):
                     consume_one_shot_profile(board[source][current_model.get()], weapon_id.value)
@@ -1088,8 +1126,10 @@ act gather_weapon_count(ctx Board board, frm UnitID source, frm UnitID target, f
         result = count
     else:
         board.current_state = CurrentStateDescription::quantity_roll
-        subaction*(board) generated = evaluate_weapon_characteristic(board, declaration.weapon.attacks(), gathering_extra_attacks(board, source, target, declaration), board[source].owned_by_player1, source, declaration_attack_modifiers(board, source, declaration), ModifiedCharacteristic::attacks)
-        result = generated.result
+        board.shared_actions.evaluate_weapon_characteristic = evaluate_weapon_characteristic(board, declaration.weapon.attacks(), gathering_extra_attacks(board, source, target, declaration), board[source].owned_by_player1, source, declaration_attack_modifiers(board, source, declaration), ModifiedCharacteristic::attacks)
+        subaction*(board) board.shared_actions.evaluate_weapon_characteristic
+        frm generated_result_snapshot_1 = board.shared_actions.evaluate_weapon_characteristic.result
+        result = generated_result_snapshot_1
 
 # Gather every identical unresolved weapon; roll random A independently and
 # combine afterward (p.17; supplied appendix 02.02.03). Keep the loop's source
@@ -1125,8 +1165,10 @@ act prepare_target_weapon_abilities(ctx Board board, ctx DeclaredWeapons declara
             available = declarations[index.value].selected_rules
             for i in range(target_info.temporary_weapon_abilities.size()):
                 available.append(target_info.temporary_weapon_abilities[i])
-            subaction*(board) granted_choices = choose_weapon_abilities(board, available)
-            declarations[index.value].current_target_rules = granted_choices.chosen
+            board.shared_actions.choose_weapon_abilities = choose_weapon_abilities(board, available)
+            subaction*(board) board.shared_actions.choose_weapon_abilities
+            frm granted_choices_chosen_snapshot_1 = board.shared_actions.choose_weapon_abilities.chosen
+            declarations[index.value].current_target_rules = granted_choices_chosen_snapshot_1
         index = index + 1
 
 # Full activation: select all weapons, declare all targets, choose target then
@@ -1161,7 +1203,8 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             act roll(Dice grant_face)
             board[source][grant_model.value].destruction_attack_suppressed = grant_face.value < board[source][grant_model.value].destruction_fight_roll.value
         grant_model = grant_model + 1
-    subaction*(board) source_selection = resolve_source_event(board, source_event(SourceEventKind::attack_selection, board[source].identity, board[target].identity, invalid_entity_identity()))
+    board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::attack_selection, board[source].identity, board[target].identity, invalid_entity_identity()))
+    subaction*(board) board.shared_actions.resolve_source_event
     frm declarations : DeclaredWeapons
     frm model : ModelIterator
     frm hazardous_uses : HazardousUses
@@ -1179,19 +1222,22 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
         declaration_index = declaration_index + 1
     while has_unresolved_attacks(declarations):
         board.current_decision_maker = board[source].owned_by_player1
-        subaction*(board, declarations) viability = revalidate_attack_targets(board, declarations, source, melee)
+        board.shared_actions.revalidate_attack_targets = revalidate_attack_targets(board, declarations, source, melee)
+        subaction*(board, declarations) board.shared_actions.revalidate_attack_targets
         if !has_unresolved_attacks(declarations):
             break
         act choose_attack_target(UnitID unit) {target_has_unresolved_weapons(declarations, unit)}
         target = unit
-        subaction*(board) source_targeted = resolve_source_event(board, source_event(SourceEventKind::attack_targeted, board[source].identity, board[target].identity, invalid_entity_identity()))
+        board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::attack_targeted, board[source].identity, board[target].identity, invalid_entity_identity()))
+        subaction*(board) board.shared_actions.resolve_source_event
         configure_attack_info(board, source.get(), target.get(), overwatch, melee)
         subaction*(board) strats = use_attack_stratagems(board, source, target, melee)
         frm target_info = board.attack_info
         board.current_decision_maker = board[source].owned_by_player1
         subaction*(board, declarations) target_abilities = prepare_target_weapon_abilities(board, declarations, source, target, target_info)
         while target_has_unresolved_weapons(declarations, target):
-            subaction*(board, declarations) changed = revalidate_attack_targets(board, declarations, source, melee)
+            board.shared_actions.revalidate_attack_targets = revalidate_attack_targets(board, declarations, source, melee)
+            subaction*(board, declarations) board.shared_actions.revalidate_attack_targets
             if !target_has_unresolved_weapons(declarations, target):
                 break
             act choose_attack_weapon(frm AttackWeaponID weapon) {
@@ -1208,11 +1254,14 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     board.allow_destroyed_attack = previous_destroyed_attack
     board.destroyed_attack_unit = previous_destroyed_unit
     frm cleanup_jobs : DamageJobs
-    subaction*(board) deaths = resolve_damage_jobs(board, cleanup_jobs, true, source)
+    board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, cleanup_jobs, true, source)
+    subaction*(board) board.shared_actions.resolve_damage_jobs
     hazardous_uses = declared_hazardous_uses(declarations)
-    subaction*(board) hazards = resolve_hazards(board, source, hazardous_uses)
+    board.shared_actions.resolve_hazards = resolve_hazards(board, source, hazardous_uses)
+    subaction*(board) board.shared_actions.resolve_hazards
 
-    subaction*(board) source_finished = resolve_source_event(board, source_event(SourceEventKind::attack_end, board[source].identity, board[target].identity, invalid_entity_identity()))
+    board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::attack_end, board[source].identity, board[target].identity, invalid_entity_identity()))
+    subaction*(board) board.shared_actions.resolve_source_event
     board.timing.active_player = previous_active
     board[source].shooting_kind = previous_kind
     board.current_decision_maker = previous_owner
@@ -1426,7 +1475,8 @@ act resolve_explosives(ctx Board board, frm UnitID source) -> Explosives:
         if face.value >= 4:
             amount = amount + 1
         index = index + 1
-    subaction*(board) damage = resolve_mortal_wounds(board, target, source, true, amount)
+    board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, target, source, true, amount)
+    subaction*(board) board.shared_actions.resolve_mortal_wounds
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
@@ -1466,7 +1516,8 @@ act resolve_crushing_impact(ctx Board board, frm UnitID source) -> CrushingImpac
     # use the common Rules Sequencing engine, not bespoke casualty deletion.
     jobs.append(damage_job(DamageKind::mortal, target, source, true, false, enemy_amount.value, invalid_entity_identity()))
     jobs.append(damage_job(DamageKind::mortal, source, source, false, false, self_amount.value, invalid_entity_identity()))
-    subaction*(board) damage = resolve_damage_jobs(board, jobs, false, source)
+    board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, source)
+    subaction*(board) board.shared_actions.resolve_damage_jobs
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
@@ -1493,7 +1544,8 @@ act timing_heroic_intervention(ctx Board board, frm Bool player) -> TimingHeroic
     if kind == ChargeKind::into_the_fray:
         cost = cost + 1
     board.commit_stratagem_with_cost(player, Stratagem::heroic_intervention, board[source], cost)
-    subaction*(board) intervention_charge = charge(board, source, kind)
+    board.shared_actions.charge = charge(board, source, kind)
+    subaction*(board) board.shared_actions.charge
     board.current_decision_maker = player
 
 # These are existing faction effects, not invented new-edition datasheets.
@@ -1576,23 +1628,32 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
                 }
                     resolved[int(rule.value)] = true
                     if rule == TimingRule::regain_coherency:
-                        subaction*(board) cleanup = regain_coherency(board, player)
+                        board.shared_actions.regain_coherency = regain_coherency(board, player)
+                        subaction*(board) board.shared_actions.regain_coherency
                     if rule == TimingRule::rapid_ingress:
-                        subaction*(board) ingress = timing_rapid_ingress(board, player)
+                        board.shared_actions.timing_rapid_ingress = timing_rapid_ingress(board, player)
+                        subaction*(board) board.shared_actions.timing_rapid_ingress
                     if rule == TimingRule::fire_overwatch:
-                        subaction*(board) overwatch = timing_overwatch(board, player)
+                        board.shared_actions.timing_overwatch = timing_overwatch(board, player)
+                        subaction*(board) board.shared_actions.timing_overwatch
                     if rule == TimingRule::shadow_in_the_warp:
-                        subaction*(board) shadow = shadow_in_the_warp(board, player)
+                        board.shared_actions.shadow_in_the_warp = shadow_in_the_warp(board, player)
+                        subaction*(board) board.shared_actions.shadow_in_the_warp
                     if rule == TimingRule::neural_disruption:
-                        subaction*(board) neural = neural_disruption(board)
+                        board.shared_actions.neural_disruption = neural_disruption(board)
+                        subaction*(board) board.shared_actions.neural_disruption
                     if rule == TimingRule::oath_of_moment:
-                        subaction*(board) oath = timing_oath_of_moment(board)
+                        board.shared_actions.timing_oath_of_moment = timing_oath_of_moment(board)
+                        subaction*(board) board.shared_actions.timing_oath_of_moment
                     if rule == TimingRule::heroic_intervention:
-                        subaction*(board) intervention = timing_heroic_intervention(board, player)
+                        board.shared_actions.timing_heroic_intervention = timing_heroic_intervention(board, player)
+                        subaction*(board) board.shared_actions.timing_heroic_intervention
                     if rule == TimingRule::smokescreen:
-                        subaction*(board) smoke = timing_smokescreen(board, player)
+                        board.shared_actions.timing_smokescreen = timing_smokescreen(board, player)
+                        subaction*(board) board.shared_actions.timing_smokescreen
                     if rule == TimingRule::objective_stratagem:
-                        subaction*(board) objective = timing_objective_stratagem(board)
+                        board.shared_actions.timing_objective_stratagem = timing_objective_stratagem(board)
+                        subaction*(board) board.shared_actions.timing_objective_stratagem
                     board.current_decision_maker = player
         player = !player
         count = count + 1
@@ -1639,7 +1700,8 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         return
     frm previous_owner = board.current_decision_maker
     board.current_decision_maker = unit.owned_by_player1
-    subaction*(board) source_shock_start = resolve_source_event(board, source_event(SourceEventKind::shock_start, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
+    board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::shock_start, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
+    subaction*(board) board.shared_actions.resolve_source_event
     frm auto_pass = false
     if command_step and board.timing.phase == BattlePhase::command and unit.owned_by_player1 == board.current_player and !board.has_used_insane_bravery[int(unit.owned_by_player1)] and board.can_target_strat(unit.owned_by_player1, Stratagem::insane_bravery, unit):
         act insane_bravery(Bool do_it)
@@ -1658,7 +1720,8 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
     else:
         if command_step and recover_shock:
             unit.battle_socked = false
-    subaction*(board) source_shock_end = resolve_source_event(board, source_event(SourceEventKind::shock_end, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
+    board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::shock_end, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
+    subaction*(board) board.shared_actions.resolve_source_event
     board.current_decision_maker = previous_owner
 
 # Existing callers have no extra penalty; Mobbed uses the same shock pipeline
@@ -1688,7 +1751,8 @@ act resolve_orks_mobbed(ctx Board board, frm UnitID source) -> OrksMobbed:
         pending[shock_target.get()] = false
         remaining = remaining - 1
         if orks_mobbed_target_valid(board, source, shock_target):
-            subaction*(board, board[shock_target]) shock = battle_shock_test(board, board[shock_target], false, false, penalty)
+            board.shared_actions.battle_shock_test = battle_shock_test(board, board[shock_target], false, false, penalty)
+            subaction*(board, board[shock_target]) board.shared_actions.battle_shock_test
     board.current_decision_maker = previous_owner
 
 # Test each live friendly unit once when already shocked or at/below half
@@ -1706,7 +1770,8 @@ act battle_shock_step(ctx Board board) -> BattleShockStep:
         if !board[i.value].battle_socked and !board[i.value].is_at_or_below_half_strength():
             i = i + 1
             continue
-        subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value], true, shocked_at_start[i.value])
+        board.shared_actions.battle_shock_test = battle_shock_test(board, board[i.value], true, shocked_at_start[i.value])
+        subaction*(board, board[i.value]) board.shared_actions.battle_shock_test
         i = i + 1
 
     # Supplied appendix 01.02.04 explicitly requires the same Command tests
@@ -1716,7 +1781,8 @@ act battle_shock_step(ctx Board board) -> BattleShockStep:
     while reserve_index.value < board.reserve_units.size():
         if !board.reserve_units[reserve_index.value].empty() and board.reserve_units[reserve_index.value].owned_by_player1 == board.current_player and (board.reserve_units[reserve_index.value].battle_socked or board.reserve_units[reserve_index.value].is_at_or_below_half_strength()):
             frm reserve_recover = board.reserve_units[reserve_index.value].battle_socked
-            subaction*(board, board.reserve_units[reserve_index.value]) reserve_shock_test = battle_shock_test(board, board.reserve_units[reserve_index.value], true, reserve_recover)
+            board.shared_actions.battle_shock_test = battle_shock_test(board, board.reserve_units[reserve_index.value], true, reserve_recover)
+            subaction*(board, board.reserve_units[reserve_index.value]) board.shared_actions.battle_shock_test
         reserve_index = reserve_index + 1
     # Supplied appendix 01.02.04 explicitly requires the same Command tests
     # for strategic reserves (core cross-reference pp.68–69). These are army
@@ -1725,7 +1791,8 @@ act battle_shock_step(ctx Board board) -> BattleShockStep:
     while passenger_index.value < board.embarked_units.size():
         if !board.embarked_units[passenger_index.value].empty() and board.embarked_units[passenger_index.value].owned_by_player1 == board.current_player and (board.embarked_units[passenger_index.value].battle_socked or board.embarked_units[passenger_index.value].is_at_or_below_half_strength()):
             frm passenger_recover = board.embarked_units[passenger_index.value].battle_socked
-            subaction*(board, board.embarked_units[passenger_index.value]) passenger_shock_test = battle_shock_test(board, board.embarked_units[passenger_index.value], true, passenger_recover)
+            board.shared_actions.battle_shock_test = battle_shock_test(board, board.embarked_units[passenger_index.value], true, passenger_recover)
+            subaction*(board, board.embarked_units[passenger_index.value]) board.shared_actions.battle_shock_test
         passenger_index = passenger_index + 1
 
 
@@ -1741,7 +1808,8 @@ act shadow_in_the_warp(ctx Board board, frm Bool player) -> ShadowInTheWarp:
         frm i : UnitIterator
         while i != board.units.size():
             if !board[i.value].empty() and board[i.value].owned_by_player1 != player:
-                subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value], false, false)
+                board.shared_actions.battle_shock_test = battle_shock_test(board, board[i.value], false, false)
+                subaction*(board, board[i.value]) board.shared_actions.battle_shock_test
             i = i + 1
     board.current_decision_maker = previous_owner
 
@@ -1768,7 +1836,8 @@ act neural_disruption(ctx Board board) -> NeuralDisruption:
                 board[source].distance(board[target]) <= 12.0
             }
                 used[source.get()] = true
-                subaction*(board, board[target]) shock_test = battle_shock_test(board, board[target], false, false)
+                board.shared_actions.battle_shock_test = battle_shock_test(board, board[target], false, false)
+                subaction*(board, board[target]) board.shared_actions.battle_shock_test
 
 # core rule command phase 
 # Gain both players' Core CP before Battle-shock, then resolve Command
@@ -1778,7 +1847,8 @@ act command_phase(ctx Board board) -> CommandPhase:
         board.command_points[i] = board.command_points[i] + 1
     # Recovery is a roll here rather than automatic shock expiration (p.30).
     subaction*(board) shock_step = battle_shock_step(board)
-    subaction*(board) abilities = resolve_timing_window(board, TimingWindow::command_abilities)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::command_abilities)
+    subaction*(board) board.shared_actions.resolve_timing_window
     board.current_decision_maker = board.current_player
 
 # Movement-only dispatch allows targeted Keep Huntin'/Bomb Squig and ordinary
@@ -1816,10 +1886,13 @@ act resolve_movement_sources(ctx Board board, frm SourceEvent trigger) -> Moveme
                             bomb_source = location.unit.value
                             act roll(Dice bomb_result)
                             if bomb_result.value >= 3:
-                                subaction* bomb_damage = evaluate_random_stat(dice_stat(3))
+                                board.shared_actions.evaluate_random_stat = evaluate_random_stat(dice_stat(3))
+                                subaction* board.shared_actions.evaluate_random_stat
+                                frm bomb_damage_result_snapshot_1 = board.shared_actions.evaluate_random_stat.result
                                 frm amount : CombatCounter
-                                amount = bomb_damage.result.value
-                                subaction*(board) bomb_mortals = resolve_mortal_wounds(board, bomb_target, bomb_source, true, amount)
+                                amount = bomb_damage_result_snapshot_1.value
+                                board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, bomb_target, bomb_source, true, amount)
+                                subaction*(board) board.shared_actions.resolve_mortal_wounds
                         else:
                             commit_pending_source(board, pending, event, player)
                     board.current_decision_maker = player
@@ -1843,7 +1916,8 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
     move_start_event.movement = board[unit].pending_move_kind
     if move_start_event.movement == MovementKind::stationary:
         move_start_event.movement = MovementKind::normal
-    subaction*(board) source_start = resolve_movement_sources(board, move_start_event)
+    board.shared_actions.resolve_movement_sources = resolve_movement_sources(board, move_start_event)
+    subaction*(board) board.shared_actions.resolve_movement_sources
     frm original : Unit
     original = board[unit]
     frm candidate : Unit
@@ -1907,7 +1981,8 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
     if completed:
         frm move_end_event = source_event(SourceEventKind::move_end, board[unit].identity, invalid_entity_identity(), invalid_entity_identity())
         move_end_event.movement = kind
-        subaction*(board) source_end = resolve_movement_sources(board, move_end_event)
+        board.shared_actions.resolve_movement_sources = resolve_movement_sources(board, move_end_event)
+        subaction*(board) board.shared_actions.resolve_movement_sources
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
@@ -1926,7 +2001,8 @@ act cleanup_phase_retained(ctx Board board) -> PhaseRetainedCleanup:
     release_phase_retained_fighters(board)
     frm jobs : DamageJobs
     let source : UnitID
-    subaction*(board) destruction_cleanup = resolve_damage_jobs(board, jobs, false, source)
+    board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, source)
+    subaction*(board) board.shared_actions.resolve_damage_jobs
 
 # Pile In/consolidation are optional staged per-model moves, separate from
 # attack selection (pp.38/42). No partial path changes live positions; closest
@@ -2061,7 +2137,8 @@ act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
                 board.moving_unit = previous_mover
     act choose_fight_kind(FightKind kind) {fight_kind_valid(board, source, kind)}
     if kind == FightKind::overrun:
-        subaction*(board) overrun_move = melee_move(board, source, false, true)
+        board.shared_actions.melee_move = melee_move(board, source, false, true)
+        subaction*(board) board.shared_actions.melee_move
     let unused_target : UnitID
     board.attack = attack(board, source, unused_target, true, false)
     subaction*(board) board.attack
@@ -2091,7 +2168,8 @@ act fight_step(ctx Board board, frm Bool start_first) -> FightStep:
                 chooser = !chooser
             act select_fighting_unit(frm UnitID source) {source.get() < board.units.size(), board[source].owned_by_player1 == chooser, fight_unit_eligible(board, source), (!first or fight_first_unit(board[source])), !counter_pending or source.get() == counter_source.get()}
                 counter_pending = false
-                subaction*(board) fighting = selected_fight(board, source)
+                board.shared_actions.selected_fight = selected_fight(board, source)
+                subaction*(board) board.shared_actions.selected_fight
                 chooser = !chooser
                 if board[source].owned_by_player1 == board.current_player and counteroffensive_available(board, chooser):
                     board.current_decision_maker = chooser
@@ -2119,8 +2197,11 @@ act melee_move_step(ctx Board board, frm Bool consolidate) -> MeleeMoveStep:
                 act finish_melee_step()
                     done = true
                 act select_melee_unit(frm UnitID source) {source.get() < board.units.size(), board[source].owned_by_player1 == mover, melee_move_eligible(board, source, consolidate, false)}
-                    subaction*(board) moving = melee_move(board, source, consolidate, false)
-                    if consolidate and moving.completed and moving.kind == MeleeMoveKind::engaging:
+                    board.shared_actions.melee_move = melee_move(board, source, consolidate, false)
+                    subaction*(board) board.shared_actions.melee_move
+                    frm moving_completed_snapshot_1 = board.shared_actions.melee_move.completed
+                    frm moving_kind_snapshot_1 = board.shared_actions.melee_move.kind
+                    if consolidate and moving_completed_snapshot_1 and moving_kind_snapshot_1 == MeleeMoveKind::engaging:
                         for i in range(board.units.size()):
                             if board[i].owned_by_player1 != mover and !board[i].has_fought and board[source].is_engaged_with(board[i]):
                                 board[i].history.consolidation_fight_pending = board.phase_serial.value + 1
@@ -2128,7 +2209,8 @@ act melee_move_step(ctx Board board, frm Bool consolidate) -> MeleeMoveStep:
                         while has_consolidation_response(board, !mover):
                             board.current_decision_maker = !mover
                             act select_consolidation_fighter(frm UnitID response) {response.get() < board.units.size(), board[response].owned_by_player1 != mover, consolidation_response_valid(board, response)}
-                            subaction*(board) answering = selected_fight(board, response)
+                            board.shared_actions.selected_fight = selected_fight(board, response)
+                            subaction*(board) board.shared_actions.selected_fight
                     board.current_decision_maker = mover
         side = side + 1
         mover = !mover
@@ -2138,9 +2220,11 @@ act melee_move_step(ctx Board board, frm Bool consolidate) -> MeleeMoveStep:
 # (pp.38–43). The user retires the previous Orks implementation; its obsolete
 # Bestial Bellow decision must not appear before the new edition's Fight step.
 act fight_phase(ctx Board board) -> FightPhase:
-    subaction*(board) pile_in = melee_move_step(board, false)
+    board.shared_actions.melee_move_step = melee_move_step(board, false)
+    subaction*(board) board.shared_actions.melee_move_step
     subaction*(board) fights = fight_step(board, true)
-    subaction*(board) consolidation = melee_move_step(board, true)
+    board.shared_actions.melee_move_step = melee_move_step(board, true)
+    subaction*(board) board.shared_actions.melee_move_step
 
 # Declare once, roll/reroll before choosing targets, and commit only a legal
 # completed move (pp.36–37). All pending numbers/paths remain bounded. Restore
@@ -2240,12 +2324,14 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
             actions:
                 act resolve_mobbed() {mobbed_pending}
                     mobbed_pending = false
-                    subaction*(board) mobbed = resolve_orks_mobbed(board, source)
+                    board.shared_actions.resolve_orks_mobbed = resolve_orks_mobbed(board, source)
+                    subaction*(board) board.shared_actions.resolve_orks_mobbed
                 act decline_crushing_impact() {crushing_pending}
                     crushing_pending = false
                 act crushing_impact() {crushing_pending, crushing_source_valid(board, source)}
                     crushing_pending = false
-                    subaction*(board) impact = resolve_crushing_impact(board, source)
+                    board.shared_actions.resolve_crushing_impact = resolve_crushing_impact(board, source)
+                    subaction*(board) board.shared_actions.resolve_crushing_impact
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
@@ -2267,7 +2353,8 @@ act charge_phase(ctx Board board) -> ChargePhase:
             act end_charge()
                 break
             act select_charging_unit(frm UnitID source) {charge_source_valid(board, source, board.current_player)}
-                subaction*(board) selected_charge = charge(board, source, ChargeKind::ordinary)
+                board.shared_actions.charge = charge(board, source, ChargeKind::ordinary)
+                subaction*(board) board.shared_actions.charge
                 board.current_decision_maker = board.current_player
 
 # Ingress setup validates every base before transfer; failed setup remains
@@ -2296,7 +2383,8 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
 act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
     frm count : HazardousUses
     count = board[id].models.size()
-    subaction*(board) hazards = resolve_hazards(board, id, count)
+    board.shared_actions.resolve_hazards = resolve_hazards(board, id, count)
+    subaction*(board) board.shared_actions.resolve_hazards
 
 # Choose an explicit mutually exclusive move. Random M is determined once
 # when selected; advance roll and fall-back hazards precede paths (p.33;
@@ -2314,8 +2402,10 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
         random_index = random_index + 1
     if random_index.value < board[id].models.size():
         # Random characteristic determination is not on Command Re-roll's list.
-        subaction* random_m = evaluate_random_stat(board[id][random_index.value].random_movement)
-        board[id].movement_override = max(1, random_m.result.value) + 1
+        board.shared_actions.evaluate_random_stat = evaluate_random_stat(board[id][random_index.value].random_movement)
+        subaction* board.shared_actions.evaluate_random_stat
+        frm random_m_result_snapshot_1 = board.shared_actions.evaluate_random_stat.result
+        board[id].movement_override = max(1, random_m_result_snapshot_1.value) + 1
     while !selected:
         actions:
             act remain_stationary() {battlefield_move_eligible(board, id, MovementKind::stationary)}
@@ -2340,7 +2430,8 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
                 selected = true
             act desperate_escape() {battlefield_move_eligible(board, id, MovementKind::desperate_escape)}
                 kind = MovementKind::desperate_escape
-                subaction*(board) escape = desperate_escape(board, id)
+                board.shared_actions.desperate_escape = desperate_escape(board, id)
+                subaction*(board) board.shared_actions.desperate_escape
                 selected = true
     if !(board[id].history.selected_move_phase == board.phase_serial.value + 1) and has_live_model(board[id]):
         board[id].pending_move_kind = kind
@@ -2358,7 +2449,9 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
                     was_mobile[i] = board[id][i].has_keyword(Keyword::mobile)
                     if !was_mobile[i]:
                         board[id][i].keywords.append(Keyword::mobile)
-        subaction*(board, id) player_move = move(board, id, extra)
+        board.shared_actions.move = move(board, id, extra)
+        subaction*(board, id) board.shared_actions.move
+        frm player_move_completed_snapshot_3 = board.shared_actions.move.completed
         if mobile:
             for i in range(board[id].models.size()):
                 if !was_mobile[i]:
@@ -2367,19 +2460,21 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
                         if board[id][i].keywords[k] == Keyword::mobile:
                             board[id][i].keywords.erase(k)
                         k = k - 1
-            if player_move.completed:
+            if player_move_completed_snapshot_3:
                 act roll(Dice mobile_hazard)
                 if mobile_hazard.value == 1:
                     board[id].battle_socked = true
-        if player_move.completed:
+        if player_move_completed_snapshot_3:
             record_move(board, id, kind)
             if kind == MovementKind::desperate_escape and !board[id].battle_socked:
-                subaction*(board, board[id]) shock = battle_shock_test(board, board[id], false, false)
+                board.shared_actions.battle_shock_test = battle_shock_test(board, board[id], false, false)
+                subaction*(board, board[id]) board.shared_actions.battle_shock_test
         else:
             # The move failed and returns all positions. Selection still has a
             # legal stationary/retry path through the phase loop (pp.12/32).
             board[id].history.move_kind = MovementKind::stationary
-    subaction*(board) embark_after_move = post_move_embark(board, id)
+    board.shared_actions.post_move_embark = post_move_embark(board, id)
+    subaction*(board) board.shared_actions.post_move_embark
     if !has_live_model(board[id]):
         board[id].history.selected_move_phase = board.phase_serial.value + 1
     board[id].movement_override = previous_override
@@ -2420,7 +2515,8 @@ act disembark(ctx Board board, frm UnitID passenger_bank) -> Disembark:
     if mode == DisembarkMode::combat:
         frm disembark_hazards : HazardousUses
         disembark_hazards = board[passenger_slot].models.size()
-        subaction*(board) combat_hazards = resolve_hazards(board, passenger_slot, disembark_hazards)
+        board.shared_actions.resolve_hazards = resolve_hazards(board, passenger_slot, disembark_hazards)
+        subaction*(board) board.shared_actions.resolve_hazards
     frm previous_mover = board.moving_unit
     board.moving_unit = passenger_slot
     frm candidate = board[passenger_slot]
@@ -2453,7 +2549,8 @@ act disembark(ctx Board board, frm UnitID passenger_bank) -> Disembark:
     board[passenger_slot] = candidate
     finish_disembark(board, passenger_slot, mode)
     if mode == DisembarkMode::tactical and !board[passenger_slot].empty():
-        subaction*(board) tactical_move = movement(board, passenger_slot, false)
+        board.shared_actions.movement = movement(board, passenger_slot, false)
+        subaction*(board) board.shared_actions.movement
     board.moving_unit = previous_mover
 
 # Every friendly unit must be selected exactly once, including reserves.
@@ -2475,7 +2572,8 @@ act movement_phase(ctx Board board) -> MovementPhase:
                     use_gilded_spear = do_it
                     if do_it:
                         board.commit_stratagem(board.current_player, Stratagem::the_gilded_spear, board[id])
-                subaction*(board) chosen_move = movement(board, id, use_gilded_spear)
+                board.shared_actions.movement = movement(board, id, use_gilded_spear)
+                subaction*(board) board.shared_actions.movement
             act select_reserve_unit(frm UnitID reserve_id) {reserve_id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[reserve_id.get()]), board.reserve_units[reserve_id.get()].owned_by_player1 == board.current_player, board.reserve_units[reserve_id.get()].history.selected_move_phase != board.phase_serial.value + 1}
                 actions:
                     act skip()
@@ -2511,7 +2609,8 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
             act use_explosives(frm UnitID explosives_source) {explosives_source_valid(board, explosives_source)}
                 subaction*(board) explosives = resolve_explosives(board, explosives_source)
             act select_shooting_unit(frm UnitID shooting_unit) {shooting_unit_valid(board, shooting_unit)}
-                subaction*(board) firing_unit = selected_shooting(board, shooting_unit, shooting_unit)
+                board.shared_actions.selected_shooting = selected_shooting(board, shooting_unit, shooting_unit)
+                subaction*(board) board.shared_actions.selected_shooting
             act select_target(frm UnitID source, frm UnitID target) {
                 shooting_unit_valid(board, source),
                 target.get() < board.units.size(),
@@ -2519,7 +2618,8 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
                 board[target].owned_by_player1 != board.current_player,
                 unit_visible_to_unit(board, board[source], board[target]) or shooting_kind_valid(board, source, ShootingKind::indirect)
             }
-                subaction*(board) firing_target = selected_shooting(board, source, target)
+                board.shared_actions.selected_shooting = selected_shooting(board, source, target)
+                subaction*(board) board.shared_actions.selected_shooting
 
 # one of the most important sequences, the whole turn of a single
 # player, as specified by the core rules
@@ -2531,42 +2631,54 @@ act turn(ctx Board board, frm Bool player_id) -> Turn:
     board.current_decision_maker = player_id
     board.start_turn_history()
     frm retained_cleanup : PhaseRetainedCleanup
-    subaction*(board) start = resolve_timing_window(board, TimingWindow::turn_start)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::turn_start)
+    subaction*(board) board.shared_actions.resolve_timing_window
     board.begin_phase(BattlePhase::command)
-    subaction*(board) command_start = resolve_timing_window(board, TimingWindow::command_start)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::command_start)
+    subaction*(board) board.shared_actions.resolve_timing_window
     subaction*(board) command_phase = command_phase(board)
-    subaction*(board) command_end = resolve_timing_window(board, TimingWindow::command_end)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::command_end)
+    subaction*(board) board.shared_actions.resolve_timing_window
     retained_cleanup = cleanup_phase_retained(board)
     subaction*(board) retained_cleanup
     board.begin_phase(BattlePhase::movement)
-    subaction*(board) movement_start = resolve_timing_window(board, TimingWindow::movement_start)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::movement_start)
+    subaction*(board) board.shared_actions.resolve_timing_window
     subaction*(board) movement_phase = movement_phase(board)
-    subaction*(board) movement_end = resolve_timing_window(board, TimingWindow::movement_end)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::movement_end)
+    subaction*(board) board.shared_actions.resolve_timing_window
     retained_cleanup = cleanup_phase_retained(board)
     subaction*(board) retained_cleanup
     board.begin_phase(BattlePhase::shooting)
-    subaction*(board) shooting_start = resolve_timing_window(board, TimingWindow::shooting_start)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::shooting_start)
+    subaction*(board) board.shared_actions.resolve_timing_window
     subaction*(board) shooting_phase = shooting_phase(board)
-    subaction*(board) shooting_end = resolve_timing_window(board, TimingWindow::shooting_end)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::shooting_end)
+    subaction*(board) board.shared_actions.resolve_timing_window
     retained_cleanup = cleanup_phase_retained(board)
     subaction*(board) retained_cleanup
     for i in range(board.units.size()):
         board[i].history.ingress_locked = false
     board.begin_phase(BattlePhase::charge)
-    subaction*(board) charge_start = resolve_timing_window(board, TimingWindow::charge_start)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::charge_start)
+    subaction*(board) board.shared_actions.resolve_timing_window
     subaction*(board) charge_phase = charge_phase(board)
-    subaction*(board) charge_end = resolve_timing_window(board, TimingWindow::charge_end)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::charge_end)
+    subaction*(board) board.shared_actions.resolve_timing_window
     retained_cleanup = cleanup_phase_retained(board)
     subaction*(board) retained_cleanup
     board.begin_phase(BattlePhase::fight)
-    subaction*(board) fight_start = resolve_timing_window(board, TimingWindow::fight_start)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::fight_start)
+    subaction*(board) board.shared_actions.resolve_timing_window
     subaction*(board) fight_phase = fight_phase(board)
-    subaction*(board) fight_end = resolve_timing_window(board, TimingWindow::fight_end)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::fight_end)
+    subaction*(board) board.shared_actions.resolve_timing_window
     retained_cleanup = cleanup_phase_retained(board)
     subaction*(board) retained_cleanup
     board.clear_phase_modifiers()
     board.timing.phase = BattlePhase::none
-    subaction*(board) end = resolve_timing_window(board, TimingWindow::turn_end)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::turn_end)
+    subaction*(board) board.shared_actions.resolve_timing_window
     return_opponent_aircraft(board)
     board.current_decision_maker = board.current_player
 
@@ -2577,14 +2689,16 @@ act round(ctx Board board) -> Round:
     board.timing.active_player = board.starting_player
     board.obtained_extra_cp_this_round[0] = false
     board.obtained_extra_cp_this_round[1] = false
-    subaction*(board) start = resolve_timing_window(board, TimingWindow::round_start)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::round_start)
+    subaction*(board) board.shared_actions.resolve_timing_window
     frm player_turn = turn(board, board.starting_player)
     subaction*(board) player_turn
     player_turn = turn(board, !board.starting_player)
     subaction*(board) player_turn
     board.current_player = board.starting_player
     board.timing.active_player = board.starting_player
-    subaction*(board) end = resolve_timing_window(board, TimingWindow::round_end)
+    board.shared_actions.resolve_timing_window = resolve_timing_window(board, TimingWindow::round_end)
+    subaction*(board) board.shared_actions.resolve_timing_window
     expire_unused_reserves(board)
 
 # Muster attachments use explicit Leader/Support permissions and separate
@@ -2693,8 +2807,10 @@ act surge(ctx Board board, frm UnitID source, frm StatModifier distance, frm Boo
     act select_surge_target(frm UnitID target) {surge_target_valid(board, source, target)}
     board.surge_target = target
     board[source].pending_move_kind = MovementKind::surge
-    subaction*(board, source) moved = move(board, source, distance)
-    if moved.completed:
+    board.shared_actions.move = move(board, source, distance)
+    subaction*(board, source) board.shared_actions.move
+    frm moved_completed_snapshot_1 = board.shared_actions.move.completed
+    if moved_completed_snapshot_1:
         record_move(board, source, MovementKind::surge)
     board[source].pending_move_kind = MovementKind::normal
     board.surge_target = previous_target
@@ -2718,8 +2834,10 @@ act resolve_scouts(ctx Board board) -> ResolveScouts:
                     board[scout].pending_move_kind = MovementKind::scout
                     frm distance : StatModifier
                     distance = transport_scouts_distance(board, board[scout])
-                    subaction*(board, scout) scout_move = move(board, scout, distance)
-                    if scout_move.completed:
+                    board.shared_actions.move = move(board, scout, distance)
+                    subaction*(board, scout) board.shared_actions.move
+                    frm scout_move_completed_snapshot_1 = board.shared_actions.move.completed
+                    if scout_move_completed_snapshot_1:
                         board[scout].history.scouts_resolved = true
                         record_move(board, scout, MovementKind::scout)
                     board[scout].pending_move_kind = MovementKind::normal
@@ -2838,5 +2956,7 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
     board.armies[int(current_player)].faction = army_faction_for_roster(board.players_faction[int(current_player)])
     board.armies[int(current_player)].reserve_budget = ReserveBudgetMode::point_free
     board.identify_units()
-    subaction*(board) selected_detachments = select_orks_detachments(board, current_player)
-    subaction*(board) selected_warlord = select_orks_warlord(board, current_player)
+    board.shared_actions.select_orks_detachments = select_orks_detachments(board, current_player)
+    subaction*(board) board.shared_actions.select_orks_detachments
+    board.shared_actions.select_orks_warlord = select_orks_warlord(board, current_player)
+    subaction*(board) board.shared_actions.select_orks_warlord

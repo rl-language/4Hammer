@@ -103,12 +103,24 @@ The full-game composition, abbreviated from `full_game.rl`, is:
 act play() -> Game:
     frm board : Board
     board.mission_scoring = MissionScoringMode::legacy_four_markers
-    subaction*(board) p1 = pick_army(board, false)
-    subaction*(board) p2 = pick_army(board, true)
+    board.shared_actions.pick_army = pick_army(board, false)
+    subaction*(board) board.shared_actions.pick_army
+    board.shared_actions.pick_army = pick_army(board, true)
+    subaction*(board) board.shared_actions.pick_army
     subaction*(board) battle = battle(board)
 ```
 
 The nested frames form the active call chain. For example, `Game` may be suspended inside a battle, turn, Shooting phase, attack, allocation and dice sequence. `subaction*` forwards the child's inputs through the parent until the child finishes. The star form is widely used here; a single-step `subaction` has different delegation semantics.
+
+### Sharing frames with disjoint active lifetimes
+
+An action declaration creates a frame type, but each call site need not own a separate copy. Sequential calls to the same action share one slot in `Board.shared_actions`, whose generated-lifecycle container is defined in `action_frames.rl`. The existing `Board.attack`, `current_roll` and `current_pair_roll` slots follow the same ownership rule. Frames that already have only one owning site remain there; `Game` owns `Board`, so it cannot itself be stored inside that board.
+
+Before sharing a type, check that no descendant can start another instance of that type while the first is suspended. Full delegation makes sibling calls sequential; it does not by itself exclude recursive re-entry. The constructor graph and generated layout are checked by `tools/check_action_frame_storage.py`. Its complete declaration inventory is `action-frame-lifetimes.json`. The graph check supplements a manual review of ordinary helpers and result lifetimes; it cannot prove arbitrary runtime lifetime behavior.
+
+Construct the child into its context slot, then delegate that slot with the original contexts. A completed child remains in the slot until the next call overwrites it. If its result is needed after another call can reuse the slot, immediately copy only the required result fields into caller-owned `frm` snapshots. For example, attack resolution retains the hit pool before gathering wound dice, and retains a skill-modifier selection before starting the hit-modifier selection. Copying the entire child would recreate the duplicate storage this design removes.
+
+This changes the serialized and observation layout, so native libraries, Python metadata and Godot headers must be regenerated together. It adds no tabletop rule and does not change action argument shapes or ownership. Save/replay, semantic and sanitizer checks remain required after moving frames.
 
 | Declaration | Lifetime and purpose |
 | --- | --- |

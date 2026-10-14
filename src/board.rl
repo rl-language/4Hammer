@@ -1,3 +1,4 @@
+import action_frames
 import units
 import source_effect_types
 import range
@@ -183,6 +184,8 @@ cls PhaseInfo:
     AlreadyUsedStratagems[2] already_used_stratagems
     
 cls Board:
+    # Serial action lifetimes share context storage instead of inactive copies.
+    SharedActionFrames shared_actions
     # Editor labels for the suspended duplicate-ability selector (p.78).
     CheckedVector<WeaponRule, 32> pending_weapon_abilities
     StateSchema schema_version

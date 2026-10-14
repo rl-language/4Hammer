@@ -757,3 +757,22 @@ favor of the user-approved circles. Unknown hull/multipart dimensions, full
 rendered journeys, mission/faction completion and wrapper-performance issues
 remain explicit dependencies with named owners. Every remaining identified
 issue must be fixed before its owning task is marked complete.
+
+### Action-frame storage prerequisite —2026-10-14
+
+The user requests auditing every action and sharing types that cannot have two
+active copies. The core prerequisite audits76 declarations, moves39 duplicated
+frame types into `Board.shared_actions`, and retains the three existing direct
+Board slots. Fully delegated siblings execute sequentially; ordinary helpers
+and constructor descendants are checked for recursive re-entry. Callers copy
+only required completed results before slot reuse. The generated layout has
+one stored copy of each shared type and no duplicate frame type in Game.
+
+The isolated prerequisite's baseline typechecks and its fresh Python metadata
+audit passes: Game19,712 bytes, Board18,496 bytes. Artifacts are in
+`/workspace/4hammer-validation/shared-core-frame-stage`. This is prerequisite
+build/layout evidence; final combined semantic, save/replay, Godot and sanitizer
+evidence belongs to the following detachment batch. State/observation32,
+next33; action19 is unchanged by this storage refactor. Regenerate matching
+bindings. Generated lifecycle, bounded storage, quads and editor argument shapes
+are preserved. Wrapper retrieval performance remains17.Q.

@@ -1,0 +1,999 @@
+[
+  {
+    "function": "declare_allocation_order",
+    "frame": "AllocationOrder",
+    "source": "src/rules.rl",
+    "line": 349,
+    "game_copies": 1,
+    "native_bytes": 104,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "attach_leaders",
+    "frame": "AttachLeaderStep",
+    "source": "src/rules.rl",
+    "line": 2707,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "attack",
+    "frame": "Attack",
+    "source": "src/rules.rl",
+    "line": 1179,
+    "game_copies": 1,
+    "native_bytes": 6112,
+    "storage": "Board.attack",
+    "nested_reentry": false,
+    "calls": [
+      "AttackDamage",
+      "DamageResolution",
+      "DeclareModelWeapons",
+      "DeclareWeaponTargets",
+      "GatherAttackGroup",
+      "GroupAttackDice",
+      "HazardRolls",
+      "PrepareTargetWeaponAbilities",
+      "RevalidateAttackTargets",
+      "SelectFiringDeck",
+      "SourceEventResolution",
+      "UseAttackStratagems"
+    ]
+  },
+  {
+    "function": "resolve_attack_damage",
+    "frame": "AttackDamage",
+    "source": "src/rules.rl",
+    "line": 564,
+    "game_copies": 1,
+    "native_bytes": 416,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "AllocationOrder",
+      "AttackDiceBatch",
+      "DamageResolution",
+      "WeaponStatRoll"
+    ]
+  },
+  {
+    "function": "collect_attack_dice",
+    "frame": "AttackDiceBatch",
+    "source": "src/rules.rl",
+    "line": 238,
+    "game_copies": 1,
+    "native_bytes": 152,
+    "storage": "Board.shared_actions.collect_attack_dice",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "battle",
+    "frame": "Battle",
+    "source": "src/rules.rl",
+    "line": 2858,
+    "game_copies": 1,
+    "native_bytes": 1208,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "AttachLeaderStep",
+      "DeclareStrategicReserves",
+      "DeclareTransportPassengers",
+      "Deployment",
+      "ResolveScouts",
+      "Round"
+    ]
+  },
+  {
+    "function": "battle_shock_step",
+    "frame": "BattleShockStep",
+    "source": "src/rules.rl",
+    "line": 1761,
+    "game_copies": 1,
+    "native_bytes": 80,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "BattleShockTest"
+    ]
+  },
+  {
+    "function": "battle_shock_test",
+    "frame": "BattleShockTest",
+    "source": "src/rules.rl",
+    "line": 1698,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "Board.shared_actions.battle_shock_test",
+    "nested_reentry": false,
+    "calls": [
+      "RerollableDicePair",
+      "SourceEventResolution"
+    ]
+  },
+  {
+    "function": "charge",
+    "frame": "Charge",
+    "source": "src/rules.rl",
+    "line": 2233,
+    "game_copies": 1,
+    "native_bytes": 1224,
+    "storage": "Board.shared_actions.charge",
+    "nested_reentry": false,
+    "calls": [
+      "CrushingImpact",
+      "OrksMobbed",
+      "RerollableDicePair"
+    ]
+  },
+  {
+    "function": "charge_phase",
+    "frame": "ChargePhase",
+    "source": "src/rules.rl",
+    "line": 2349,
+    "game_copies": 1,
+    "native_bytes": 16,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "Charge"
+    ]
+  },
+  {
+    "function": "choose_attack_modifiers",
+    "frame": "ChooseAttackModifiers",
+    "source": "src/modifier_choices.rl",
+    "line": 81,
+    "game_copies": 1,
+    "native_bytes": 144,
+    "storage": "Board.shared_actions.choose_attack_modifiers",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "choose_weapon_abilities",
+    "frame": "ChooseWeaponAbilities",
+    "source": "src/weapon_abilities.rl",
+    "line": 66,
+    "game_copies": 1,
+    "native_bytes": 104,
+    "storage": "Board.shared_actions.choose_weapon_abilities",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "command_phase",
+    "frame": "CommandPhase",
+    "source": "src/rules.rl",
+    "line": 1845,
+    "game_copies": 1,
+    "native_bytes": 88,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "BattleShockStep",
+      "TimingWindowResolution"
+    ]
+  },
+  {
+    "function": "resolve_crushing_impact",
+    "frame": "CrushingImpact",
+    "source": "src/rules.rl",
+    "line": 1487,
+    "game_copies": 1,
+    "native_bytes": 104,
+    "storage": "Board.shared_actions.resolve_crushing_impact",
+    "nested_reentry": false,
+    "calls": [
+      "DamageResolution"
+    ]
+  },
+  {
+    "function": "resolve_damage_jobs",
+    "frame": "DamageResolution",
+    "source": "src/rules.rl",
+    "line": 380,
+    "game_copies": 1,
+    "native_bytes": 4656,
+    "storage": "Board.shared_actions.resolve_damage_jobs",
+    "nested_reentry": false,
+    "calls": [
+      "AttackDiceBatch",
+      "OnModelDestroyed",
+      "RollStat",
+      "SourceEventResolution",
+      "WoundPrevention"
+    ]
+  },
+  {
+    "function": "declare_model_weapons",
+    "frame": "DeclareModelWeapons",
+    "source": "src/rules.rl",
+    "line": 932,
+    "game_copies": 1,
+    "native_bytes": 72,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "ChooseWeaponAbilities"
+    ]
+  },
+  {
+    "function": "declare_strategic_reserves",
+    "frame": "DeclareStrategicReserves",
+    "source": "src/rules.rl",
+    "line": 2757,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "declare_transport_passengers",
+    "frame": "DeclareTransportPassengers",
+    "source": "src/rules.rl",
+    "line": 2733,
+    "game_copies": 1,
+    "native_bytes": 56,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "declare_weapon_targets",
+    "frame": "DeclareWeaponTargets",
+    "source": "src/rules.rl",
+    "line": 963,
+    "game_copies": 1,
+    "native_bytes": 1160,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "deploy",
+    "frame": "Deployment",
+    "source": "src/rules.rl",
+    "line": 2775,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "desperate_escape",
+    "frame": "DesperateEscapeTest",
+    "source": "src/rules.rl",
+    "line": 2383,
+    "game_copies": 1,
+    "native_bytes": 24,
+    "storage": "Board.shared_actions.desperate_escape",
+    "nested_reentry": false,
+    "calls": [
+      "HazardRolls"
+    ]
+  },
+  {
+    "function": "disembark",
+    "frame": "Disembark",
+    "source": "src/rules.rl",
+    "line": 2506,
+    "game_copies": 1,
+    "native_bytes": 640,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "HazardRolls",
+      "Movement"
+    ]
+  },
+  {
+    "function": "resolve_explosives",
+    "frame": "Explosives",
+    "source": "src/rules.rl",
+    "line": 1459,
+    "game_copies": 1,
+    "native_bytes": 64,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "MortalWounds"
+    ]
+  },
+  {
+    "function": "fight_phase",
+    "frame": "FightPhase",
+    "source": "src/rules.rl",
+    "line": 2222,
+    "game_copies": 1,
+    "native_bytes": 40,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "FightStep",
+      "MeleeMoveStep"
+    ]
+  },
+  {
+    "function": "fight_step",
+    "frame": "FightStep",
+    "source": "src/rules.rl",
+    "line": 2152,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "SelectedFight"
+    ]
+  },
+  {
+    "function": "play",
+    "frame": "Game",
+    "source": "src/full_game.rl",
+    "line": 6,
+    "game_copies": 1,
+    "native_bytes": 19712,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "Battle",
+      "PickFaction"
+    ]
+  },
+  {
+    "function": "gather_attack_group",
+    "frame": "GatherAttackGroup",
+    "source": "src/rules.rl",
+    "line": 1137,
+    "game_copies": 1,
+    "native_bytes": 1920,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "WeaponAttackCount"
+    ]
+  },
+  {
+    "function": "resolve_attack_dice",
+    "frame": "GroupAttackDice",
+    "source": "src/rules.rl",
+    "line": 264,
+    "game_copies": 1,
+    "native_bytes": 320,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "AttackDiceBatch",
+      "ChooseAttackModifiers"
+    ]
+  },
+  {
+    "function": "resolve_hazards",
+    "frame": "HazardRolls",
+    "source": "src/rules.rl",
+    "line": 652,
+    "game_copies": 1,
+    "native_bytes": 96,
+    "storage": "Board.shared_actions.resolve_hazards",
+    "nested_reentry": false,
+    "calls": [
+      "AttackDiceBatch",
+      "MortalWounds"
+    ]
+  },
+  {
+    "function": "melee_move",
+    "frame": "MeleeMove",
+    "source": "src/rules.rl",
+    "line": 2010,
+    "game_copies": 1,
+    "native_bytes": 1480,
+    "storage": "Board.shared_actions.melee_move",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "melee_move_step",
+    "frame": "MeleeMoveStep",
+    "source": "src/rules.rl",
+    "line": 2188,
+    "game_copies": 1,
+    "native_bytes": 64,
+    "storage": "Board.shared_actions.melee_move_step",
+    "nested_reentry": false,
+    "calls": [
+      "MeleeMove",
+      "SelectedFight"
+    ]
+  },
+  {
+    "function": "resolve_model_attack",
+    "frame": "ModelAttack",
+    "source": "src/rules.rl",
+    "line": 778,
+    "game_copies": 0,
+    "native_bytes": 856,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "ResolveWeapon"
+    ]
+  },
+  {
+    "function": "resolve_mortal_wounds",
+    "frame": "MortalWounds",
+    "source": "src/rules.rl",
+    "line": 554,
+    "game_copies": 1,
+    "native_bytes": 64,
+    "storage": "Board.shared_actions.resolve_mortal_wounds",
+    "nested_reentry": false,
+    "calls": [
+      "DamageResolution"
+    ]
+  },
+  {
+    "function": "move",
+    "frame": "Move",
+    "source": "src/rules.rl",
+    "line": 1908,
+    "game_copies": 1,
+    "native_bytes": 1288,
+    "storage": "Board.shared_actions.move",
+    "nested_reentry": false,
+    "calls": [
+      "MovementSourceResolution"
+    ]
+  },
+  {
+    "function": "movement",
+    "frame": "Movement",
+    "source": "src/rules.rl",
+    "line": 2392,
+    "game_copies": 1,
+    "native_bytes": 104,
+    "storage": "Board.shared_actions.movement",
+    "nested_reentry": false,
+    "calls": [
+      "BattleShockTest",
+      "DesperateEscapeTest",
+      "Move",
+      "PostMoveEmbark",
+      "RerollableDice",
+      "RollStat"
+    ]
+  },
+  {
+    "function": "movement_phase",
+    "frame": "MovementPhase",
+    "source": "src/rules.rl",
+    "line": 2558,
+    "game_copies": 1,
+    "native_bytes": 680,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "Disembark",
+      "Movement"
+    ]
+  },
+  {
+    "function": "resolve_movement_sources",
+    "frame": "MovementSourceResolution",
+    "source": "src/rules.rl",
+    "line": 1859,
+    "game_copies": 1,
+    "native_bytes": 208,
+    "storage": "Board.shared_actions.resolve_movement_sources",
+    "nested_reentry": false,
+    "calls": [
+      "MortalWounds",
+      "RollStat"
+    ]
+  },
+  {
+    "function": "neural_disruption",
+    "frame": "NeuralDisruption",
+    "source": "src/rules.rl",
+    "line": 1819,
+    "game_copies": 1,
+    "native_bytes": 56,
+    "storage": "Board.shared_actions.neural_disruption",
+    "nested_reentry": false,
+    "calls": [
+      "BattleShockTest"
+    ]
+  },
+  {
+    "function": "on_model_destroyed",
+    "frame": "OnModelDestroyed",
+    "source": "src/rules.rl",
+    "line": 678,
+    "game_copies": 1,
+    "native_bytes": 40,
+    "storage": "Board.shared_actions.on_model_destroyed",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "resolve_orks_mobbed",
+    "frame": "OrksMobbed",
+    "source": "src/rules.rl",
+    "line": 1737,
+    "game_copies": 1,
+    "native_bytes": 80,
+    "storage": "Board.shared_actions.resolve_orks_mobbed",
+    "nested_reentry": false,
+    "calls": [
+      "BattleShockTest"
+    ]
+  },
+  {
+    "function": "cleanup_phase_retained",
+    "frame": "PhaseRetainedCleanup",
+    "source": "src/rules.rl",
+    "line": 2000,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "DamageResolution"
+    ]
+  },
+  {
+    "function": "pick_army",
+    "frame": "PickFaction",
+    "source": "src/rules.rl",
+    "line": 2937,
+    "game_copies": 1,
+    "native_bytes": 16,
+    "storage": "Board.shared_actions.pick_army",
+    "nested_reentry": false,
+    "calls": [
+      "SelectOrksDetachments",
+      "SelectOrksWarlord"
+    ]
+  },
+  {
+    "function": "spawn_unit",
+    "frame": "PickUnit",
+    "source": "src/rules.rl",
+    "line": 1678,
+    "game_copies": 0,
+    "native_bytes": 560,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "post_move_embark",
+    "frame": "PostMoveEmbark",
+    "source": "src/rules.rl",
+    "line": 2486,
+    "game_copies": 1,
+    "native_bytes": 48,
+    "storage": "Board.shared_actions.post_move_embark",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "prepare_target_weapon_abilities",
+    "frame": "PrepareTargetWeaponAbilities",
+    "source": "src/rules.rl",
+    "line": 1160,
+    "game_copies": 1,
+    "native_bytes": 432,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "ChooseWeaponAbilities"
+    ]
+  },
+  {
+    "function": "regain_coherency",
+    "frame": "RegainCoherency",
+    "source": "src/rules.rl",
+    "line": 1419,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "Board.shared_actions.regain_coherency",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "rerollable_dice_roll",
+    "frame": "RerollableDice",
+    "source": "src/rules.rl",
+    "line": 193,
+    "game_copies": 1,
+    "native_bytes": 48,
+    "storage": "Board.current_roll",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "rerollable_pair_dices_roll",
+    "frame": "RerollableDicePair",
+    "source": "src/rules.rl",
+    "line": 164,
+    "game_copies": 1,
+    "native_bytes": 56,
+    "storage": "Board.current_pair_roll",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "reserve_deployment",
+    "frame": "ReserveDeployment",
+    "source": "src/rules.rl",
+    "line": 2362,
+    "game_copies": 0,
+    "native_bytes": 24,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "resolve_scouts",
+    "frame": "ResolveScouts",
+    "source": "src/rules.rl",
+    "line": 2822,
+    "game_copies": 1,
+    "native_bytes": 64,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "Move"
+    ]
+  },
+  {
+    "function": "resolve_weapon",
+    "frame": "ResolveWeapon",
+    "source": "src/rules.rl",
+    "line": 709,
+    "game_copies": 0,
+    "native_bytes": 792,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "RollStat",
+      "SingleAttack"
+    ]
+  },
+  {
+    "function": "revalidate_attack_targets",
+    "frame": "RevalidateAttackTargets",
+    "source": "src/rules.rl",
+    "line": 1001,
+    "game_copies": 1,
+    "native_bytes": 56,
+    "storage": "Board.shared_actions.revalidate_attack_targets",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "evaluate_random_stat",
+    "frame": "RollStat",
+    "source": "src/rules.rl",
+    "line": 74,
+    "game_copies": 1,
+    "native_bytes": 80,
+    "storage": "Board.shared_actions.evaluate_random_stat",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "round",
+    "frame": "Round",
+    "source": "src/rules.rl",
+    "line": 2687,
+    "game_copies": 1,
+    "native_bytes": 984,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "TimingWindowResolution",
+      "Turn"
+    ]
+  },
+  {
+    "function": "select_firing_deck",
+    "frame": "SelectFiringDeck",
+    "source": "src/firing_deck_rules.rl",
+    "line": 101,
+    "game_copies": 1,
+    "native_bytes": 1224,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "ChooseWeaponAbilities"
+    ]
+  },
+  {
+    "function": "select_orks_detachments",
+    "frame": "SelectOrksDetachments",
+    "source": "src/rules.rl",
+    "line": 2920,
+    "game_copies": 1,
+    "native_bytes": 16,
+    "storage": "Board.shared_actions.select_orks_detachments",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "select_orks_warlord",
+    "frame": "SelectOrksWarlord",
+    "source": "src/orks_army_rules.rl",
+    "line": 236,
+    "game_copies": 1,
+    "native_bytes": 40,
+    "storage": "Board.shared_actions.select_orks_warlord",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "selected_fight",
+    "frame": "SelectedFight",
+    "source": "src/rules.rl",
+    "line": 2118,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "Board.shared_actions.selected_fight",
+    "nested_reentry": false,
+    "calls": [
+      "Attack",
+      "MeleeMove"
+    ]
+  },
+  {
+    "function": "selected_shooting",
+    "frame": "SelectedShooting",
+    "source": "src/rules.rl",
+    "line": 2593,
+    "game_copies": 1,
+    "native_bytes": 24,
+    "storage": "Board.shared_actions.selected_shooting",
+    "nested_reentry": false,
+    "calls": [
+      "Attack"
+    ]
+  },
+  {
+    "function": "shadow_in_the_warp",
+    "frame": "ShadowInTheWarp",
+    "source": "src/rules.rl",
+    "line": 1800,
+    "game_copies": 1,
+    "native_bytes": 24,
+    "storage": "Board.shared_actions.shadow_in_the_warp",
+    "nested_reentry": false,
+    "calls": [
+      "BattleShockTest"
+    ]
+  },
+  {
+    "function": "shooting_phase",
+    "frame": "ShootingPhase",
+    "source": "src/rules.rl",
+    "line": 2603,
+    "game_copies": 1,
+    "native_bytes": 104,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "Explosives",
+      "SelectedShooting"
+    ]
+  },
+  {
+    "function": "single_attack",
+    "frame": "SingleAttack",
+    "source": "src/rules.rl",
+    "line": 669,
+    "game_copies": 0,
+    "native_bytes": 744,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "AttackDamage",
+      "GroupAttackDice"
+    ]
+  },
+  {
+    "function": "resolve_source_event",
+    "frame": "SourceEventResolution",
+    "source": "src/rules.rl",
+    "line": 29,
+    "game_copies": 1,
+    "native_bytes": 136,
+    "storage": "Board.shared_actions.resolve_source_event",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "surge",
+    "frame": "Surge",
+    "source": "src/rules.rl",
+    "line": 2801,
+    "game_copies": 1,
+    "native_bytes": 56,
+    "storage": "Board.shared_actions.surge",
+    "nested_reentry": false,
+    "calls": [
+      "Move"
+    ]
+  },
+  {
+    "function": "timing_heroic_intervention",
+    "frame": "TimingHeroicIntervention",
+    "source": "src/rules.rl",
+    "line": 1539,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "Board.shared_actions.timing_heroic_intervention",
+    "nested_reentry": false,
+    "calls": [
+      "Charge"
+    ]
+  },
+  {
+    "function": "timing_oath_of_moment",
+    "frame": "TimingOathOfMoment",
+    "source": "src/rules.rl",
+    "line": 1554,
+    "game_copies": 1,
+    "native_bytes": 16,
+    "storage": "Board.shared_actions.timing_oath_of_moment",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "timing_objective_stratagem",
+    "frame": "TimingObjectiveStratagem",
+    "source": "src/rules.rl",
+    "line": 1568,
+    "game_copies": 1,
+    "native_bytes": 24,
+    "storage": "Board.shared_actions.timing_objective_stratagem",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "timing_overwatch",
+    "frame": "TimingOverwatch",
+    "source": "src/rules.rl",
+    "line": 1528,
+    "game_copies": 1,
+    "native_bytes": 32,
+    "storage": "Board.shared_actions.timing_overwatch",
+    "nested_reentry": false,
+    "calls": [
+      "Attack"
+    ]
+  },
+  {
+    "function": "timing_rapid_ingress",
+    "frame": "TimingRapidIngress",
+    "source": "src/rules.rl",
+    "line": 1438,
+    "game_copies": 1,
+    "native_bytes": 24,
+    "storage": "Board.shared_actions.timing_rapid_ingress",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "timing_smokescreen",
+    "frame": "TimingSmokescreen",
+    "source": "src/rules.rl",
+    "line": 1449,
+    "game_copies": 1,
+    "native_bytes": 16,
+    "storage": "Board.shared_actions.timing_smokescreen",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "resolve_timing_window",
+    "frame": "TimingWindowResolution",
+    "source": "src/rules.rl",
+    "line": 1592,
+    "game_copies": 1,
+    "native_bytes": 168,
+    "storage": "Board.shared_actions.resolve_timing_window",
+    "nested_reentry": false,
+    "calls": [
+      "NeuralDisruption",
+      "RegainCoherency",
+      "ShadowInTheWarp",
+      "TimingHeroicIntervention",
+      "TimingOathOfMoment",
+      "TimingObjectiveStratagem",
+      "TimingOverwatch",
+      "TimingRapidIngress",
+      "TimingSmokescreen"
+    ]
+  },
+  {
+    "function": "turn",
+    "frame": "Turn",
+    "source": "src/rules.rl",
+    "line": 2628,
+    "game_copies": 1,
+    "native_bytes": 976,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "ChargePhase",
+      "CommandPhase",
+      "FightPhase",
+      "MovementPhase",
+      "PhaseRetainedCleanup",
+      "ShootingPhase",
+      "TimingWindowResolution"
+    ]
+  },
+  {
+    "function": "use_attack_stratagems",
+    "frame": "UseAttackStratagems",
+    "source": "src/rules.rl",
+    "line": 821,
+    "game_copies": 1,
+    "native_bytes": 72,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "DamageResolution",
+      "MortalWounds",
+      "RerollableDice",
+      "RerollableDicePair"
+    ]
+  },
+  {
+    "function": "gather_weapon_count",
+    "frame": "WeaponAttackCount",
+    "source": "src/rules.rl",
+    "line": 1120,
+    "game_copies": 1,
+    "native_bytes": 1160,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "WeaponStatRoll"
+    ]
+  },
+  {
+    "function": "evaluate_weapon_characteristic",
+    "frame": "WeaponStatRoll",
+    "source": "src/rules.rl",
+    "line": 108,
+    "game_copies": 1,
+    "native_bytes": 136,
+    "storage": "Board.shared_actions.evaluate_weapon_characteristic",
+    "nested_reentry": false,
+    "calls": [
+      "RollStat"
+    ]
+  },
+  {
+    "function": "prevent_wound_loss",
+    "frame": "WoundPrevention",
+    "source": "src/rules.rl",
+    "line": 361,
+    "game_copies": 1,
+    "native_bytes": 56,
+    "storage": "Board.shared_actions.prevent_wound_loss",
+    "nested_reentry": false,
+    "calls": []
+  }
+]

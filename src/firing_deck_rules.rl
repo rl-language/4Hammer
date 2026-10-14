@@ -121,9 +121,11 @@ act select_firing_deck(ctx Board board, ctx DeclaredWeapons declarations, frm Un
                                     act cancel_deck_model()
                                     act select_firing_deck_weapon(frm BInt<0, MAX_WEAPONS> deck_weapon) {deck_weapon_valid(board, deck_source, deck_carrier, deck_passenger, deck_model, deck_weapon.value, declarations)}
                                         frm granted_weapon = make_deck_declaration(board, deck_source, deck_carrier, deck_passenger, deck_model, deck_weapon.value)
-                                        subaction*(board) deck_abilities = choose_weapon_abilities(board, granted_weapon.selected_rules)
-                                        granted_weapon.selected_rules = deck_abilities.chosen
-                                        granted_weapon.current_target_rules = deck_abilities.chosen
+                                        board.shared_actions.choose_weapon_abilities = choose_weapon_abilities(board, granted_weapon.selected_rules)
+                                        subaction*(board) board.shared_actions.choose_weapon_abilities
+                                        frm deck_abilities_chosen_snapshot_1 = board.shared_actions.choose_weapon_abilities.chosen
+                                        granted_weapon.selected_rules = deck_abilities_chosen_snapshot_1
+                                        granted_weapon.current_target_rules = deck_abilities_chosen_snapshot_1
                                         declarations.append(granted_weapon)
                                         let chosen : DeckSelection
                                         chosen.carrier = board[deck_source][deck_carrier].identity
