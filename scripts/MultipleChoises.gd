@@ -116,6 +116,17 @@ func on_state_change():
 			var roster_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_reserve_units(), reserve_id)
 			make_choise("Enhancement bearer: " + RLCLib.convert_string(roster_unit.get_name().get_value()) + " model " + str(model_id + 1), action)
 			added += 1
+		# These decisions target a named repair/healing unit, including offboard
+		# own-unit healing. Buttons do not reuse the active Attack's target ID.
+		if unwrapped is RLCGameChooseMekRepairModel or unwrapped is RLCGameChooseHealedModel or unwrapped is RLCGameChoosePunishedGretchin:
+			var chosen_model = unwrapped.get_member(0).get_id().get_value()
+			var model_effect = "Heal model"
+			if unwrapped is RLCGameChooseMekRepairModel:
+				model_effect = "Repair vehicle model"
+			if unwrapped is RLCGameChoosePunishedGretchin:
+				model_effect = "Destroy Gretchin"
+			make_choise(model_effect + " " + str(chosen_model + 1), action)
+			added += 1
 		if unwrapped is RLCGameChooseHealedCasualty or unwrapped is RLCGameChooseSurlyCasualty:
 			var casualty_id = unwrapped.get_member(0).get_id().get_value()
 			make_choise("Return original casualty " + str(casualty_id + 1), action)
@@ -256,12 +267,22 @@ func on_state_change():
 			added += 1
 		# Targeted current Orks effects retain one-UnitID click discovery and also
 		# offer named buttons, so the selected effect is explicit to the player.
-		if unwrapped is RLCGameChooseKeepHuntinTarget or unwrapped is RLCGameChooseBombSquigTarget or unwrapped is RLCGameChooseMobbedTarget:
+		if unwrapped is RLCGameChooseKeepHuntinTarget or unwrapped is RLCGameChooseBombSquigTarget or unwrapped is RLCGameChooseMobbedTarget or unwrapped is RLCGameChooseMekRepairUnit or unwrapped is RLCGameChoosePainbossHealingUnit or unwrapped is RLCGameChoosePulsaTarget or unwrapped is RLCGameChooseImpetusTarget or unwrapped is RLCGameChooseRokkitBarrageTarget:
 			var target_id = unwrapped.get_member(0).get_id().get_value()
 			var target_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_units(), target_id)
 			var effect = "Keep Huntin'" if unwrapped is RLCGameChooseKeepHuntinTarget else "Bomb Squig"
 			if unwrapped is RLCGameChooseMobbedTarget:
 				effect = "Mobbed: Battle-shock"
+			if unwrapped is RLCGameChooseMekRepairUnit:
+				effect = "Clever Know-wotz"
+			if unwrapped is RLCGameChoosePainbossHealingUnit:
+				effect = "Push Dat Bit Back In"
+			if unwrapped is RLCGameChoosePulsaTarget:
+				effect = "Pulsa Rokkit"
+			if unwrapped is RLCGameChooseImpetusTarget:
+				effect = "Krushin' Impetus"
+			if unwrapped is RLCGameChooseRokkitBarrageTarget:
+				effect = "Rokkit Barrage"
 			make_choise(effect + ": " + RLCLib.convert_string(target_unit.get_name().get_value()), action)
 			added += 1
 		if unwrapped is RLCGameChooseAttackWeapon:

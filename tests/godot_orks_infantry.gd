@@ -19,9 +19,9 @@ func panel_for(rules, library, action):
 func check_units():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 33)
-	assert(library.get_observation_schema_version() == 33)
-	assert(library.get_action_schema_version() == 21)
+	assert(library.get_state_schema_version() == 34)
+	assert(library.get_observation_schema_version() == 34)
+	assert(library.get_action_schema_version() == 22)
 	var units = [library.make_orks_boyz(1, 9), library.make_orks_nobz(5), library.make_orks_warboss(), library.make_orks_bigboss(), library.make_orks_bannernob(), library.make_orks_stormboyz(4, true), library.make_orks_warbikers(2), library.make_orks_deff_dread(), library.make_orks_killa_kans(3), library.make_orks_big_mek_dakkarig(), library.make_orks_beastboss_on_squigosaur(true), library.make_orks_mozrog_skragbad()]
 	var counts = [10, 5, 1, 1, 1, 5, 3, 1, 3, 1, 1, 1]
 	var board = RLCBoard.make()
