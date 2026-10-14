@@ -37,6 +37,8 @@ fun attack_skill_choices(Board board, AttackSequenceInfo info) -> AttackModifier
 # Damaged24.39; appendix02.02.02). They never become BS/WS modifications.
 fun attack_hit_choices(Board board, AttackSequenceInfo info) -> AttackModifierChoices:
     let choices : AttackModifierChoices
+    for unit_modifier in range(info.orks_unit_hit_modifiers.size()):
+        choices.append(attack_modifier_choice(info.orks_unit_hit_modifiers[unit_modifier], ModifierOrigin::orks_datasheet))
     for orks_modifier in range(info.orks_hit_modifiers.size()):
         choices.append(attack_modifier_choice(info.orks_hit_modifiers[orks_modifier], ModifierOrigin::orks_detachment))
     if info.hit_roll_bonus:
@@ -75,14 +77,14 @@ fun same_attack_modifier_choices(AttackModifierChoices left, AttackModifierChoic
 fun valid_attack_modifier_choice(AttackModifierChoice choice) -> Bool:
     let one : RuleModifiers
     one.append(choice.modifier)
-    return choice.origin.value >= 0 and choice.origin.value <= ModifierOrigin::orks_detachment.value and valid_rule_modifiers(one)
+    return choice.origin.value >= 0 and choice.origin.value <= max(choice.origin) and valid_rule_modifiers(one)
 
 # Sequential two-choice inputs represent every subset of the original list,
 # without an exponential action payload. Declining/applying spends no CP or
 # source usage (02.02.02); restore the caller's ownership and UI context.
 act choose_attack_modifiers(ctx Board board, frm AttackModifierChoices choices, frm Bool player, frm ModifierSelectionKind kind, frm Bool permitted) -> ChooseAttackModifiers:
     frm result : SelectedAttackModifiers
-    frm index : LinearlyDistributedInt<0, 19>
+    frm index : LinearlyDistributedInt<0, 35>
     frm previous_owner = board.current_decision_maker
     frm previous_choice = board.pending_modifier_choice
     frm previous_kind = board.pending_modifier_kind

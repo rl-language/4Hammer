@@ -485,7 +485,7 @@ fun source_weapon_grant(WeaponRule rule) -> SourceWeaponGrant:
 fun valid_source_grant(SourceGrant grant) -> Bool:
     let valid = false
     if grant is OrksEffectGrant:
-        valid = grant.kind.value > 0 and grant.kind.value <= OrksEffectKind::invulnerable_five.value and grant.amount.value >= 0 and grant.associated_unit.value >= 0
+        valid = grant.kind.value > 0 and grant.kind.value <= max(grant.kind) and grant.amount.value >= 0 and grant.associated_unit.value >= 0
     if grant is CharacteristicModifier:
         let entries : CharacteristicModifiers
         entries.append(grant)

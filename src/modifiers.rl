@@ -123,7 +123,12 @@ fun<Int capacity> modified_characteristic(Int base, ModifiedCharacteristic kind,
 # Rolls are modified after rerolls; hit/wound cumulative changes cap at +/-1,
 # all roll results are at least one, and charge totals cap at 12 (02.02.01).
 fun modified_dice_result(Int original, RuleModifiers modifiers, Bool hit_or_wound, Bool charge) -> Int:
-    let result = apply_rule_modifiers(original, modifiers, false)
+    return modified_dice_result(original, modifiers, hit_or_wound, charge, 0)
+
+# Source charge increments join the addition step before division/rounding,
+# without filling the user's authored modifier vector (02.02.01).
+fun modified_dice_result(Int original, RuleModifiers modifiers, Bool hit_or_wound, Bool charge, Int extra_addition) -> Int:
+    let result = apply_rule_modifiers(original, modifiers, false, extra_addition)
     if hit_or_wound:
         result = original + min(1, max(-1, result - original))
     if charge:
@@ -345,6 +350,7 @@ enum ModifierOrigin:
     plunging_fire
     dodge_dis
     orks_detachment
+    orks_datasheet
 
 enum ModifierSelectionKind:
     weapon_skill
@@ -358,4 +364,7 @@ cls AttackModifierChoice:
 # Sixteen authored operations plus distinct Cover/Plunging Fire increments;
 # the action payload remains one Bool, never a2^18 mask (02.02.02/pp.50/73).
 using AttackModifierChoices = CheckedVector<AttackModifierChoice, 34>
-using SelectedAttackModifiers = CheckedVector<RuleModifier, 18>
+# Every offered choice may be kept (02.02.02), including more than18 separate
+# hit contributions. Match the actual choice envelope, not the old skill-only
+#16 authored operations plus Cover/Plunging Fire envelope.
+using SelectedAttackModifiers = CheckedVector<RuleModifier, 34>

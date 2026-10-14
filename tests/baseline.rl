@@ -12269,3 +12269,14 @@ fun test_orks17p1_monster_and_mek_metadata() -> Bool:
     let mek = make_orks_big_mek_dakkarig()
     let squigo = make_orks_beastboss_on_squigosaur(true)
     return mozrog.has_keyword(Keyword::epic_hero) and !mozrog.has_keyword(Keyword::warboss) and !mozrog[0].has_da_boss and !mek[0].has_da_boss and mek.has_keyword(Keyword::big_mek) and squigo[0].has_da_boss and squigo[0].weapons.size() == 5 and squigo.attachment_role.value != AttachmentRole::leader.value
+
+# Appendix02.02.02: every offered contribution can be retained, including34.
+fun test_orks17p1_modifier_full_capacity_and_origin() -> Bool:
+    let board = orks17p1_fixture(make_orks_bigboss())
+    let choices : AttackModifierChoices
+    for index in range(34):
+        choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::orks_datasheet))
+    let sequence = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::hit_roll, true)
+    for index in range(34):
+        sequence.apply_attack_modifier(board, true)
+    return sequence.is_done() and sequence.result.size() == 34 and selected_hit_bonus(sequence.result) == 1

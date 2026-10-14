@@ -41,6 +41,9 @@ cls AttackSequenceInfo:
     Bool dodge_dis_hit_bonus
     Bool hit_roll_bonus
     RuleModifiers orks_hit_modifiers
+    # Unit effects need at most three contributions in this batch; retain
+    # them separately from package terms for optional ignoring (02.02.02).
+    CheckedVector<RuleModifier, 4> orks_unit_hit_modifiers
     RuleModifiers orks_wound_modifiers
     Bool orks_fail_hits_three
     # Cover changes BS, separate from the clamped hit modifier (p.50).
@@ -133,7 +136,7 @@ cls AttackSequenceInfo:
     # and appendix02.02.01). Optional ignoring retains its own provenance.
     # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
     fun total_hit_modifier() -> Int:
-        let result = apply_rule_modifiers(0, self.orks_hit_modifiers, false) + int(self.hit_roll_bonus) + int(self.dodge_dis_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
+        let result = apply_rule_modifiers(0, self.orks_hit_modifiers, false) + apply_rule_modifiers(0, self.orks_unit_hit_modifiers, false) + int(self.hit_roll_bonus) + int(self.dodge_dis_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
         let i = 0
         while i != self.profile_hit_roll_bonus.size():
             if self.profile_hit_roll_bonus[i] == self.source_profile:
@@ -946,7 +949,7 @@ fun valid_model_numeric_history(Model model) -> Bool:
         return false
     for ork_effect in range(model.orks_effects.size()):
         ref grant = model.orks_effects[ork_effect]
-        if grant.kind.value <= 0 or grant.kind.value > OrksEffectKind::invulnerable_five.value or grant.source_effect.value < 0 or grant.source_effect.value >= MAX_SOURCE_EFFECT_KEY or grant.amount.value < 0 or grant.amount.value >= MAX_CHARACTERISTIC or grant.associated_unit.value < 0 or grant.associated_unit.value >= MAX_IDENTITY_SEQUENCE:
+        if grant.kind.value <= 0 or grant.kind.value > max(grant.kind) or grant.source_effect.value < 0 or grant.source_effect.value >= MAX_SOURCE_EFFECT_KEY or grant.amount.value < 0 or grant.amount.value >= MAX_CHARACTERISTIC or grant.associated_unit.value < 0 or grant.associated_unit.value >= MAX_IDENTITY_SEQUENCE:
             return false
     for riled_index in range(model.riled_source_effects.size()):
         if model.riled_source_effects[riled_index].value < 0 or model.riled_source_effects[riled_index].value >= MAX_SOURCE_EFFECT_KEY:
