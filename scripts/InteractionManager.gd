@@ -18,10 +18,10 @@ func on_state_change():
 		current_target_unit_action = null
 	# Deployment selects reserves through the choice panel. Battlefield model
 	# indices address a different collection and must not select reserve units.
-	if current_select_unit_action is RLCGameChooseWarlordUnit or current_select_unit_action is RLCGameSelectUnit or current_select_unit_action is RLCGameSelectReserveUnit or current_select_unit_action is RLCGameSelectIngressUnit or current_select_unit_action is RLCGameSelectScoutReserve or current_select_unit_action is RLCGameChooseStrategicReserve or current_select_unit_action is RLCGameChooseFormationPassenger or current_select_unit_action is RLCGameChooseFormationTransport or current_select_unit_action is RLCGameSelectDisembarkingUnit or current_select_unit_action is RLCGameChooseEmergencyPassenger or current_select_unit_action is RLCGameSelectFiringDeckPassenger:
+	if current_select_unit_action is RLCGameChooseOffboardDreadUnit or current_select_unit_action is RLCGameChooseOrksOffboardUnit or current_select_unit_action is RLCGameChooseOrksOptionUnit or current_select_unit_action is RLCGameChooseWarlordUnit or current_select_unit_action is RLCGameSelectUnit or current_select_unit_action is RLCGameSelectReserveUnit or current_select_unit_action is RLCGameSelectIngressUnit or current_select_unit_action is RLCGameSelectScoutReserve or current_select_unit_action is RLCGameChooseStrategicReserve or current_select_unit_action is RLCGameChooseFormationPassenger or current_select_unit_action is RLCGameChooseFormationTransport or current_select_unit_action is RLCGameSelectDisembarkingUnit or current_select_unit_action is RLCGameChooseEmergencyPassenger or current_select_unit_action is RLCGameSelectFiringDeckPassenger:
 		current_select_unit_action = null
 	# Passenger/formation model choices use buttons because these models are offboard.
-	if current_select_model_action is RLCGameChooseWarlordModel or current_select_model_action is RLCGameChooseFormationCarrierModel or current_select_model_action is RLCGameSelectFiringDeckModel or current_select_model_action is RLCGameSelectDisembarkingModel:
+	if current_select_model_action is RLCGameChooseOffboardMortalModel or current_select_model_action is RLCGameChooseOrksOptionBearer or current_select_model_action is RLCGameChooseHealedCasualty or current_select_model_action is RLCGameChooseSurlyCasualty or current_select_model_action is RLCGameChooseWarlordModel or current_select_model_action is RLCGameChooseFormationCarrierModel or current_select_model_action is RLCGameSelectFiringDeckModel or current_select_model_action is RLCGameSelectDisembarkingModel:
 		current_select_model_action = null
 	mark_possible_targets()
 		
@@ -57,6 +57,8 @@ func mark_possible_target(node):
 		var target_id = GlobalRules.get_targetable_unit_id()
 		# Task-10 damage/destruction can select a model outside the original
 		# attack target (e.g. self hazards); its explicit context identifies it.
+		if current_select_model_action is RLCGameChooseHealedModel:
+			target_id = GlobalRules.state.get_board().get_orks_selected_unit().get_id().get_value()
 		if current_select_model_action is RLCGameAllocateWound or current_select_model_action is RLCGameAllocateMortal or current_select_model_action is RLCGameSelectMortalModel or current_select_model_action is RLCGameResolveDestructionModel:
 			target_id = GlobalRules.state.get_board().get_attack_info().get_target_unit_id().get_id().get_value()
 		if current_select_model_action is RLCGameSelectMovingModel or current_select_model_action is RLCGameSelectChargingModel or current_select_model_action is RLCGameSelectMeleeModel or current_select_model_action is RLCGameChooseExplosivesModel or current_select_model_action is RLCGameChooseImpactModel or current_select_model_action is RLCGameChooseEpicCharacter or current_select_model_action is RLCGameChooseEmbarkModel:

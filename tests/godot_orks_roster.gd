@@ -14,7 +14,7 @@ func check_roster():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
 	assert(library.get_state_schema_version() == 32)
-	assert(library.get_action_schema_version() == 19)
+	assert(library.get_action_schema_version() == 20)
 	var panel = VBoxContainer.new()
 	panel.set_script(load("res://MultipleChoises.gd"))
 	var buttons = VBoxContainer.new()
@@ -29,6 +29,8 @@ func check_roster():
 	assert(library.base_size(library.get(hogs.get_models(), 0).get_profile()) == 90.0)
 	press(panel, "select detachment: war horde")
 	press(panel, "finish detachment selection")
+	if rules.can_apply(RLCGameFinishOrksOptions.make()):
+		press(panel, "finish enhancements")
 	press(panel, "warlord unit army 1: beastboss")
 	var restored = library.play()
 	assert(library.set_state(restored, RLCLib.godot_string_to_rlc_string(rules.as_indented_str(rules.state))))
@@ -38,6 +40,8 @@ func check_roster():
 	assert(library.get_current_player(rules.state) == 1)
 	press(panel, rules.strip_symbols("Orks (current units)"))
 	press(panel, "finish detachment selection")
+	if rules.can_apply(RLCGameFinishOrksOptions.make()):
+		press(panel, "finish enhancements")
 	press(panel, "warlord unit army 2: beastboss")
 	press(panel, "warlord: beastboss model 1")
 	print("CHECK: both roster and Warlord selections completed")

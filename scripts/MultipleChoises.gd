@@ -33,6 +33,10 @@ func on_state_change():
 				make_choise("Orks (current units)", action)
 			elif unwrapped is RLCGameFinishDetachmentSelection:
 				make_choise("Finish detachment selection", action)
+			elif unwrapped is RLCGameFinishOrksOptions:
+				make_choise("Finish enhancements", action)
+			elif unwrapped is RLCGameCancelOrksOption or unwrapped is RLCGameCancelOrksOptionBearer:
+				make_choise("Cancel enhancement selection", action)
 			else:
 				make_choise(unwrapped.get_class().substr(7), action)
 			added += 1
@@ -46,6 +50,13 @@ func on_state_change():
 				label = "Call War Cry (once per battle)" if unwrapped.get_member(0).get_value() == 0 else "Da Boss: gain 1 CP"
 			if unwrapped is RLCGameChooseOrksDetachment:
 				label = "Select detachment: " + label
+			if unwrapped is RLCGameChooseOrksOption:
+				label = ("Upgrade: " if GlobalRules.library.orks_is_upgrade(unwrapped.get_member(0)) else "Enhancement: ") + label
+			if unwrapped is RLCGameChooseOrksAttackStratagem or unwrapped is RLCGameChooseOrksDefenceStratagem or unwrapped is RLCGameChooseOrksMoveStratagem or unwrapped is RLCGameChooseOrksWindowStratagem or unwrapped is RLCGameChooseOrksPhaseCard or unwrapped is RLCGameChooseOrksAttackReactionCard:
+				label = label.trim_prefix("orks ")
+				label += " (2 CP)" if label == "infested war zone" else " (1 CP)"
+			if unwrapped is RLCGameChooseArtilleristMode:
+				label = ["Lethal Hits", "Sustained Hits 1", "Lethal + Sustained Hits 1 + Hazardous"][unwrapped.get_member(0).get_value()]
 			make_choise(label, action)
 			added += 1
 		if unwrapped.members_count() == 1 and unwrapped.get_member(0) is bool:
@@ -61,6 +72,14 @@ func on_state_change():
 				label = ("Apply " if unwrapped.get_member(0) else "Ignore ") + detail
 			if unwrapped is RLCGameAdvance:
 				label = "Advance" if unwrapped.get_member(0) else "Normal move"
+			if unwrapped is RLCGameChooseHulkingProtection:
+				label = "All ranged attacks: -1 to wound (2 CP)" if unwrapped.get_member(0) else "Only S greater than T: -1 to wound (1 CP)"
+			if unwrapped is RLCGameChooseButtonDice:
+				label = "Roll two D6 and one extra Hazardous test" if unwrapped.get_member(0) else "Roll one D6"
+			if unwrapped is RLCGameUseUnstoppableAdvance:
+				label = "Use Advance result 6" if unwrapped.get_member(0) else "Keep rolled Advance result"
+			if unwrapped is RLCGameChooseAssaultDisembark:
+				label = "Assault Disembark: may charge" if unwrapped.get_member(0) else "Rapid Disembark: cannot charge"
 			make_choise(label, action)
 			added += 1
 		# Core effects coexist with ordinary one-UnitID phase selectors; explicit
@@ -83,6 +102,18 @@ func on_state_change():
 			var role = GlobalRules.library.as_string_literal(leader.get_attachment_role())
 			make_choise("Attach " + str(role) + ": " + RLCLib.convert_string(leader.get_name().get_value()) + " to " + RLCLib.convert_string(bodyguard.get_name().get_value()), action)
 			added += 1
+		# Enhancement selections address the reserve roster before attachments.
+		# Keep the native one-ModelID shape, but label it from that bank.
+		if unwrapped is RLCGameChooseOrksOptionBearer:
+			var model_id = unwrapped.get_member(0).get_id().get_value()
+			var reserve_id = GlobalRules.state.get_board().get_orks_selected_unit().get_id().get_value()
+			var roster_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_reserve_units(), reserve_id)
+			make_choise("Enhancement bearer: " + RLCLib.convert_string(roster_unit.get_name().get_value()) + " model " + str(model_id + 1), action)
+			added += 1
+		if unwrapped is RLCGameChooseHealedCasualty or unwrapped is RLCGameChooseSurlyCasualty:
+			var casualty_id = unwrapped.get_member(0).get_id().get_value()
+			make_choise("Return original casualty " + str(casualty_id + 1), action)
+			added += 1
 		if unwrapped is RLCGameChooseWarlordModel:
 			var model_id = unwrapped.get_member(0).get_id().get_value()
 			var reserve_id = GlobalRules.state.get_board().get_selected_warlord_unit().get_id().get_value()
@@ -91,13 +122,15 @@ func on_state_change():
 			added += 1
 		# Deployment IDs refer to reserves, not the battlefield models used by
 		# the click selector. Offer the actual legal reserve action as a button.
-		if unwrapped is RLCGameChooseWarlordUnit or unwrapped is RLCGameSelectUnit or unwrapped is RLCGameSelectReserveUnit or unwrapped is RLCGameSelectIngressUnit or unwrapped is RLCGameSelectScoutReserve or unwrapped is RLCGameChooseStrategicReserve or unwrapped is RLCGameChooseFormationPassenger or unwrapped is RLCGameChooseFormationTransport:
+		if unwrapped is RLCGameChooseOrksOptionUnit or unwrapped is RLCGameChooseWarlordUnit or unwrapped is RLCGameSelectUnit or unwrapped is RLCGameSelectReserveUnit or unwrapped is RLCGameSelectIngressUnit or unwrapped is RLCGameSelectScoutReserve or unwrapped is RLCGameChooseStrategicReserve or unwrapped is RLCGameChooseFormationPassenger or unwrapped is RLCGameChooseFormationTransport:
 			var reserve_id = unwrapped.get_member(0).get_id().get_value()
 			var reserves = GlobalRules.state.get_board().get_reserve_units()
 			var unit = GlobalRules.library.get(reserves, reserve_id)
 			var unit_name = RLCLib.convert_string(unit.get_name().get_value())
 			var army = 2 if unit.get_owned_by_player1() else 1
 			var prefix = "Deploy" if unwrapped is RLCGameSelectUnit else "Reserve"
+			if unwrapped is RLCGameChooseOrksOptionUnit:
+				prefix = "Enhancement unit"
 			if unwrapped is RLCGameChooseWarlordUnit:
 				prefix = "Warlord unit"
 			if unwrapped is RLCGameSelectScoutReserve:
@@ -109,6 +142,31 @@ func on_state_change():
 			if unwrapped is RLCGameChooseFormationTransport:
 				prefix = "Choose carrier"
 			make_choise(prefix + " army " + str(army) + ": " + unit_name, action)
+			added += 1
+		# Parallel same-shape faction choices get explicit source buttons, so
+		# the click autodetector cannot hide a support/reaction selector.
+		if unwrapped is RLCGameUseDreadherderSupport or unwrapped is RLCGameUseOrksMovementSupport or unwrapped is RLCGameChooseOrksPackageSource or unwrapped is RLCGameChooseOrksAttackReactionUnit or unwrapped is RLCGameChooseOrksMoveReactionUnit or unwrapped is RLCGameChooseMobMentalitySource:
+			var source_id = unwrapped.get_member(0).get_id().get_value()
+			var source_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_units(), source_id)
+			var label = "Movement abilities" if unwrapped is RLCGameUseOrksMovementSupport else "Resolve detachment rule"
+			if unwrapped is RLCGameChooseOrksAttackReactionUnit or unwrapped is RLCGameChooseOrksMoveReactionUnit:
+				label = "Reaction unit"
+			if unwrapped is RLCGameUseDreadherderSupport:
+				label = "Dreadherder"
+			if unwrapped is RLCGameChooseMobMentalitySource:
+				label = "Mob Mentality (1 CP)"
+			make_choise(label + ": " + RLCLib.convert_string(source_unit.get_name().get_value()), action)
+			added += 1
+		if unwrapped is RLCGameChooseOrksOffboardUnit or unwrapped is RLCGameChooseOffboardDreadUnit:
+			var slot = unwrapped.get_member(0).get_id().get_value()
+			var bank = GlobalRules.state.get_board().get_orks_support_bank().get_value()
+			var units = GlobalRules.state.get_board().get_reserve_units() if bank == 1 else GlobalRules.state.get_board().get_embarked_units()
+			var unit = GlobalRules.library.get(units, slot)
+			make_choise("Own-unit ability: " + RLCLib.convert_string(unit.get_name().get_value()), action)
+			added += 1
+		if unwrapped is RLCGameChooseOffboardMortalModel:
+			var model_id = unwrapped.get_member(0).get_id().get_value()
+			make_choise("Offboard mortal wound: model " + str(model_id + 1), action)
 			added += 1
 		# Embarked selectors address the passenger bank, never battlefield IDs.
 		if unwrapped is RLCGameSelectDisembarkingUnit or unwrapped is RLCGameChooseEmergencyPassenger or unwrapped is RLCGameSelectFiringDeckPassenger:

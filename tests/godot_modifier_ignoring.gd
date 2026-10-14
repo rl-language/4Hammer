@@ -6,16 +6,18 @@ func _initialize():
 func check_modifier_ignoring():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 31)
-	assert(library.get_observation_schema_version() == 31)
-	assert(library.get_action_schema_version() == 19)
+	assert(library.get_state_schema_version() == 32)
+	assert(library.get_observation_schema_version() == 32)
+	assert(library.get_action_schema_version() == 20)
 	var board = RLCBoard.make()
 	var origin = RLCModifierOrigin.make()
 	origin.set_value(4) # damaged
 	var operation = RLCModifierOperation.make()
 	operation.set_value(2) # add
 	var choice = library.attack_modifier_choice(library.rule_modifier(operation, -1), origin)
-	var choices = RLCCheckedVectorTAttackModifierChoiceT18T.make()
+	# Borrow the actual alias type; retain its parent for the wrapper lifetime.
+	var choice_frame = RLCChooseAttackModifiers.make()
+	var choices = choice_frame.get_choices()
 	library.append(choices, choice)
 	var kind = RLCModifierSelectionKind.make()
 	kind.set_value(2) # hit_roll
