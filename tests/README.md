@@ -394,3 +394,33 @@ requested compiler parallelism; `RULE_TEST_OPTIMIZE` remains off for debugging.
 Run large native builds separately when concurrent compilers exceed available
 memory. A compilation timeout or killed compiler leaves its assertions unrun,
 not passed.
+
+
+### Twelve-unit Orks sweep (17.P1)
+
+There are931 assertions/932 registered entries. ROADMAP records930 initial
+full-suite passes plus the corrected59-case native ASAN/UBSAN/leak suite,
+including59 individual CTests; do not claim a second full-suite run. The single
+initial failure was an incorrect expected absence of Shoota's printed conditional
+Lethal Hits. The corrected target query passes against the compiled game and
+in the final native suite. No game rule was weakened or test disabled.
+
+Artifacts are `/workspace/4hammer-validation/orks-p1`: `tests` for the full
+CTest fixture, `sanitized` for the final unoptimized59-case driver and CTest
+registration, `godot` for matching header/C++/debug-native bindings, `fuzzer`
+for the optimized fixture-assisted engine and separate semantic/action corpora.
+The Godot artifact reuses the Python-linked debug engine with explicit matching
+libpython3.12 linkage; sanitizer-library loading is incompatible with Godot's
+RTLD_DEEPBIND. Keep native ASAN/UBSAN/leak checks separate; no sanitizer is disabled.
+
+```sh
+python tools/check_orks_unit_tables.py --wrapper /workspace/4hammer-validation/orks-p1/tests/rule-tests/baseline/wrapper.py --source-dir /workspace/4hammer-validation/orks-audit-2026-10-12/sources
+python tools/check_godot_state.py --build-path /workspace/4hammer-validation/orks-p1/godot --script tests/godot_orks_infantry.gd --timeout 120
+```
+
+All15 cards/20 profiles/79 rows are checked from original HTML; the59 semantic
+cases cover source-specific behavior. This validates adapters and host APIs;
+full public roster selection of these units remains17.Q. Use ROADMAP for the
+completed game, fixed replays,265 semantic-seed runs and78 action-mutation runs,
+coverage and diagnostic limits. Action/schema33/21 regeneration adds six Bool
+candidates and leaves coordinate bounds unchanged.

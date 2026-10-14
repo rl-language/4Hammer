@@ -515,3 +515,34 @@ full rendered journeys as mandatory fixes; sharing frames is not a demonstrated
 runtime speedup. Read the final roadmap section for test scope, corrected
 binding fixtures and sanitizer/replay evidence. Do not reintroduce duplicate
 serial frames or custom lifecycle hooks while adding the remaining units.
+
+
+## Twelve current Orks adapters —17.P1
+
+Read [the adapter guide](doc/orks-infantry-walkers.md) and the latest ROADMAP
+section. Boyz, Nobz, Warboss, Bigboss, Bannernob, Stormboyz, Warbikers, Deff Dread,
+Killa Kans, Big Mek Dakkarig, Beastboss on Squigosaur and Mozrog now have checked
+profiles/loadouts and source consumers.15/54 standard cards are implemented;
+39 and arbitrary public roster selection remain17.P/17.Q. Keep source audits
+and substantive regressions together in broad dependency batches, then run the
+expensive builds once; rerun affected checks when corrections justify it.
+
+Use original component identity for113/114 Ammo tokens, phase-owned effects
+for ammo/Rokkit grants, existing110/112 shared army-round budgets, and live aura
+queries. Rokkit selection belongs to SelectedFight before Overrun; ammo belongs
+to own-Shooting attack selection. Per-unit hit contributions retain ignore
+provenance and all34 choices/results must fit. Single-owner selection frames
+stay with their callers; continue auditing every new frame for duplication and
+re-entry. State/observation33, action21, next34 require matching bindings.
+Warbiker75x42mm ovals intentionally use75mm circles. Preserve quads, bounded
+state, generated init/drop, CP costs and excluded points/Forge World/Legends.
+
+Executed evidence and limits are in ROADMAP: all931 assertions covered across
+930 initial passes and59 corrected-source native sanitizer/individual CTest
+passes;15-card HTML check; eight Godot controls; completed697-action game and
+sanitized replay; separate semantic/action mutation campaigns. Godot validation
+reuses the matching debug test engine with explicit installed libpython3.12
+linkage; production pure-native build settings are unchanged. Godot rejects
+RTLD_DEEPBIND loading under ASAN; keep native sanitizer/leak validation enabled
+and separate. Fixed arrays need typed helpers/declarations, not direct generated
+getters; normalize expected UI labels with GlobalRules.strip_symbols.

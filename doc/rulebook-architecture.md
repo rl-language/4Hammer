@@ -1,6 +1,6 @@
 # Rulebook design and architecture
 
-This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation after tasks17.D/E,17.C4b,17.F,17.G and the combined17.H2/H3 step, using Rulebook compiler 0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
+This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation through the ordinary detachment/frame-sharing work and the twelve-unit17.P1 sweep, using Rulebook compiler0.4.17. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
 Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and [supplied appendix](11th-edition-supplied-appendix.md) for game rules. The architecture supports those rules, but its storage bounds, schemas and UI protocols are project decisions. [AGENTS.md](../AGENTS.md) records development constraints and the language conventions used here.
 
@@ -83,8 +83,8 @@ The module map below describes responsibility boundaries. Imports expose shared 
 | Terrain and objectives | [terrain_rules.rl](../src/terrain_rules.rl) | Visibility abstraction, area membership, cover, target conditions and objective/action eligibility |
 | Core stratagems and actions | [core_stratagem_rules.rl](../src/core_stratagem_rules.rl) | Core effect eligibility and phase-local action permissions; shared CP payment is on `Board` |
 | Transport and borrowed weapons | [transport_rules.rl](../src/transport_rules.rl), [firing_deck_rules.rl](../src/firing_deck_rules.rl) | Carrier/passenger links, embark/disembark setup, capacity, emergency setup and Firing Deck selections |
-| Current Orks data | [orks_unit_data.rl](../src/orks_unit_data.rl) | Source profiles/equipment/count validators, named physical alternatives, ability metadata and user-authorized oval proxies |
-| Current Orks unit abilities | [orks_unit_rules.rl](../src/orks_unit_rules.rl) | Identity-backed Keep Huntin'/Bomb registration, targeted eligibility/usage and Mobbed requirements; rules.rl owns their action dispatch |
+| Current Orks data | [orks_unit_data.rl](../src/orks_unit_data.rl), [orks_infantry_data.rl](../src/orks_infantry_data.rl) | Source profiles/equipment/count validators, named physical alternatives, ability metadata and user-authorized oval proxies |
+| Current Orks unit abilities | [orks_unit_rules.rl](../src/orks_unit_rules.rl), [orks_datasheet_rules.rl](../src/orks_datasheet_rules.rl) | Identity-backed source registration and usage, ammo/Rokkit selections, declaration/gathering modifiers and live aura queries; rules.rl owns dispatch |
 | Orks army mechanics | [orks_army_rules.rl](../src/orks_army_rules.rl) | Explicit Waaagh!/Da Boss metadata, riled grants, War Cry start-window choices and pre-formation Warlord selection |
 | Source lifecycle | [source_effect_types.rl](../src/source_effect_types.rl), [source_effects.rl](../src/source_effects.rl) | Source/event/use/effect records, eligibility, typed grants, expiry, aura refresh and restore validation |
 
@@ -318,9 +318,11 @@ Source-installed numerical records use the same effective M/T/Sv/InSv/Ld/OC and 
 
 `modifier_choices.rl` keeps each authored skill operation and each core contribution separate. Cover and Plunging Fire are BS operations; Heavy, Damaged, ordinary/profile hit bonuses and the two engagement penalties are hit-roll contributions. For every ordinary hit die, after re-rolls, the bearer’s controller may apply or ignore each relevant item, including beneficial items. Selected operations then use the same ordered arithmetic, rounding, characteristic limits and cumulative hit cap. Natural 1/6 and other unmodified gates remain intact. The no-permission path retains aggregate classification.
 
-`ChooseAttackModifiers` persists its bounded list, index and result. A one-Bool `apply_attack_modifier` input represents every subset without enumerating an exponential mask. Board exposes the current modifier/kind for labels; the child restores the previous decision owner and UI context. Group identity compares permissions and the original selectable lists, since equal all-applied totals can offer different subsets. A typed source grant can install a permission, with source-owned expiry and archive cleanup. Actual Orks ability adapters remain later work.
+`ChooseAttackModifiers` persists its bounded list, index and result. A one-Bool `apply_attack_modifier` input represents every subset without enumerating an exponential mask. Board exposes the current modifier/kind for labels; the child restores the previous decision owner and UI context. Group identity compares permissions and the original selectable lists, since equal all-applied totals can offer different subsets. A typed source grant can install a permission, with source-owned expiry and archive cleanup. Current Orks adapters use these same provenance and selection mechanisms; remaining cards are tracked in ROADMAP.
 
 ## Current Orks data adapters
+
+The twelve-card17.P1 adapter batch is described in [the infantry, walker and monster guide](orks-infantry-walkers.md). Its separate data module builds checked loadouts; `orks_datasheet_rules.rl` feeds selection decisions, declarations, gathered characteristics, individual hit contributions and live auras into the existing kernels. ROADMAP.md records validation status.
 
 [Current Orks profiles/loadouts](orks-current-unit-data.md) describes17.H1's five model profiles and12 unique weapon profiles, literal composition ranges, optional Thump Guns and named physical profile alternatives. Constructors configure actual keyword/datasheet/Army Rules/attachment metadata. Raw HTML supplies separate InSv boxes and the Hunter keyword header omitted by the text extracts. An independent tool checks the compiled values against those tables.
 
@@ -328,7 +330,7 @@ These constructors now carry current ability metadata. [The ability report](orks
 
 Dodge Dis! is a separate hit contribution in each attack snapshot, preserving pre-cap arithmetic and optional ignoring provenance. Brutal Impact adds a damage operation to every declared profile when the actual source unit has charged this turn. Mobbed runs all engaged enemy Monster/Vehicle shock tests after completed charge movement, with source-controller ordering and target-owned shock choices. Unit/component conferral reuses the existing attachment lifecycle.
 
-Squighog profiles retain original oval axes and `profile_has_oval_base`, while the user's updated policy permits75/90mm long-axis circle proxies through the common distance/overlap/setup/path/rendering consumers. Rotation leaves the proxy unchanged. Exact ovals are deferred; unknown hull/multipart geometry remains unsupported. Anchors stay on whole quads. The public Orks starter now uses these current adapters with real Warlord and attachment decisions. Existing profile/weapon IDs remain historical fixtures. New ability values, hit provenance and action frames require matching schemas31/19/31, next32.
+Squighog profiles retain original oval axes and `profile_has_oval_base`, while the user's updated policy permits75/90mm long-axis circle proxies through the common distance/overlap/setup/path/rendering consumers. Rotation leaves the proxy unchanged. Exact ovals are deferred; unknown hull/multipart geometry remains unsupported. Anchors stay on whole quads. The public Orks starter now uses these current adapters with real Warlord and attachment decisions. Existing profile/weapon IDs remain historical fixtures. The starter promotion first used schemas31/19/31. Current17.P1 schemas are33/21/33, next34; regenerate matching bindings after structural changes.
 
 ## Attached units
 

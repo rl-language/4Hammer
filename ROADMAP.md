@@ -953,3 +953,77 @@ Next17.P: implement the remaining standard unit families in dependency batches,
 using the completed package/shared mechanics and the source matrix.17.Q must
 still fix measured wrapper retrieval/native slow inputs and complete the full
 rendered journeys; task17 and the whole edition migration remain incomplete.
+
+###17.P1 complete — twelve standard unit adapters
+
+Implement Boyz, Nobz, Warboss, Bigboss, Bannernob, Stormboyz, Warbikers,
+Deff Dread, Killa Kans, Big Mek Dakkarig, Beastboss on Squigosaur and Mozrog
+Skragbad together from the retrieved2026-10-12 version1.2 cards. Add15 exact
+profiles, complete per-model loadouts and their source-owned abilities using
+existing attack, movement, aura, damage and delayed-fight kernels. Reuse110/112
+shared Keep Huntin’/Intimidating Motivation limits. Batch source edits and
+regressions before expensive native validation, as requested by the user.
+
+The public starter remains three families; arbitrary roster selection remains
+17.Q integration. This batch brings implemented adapter coverage to15/54, leaving39.
+Constructors alone do not certify mechanics. Preserve bounded state,
+generated lifecycle, quads, intentional source-sized circles, no prices and CP
+tracking. Schema33/21/33 (next34) requires matching rebuilt bindings. Any issues
+found must be fixed with regression coverage before completion.
+
+
+17.P1 executed evidence —2026-10-14 (`/workspace/4hammer-validation/orks-p1`):
+
+-59 new regressions cover15 profiles, literal composition/loadout boundaries,
+ all20 legal Dread arm combinations, physical alternatives/Extra Klaws, source
+ tokens/duration/ownership/saves, live target conditions, modifiers, charge
+ traversal, auras, actual gathering, attack/fight delegation and Mozrog death.
+ The full unoptimized CTest run executes931 assertions:930 pass; one test
+ incorrectly assumed Shootas lacked their printed conditional Lethal Hits.
+ Correct the test to query the selected Monster target. The compiled game
+ passes the corrected assertions directly (`tide-corrected.log`), and all59
+ corrected-source native ASAN/UBSAN/leak cases pass, both together and as59
+ individual CTests (`sanitized/run.log`, `sanitized/ctest.log`). These runs
+ cover all931 assertions; no second full932-entry CTest run is claimed.
+-Independent original-HTML comparison passes15 cards/20 model profiles/79
+ printed weapon rows, including InSv, fixed/random expressions and weapon
+ rules. Attachment inventory remains67 identities/41 permission edges.
+-Frame audit passes113 actions/66 shared slots/no duplicated frames. Game/Board
+ inline sizes34,744/28,944 bytes. Each new selection frame has one owner.
+-20-step Gym passes29,387 action candidates and15,265,917 finite observations.
+ Only six Bool candidates were added; whole-quad coordinate bounds are unchanged.
+ Fresh seed40000 current-root gameplay completes697 legal actions, terminal-4.
+ The optimized sanitized engine replays its exact input in96.439s and both
+ preserved deployment/geometry lifetime inputs without sanitizer failures.
+-Eight matching Godot controls pass: new twelve-unit constructors/decisions,
+ existing data, unit rules, modifier ignoring, detachments, attachments, weapons/
+ sources and current roster/Warlord/save journey. Artifacts reuse the current
+ unoptimized Python-linked native engine with an explicit dependency on the
+ installed matching libpython3.12; generated header and C++ extension are fresh.
+ This is validation artifact reuse, not a production CMake dependency change.
+ Direct sanitizer-library loading was rejected by Godot's RTLD_DEEPBIND mode;
+ native sanitizer checks remain separate and enabled. Fixed-array getter and
+ normalized-label fixture mistakes were corrected. Broad/rendered checks17.Q
+ remain pending; no pure-native Godot rebuild or rendered journey is claimed.
+-Fixture-assisted fuzzer uses a copy of the current full-game root/catalog and
+ original action-fuzz loop, plus one selected semantic assertion per input.
+ All59 one-byte seeds initialize successfully;265 runs/61s validate semantic
+ fixtures (this corpus stays below the action-input length). A separate73-byte
+ seed campaign exercises actual actions:78 runs/62s,28 new units added,
+ coverage13,174/features17,057. Both campaigns and fixed replays keep ASAN,
+ UBSAN, bounds/preconditions and leaks enabled; no crash artifacts. Missing
+ external symbolizer warnings retain their17.Q diagnostics owner. This does
+ not certify complete games using all12 new units through the public roster.
+
+Fixed issues: source-effect/provenance validators now admit the new enum entries;
+ modifier result/index capacity accommodates all34 offered contributions;
+ borrowed weapons receive carrier datasheet rules; Nobz traversal preserves FLY;
+ Rokkit Charge is selected before Overrun/attacks. Rule functions cite source
+ cards or applicable core/appendix wording. Generated lifecycle, bounded state,
+ circle proxies, CP tracking and Rules.gd/TraceManager.gd are preserved.
+
+17.P remains open for39 standard cards. Arbitrary public roster selection,
+ unsupported hull data, full rendered journeys and measured wrapper/native
+ performance fixes retain their existing17.P/17.Q owners. All issues identified
+ must be fixed and validated; do not turn documentation/table coverage into
+ claims that these remaining mechanics are complete.
