@@ -17,6 +17,7 @@ if(NOT RLC_TEST_COMPILER)
 endif()
 set(rule_test_runner "${PROJECT_SOURCE_DIR}/tools/ctest_rules.py")
 set(RULE_TEST_COMPILER_JOBS 4 CACHE STRING "Workers per RLC test compilation (0.4.17+)")
+set(RULE_TEST_COMPILE_TIMEOUT 1200 CACHE STRING "Seconds allowed for a rule-suite compilation")
 option(RULE_TEST_OPTIMIZE "Optimize rule tests with -O2 (off for debugging)" OFF)
 if(RULE_TEST_OPTIMIZE)
   set(rule_test_optimization --optimize)
@@ -33,13 +34,19 @@ if(NOT discovery_status EQUAL 0)
   message(FATAL_ERROR "Rule test discovery failed: ${discovery_error}")
 endif()
 foreach(suite baseline discrepancies)
+  # An empty discrepancy manifest has no assertions to execute. Avoid another
+  # full-engine compilation solely to establish an unused fixture.
+  string(FIND "${discovered_tests}" "${suite}|" suite_test_position)
+  if(suite_test_position EQUAL -1)
+    continue()
+  endif()
   add_test(NAME rules.compile.${suite}
     COMMAND "${Python3_EXECUTABLE}" "${rule_test_runner}" build
       --suite ${suite} --directory "${PROJECT_BINARY_DIR}/rule-tests/${suite}"
       --compiler "${RLC_TEST_COMPILER}" --jobs "${RULE_TEST_COMPILER_JOBS}"
       ${rule_test_optimization})
   set_tests_properties(rules.compile.${suite} PROPERTIES
-    FIXTURES_SETUP rules_${suite} LABELS "rules;setup" TIMEOUT 600)
+    FIXTURES_SETUP rules_${suite} LABELS "rules;setup" TIMEOUT ${RULE_TEST_COMPILE_TIMEOUT})
 endforeach()
 string(REPLACE "\n" ";" discovered_tests "${discovered_tests}")
 foreach(entry IN LISTS discovered_tests)

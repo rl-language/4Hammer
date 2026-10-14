@@ -382,3 +382,15 @@ retains22,907 candidates and28,980,462 finite observations. Exact rendered/mouse
 journeys and the known wrapper-performance work remain17.Q. Read the roadmap
 for full/affected CTest,17-case native sanitizer/leak and actual-roster complete
 game/fuzzer evidence; do not describe a partial rerun as a second full suite.
+
+### Large debug suites
+
+CTest compiles only suites that contain assertions. An empty known-discrepancy
+manifest no longer triggers a second full-engine compilation. Compilation
+fixtures use `RULE_TEST_COMPILE_TIMEOUT` (default1200 seconds); override it at
+CMake configuration when the native debug build needs longer. Individual
+assertions retain their30-second timeout. `RULE_TEST_COMPILER_JOBS=4` keeps the
+requested compiler parallelism; `RULE_TEST_OPTIMIZE` remains off for debugging.
+Run large native builds separately when concurrent compilers exceed available
+memory. A compilation timeout or killed compiler leaves its assertions unrun,
+not passed.
