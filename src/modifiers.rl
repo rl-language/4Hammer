@@ -344,6 +344,7 @@ enum ModifierOrigin:
     cover
     plunging_fire
     dodge_dis
+    orks_detachment
 
 enum ModifierSelectionKind:
     weapon_skill
@@ -356,5 +357,5 @@ cls AttackModifierChoice:
 
 # Sixteen authored operations plus distinct Cover/Plunging Fire increments;
 # the action payload remains one Bool, never a2^18 mask (02.02.02/pp.50/73).
-using AttackModifierChoices = CheckedVector<AttackModifierChoice, 18>
+using AttackModifierChoices = CheckedVector<AttackModifierChoice, 34>
 using SelectedAttackModifiers = CheckedVector<RuleModifier, 18>

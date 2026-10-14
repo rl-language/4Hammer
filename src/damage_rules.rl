@@ -202,21 +202,30 @@ fun destruction_unit_valid(Board board, UnitID unit, Bool player, Bool finish, U
 # Trigger presence determines retention, not merely taking attack damage
 # (p.87). Existing faction hooks retain their legacy definitions until task 17.
 fun has_destruction_trigger(Board board, UnitID source, Bool source_known, Model model, Bool fight_on_death) -> Bool:
-    return has_source_destruction_trigger(board, source, source_known, model) or carrier_has_passengers(board, model.identity) or fight_on_death or model.has_deadly_demise or model.has_keyword(Keyword::master_of_possession) or (source_known and source.get() < board.units.size() and model.is_character() and board[source].has_ability(AbilityKind::feeder_tendrils))
+    return has_source_destruction_trigger(board, source, source_known, model) or carrier_has_passengers(board, model.identity) or model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value or orks_aircraft_death_source(board, model) or fight_on_death or model.has_deadly_demise or model.has_keyword(Keyword::master_of_possession) or (source_known and source.get() < board.units.size() and model.is_character() and board[source].has_ability(AbilityKind::feeder_tendrils))
 
 # Raw lost wounds are committed only after all prevention for that application.
 # Snapshot provenance before removal so deferred hooks cannot target a new slot
 # (p.87); prevention is resolved separately first (p.81).
 fun commit_wound_loss(Board board, DamageJob job, ModelID model, Int lost, Bool fight_on_death):
     assert(lost >= 0, "negative wound loss")
+    if lost > 0 and job.from_attack and board.orks_attack_active:
+        ref record = orks_attack_record(board, board[job.target].identity)
+        add_attack_count(record.wounds_lost, min(lost, board[job.target][model].wounds_left()))
     if lost > 0:
         board[job.target][model].suffered_wounds = min(board[job.target][model].profile.wounds(), board[job.target][model].suffered_wounds.value + lost)
     if board[job.target][model].wounds_left() <= 0:
+        board[job.target][model].destroyed_phase = board.phase_serial.value + 1
         # Source lifetime p.67 independently requires retaining the bearer,
         # even if it has no Deadly Demise or other death-trigger ability.
+        if board.orks_attack_active and live_attachment_strength(board[job.target]) == 0:
+            ref destruction_record = orks_attack_record(board, board[job.target].identity)
+            destruction_record.destroyed = true
+            board[job.target].orks_destroyed_attack = board.orks_attack_serial
+            board[job.target].orks_destroyed_phase = board.phase_serial.value + 1
         let retained_rules = retain_attachment_rules_for_attack(board, job.target, model, job)
         board[job.target][model].attachment_abilities_retained = retained_rules
-        let unit_death = !board[job.target].unit_destruction_event_issued and live_attachment_strength(board[job.target]) == 0 and has_source_unit_destruction_trigger(board, job)
+        let unit_death = !board[job.target].unit_destruction_event_issued and live_attachment_strength(board[job.target]) == 0 and (has_source_unit_destruction_trigger(board, job) or orks_package(board, board[job.target], OrksDetachment::flyboyz) and board[job.target][model].has_keyword(Keyword::aircraft))
         board[job.target][model].destroyed_whole_unit = unit_death
         if unit_death:
             board[job.target].unit_destruction_event_issued = true
@@ -228,6 +237,8 @@ fun commit_wound_loss(Board board, DamageJob job, ModelID model, Int lost, Bool 
             board[job.target][model].destroyed_by_attack = job.from_attack
             board[job.target][model].destroying_unit_known = job.source_known
             board[job.target][model].destroying_unit = job.source
+            if job.source_known:
+                board[job.target][model].destroying_unit_identity = board[job.source].identity
             board[job.target][model].destruction_fight_roll = board.attack_info.fight_on_death_roll
         else:
             board[job.target].remove_model(model.get())

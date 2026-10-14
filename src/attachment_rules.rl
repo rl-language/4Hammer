@@ -63,6 +63,8 @@ fun attachment_valid(Board board, UnitID source, UnitID target, Bool player) -> 
     ref bodyguard = board.reserve_units[target.get()]
     if leader.owned_by_player1 != player or bodyguard.owned_by_player1 != player or !leader.attached_units.empty() or leader.models.empty() or bodyguard.models.empty() or leader.retired or bodyguard.retired or !attachment_role_available(bodyguard, leader.attachment_role) or leader.models.size() + bodyguard.models.size() > MAX_UNIT_MODELS:
         return false
+    if !orks_enhancement_attachment_valid(leader, bodyguard):
+        return false
     if leader.identity.value <= 0 or bodyguard.identity.value <= 0:
         return false
     for member in range(leader.models.size()):

@@ -37,6 +37,7 @@ enum AbilityKind:
     mobbed
     bomb_squig
     brutal_impact
+    intimidating_motivation
 
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value
@@ -141,6 +142,23 @@ enum Keyword:
     # Current Beastboss / Beast Snagga Boyz keywords (source card URLs below).
     warboss
     battleline
+    # Ordinary Orks detachment selectors; append to preserve older IDs.
+    epic_hero
+    mega_armour
+    big_mek
+    bigboss
+    mek
+    speed_freeks
+    wagon
+    gretchin
+    boyz
+    nobz
+    meganobz
+    kommandos
+    stormboyz
+    warbikers
+    deffkoptas
+    jump_pack
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value

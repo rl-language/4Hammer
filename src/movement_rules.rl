@@ -118,7 +118,7 @@ fun battlefield_move_eligible(Board board, UnitID id, MovementKind kind) -> Bool
     if kind == MovementKind::stationary:
         return true
     if kind == MovementKind::ordered_retreat:
-        return board.is_in_melee(board[id]) and !board[id].battle_socked
+        return board.is_in_melee(board[id]) and !board[id].battle_socked and !orks_forces_escape(board, board[id])
     if kind == MovementKind::desperate_escape:
         return board.is_in_melee(board[id])
     if kind == MovementKind::normal or kind == MovementKind::advance:
@@ -158,8 +158,8 @@ fun record_move(Board board, UnitID id, MovementKind kind):
             board[id].can_charge = false
     if kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape:
         board[id].history.fell_back_this_turn = true
-        board[id].can_shoot = false
-        board[id].can_charge = false
+        board[id].can_shoot = board[id].history.fallback_allows_shooting
+        board[id].can_charge = board[id].history.fallback_allows_charge
 
 # Ingress is selected once per phase and locks later moves; no history reset
 # is allowed when a repositioned unit returns the same turn (pp.68–69).
@@ -172,6 +172,12 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
     let valid = arrange_setup_candidate(board, candidate, position, kind, infiltrates)
     assert(valid, "setup candidate must satisfy every placement condition")
     let destination = board.units.size()
+    if candidate.is_generated_replacement and !candidate.has_return_slot and !board.units.has_capacity():
+        let reusable = orks_replacement_slot(board)
+        assert(reusable >= 0, "replacement has no safe battlefield slot")
+        board.expired_reserves.value.append(board[reusable])
+        candidate.has_return_slot = true
+        candidate.return_slot = reusable
     if candidate.has_return_slot:
         destination = candidate.return_slot.get()
         board[destination] = candidate
@@ -181,8 +187,8 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
     board[destination].mark_set_up()
     # Arrival itself does not prohibit shooting/charging. Preserve surviving
     # same-turn Advance/Fall Back restrictions explicitly (pp.33/68–69).
-    board[destination].can_shoot = !candidate.history.fell_back_this_turn and !candidate.history.deck_shooting_locked
-    board[destination].can_charge = (!candidate.history.advanced_this_turn or candidate.history.advance_allows_charge) and !candidate.history.fell_back_this_turn
+    board[destination].can_shoot = (!candidate.history.fell_back_this_turn or candidate.history.fallback_allows_shooting) and !candidate.history.deck_shooting_locked
+    board[destination].can_charge = (!candidate.history.advanced_this_turn or candidate.history.advance_allows_charge) and (!candidate.history.fell_back_this_turn or candidate.history.fallback_allows_charge)
     if kind == MovementKind::ingress:
         board[destination].history.ingress_turn = board.turn_serial.value + 1
         board[destination].history.ingress_used_deep_strike = candidate.all_have_ability(AbilityKind::deep_strike)
@@ -191,6 +197,11 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
         board[destination].history.selected_move_phase = board.phase_serial.value + 1
         board[destination].history.move_kind = kind
         board[destination].has_moved = true
+        # Flyboss triggers on every actual reserve ingress, including alternate
+        # ingress callers; prebattle deployment/redeployment is not ingress.
+        let arrival : UnitID
+        arrival = destination
+        orks_flyboss_ingress(board, arrival)
     board.reserve_units.erase(reserve.get())
 
 # Repositioning preserves effects/history and retires the battlefield slot
@@ -280,6 +291,11 @@ fun scouts_values_uniform(Unit unit) -> Bool:
 fun scouts_distance(Unit unit) -> Int:
     if unit.empty():
         return 0
+    if unit_has_orks_enhancement(unit, OrksEnhancement::minefield_detail) and unit.embarked_transport.value == 0:
+        for member in range(unit.models.size()):
+            for entry in range(unit[member].scout_distances.size()):
+                assert(unit[member].scout_distances[entry].value == 6, "Scouts values must all be identical")
+        return 6
     for i in range(unit.models.size()):
         if unit[i].scout_distances.empty():
             return 0
@@ -343,7 +359,10 @@ fun waypoint_valid(Board board, Unit original, ModelPath path, BoardPosition pos
         segment = horizontal_length(start, finish)
     # HOVER exempts the unit's maximum distance, not just its bearer (p.82).
     let skies_penalty = skies and !original.has_ability(AbilityKind::hover)
-    if path_distance(model, path, skies) + segment > float(model_move_budget(model, kind, extra, override_m, skies_penalty) * MICROMETRES_PER_INCH):
+    let budget = model_move_budget(model, kind, extra, override_m, skies_penalty)
+    if original.movement_distance_limit.value > 0:
+        budget = max(0, original.movement_distance_limit.value - 1 - 2 * int(skies_penalty))
+    if path_distance(model, path, skies) + segment > float(budget * MICROMETRES_PER_INCH):
         return false
     return model_segment_valid(board, original, model, start, finish, policy)
 
@@ -351,6 +370,8 @@ fun waypoint_valid(Board board, Unit original, ModelPath path, BoardPosition pos
 # strict >8; ordinary/Fall Back finishes unengaged (pp.12/33/84).
 fun movement_finish_valid(Board board, Unit candidate, UnitID slot, MovementKind kind) -> Bool:
     if !unit_placement_valid(board, candidate, slot.get(), true):
+        return false
+    if board.orks_objective_move and slot.get() == board.orks_objective_mover.get() and !orks_near_any_objective(board, candidate):
         return false
     if kind == MovementKind::scout:
         return separated_from_enemies(board, candidate, slot.get(), 8)
@@ -614,4 +635,4 @@ fun return_opponent_aircraft(Board board):
 fun battlefield_entry_available(Board board, Unit unit) -> Bool:
     if unit.has_return_slot:
         return unit.return_slot.get() < board.units.size() and board[unit.return_slot].retired and board[unit.return_slot].empty()
-    return board.units.has_capacity()
+    return board.units.has_capacity() or (unit.is_generated_replacement and orks_replacement_slot(board) >= 0)

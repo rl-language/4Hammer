@@ -16,12 +16,14 @@ using ChargeDistance = LinearlyDistributedInt<0, 13>
 # consumes this phase's declaration but grants neither Lance nor Fights First
 # (pp.36–37/82). This also excludes offboard/retained casualties and engagement.
 fun charge_source_valid(Board board, UnitID source, Bool player) -> Bool:
+    if source.get() < board.units.size() and unit_orks_effect(board, board[source], OrksEffectKind::no_charge) > 0:
+        return false
     if source.get() >= board.units.size():
         return false
     ref unit = board[source]
     # Orks Waaagh! waives only this selected Advance; the saved permission
     # preserves all other restrictions (Orks faction Army Rules / Waaagh!).
-    if unit.off_battlefield or unit.owned_by_player1 != player or unit.has_keyword(Keyword::aircraft) or !has_live_model(unit) or !unit.can_charge or board.is_in_melee(unit) or ((unit.has_run or unit.history.advanced_this_turn) and !unit.history.advance_allows_charge) or unit.history.fell_back_this_turn or unit.history.action_started or unit.history.ingress_locked or unit.history.declared_charge_phase == board.phase_serial.value + 1:
+    if unit.off_battlefield or unit.owned_by_player1 != player or unit.has_keyword(Keyword::aircraft) or !has_live_model(unit) or !unit.can_charge or board.is_in_melee(unit) or ((unit.has_run or unit.history.advanced_this_turn) and !unit.history.advance_allows_charge) or (unit.history.fell_back_this_turn and !unit.history.fallback_allows_charge) or unit.history.action_started or unit.history.ingress_locked or unit.history.declared_charge_phase == board.phase_serial.value + 1:
         return false
     for i in range(board.units.size()):
         if board[i].owned_by_player1 != player and has_live_model(board[i]) and live_unit_distance(unit, board[i]) <= 12.0:

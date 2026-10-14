@@ -40,6 +40,9 @@ cls AttackSequenceInfo:
     # Beastboss Dodge Dis!: separate contribution before the cumulative cap.
     Bool dodge_dis_hit_bonus
     Bool hit_roll_bonus
+    RuleModifiers orks_hit_modifiers
+    RuleModifiers orks_wound_modifiers
+    Bool orks_fail_hits_three
     # Cover changes BS, separate from the clamped hit modifier (p.50).
     Bool target_has_cover
     # Printed Plunging Fire changes BS; Aircraft are excluded (pp.73–74).
@@ -108,10 +111,10 @@ cls AttackSequenceInfo:
             result = board[self.source_unit_id].max_weapon_parameter(self.source, kind)
         for i in range(self.selected_weapon_rules.size()):
             if self.selected_weapon_rules[i].kind == kind and self.rule_applies(board, self.selected_weapon_rules[i]):
-                result = max(result, self.selected_weapon_rules[i].parameter.value)
+                result = max(result, effective_weapon_ability_parameter(board, self.selected_weapon_rules[i]))
         for i in range(self.temporary_weapon_abilities.size()):
             if self.temporary_weapon_abilities[i].kind == kind and self.rule_applies(board, self.temporary_weapon_abilities[i]):
-                result = max(result, self.temporary_weapon_abilities[i].parameter.value)
+                result = max(result, effective_weapon_ability_parameter(board, self.temporary_weapon_abilities[i]))
         return result
 
     # Presence is independent of parameter magnitude (pp.78–85).
@@ -130,7 +133,7 @@ cls AttackSequenceInfo:
     # and appendix02.02.01). Optional ignoring retains its own provenance.
     # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
     fun total_hit_modifier() -> Int:
-        let result = int(self.hit_roll_bonus) + int(self.dodge_dis_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
+        let result = apply_rule_modifiers(0, self.orks_hit_modifiers, false) + int(self.hit_roll_bonus) + int(self.dodge_dis_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
         let i = 0
         while i != self.profile_hit_roll_bonus.size():
             if self.profile_hit_roll_bonus[i] == self.source_profile:
@@ -140,7 +143,7 @@ cls AttackSequenceInfo:
         return result
 
     fun total_wound_modifier() -> Int:
-        let result = int(self.wound_roll_bonus) - int(self.wound_roll_malus)
+        let result = apply_rule_modifiers(0, self.orks_wound_modifiers, false) + int(self.wound_roll_bonus) - int(self.wound_roll_malus)
         let i = 0
         while i != self.profile_wound_roll_bonus.size():
             if self.profile_wound_roll_bonus[i] == self.source_profile:
@@ -228,7 +231,17 @@ cls Board:
     SourceUseRecords source_uses
     SourceEffects source_effects
     SourceEffectKey next_source_effect
+    SourceEffectKey next_source_generation
     AttackSequenceInfo attack_info
+    # Actual hit/loss provenance for detachment post-attack reactions.
+    OrksAttackRecords orks_attack_records
+    LinearlyDistributedInt<0, 1025> orks_attack_serial
+    Bool orks_objective_move
+    UnitID orks_objective_mover
+    EntityIdentity orks_reaction_target
+    Bool orks_attack_active
+    SourceBank orks_support_bank
+    UnitID orks_selected_unit
     # Active group labels/target are editor infrastructure for p.19 decisions.
     AllocationGroups active_allocation_groups
     UnitID active_allocation_target
@@ -388,6 +401,23 @@ cls Board:
     fun begin_phase(BattlePhase phase):
         self.clear_phase_modifiers()
         self.timing.phase = phase
+        # Offboard banks have no battlefield anchors in this phase. Arrival
+        # must not reuse last phase's coherency/engagement snapshot (01.02.03).
+        for reserve in range(self.reserve_units.size()):
+            self.reserve_units[reserve].history.phase_start_members.clear()
+            self.reserve_units[reserve].history.phase_start_engagements.clear()
+        for passenger in range(self.embarked_units.size()):
+            self.embarked_units[passenger].history.phase_start_members.clear()
+            self.embarked_units[passenger].history.phase_start_engagements.clear()
+        for slot in range(self.units.size()):
+            self.units[slot].history.phase_start_members.clear()
+            self.units[slot].history.phase_start_engagements.clear()
+            for member in range(self.units[slot].models.size()):
+                if self.units[slot][member].is_alive() and !self.units[slot][member].off_battlefield:
+                    self.units[slot].history.phase_start_members.append(self.units[slot][member].identity)
+            for enemy in range(self.units.size()):
+                if self.units[slot].owned_by_player1 != self.units[enemy].owned_by_player1 and self.units[slot].is_engaged_with(self.units[enemy]):
+                    self.units[slot].history.phase_start_engagements.append(self.units[enemy].identity)
         refresh_source_effects(self, TimingWindow::none)
         self.current_decision_maker = self.current_player
 
@@ -831,14 +861,14 @@ fun destroyed_stratagem_target(Unit target) -> Bool:
 # Check saved roots before restoring editor choices (appendix02.05.01/p.78).
 fun valid_weapon_condition(WeaponRule rule) -> Bool:
     let keyword : Keyword
-    return rule.source_effect.value >= 0 and rule.source_effect.value < MAX_SOURCE_EFFECT_KEY and rule.kind.value >= 0 and rule.kind.value <= WeaponRuleKind::anti.value and rule.parameter.value >= 0 and rule.parameter.value < MAX_CHARACTERISTIC and rule.target_condition.valid(max(keyword))
+    return rule.parameter_increment_source.value >= 0 and rule.parameter_increment_source.value < MAX_SOURCE_EFFECT_KEY and rule.parameter_increment_amount.value >= 0 and rule.parameter_increment_amount.value < MAX_CHARACTERISTIC and rule.source_effect.value >= 0 and rule.source_effect.value < MAX_SOURCE_EFFECT_KEY and rule.kind.value >= 0 and rule.kind.value <= WeaponRuleKind::supa_hazardous.value and rule.parameter.value >= 0 and rule.parameter.value < MAX_CHARACTERISTIC and rule.target_condition.valid(max(keyword))
 
 # Compatibility/integrity gate: configurations cannot bypass their bounded
 # policies; identity integrity protects the lifecycle rules (pp.19/88).
 fun valid_state_foundations(Board board) -> Bool:
     if !valid_attack_modifier_choice(board.pending_modifier_choice) or board.pending_modifier_kind.value < 0 or board.pending_modifier_kind.value > ModifierSelectionKind::hit_roll.value:
         return false
-    if !valid_orks_army_state(board) or !valid_source_foundations(board):
+    if !valid_orks_army_state(board) or !valid_source_foundations(board) or !valid_orks_detachment_foundations(board):
         return false
     if !valid_rule_modifiers(board.attack_info.skill_modifiers) or !valid_rule_modifiers(board.attack_info.ap_modifiers) or !valid_rule_modifiers(board.attack_info.damage_modifiers):
         return false
@@ -912,6 +942,12 @@ fun valid_state_foundations(Board board) -> Bool:
 # Reject malformed bounded history on load before it can change range/Heavy
 # decisions or inferred observations (p.82 / user numeric-storage requirement).
 fun valid_model_numeric_history(Model model) -> Bool:
+    if model.orks_enhancement.value < 0 or model.orks_enhancement.value > OrksEnhancement::warphead.value or model.orks_upgrade_origin.value < 0 or model.orks_upgrade_origin.value >= MAX_IDENTITY_SEQUENCE or model.destroying_unit_identity.value < 0 or model.destroying_unit_identity.value >= MAX_IDENTITY_SEQUENCE or model.destroyed_phase.value < 0 or model.destroyed_phase.value >= MAX_PHASE_STAMP:
+        return false
+    for ork_effect in range(model.orks_effects.size()):
+        ref grant = model.orks_effects[ork_effect]
+        if grant.kind.value <= 0 or grant.kind.value > OrksEffectKind::invulnerable_five.value or grant.source_effect.value < 0 or grant.source_effect.value >= MAX_SOURCE_EFFECT_KEY or grant.amount.value < 0 or grant.amount.value >= MAX_CHARACTERISTIC or grant.associated_unit.value < 0 or grant.associated_unit.value >= MAX_IDENTITY_SEQUENCE:
+            return false
     for riled_index in range(model.riled_source_effects.size()):
         if model.riled_source_effects[riled_index].value < 0 or model.riled_source_effects[riled_index].value >= MAX_SOURCE_EFFECT_KEY:
             return false
@@ -950,6 +986,10 @@ fun valid_model_numeric_history(Model model) -> Bool:
 # Timestamps remain within configured serial ranges, including zero sentinel.
 # Live and archived bearers must both retain bounded numeric history (pp.19/88).
 fun valid_unit_numeric_history(Unit unit) -> Bool:
+    if unit.movement_distance_limit.value < 0 or unit.movement_distance_limit.value >= 258:
+        return false
+    if unit.psyker_level.value < 0 or unit.psyker_level.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.round_stamp.value < 0 or unit.orks_psychic_usage.round_stamp.value >= MAX_ROUNDS or unit.orks_psychic_usage.spent.value < 0 or unit.orks_psychic_usage.spent.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.roar_phase.value < 0 or unit.orks_psychic_usage.roar_phase.value >= MAX_PHASE_STAMP or unit.orks_psychic_usage.visions_phase.value < 0 or unit.orks_psychic_usage.visions_phase.value >= MAX_PHASE_STAMP:
+        return false
     if unit.history.embarked_phase.value < 0 or unit.history.embarked_phase.value >= MAX_PHASE_STAMP or unit.history.ingress_turn.value < 0 or unit.history.ingress_turn.value >= MAX_TURN_STAMP:
         return false
     if unit.return_slot.get() < 0 or unit.return_slot.get() >= MAX_UNIT_COUNT:

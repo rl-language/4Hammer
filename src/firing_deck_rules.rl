@@ -36,8 +36,10 @@ fun deck_weapon_valid(Board board, UnitID source, ModelID carrier, UnitID passen
     if weapon.range() <= 0 or model_weapon_has_rule(passenger_model, slot, WeaponRuleKind::one_shot) or passenger_model.used_once_per_battle_weapon[slot]:
         return false
     let pistol = close_quarters_weapon(weapon)
-    if board[source].shooting_kind == ShootingKind::assault and !model_weapon_has_rule(passenger_model, slot, WeaponRuleKind::assault):
-        return false
+    if board[source].shooting_kind == ShootingKind::assault:
+        let borrowed = make_deck_declaration(board, source, carrier, passenger, model, slot)
+        if !declared_weapon_has_kind(borrowed, WeaponRuleKind::assault):
+            return false
     if !monster_vehicle_model(board[source][carrier]):
         if board[source].shooting_kind == ShootingKind::close_quarters and !pistol:
             return false
@@ -67,6 +69,7 @@ fun make_deck_declaration(Board board, UnitID source, ModelID carrier, UnitID pa
     for granted_index in range(board.embarked_units[passenger.get()][model].additional_weapon_rules[slot].size()):
         result.selected_rules.append(board.embarked_units[passenger.get()][model].additional_weapon_rules[slot][granted_index])
     append_riled_assault_rules(board[source][carrier], result.weapon, result.selected_rules)
+    append_orks_package_weapon_rules(board, source, carrier.get(), result.weapon, result.weapon_name, result.selected_rules)
     let own_rules = board[source].get_temporary_weapon_rules()
     for own_index in range(own_rules.size()):
         result.selected_rules.append(own_rules[own_index])
@@ -84,7 +87,11 @@ fun lock_deck_passengers(Board board, EntityIdentity carrier):
 # Imported rules make a carrier eligible for Assault/close-quarters/indirect
 # modes too; actual profile choices still undergo the mode checks (p.81).
 fun carrier_has_ranged_rule(Board board, UnitID source, WeaponRuleKind kind) -> Bool:
-    let found = unit_has_ranged_rule(board[source], kind)
+    let found = false
+    for bearer in range(board[source].models.size()):
+        if board[source][bearer].is_alive():
+            for slot in range(board[source][bearer].weapons.size()):
+                found = found or board[source][bearer].weapons[slot].range() > 0 and available_weapon_has_rule(board, source, bearer, slot, kind)
     for carrier_index in range(board[source].models.size()):
         if board[source][carrier_index].firing_deck.value > 0:
             for bank_unit in range(board.embarked_units.size()):
@@ -92,7 +99,14 @@ fun carrier_has_ranged_rule(Board board, UnitID source, WeaponRuleKind kind) -> 
                     for bank_model in range(board.embarked_units[bank_unit].models.size()):
                         for weapon_slot in range(board.embarked_units[bank_unit][bank_model].weapons.size()):
                             if board.embarked_units[bank_unit][bank_model].weapons[weapon_slot].range() > 0 and !model_weapon_has_rule(board.embarked_units[bank_unit][bank_model], weapon_slot, WeaponRuleKind::one_shot):
-                                found = found or model_weapon_has_rule(board.embarked_units[bank_unit][bank_model], weapon_slot, kind) or (kind == WeaponRuleKind::assault and board[source][carrier_index].is_riled_up())
+                                let carrier : ModelID
+                                carrier = carrier_index
+                                let passenger : UnitID
+                                passenger = bank_unit
+                                let model : ModelID
+                                model = bank_model
+                                let borrowed = make_deck_declaration(board, source, carrier, passenger, model, weapon_slot)
+                                found = found or declared_weapon_has_kind(borrowed, kind)
     return found
 
 # Firing Deck runs only in own Shooting, never Snap or melee (24.14 p.81).

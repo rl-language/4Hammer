@@ -100,6 +100,8 @@ enum WeaponRuleKind:
     one_shot
     cleave
     anti
+    # Supa-glowy Fing requires two tests; it is distinct from Hazardous.
+    supa_hazardous
 
     fun equal(WeaponRuleKind other) -> Bool:
         return self.value == other.value
@@ -114,6 +116,9 @@ fun size_as_observation_tensor(WeaponRuleKind kind) -> Int:
 cls WeaponRule:
     # Zero is an intrinsic/manual grant; nonzero belongs to one timed effect.
     SourceEffectKey source_effect
+    # Close-range Dakka/Mow improve an existing instance until this key expires.
+    SourceEffectKey parameter_increment_source
+    FixedStat parameter_increment_amount
     WeaponRuleKind kind
     LinearlyDistributedInt<0, MAX_CHARACTERISTIC> parameter
     # Target predicates preserve adjacent/slash/excluded keyword meaning
@@ -877,6 +882,33 @@ enum Weapon:
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+
+    # Additional enhancement weapons use the literal Orks source rows. Prices
+    # are omitted; each is a separate physical weapon (Brute Bosses/Wurrband).
+    orks_da_gobshot_thunderbuss:
+        Int range = 24
+        Stat attacks = raw_stat(6)
+        Int skill = 4
+        Int strenght = 7
+        Int penetration = -2
+        Stat damage = raw_stat(2)
+        WeaponRules rules = weapon_rules(orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0), weapon_rule(WeaponRuleKind::rapid_fire, 6))
+    orks_da_krunch:
+        Int range = 24
+        Stat attacks = raw_stat(3)
+        Int skill = 4
+        Int strenght = 5
+        Int penetration = -1
+        Stat damage = raw_stat(1)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::blast, 3), weapon_rule(WeaponRuleKind::hazardous), weapon_rule(WeaponRuleKind::letal_hits), weapon_rule(WeaponRuleKind::psychic))
+    orks_eadbanger:
+        Int range = 24
+        Stat attacks = raw_stat(2)
+        Int skill = 4
+        Int strenght = 6
+        Int penetration = -3
+        Stat damage = raw_stat(3)
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::hazardous), weapon_rule(WeaponRuleKind::precision), weapon_rule(WeaponRuleKind::psychic))
 
     # Magnitude lookup retains the first declared parameter, distinct from
     # presence for parameterless abilities (pp.80–85). Own copies exit once.

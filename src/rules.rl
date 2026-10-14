@@ -16,6 +16,8 @@ import fight_rules
 import core_stratagem_rules
 import transport_rules
 import firing_deck_rules
+import orks_detachment_rules
+import orks_detachment_support
 import source_effects
 import modifier_choices
 import orks_army_rules
@@ -1080,6 +1082,7 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
             info.engaged_hit_penalties = info.engaged_hit_penalties + 1
         if board.is_in_melee(board[target]) and (board[target].has_keyword(Keyword::monster) or board[target].has_keyword(Keyword::vehicle)):
             info.engaged_hit_penalties = info.engaged_hit_penalties + 1
+    append_orks_attack_effects(board, source, target, weapon, info)
     return info
 
 # Group comparisons finish in an ordinary helper before any suspension;
@@ -1695,15 +1698,16 @@ act spawn_unit(ctx Board board) -> PickUnit:
 # (p.30). Insane Bravery is restricted to that step and once per battle (p.56).
 # Mobbed supplies the -1/-2 roll penalty through this same pipeline:
 # https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz
-act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm Bool recover_shock, frm LinearlyDistributedInt<0, 3> penalty) -> BattleShockTest:
+act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm Bool recover_shock, frm LinearlyDistributedInt<0, 8> penalty) -> BattleShockTest:
     if unit.empty():
         return
     frm previous_owner = board.current_decision_maker
     board.current_decision_maker = unit.owned_by_player1
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::shock_start, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
-    frm auto_pass = false
-    if command_step and board.timing.phase == BattlePhase::command and unit.owned_by_player1 == board.current_player and !board.has_used_insane_bravery[int(unit.owned_by_player1)] and board.can_target_strat(unit.owned_by_player1, Stratagem::insane_bravery, unit):
+    frm shocked_before = unit.battle_socked
+    frm auto_pass = unit_orks_effect(board, unit, OrksEffectKind::automatic_shock_success) > 0
+    if !auto_pass and command_step and board.timing.phase == BattlePhase::command and unit.owned_by_player1 == board.current_player and !board.has_used_insane_bravery[int(unit.owned_by_player1)] and board.can_target_strat(unit.owned_by_player1, Stratagem::insane_bravery, unit):
         act insane_bravery(Bool do_it)
         if do_it:
             board.commit_stratagem(unit.owned_by_player1, Stratagem::insane_bravery, unit)
@@ -1712,7 +1716,7 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         # Leadership/Battle-shock is absent from Command Re-roll's list (p.56).
         board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, false, unit.owned_by_player1)
         subaction*(board) board.current_pair_roll
-        if !unit.leadership_roll_succeeds(max(1, board.current_pair_roll.result.value + board.current_pair_roll.result2.value - penalty.value)):
+        if !unit.leadership_roll_succeeds(max(1, board.current_pair_roll.result.value + board.current_pair_roll.result2.value - penalty.value - unit_orks_effect(board, unit, OrksEffectKind::snotling_leadership_penalty))):
             unit.battle_socked = true
         else:
             if command_step and recover_shock:
@@ -1720,6 +1724,20 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
     else:
         if command_step and recover_shock:
             unit.battle_socked = false
+    if !shocked_before and unit.battle_socked:
+        frm shocked_slot : UnitIterator
+        shocked_slot = board.units.size()
+        for index in range(board.units.size()):
+            if board.units[index].identity == unit.identity:
+                shocked_slot = index
+        if shocked_slot.value < board.units.size():
+            frm shock_target : UnitID
+            shock_target = shocked_slot.value
+            board.shared_actions.orks_became_shocked = orks_became_shocked(board, shock_target)
+            subaction*(board) board.shared_actions.orks_became_shocked
+    if !shocked_before and unit.battle_socked and unit.off_battlefield:
+        board.shared_actions.orks_offboard_breakin_heads = orks_offboard_breakin_heads(board, unit)
+        subaction*(board, unit) board.shared_actions.orks_offboard_breakin_heads
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::shock_end, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
     board.current_decision_maker = previous_owner
@@ -1727,7 +1745,7 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
 # Existing callers have no extra penalty; Mobbed uses the same shock pipeline
 # with its printed-1/-2 roll modifier, including start/end source triggers.
 fun battle_shock_test(Board board, Unit unit, Bool command_step, Bool recover_shock) -> BattleShockTest:
-    let penalty : LinearlyDistributedInt<0, 3>
+    let penalty : LinearlyDistributedInt<0, 8>
     return battle_shock_test(board, unit, command_step, recover_shock, penalty)
 
 # Mobbed's owner orders all affected enemy units; each opponent controls its
@@ -1736,7 +1754,7 @@ fun battle_shock_test(Board board, Unit unit, Bool command_step, Bool recover_sh
 # https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz (Mobbed).
 act resolve_orks_mobbed(ctx Board board, frm UnitID source) -> OrksMobbed:
     frm previous_owner = board.current_decision_maker
-    frm penalty : LinearlyDistributedInt<0, 3>
+    frm penalty : LinearlyDistributedInt<0, 8>
     penalty = orks_mobbed_penalty(board[source])
     frm pending : Bool[MAX_UNIT_COUNT]
     frm remaining : UnitIterator

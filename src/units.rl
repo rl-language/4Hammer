@@ -6,6 +6,7 @@ import range
 import state_types
 import geometry
 import modifiers
+import orks_detachment_types
 
 using Wounds = LinearlyDistributedInt<0, MAX_WOUNDS>
 using WeaponsVector = CheckedVector<Weapon, MAX_WEAPONS>
@@ -22,6 +23,11 @@ enum ModelState:
         return self.value == other.value
 
 cls Model:
+    # Printed ordinary detachment options and source-owned timed permissions.
+    # Generated lifecycle and bounded values preserve the inferred ML layout.
+    OrksEnhancement orks_enhancement
+    EntityIdentity orks_upgrade_origin
+    OrksEffectGrants orks_effects
     # Bank/staged offboard units have no battlefield visibility/ranges
     # (supplied appendix01.02.04, transport pp.64–65).
     Bool off_battlefield
@@ -77,6 +83,7 @@ cls Model:
     Stat deadly_demise
     # Trigger timing is lifecycle infrastructure for destruction p.87.
     Bool destruction_pending
+    PhaseStamp destroyed_phase
     # A conferred attached-unit rule survives attack destruction until all
     # that attacking unit's attacks end (p.67). This is not live-model status.
     Bool attachment_abilities_retained
@@ -89,6 +96,8 @@ cls Model:
     Bool destroyed_by_attack
     Bool destroying_unit_known
     UnitID destroying_unit
+    # Stable historical killer identity survives explicit replacement-slot reuse.
+    EntityIdentity destroying_unit_identity
     Dice destruction_fight_roll
     ModelHistory history
     # Appendix 04.01.03: nonzero equal IDs identify profiles of one physical weapon.
@@ -112,6 +121,11 @@ cls Model:
 
     # Read per-model keywords without copying owning storage (pp.67/87).
     fun has_keyword(Keyword keyword) -> Bool:
+        for effect in range(self.orks_effects.size()):
+            if keyword == Keyword::mobile and self.orks_effects[effect].kind.value == OrksEffectKind::mobile.value:
+                return true
+            if keyword == Keyword::fly and self.orks_effects[effect].kind.value == OrksEffectKind::lifted.value:
+                return true
         # Painboss Runnin' wiv da Herd: no keyword spread to other models.
         if self.painboss_mounted_attachment:
             if keyword == Keyword::infantry:
@@ -137,6 +151,9 @@ cls Model:
     # Properties stay readable to explicit death hooks; active use is gated
     # by Unit.has_ability/is_alive (p.87). Avoid an owning temporary here.
     fun has_ability(AbilityKind kind) -> Bool:
+        for effect in range(self.orks_effects.size()):
+            if kind == AbilityKind::keep_huntin and self.orks_effects[effect].kind.value == OrksEffectKind::borrowed_keep_huntin.value or kind == AbilityKind::intimidating_motivation and self.orks_effects[effect].kind.value == OrksEffectKind::borrowed_intimidation.value:
+                return true
         let i = 0
         ref rules = self.abilities
         while i != rules.size():
@@ -218,11 +235,11 @@ cls Model:
     # Effective model characteristics retain one printed arithmetic policy
     # (appendix02.02.01); source selection and expiry are separate consumers.
     fun effective_movement(Int base) -> Int:
-        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, false, 4 * int(self.painboss_mounted_attachment))
+        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, false, 4 * int(self.painboss_mounted_attachment) + 2 * int(self.orks_enhancement.value == OrksEnhancement::cybork_boosta.value))
 
     # Multiple Toughness uses each model's effective value (appendix05.02.01).
     fun effective_toughness() -> Int:
-        return effective_characteristic_value(self.profile.thoughness(), ModifiedCharacteristic::toughness, self.characteristic_modifiers, false)
+        return effective_characteristic_value(self.profile.thoughness(), ModifiedCharacteristic::toughness, self.characteristic_modifiers, false, int(self.orks_enhancement.value == OrksEnhancement::it_came_from_da_drops.value))
 
     # Save groups compare modified Sv/InSv before allocating dice (p.19).
     fun effective_save() -> Int:
@@ -234,6 +251,11 @@ cls Model:
         let base = self.profile.invuln_save()
         if self.is_riled_up():
             base = min(base, 5)
+        for effect in range(self.orks_effects.size()):
+            if self.orks_effects[effect].kind.value == OrksEffectKind::invulnerable_four.value:
+                base = min(base, 4)
+            if self.orks_effects[effect].kind.value == OrksEffectKind::invulnerable_five.value:
+                base = min(base, 5)
         return effective_characteristic_value(base, ModifiedCharacteristic::invulnerable_save, self.characteristic_modifiers, base > 6)
 
     # Riled-up gives a5+ InSv and ranged Assault; owned keys preserve overlapping
@@ -304,6 +326,15 @@ cls PhaseModifiers:
     Bool counteroffensive
 
 cls Unit:
+    # Immutable battle-start equipment for identical replacement units; not
+    # current wounds/status and not a model-revival identity (Infested War Zone).
+    Hidden<ModelVector> battle_start_models
+    # Orks psychic expenditure survives reserves/passengers and attachment.
+    FixedStat psyker_level
+    OrksPsychicUsage orks_psychic_usage
+    Bool is_generated_replacement
+    LinearlyDistributedInt<0, 1025> orks_destroyed_attack
+    PhaseStamp orks_destroyed_phase
     Bool off_battlefield
     EntityIdentity embarked_transport
     # Stable retired slot survives reserve round trips (pp.68–69/74).
@@ -318,6 +349,8 @@ cls Unit:
     Bool has_moved
     # Per-selection M snapshot and optional flight mode (appendix 02.02.03; p.71).
     MovementOverride movement_override
+    # Explicit reactive maximum is a distance, not a modifiable M characteristic.
+    MovementOverride movement_distance_limit
     Bool move_takes_to_skies
     MovementKind pending_move_kind
     Bool has_run 
@@ -394,6 +427,9 @@ cls Unit:
         self.history.advanced_this_turn = false
         self.history.advance_allows_charge = false
         self.history.fell_back_this_turn = false
+        self.history.fallback_allows_charge = false
+        self.history.fallback_allows_shooting = false
+        self.history.selected_move_allows_action = false
         # p.58: starting another action is a turn-local restriction; pending
         # cross-turn mission actions keep their completion/failure state.
         self.history.action_started = false
@@ -406,6 +442,7 @@ cls Unit:
     # Starting strength is the initial/combined model count, not a model index
     # (p.86; attached units pp.66–67). Strength thresholds are task 7.
     fun capture_starting_strength():
+        self.battle_start_models.value = self.models
         self.starting_strenght = self.models.size()
         if self.attached_units.empty():
             self.bodyguard_starting_strength = self.models.size()
@@ -477,6 +514,7 @@ cls Unit:
         component.role = self.attachment_role
         component.datasheet = self.roster_datasheet
         component.abilities = self.unit_abilities
+        component.psyker_level = self.psyker_level
         component.waaagh = component_has_waaagh(self, self.identity)
         other.attached_units.append(component)
         for source_model in range(self.models.size()):
@@ -522,7 +560,7 @@ cls Unit:
     # Generic unit gates (pp.9/34–35/57–58), including every shooting type's
     # phase-local after-shooting ban. Board checks engagement/membership.
     fun allows_action_start() -> Bool:
-        return !self.battle_socked and !self.has_keyword(Keyword::aircraft) and !self.has_keyword(Keyword::fortification) and !self.history.advanced_this_turn and !self.history.fell_back_this_turn and !self.history.action_started and !self.history.shot_this_phase
+        return !self.battle_socked and !self.has_keyword(Keyword::aircraft) and !self.has_keyword(Keyword::fortification) and (!self.history.advanced_this_turn or self.history.selected_move_allows_action) and (!self.history.fell_back_this_turn or self.history.selected_move_allows_action) and !self.history.action_started and !self.history.shot_this_phase
 
     # p.58: a non-exempt move/departure interrupts every unresolved action,
     # including one started in an earlier turn. Mission effects remain separate.
@@ -579,6 +617,8 @@ cls Unit:
     # Typed unit rules retain p67 conferral; intrinsic per-model all-member
     # checks require live bearers and do not pass vacuously (p.87).
     fun all_have_ability(AbilityKind kind) -> Bool:
+        if orks_unit_grants_ability(self, kind):
+            return true
         if scoped_unit_ability(self, kind):
             return true
         let alive = false
@@ -586,7 +626,7 @@ cls Unit:
         for i in range(self.models.size()):
             if self.models[i].is_alive():
                 alive = true
-                all_have = all_have and self.models[i].has_ability(kind)
+                all_have = all_have and (self.models[i].has_ability(kind) or orks_model_grants_ability(self, self.models[i], kind))
         return alive and all_have
 
     fun all_have_keyword(Keyword kind) -> Bool:
@@ -608,11 +648,13 @@ cls Unit:
     # Typed unit-scope rules follow their source component until its last
     # member dies; attack destruction retains them through all attacks (p.67).
     fun has_ability(AbilityKind kind) -> Bool:
+        if orks_unit_grants_ability(self, kind):
+            return true
         if scoped_unit_ability(self, kind):
             return true
         let i = 0
         while i != self.models.size():
-            if model_confers_attached_abilities(self.models[i]) and self.models[i].has_ability(kind):
+            if model_confers_attached_abilities(self.models[i]) and (self.models[i].has_ability(kind) or orks_model_grants_ability(self, self.models[i], kind)):
                 return true 
             i = i + 1
         return false
@@ -1852,5 +1894,5 @@ fun unit_has_waaagh(Unit unit) -> Bool:
 fun unit_is_riled_up(Unit unit) -> Bool:
     let active = false
     for index in range(unit.models.size()):
-        active = active or (unit[index].is_alive() and unit[index].is_riled_up())
+        active = active or ((unit[index].is_alive() or unit[index].state == ModelState::fight_on_death) and unit[index].is_riled_up())
     return active

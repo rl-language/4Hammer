@@ -5,6 +5,7 @@
 # not a tabletop rule. See doc/action-frame-lifetimes.json and the design guide.
 cls SharedActionFrames:
     AttackDiceBatch collect_attack_dice
+    AttackWithOrksReactions attack_with_orks_reactions
     BattleShockTest battle_shock_test
     Charge charge
     ChooseAttackModifiers choose_attack_modifiers
@@ -21,13 +22,36 @@ cls SharedActionFrames:
     MovementSourceResolution resolve_movement_sources
     NeuralDisruption neural_disruption
     OnModelDestroyed on_model_destroyed
+    OrksBecameShocked orks_became_shocked
+    OrksDreadherderShooting orks_dreadherder_shooting
+    OrksEnemyMoveReaction select_orks_enemy_move_reaction
+    OrksFallbackSelection orks_fallback_selection
+    OrksHitInterception intercept_orks_hits
     OrksMobbed resolve_orks_mobbed
+    OrksMoveMode orks_move_mode
+    OrksMoveSelection orks_move_selection
+    OrksMovementAbilities orks_movement_abilities
+    OrksOffboardBreakinHeads orks_offboard_breakin_heads
+    OrksOffboardDeath resolve_orks_offboard_death
+    OrksOffboardMortals orks_offboard_mortals
+    OrksOffboardSupport use_orks_offboard_support
+    OrksOffboardSupportSelection choose_orks_offboard_support
+    OrksPackageWindow orks_package_window
+    OrksPostAttack resolve_orks_post_attack
+    OrksPsychic use_orks_psychic
+    OrksReactiveMove orks_reactive_move
+    OrksSupportCard use_orks_support_card
+    OrksSurly resolve_orks_surly
+    OrksUnitHealing heal_orks_unit
+    OrksWagonChargeEnd orks_wagon_charge_end
+    OrksWagonMoveEnd orks_wagon_move_end
     PickFaction pick_army
     PostMoveEmbark post_move_embark
     RegainCoherency regain_coherency
     RevalidateAttackTargets revalidate_attack_targets
     RollStat evaluate_random_stat
     SelectOrksDetachments select_orks_detachments
+    SelectOrksOptions select_orks_options
     SelectOrksWarlord select_orks_warlord
     SelectedFight selected_fight
     SelectedShooting selected_shooting

@@ -68,8 +68,15 @@ fun mark_unit_offboard(Unit unit, Bool offboard):
 # interrupts mission actions (p.58; transport p.64; appendix01.02.02).
 fun embark_battlefield_unit(Board board, UnitID passenger, UnitID carrier, ModelID model):
     assert(embark_after_move_valid(board, passenger, carrier, model), "illegal embarkation")
+    transfer_embarked_unit(board, passenger, board[carrier][model].identity)
+
+# Common whole-unit bank transfer for normal embarkation and an explicit
+# faction exception (Keep It Runnin'). Each caller validates its own window,
+# range/capacity; p64 and appendix01.02.02 require histories to survive.
+fun transfer_embarked_unit(Board board, UnitID passenger, EntityIdentity carrier):
+    assert(board.embarked_units.has_capacity(), "passenger bank capacity exceeded")
     board[passenger].interrupt_actions()
-    board[passenger].embarked_transport = board[carrier][model].identity
+    board[passenger].embarked_transport = carrier
     board[passenger].history.embarked_phase = board.phase_serial.value + 1
     board[passenger].has_return_slot = true
     board[passenger].return_slot = passenger
@@ -81,6 +88,7 @@ fun embark_battlefield_unit(Board board, UnitID passenger, UnitID carrier, Model
     board[passenger].identity = 0
     board[passenger].embarked_transport = 0
     board[passenger].retired = true
+    register_orks_cargo_passives(board)
 
 # Prebattle passengers use the same whole-unit permission checks without a
 # battlefield move/range requirement (18.01 p.64). Resolve carrier before erase.
@@ -91,6 +99,7 @@ fun embark_formation_unit(Board board, UnitID passenger, UnitID carrier, ModelID
     mark_unit_offboard(board.reserve_units[passenger.get()], true)
     board.embarked_units.append(board.reserve_units[passenger.get()])
     board.reserve_units.erase(passenger.get())
+    register_orks_cargo_passives(board)
 
 # Circle fixtures use farthest passenger-base point to nearest carrier-base
 # point, preserving 3D range and whole-inch stored coordinates (18.04 p.65;
@@ -254,6 +263,8 @@ fun required_disembark_mode(Board board, Unit passenger, CarrierLocation carrier
     assert(carrier.found and !carrier.reserve, "disembark requires battlefield carrier")
     ref carrier_unit = board[carrier.unit]
     if carrier_unit.history.selected_move_phase == board.phase_serial.value + 1 and (carrier_unit.history.move_kind == MovementKind::normal or carrier_unit.history.move_kind == MovementKind::ingress):
+        if unit_orks_effect(board, carrier_unit, OrksEffectKind::assault_disembark) > 0:
+            return DisembarkMode::assault
         return DisembarkMode::rapid
     if (carrier_unit.history.selected_move_phase != board.phase_serial.value + 1 or carrier_unit.history.move_kind == MovementKind::stationary) and transport_has_setup(board, passenger, carrier, DisembarkMode::tactical, -1):
         return DisembarkMode::tactical
@@ -282,6 +293,7 @@ fun stage_disembarking_passenger(Board board, UnitID passenger) -> UnitID:
 fun finish_disembark(Board board, UnitID passenger, DisembarkMode mode):
     mark_unit_offboard(board[passenger], false)
     board[passenger].embarked_transport = 0
+    refresh_source_effects(board, TimingWindow::none)
     board[passenger].interrupt_actions()
     board[passenger].mark_set_up()
     board[passenger].history.disembarked_this_turn = true
@@ -292,7 +304,7 @@ fun finish_disembark(Board board, UnitID passenger, DisembarkMode mode):
         board[passenger].history.move_kind = MovementKind::emergency_disembark
     board[passenger].history.tactical_move_required = mode == DisembarkMode::tactical
     if !(mode == DisembarkMode::tactical):
-        board[passenger].can_charge = false
+        board[passenger].can_charge = mode == DisembarkMode::assault
         board[passenger].history.selected_move_phase = board.phase_serial.value + 1
     if mode == DisembarkMode::combat or mode == DisembarkMode::emergency:
         board[passenger].battle_socked = true

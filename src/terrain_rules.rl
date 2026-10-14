@@ -31,7 +31,7 @@ fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model 
     let lone_range = 12
     if target_unit.lone_operative_range.value > 0:
         lone_range = characteristic_limit(ModifiedCharacteristic::detection_range, target_unit.lone_operative_range.value)
-    return (!target_unit.is_lone_operative() or observer.distance(target) <= float(lone_range)) and detection_range >= 0 and (!model_is_hidden(board, target_unit, target) or observer.distance(target) <= float(characteristic_limit(ModifiedCharacteristic::detection_range, detection_range)))
+    return (!orks_lone_operative(board, target_unit) or observer.distance(target) <= float(lone_range)) and detection_range >= 0 and (!model_is_hidden(board, target_unit, target) or observer.distance(target) <= float(characteristic_limit(ModifiedCharacteristic::detection_range, detection_range - 3 * int(unit_has_orks_enhancement(target_unit, OrksEnhancement::extra_sneaky)))))
 
 # Printed default detection is inclusive 15in; this is not model-silhouette LOS.
 fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model target) -> Bool:

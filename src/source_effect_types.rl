@@ -1,5 +1,6 @@
 import modifiers
 import weapons
+import orks_detachment_types
 
 # Event kinds describe actual core boundaries; source cards install their own
 # eligibility/payload rather than synthesizing abilities (pp.28–38/87;17.E).
@@ -61,7 +62,7 @@ cls SourceWeaponGrant:
 cls RiledUpGrant:
     Bool enabled
 
-using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant | AttackModifierPermission | RiledUpGrant
+using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant | AttackModifierPermission | RiledUpGrant | OrksEffectGrant
 
 cls SourceUseLimits:
     # Zero is unlimited for this interval; combine all four printed limits.
@@ -71,6 +72,10 @@ cls SourceUseLimits:
     FixedStat battle
 
 cls SourceInstance:
+    # A recycled source slot cannot satisfy an older pending event.
+    SourceEffectKey generation
+    EntityIdentity required_embarked_model
+    EntityIdentity required_carrier_model
     SourceRuleCode rule
     Hidden<String> name
     EntityIdentity source_unit
@@ -97,6 +102,7 @@ cls SourceInstance:
     Bool model_specific_rule
     KeywordPredicate recipient_condition
     Bool optional
+    Bool allow_retained_source
     Bool offboard_allowed
     FixedStat trigger_range
     SourceGrant grant
@@ -126,6 +132,7 @@ cls SourceUseRecord:
     FixedStat battle_uses
 
 cls PendingSourceEvent:
+    SourceEffectKey generation
     LinearlyDistributedInt<0, MAX_SOURCE_INSTANCES> source
     SourceEvent event
     Bool resolved

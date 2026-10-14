@@ -105,6 +105,8 @@ fun declaration_target_valid(Board board, UnitID source, DeclaredWeapon weapon, 
         return false
     if board[source].owned_by_player1 == board[target].owned_by_player1:
         return false
+    if !melee and board.orks_reaction_target.value > 0 and board[target].identity != board.orks_reaction_target:
+        return false
     # Supplied appendix 04.01.03: Hunter restrictions also apply to replacement targets.
     if !board[target].weapon_rule_applies(weapon.hunter_condition):
         return false
@@ -217,6 +219,8 @@ fun attacks_are_identical(Board board, AttackSequenceInfo left, AttackSequenceIn
     if !(left.shooting_kind == right.shooting_kind) or left.indirect_stationary_visible != right.indirect_stationary_visible or left.heavy_bonus != right.heavy_bonus or left.engaged_hit_penalties != right.engaged_hit_penalties:
         return false
     if left.total_hit_modifier() != right.total_hit_modifier() or left.total_wound_modifier() != right.total_wound_modifier():
+        return false
+    if left.orks_fail_hits_three != right.orks_fail_hits_three:
         return false
     if left.only_hits_on_6 != right.only_hits_on_6 or left.reroll_hits != right.reroll_hits or left.reroll1_hits != right.reroll1_hits or left.reroll_wounds != right.reroll_wounds or left.reroll1_wounds != right.reroll1_wounds:
         return false
@@ -358,6 +362,7 @@ fun declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration
     # after a completed charge this turn, within the ordinary addition step.
     if kind.value == ModifiedCharacteristic::damage.value and board[source].has_charged and board[source].has_ability(AbilityKind::brutal_impact):
         result.append(rule_modifier(ModifierOperation::add, 1))
+    append_orks_declaration_modifiers(board, source, declaration, kind, result)
     return result
 
 # Hazardous counts actual selected physical weapons, not every simultaneously
@@ -375,13 +380,21 @@ fun same_declared_physical_weapon(DeclaredWeapon left, DeclaredWeapon right) -> 
 
 # Roll one Hazardous test per selected physical weapon, even when a sourced
 # exception permits several profiles or targets (core p.81; appendix04.01.03).
+# Physical weapons count each distinct hazard rule once, across all selected
+# profiles: Hazardous1 and Supa-hazardous2 are independent (Supa-glowy Fing).
 fun declared_hazardous_uses(DeclaredWeapons declarations) -> Int:
     let result = 0
     for index in range(declarations.size()):
-        if !declared_weapon_has_kind(declarations[index], WeaponRuleKind::hazardous):
-            continue
         let counted = false
         for earlier in range(index):
-            counted = counted or (declared_weapon_has_kind(declarations[earlier], WeaponRuleKind::hazardous) and same_declared_physical_weapon(declarations[earlier], declarations[index]))
-        result = result + int(!counted)
+            counted = counted or same_declared_physical_weapon(declarations[earlier], declarations[index])
+        if counted:
+            continue
+        let ordinary = false
+        let supa = false
+        for selected in range(declarations.size()):
+            if same_declared_physical_weapon(declarations[selected], declarations[index]):
+                ordinary = ordinary or declared_weapon_has_kind(declarations[selected], WeaponRuleKind::hazardous)
+                supa = supa or declared_weapon_has_kind(declarations[selected], WeaponRuleKind::supa_hazardous)
+        result = result + int(ordinary) + 2 * int(supa)
     return result

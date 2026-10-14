@@ -22,7 +22,7 @@ fun monster_vehicle_model(Model model) -> Bool:
 # Modes are selected before weapons; snap eligibility comes from its granting
 # rule and is not a freely selectable Shooting-phase type (pp.34–35/57).
 fun shooting_kind_valid(Board board, UnitID source, ShootingKind kind) -> Bool:
-    if source.get() >= board.units.size() or !has_shooting_model(board[source]) or !board[source].can_shoot or board[source].history.fell_back_this_turn or (board[source].history.action_started and !board[source].has_keyword(Keyword::titanic)):
+    if source.get() >= board.units.size() or !has_shooting_model(board[source]) or !board[source].can_shoot or (board[source].history.fell_back_this_turn and !board[source].history.fallback_allows_shooting) or (board[source].history.action_started and !board[source].has_keyword(Keyword::titanic)):
         return false
     let engaged = board.is_in_melee(board[source])
     let advanced = board[source].history.advanced_this_turn or board[source].has_run
@@ -102,7 +102,7 @@ fun ranged_target_valid(Board board, UnitID source, Model bearer, Weapon weapon,
         let lone_range = 12
         if board[target].lone_operative_range.value > 0:
             lone_range = characteristic_limit(ModifiedCharacteristic::detection_range, board[target].lone_operative_range.value)
-        return !board[target].is_lone_operative() or live_distance_to_model(board[target], bearer) <= float(lone_range)
+        return !orks_lone_operative(board, board[target]) or live_distance_to_model(board[target], bearer) <= float(lone_range)
     return model_can_see_unit(board, bearer, board[target])
 
 # Selecting Remain Stationary is distinct from a zero-distance normal move;

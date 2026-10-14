@@ -81,6 +81,7 @@ fun call_war_cry(Board board, Bool player):
                 continue
             let entry : PendingSourceEvent
             entry.source = source.value
+            entry.generation = board.source_instances[source.value].generation
             entry.event.kind = SourceEventKind::timing_window
             entry.event.window = TimingWindow::command_start
             entry.event.target = unit.identity

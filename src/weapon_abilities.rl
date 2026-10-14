@@ -28,6 +28,7 @@ fun model_weapon_rules(Board board, UnitID source, Int model, Int slot) -> Weapo
     let granted = board[source].get_temporary_weapon_rules()
     for i in range(granted.size()):
         result.append(granted[i])
+    append_orks_package_weapon_rules(board, source, model, slot, result)
     return result
 
 # Selection/eligibility uses ability presence before the target is declared (p.78).
@@ -52,7 +53,7 @@ fun chosen_weapon_has_rule(Board board, UnitID target, WeaponAbilitySet rules, W
 fun chosen_weapon_parameter(Board board, UnitID target, WeaponAbilitySet rules, WeaponRuleKind kind) -> Int:
     for i in range(rules.size()):
         if rules[i].kind == kind and source_grant_active(board, rules[i].source_effect) and board[target].weapon_rule_applies(rules[i]):
-            return rules[i].parameter.value
+            return effective_weapon_ability_parameter(board, rules[i])
     return 0
 
 # Find the next undecided ability; each choice removes the entire duplicate family (p.78).
@@ -126,7 +127,11 @@ fun weapon_ability_condition_clause(WeaponRule rule, Int entry) -> KeywordClause
 
 # Unit-granted abilities affect every equipped weapon as well (p.78).
 fun available_weapon_has_rule(Board board, UnitID source, Int model, Int slot, WeaponRuleKind kind) -> Bool:
-    return model_weapon_has_rule(board[source][model], slot, kind) or board[source].has_temporary_wepon_rule(kind) or (kind == WeaponRuleKind::sustained_hit and war_horde_melee_rule_applies(board, source, board[source][model].weapons[slot]))
+    let rules = model_weapon_rules(board, source, model, slot)
+    let present = false
+    for entry in range(rules.size()):
+        present = present or rules[entry].kind == kind and source_grant_active(board, rules[entry].source_effect)
+    return present
 
 # Retained corpses do not make a unit closer for range or detection (pp.9/87).
 # Physical death hooks use their explicit retained model geometry instead.
@@ -183,3 +188,12 @@ fun war_horde_melee_rule_applies(Board board, UnitID source, Weapon weapon) -> B
     ref unit = board[source]
     ref army = board.armies[int(unit.owned_by_player1)]
     return army.faction == ArmyFaction::orks and army.has_detachment(OrksDetachment::war_horde) and unit.has_keyword(Keyword::orks)
+
+
+# A phase-limited numeric improvement expires without deleting its intrinsic
+# ability instance (Close-range Dakka/Mow 'Em Down; appendix01.02.02).
+fun effective_weapon_ability_parameter(Board board, WeaponRule rule) -> Int:
+    let parameter = rule.parameter.value
+    if rule.parameter_increment_source.value > 0 and !source_grant_active(board, rule.parameter_increment_source):
+        parameter = parameter - rule.parameter_increment_amount.value
+    return max(0, parameter)

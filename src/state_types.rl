@@ -5,7 +5,7 @@ import bounded_arg
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
 const STATE_SCHEMA_VERSION = 32
-const ACTION_SCHEMA_VERSION = 19
+const ACTION_SCHEMA_VERSION = 20
 const OBSERVATION_SCHEMA_VERSION = 32
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
@@ -33,7 +33,10 @@ const MAX_WEAPONS = 13
 const MAX_WEAPON_SCOPES = 14
 # Source instance/action slots and monotonically allocated effect handles are
 # distinct bounded domains (source timing infrastructure;17.E).
-const MAX_SOURCE_INSTANCES = 64
+# Thirty-two roster units can see up to12 cards across their three packages,
+# plus independent enhancement/unit/army sources. Reused rule/unit handles
+# prevent growth on repeated activations. This is an implementation envelope.
+const MAX_SOURCE_INSTANCES = 512
 const MAX_SOURCE_EFFECT_KEY = 4097
 using SourceEffectKey = LinearlyDistributedInt<0, MAX_SOURCE_EFFECT_KEY>
 const MAX_CHARACTERISTIC = 257
@@ -41,7 +44,9 @@ const MAX_STAT_MODIFIER = 257
 const MAX_RANDOM_STAT_RESULT = 513
 const MAX_COMBAT_COUNTER = 4097
 const MAX_WOUNDS = 4097
-const MAX_HAZARDOUS_USES = 257
+#448 selected physical weapons (including Firing Deck), up to one ordinary
+# and two Supa-Hazardous tests each:448*3, plus zero sentinel, linear encoding.
+const MAX_HAZARDOUS_USES = 1345
 # Supported temporary declaration capacity, not a tabletop limit (p.81).
 const MAX_DECK_SELECTIONS = 32
 const MAX_STARTING_STRENGTH = 33
@@ -158,6 +163,8 @@ cls UnitActionProgress:
     Bool completed
 
 cls UnitHistory:
+    CheckedVector<EntityIdentity, MAX_UNIT_MODELS> phase_start_members
+    CheckedVector<EntityIdentity, MAX_UNIT_COUNT> phase_start_engagements
     PhaseStamp embarked_phase
     TurnStamp ingress_turn
     Bool ingress_used_deep_strike
@@ -180,6 +187,9 @@ cls UnitHistory:
     # for that move even if riled status later changes (Orks Army Rules).
     Bool advance_allows_charge
     Bool fell_back_this_turn
+    Bool fallback_allows_charge
+    Bool fallback_allows_shooting
+    Bool selected_move_allows_action
     Bool ingress_locked
     Bool strategic_reserve
     Bool repositioned
@@ -190,6 +200,7 @@ cls UnitHistory:
     Bool used_stratagem_this_phase
     Bool[2] stratagem_targeted_by_player
     Bool shot_this_phase
+    Bool wrecka_objective_selection
     Bool action_started
     Bool action_completed
     CheckedVector<UnitActionProgress, MAX_TURN_STAMP> action_records
@@ -259,7 +270,8 @@ enum AttachmentRole:
     leader
     support
 
-const MAX_BODYGUARD_TYPES = 6
+# Big Mek has six native permissions plus at most one enhancement permission.
+const MAX_BODYGUARD_TYPES = 7
 using BodyguardPermissions = CheckedVector<DatasheetCode, MAX_BODYGUARD_TYPES>
 
 # Component identity/starting strength/source data persists after its models
@@ -271,6 +283,7 @@ cls AttachmentComponent:
     AttachmentRole role
     DatasheetCode datasheet
     Abilities abilities
+    FixedStat psyker_level
     Bool waaagh
 
 # Serialize the bounded backing collection for save/replay round trips; implementation
@@ -387,6 +400,7 @@ enum DisembarkMode:
     tactical
     combat
     emergency
+    assault
 
     fun equal(DisembarkMode other) -> Bool:
         return self.value == other.value

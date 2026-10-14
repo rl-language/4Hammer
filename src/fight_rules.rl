@@ -44,7 +44,10 @@ fun fight_first_unit(Unit unit) -> Bool:
     for i in range(unit.models.size()):
         if fight_model_present(unit[i]):
             present = true
-            if !unit[i].has_ability(AbilityKind::fight_first):
+            let psychic_first = false
+            for effect in range(unit[i].orks_effects.size()):
+                psychic_first = psychic_first or unit[i].orks_effects[effect].kind.value == OrksEffectKind::fights_first.value
+            if !unit[i].has_ability(AbilityKind::fight_first) and !psychic_first:
                 return false
     return present
 

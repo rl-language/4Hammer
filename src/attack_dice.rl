@@ -35,7 +35,7 @@ enum AttackRollResult:
 # (p.18). Existing Snap Shooting's explicit six-only gate is p.57; the rest of
 # that stratagem remains task 15. Cover changes BS independently of modifiers.
 fun classify_attack_hit(Board board, AttackSequenceInfo info, Dice roll, Int modifier, Int skill) -> AttackRollResult:
-    if roll == 1:
+    if roll == 1 or (info.orks_fail_hits_three and roll.value <= 3):
         return AttackRollResult::failed
     if roll == 6:
         return AttackRollResult::critical

@@ -69,7 +69,7 @@ fun source_started_leading(Unit unit, SourceInstance instance) -> Bool:
 # Own destruction triggers are separately authorised by their event (p.87).
 fun source_alive(Board board, SourceInstance instance) -> Bool:
     let location = locate_source(board, instance.source_unit, instance.source_model)
-    if instance.disabled or !location.found:
+    if instance.disabled or !location.found or !orks_source_transport_dependency(board, instance):
         return false
     ref unit = source_bank_unit(board, location.bank, location.unit.value)
     if instance.source_model.value == 0:
@@ -86,7 +86,7 @@ fun source_confers_rules(Board board, SourceInstance instance) -> Bool:
     if instance.model_specific_rule:
         return source_alive(board, instance)
     let location = locate_source(board, instance.source_unit, instance.source_model)
-    if instance.disabled or !location.found:
+    if instance.disabled or !location.found or !orks_source_transport_dependency(board, instance):
         return false
     ref unit = source_bank_unit(board, location.bank, location.unit.value)
     if instance.source_model.value == 0:
@@ -103,13 +103,24 @@ fun register_source_instance(Board board, SourceInstance instance) -> SourceInst
     # source_alive/conferral still enforce that condition during activation.
     let physical_source = instance
     physical_source.requires_leading = false
-    assert(source_alive(board, physical_source), "source must exist when registered")
+    assert(source_alive(board, physical_source) or (instance.allow_retained_source and orks_retained_source_present(board, instance)), "source must exist when registered")
+    let candidate = board.source_instances.size()
+    let reusable = reusable_orks_source_slot(board)
+    if reusable >= 0:
+        candidate = reusable
+    assert(candidate >= 0 and candidate < MAX_SOURCE_INSTANCES, "source instance capacity exceeded")
     let id : SourceInstanceID
-    id = board.source_instances.size()
+    id = candidate
     assert(valid_source_grant(instance.grant), "invalid source grant")
     let location = locate_source(board, instance.source_unit, instance.source_model)
     assert(source_bank_unit(board, location.bank, location.unit.value).owned_by_player1 == instance.owner, "source owner mismatch")
-    board.source_instances.append(instance)
+    assert(board.next_source_generation.value + 1 < MAX_SOURCE_EFFECT_KEY, "source generation capacity exceeded")
+    board.next_source_generation = board.next_source_generation + 1
+    instance.generation = board.next_source_generation
+    if reusable >= 0:
+        board.source_instances[reusable] = instance
+    else:
+        board.source_instances.append(instance)
     assert(valid_source_foundations(board), "invalid source metadata")
     refresh_source_effects(board, TimingWindow::none)
     return id
@@ -269,6 +280,7 @@ fun collect_source_events(Board board, SourceEvent event) -> PendingSourceEvents
         if source_event_available(board, board.source_instances[source_index], event):
             let entry : PendingSourceEvent
             entry.source = source_index
+            entry.generation = board.source_instances[source_index].generation
             entry.event = event
             pending.append(entry)
     return pending
@@ -276,7 +288,7 @@ fun collect_source_events(Board board, SourceEvent event) -> PendingSourceEvents
 # Each controller sees only its own still-eligible source instances; no stale
 # record or invalid action-domain index may dereference a missing source.
 fun pending_source_valid(Board board, PendingSourceEvents pending, SourceEventID id, Bool player) -> Bool:
-    return id.value >= 0 and id.value < pending.size() and !pending[id.value].resolved and pending[id.value].source.value >= 0 and pending[id.value].source.value < board.source_instances.size() and board.source_instances[pending[id.value].source.value].owner == player and source_event_available(board, board.source_instances[pending[id.value].source.value], pending[id.value].event)
+    return id.value >= 0 and id.value < pending.size() and !pending[id.value].resolved and pending[id.value].source.value >= 0 and pending[id.value].source.value < board.source_instances.size() and board.source_instances[pending[id.value].source.value].owner == player and pending[id.value].generation == board.source_instances[pending[id.value].source.value].generation and source_event_available(board, board.source_instances[pending[id.value].source.value], pending[id.value].event)
 
 fun source_events_remaining(Board board, PendingSourceEvents pending, Bool player, Bool mandatory_only) -> Bool:
     let result = false
@@ -300,6 +312,9 @@ fun install_source_grant(Model model, SourceGrant grant, SourceEffectKey key):
     if installed is AttackModifierPermission:
         installed.source_effect = key
         model.attack_modifier_permissions.append(installed)
+    if installed is OrksEffectGrant:
+        installed.source_effect = key
+        model.orks_effects.append(installed)
     if installed is RiledUpGrant:
         model.riled_source_effects.append(key)
     if installed is SourceWeaponGrant:
@@ -331,6 +346,11 @@ fun commit_pending_source(Board board, PendingSourceEvents pending, SourceEventI
 # Remove a handle, not every equal-valued modifier. Archives are included so
 # later revival cannot resurrect expired grants (returning models p.88).
 fun remove_source_grant(Model model, SourceEffectKey key):
+    let effect_index = model.orks_effects.size()
+    while effect_index > 0:
+        effect_index = effect_index - 1
+        if model.orks_effects[effect_index].source_effect == key:
+            model.orks_effects.erase(effect_index)
     let index = model.characteristic_modifiers.size()
     while index > 0:
         index = index - 1
@@ -464,6 +484,8 @@ fun source_weapon_grant(WeaponRule rule) -> SourceWeaponGrant:
 # invalid modifiers, foreign ownership or forged effect handles into consumers.
 fun valid_source_grant(SourceGrant grant) -> Bool:
     let valid = false
+    if grant is OrksEffectGrant:
+        valid = grant.kind.value > 0 and grant.kind.value <= OrksEffectKind::invulnerable_five.value and grant.amount.value >= 0 and grant.associated_unit.value >= 0
     if grant is CharacteristicModifier:
         let entries : CharacteristicModifiers
         entries.append(grant)
@@ -483,10 +505,14 @@ fun valid_source_grant(SourceGrant grant) -> Bool:
 # Persistent metadata is bounded infrastructure, not a license for new rules.
 # Dead/absent sources may retain usage/persisting effects; IDs must stay valid.
 fun valid_source_foundations(Board board) -> Bool:
+    if board.next_source_generation.value < 0 or board.next_source_generation.value >= MAX_SOURCE_EFFECT_KEY:
+        return false
     if board.next_source_effect.value < 0 or board.next_source_effect.value >= MAX_SOURCE_EFFECT_KEY:
         return false
     for source_index in range(board.source_instances.size()):
         ref instance = board.source_instances[source_index]
+        if instance.generation.value <= 0 or instance.generation.value > board.next_source_generation.value or instance.required_embarked_model.value < 0 or instance.required_embarked_model.value > board.next_identity.value or instance.required_carrier_model.value < 0 or instance.required_carrier_model.value > board.next_identity.value:
+            return false
         if instance.rule.value <= 0 or instance.rule.value >= 513 or instance.source_unit.value <= 0 or instance.source_unit.value > board.next_identity.value or instance.source_model.value < 0 or instance.source_model.value > board.next_identity.value:
             return false
         if instance.trigger.value < 0 or instance.trigger.value > SourceEventKind::unit_destroyed.value or instance.window.value < 0 or instance.window.value > TimingWindow::fight_end.value or instance.phase.value < 0 or instance.phase.value > BattlePhase::fight.value or instance.subject.value < 0 or instance.subject.value > SourceSubject::target_unit.value or instance.use_scope.value < 0 or instance.use_scope.value > SourceUseScope::model.value or instance.recipient.value < 0 or instance.recipient.value > SourceTarget::source_model.value or instance.duration.value < 0 or instance.duration.value > SourceDuration::end_next_turn.value:
@@ -581,6 +607,8 @@ fun source_aura_target(Board board, SourceInstance instance, SourceLocation targ
 # already carried by a surviving model (returning models p.88/01.02.02).
 fun model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
     let present = false
+    for orks_effect in range(model.orks_effects.size()):
+        present = present or model.orks_effects[orks_effect].source_effect == key
     for index in range(model.characteristic_modifiers.size()):
         present = present or model.characteristic_modifiers[index].source_effect == key
     for incoming_index in range(model.incoming_attack_modifiers.size()):
@@ -602,7 +630,7 @@ fun refresh_effect_members(Board board, SourceEffect effect):
         return
     ref unit = source_bank_unit(board, location.bank, location.unit.value)
     for index in range(unit.models.size()):
-        if !unit[index].is_alive() or model_has_source_grant(unit[index], effect.identity):
+        if (!unit[index].is_alive() and !(unit[index].state == ModelState::fight_on_death)) or model_has_source_grant(unit[index], effect.identity):
             continue
         install_source_grant(unit[index], board.source_instances[effect.source.value].grant, effect.identity)
         let known = false
@@ -665,7 +693,7 @@ fun riled_up_grant() -> SourceGrant:
 
 
 # Simultaneous model/unit destruction rules share controller groups and choice
-# ordering; a source has exactly one trigger, so the total still fits64 (p.66/87;
+# ordering; a source has exactly one trigger, so the total fits the source arena (p.66/87;
 # user-supplied Rules Sequencing). Non-destruction dispatch remains unchanged.
 fun collect_destruction_sources(Board board, SourceEvent model_event, Bool unit_destroyed) -> PendingSourceEvents:
     let pending = collect_source_events(board, model_event)
@@ -700,7 +728,7 @@ fun commit_source_effect_to_unit(Board board, SourceInstance instance, Int sourc
     effect.turn_stamp = board.turn_serial.value
     effect.round_stamp = board.current_round.value
     for model_index in range(unit.models.size()):
-        if unit[model_index].is_alive() and (instance.recipient.value != SourceTarget::source_model.value or unit[model_index].identity == instance.source_model):
+        if (unit[model_index].is_alive() or unit[model_index].state == ModelState::fight_on_death) and (instance.recipient.value != SourceTarget::source_model.value or unit[model_index].identity == instance.source_model):
             install_source_grant(unit[model_index], instance.grant, effect.identity)
             effect.recipients.append(unit[model_index].identity)
     board.source_effects.append(effect)

@@ -37,6 +37,8 @@ fun attack_skill_choices(Board board, AttackSequenceInfo info) -> AttackModifier
 # Damaged24.39; appendix02.02.02). They never become BS/WS modifications.
 fun attack_hit_choices(Board board, AttackSequenceInfo info) -> AttackModifierChoices:
     let choices : AttackModifierChoices
+    for orks_modifier in range(info.orks_hit_modifiers.size()):
+        choices.append(attack_modifier_choice(info.orks_hit_modifiers[orks_modifier], ModifierOrigin::orks_detachment))
     if info.hit_roll_bonus:
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::hit_bonus))
     # Beastboss/Dodge Dis!: unit-wide +1, separately selectable under02.02.02.
@@ -73,7 +75,7 @@ fun same_attack_modifier_choices(AttackModifierChoices left, AttackModifierChoic
 fun valid_attack_modifier_choice(AttackModifierChoice choice) -> Bool:
     let one : RuleModifiers
     one.append(choice.modifier)
-    return choice.origin.value >= 0 and choice.origin.value <= ModifierOrigin::dodge_dis.value and valid_rule_modifiers(one)
+    return choice.origin.value >= 0 and choice.origin.value <= ModifierOrigin::orks_detachment.value and valid_rule_modifiers(one)
 
 # Sequential two-choice inputs represent every subset of the original list,
 # without an exponential action payload. Declining/applying spends no CP or
