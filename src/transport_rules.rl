@@ -545,3 +545,23 @@ fun valid_passenger_against_carrier(Board board, Unit passenger, Model carrier, 
         if !passenger[validated_model].off_battlefield or !passenger_model_permitted(carrier, passenger[validated_model]):
             return false
     return true
+
+# Reviving an embarked model returns it to that unit if capacity permits;
+# lack of capacity destroys it with NO further triggers (01.02.03). A reserve
+# return is offboard too: never use last battlefield coordinates for placement.
+fun returned_passenger_permitted(Board board, Unit unit, Model model) -> Bool:
+    if unit.embarked_transport.value == 0:
+        return true
+    let carrier = find_passenger_carrier(board, unit.embarked_transport)
+    if !carrier.found:
+        return false
+    let bank = SourceBank::battlefield
+    if carrier.reserve:
+        bank = SourceBank::reserves
+    ref transport = source_bank_unit(board, bank, carrier.unit.get())[carrier.model]
+    if !unit.models.has_capacity():
+        return false
+    let candidate : Unit
+    candidate = unit
+    candidate.models.append(model)
+    return passenger_model_permitted(transport, model) and passenger_space_used(board, unit.embarked_transport) - orks_passenger_space(unit) + orks_passenger_space(candidate) <= transport.transport_capacity.value

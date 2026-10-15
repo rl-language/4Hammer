@@ -21,9 +21,9 @@ func panel_for(rules, library, action):
 func check_units():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 39)
-	assert(library.get_observation_schema_version() == 39)
-	assert(library.get_action_schema_version() == 25)
+	assert(library.get_state_schema_version() == 40)
+	assert(library.get_observation_schema_version() == 40)
+	assert(library.get_action_schema_version() == 26)
 	# Source identities for every remaining standard card; Use-model sizes are
 	# intentionally approximate large circles, authorized2026-10-15.
 	var codes = [2, 11, 13, 14, 19, 20, 22, 23, 26, 27, 31, 32, 34, 37, 43, 45, 47, 51, 54, 57, 62, 63, 64, 65, 66]

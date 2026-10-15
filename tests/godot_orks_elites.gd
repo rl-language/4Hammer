@@ -22,9 +22,9 @@ func panel_for(rules, library, action):
 func check_units():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 39)
-	assert(library.get_observation_schema_version() == 39)
-	assert(library.get_action_schema_version() == 25)
+	assert(library.get_state_schema_version() == 40)
+	assert(library.get_observation_schema_version() == 40)
+	assert(library.get_action_schema_version() == 26)
 	var gun = RLCOrksMegaMekGun.make()
 	var extra = RLCOrksMegaMekExtra.make()
 	extra.set_value(2) # force_field

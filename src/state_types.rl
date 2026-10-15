@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 39
-const ACTION_SCHEMA_VERSION = 25
-const OBSERVATION_SCHEMA_VERSION = 39
+const STATE_SCHEMA_VERSION = 40
+const ACTION_SCHEMA_VERSION = 26
+const OBSERVATION_SCHEMA_VERSION = 40
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -136,11 +136,17 @@ fun<T, Int capacity> size_as_observation_tensor(CheckedVector<T, capacity> obj) 
 # Nonnegative bounds keep generated Python/Godot names valid in RLC 0.4.14.
 const MAX_ENTITY_IDENTITIES = 16384
 const MAX_IDENTITY_SEQUENCE = 16385
-const NEXT_STATE_SCHEMA_VERSION = 40
+const NEXT_STATE_SCHEMA_VERSION = 41
 const MAX_PHASE_SERIAL = 64
 const MAX_TURN_SERIAL = 16
 const MAX_PHASE_STAMP = 65
 const MAX_TURN_STAMP = 17
+# Returning Models01.02.03: ordinary phase-start anchors or an explicit
+# nearest unengaged return; the source ability chooses which policy applies.
+enum ReturnPlacementPolicy:
+    phase_start
+    nearest_unengaged
+
 # Shared round resource accounting; source abilities supply their actual limit.
 # Stamp+1 preserves round zero (usage infrastructure; appendix22.03.01).
 cls RoundResourceBudget:

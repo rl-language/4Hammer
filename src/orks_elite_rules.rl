@@ -327,85 +327,9 @@ act orks_elite_command(ctx Board board, frm SourceInstance instance) -> OrksElit
                 board.shared_actions.evaluate_random_stat = evaluate_random_stat(dice_stat(3))
                 subaction* board.shared_actions.evaluate_random_stat
                 remaining = remaining.value + board.shared_actions.evaluate_random_stat.result.value
-    while remaining.value > 0:
-        frm chunk : BInt<0, 4>
-        chunk = min(3, remaining.value)
-        board.shared_actions.heal_orks_component = heal_orks_component(board, source_bank_unit(board, bank, target.get()), bank, chunk)
-        subaction*(board, source_bank_unit(board, bank, target.get())) board.shared_actions.heal_orks_component
-        remaining = remaining.value - chunk.value
+    board.shared_actions.heal_unit = heal_unit(board, source_bank_unit(board, bank, target.get()), bank, remaining)
+    subaction*(board, source_bank_unit(board, bank, target.get())) board.shared_actions.heal_unit
     board.current_decision_maker = previous_owner
-
-# No external bank measurements: self-healing is still an own-unit ability.
-# These selectors expose archived models explicitly rather than stale sprites.
-# Sources: Orks Command-healing cards; appendix01.02.03/01.02.04/02.02.04.
-fun orks_component_archive_valid(Board board, Unit unit, SourceBank bank, ModelID archive) -> Bool:
-    if archive.get() >= unit.destroyed_models.value.size() or orks_heal_wounded(unit) or !unit.models.has_capacity():
-        return false
-    ref returned = unit.destroyed_models.value[archive.get()]
-    if returned.is_character():
-        return false
-    if bank.value != SourceBank::battlefield.value:
-        return true
-    let target : UnitID
-    for slot in range(board.units.size()):
-        if board[slot].identity == unit.identity:
-            target = slot
-            return orks_return_has_position(board, target, returned, false)
-    return false
-
-# One shared healing frame supports battlefield and offboard units. Failed
-# offboard placement consumes the wound without another destruction trigger;
-# it cannot revive Characters or exceed the original component's roster.
-# Appendix01.02.03/02.02.04; all source Command-healing cards.
-act heal_orks_component(ctx Board board, ctx Unit unit, frm SourceBank bank, frm BInt<0, 4> count) -> OrksComponentHealing:
-    frm previous_owner = board.current_decision_maker
-    board.current_decision_maker = unit.owned_by_player1
-    while count.value > 0:
-        if orks_heal_wounded(unit):
-            act choose_healed_model(ModelID wounded) {wounded.get() < unit.models.size(), unit[wounded].is_alive(), unit[wounded].suffered_wounds > 0}
-            unit[wounded].suffered_wounds = unit[wounded].suffered_wounds - 1
-        else:
-            frm available = false
-            let archive : ModelID
-            for index in range(unit.destroyed_models.value.size()):
-                archive = index
-                available = available or orks_component_archive_valid(board, unit, bank, archive)
-            if !available:
-                break
-            act choose_healed_casualty(frm ModelID casualty) {orks_component_archive_valid(board, unit, bank, casualty)}
-            frm returned : Model
-            returned = unit.destroyed_models.value[casualty.get()]
-            frm placed = true
-            if bank.value == SourceBank::battlefield.value:
-                frm target : UnitID
-                target = board.find_unit(unit.identity)
-                act place_returned_model(BoardPosition position) {orks_return_position_valid(board, target, returned, position, false)}
-                returned.position = position
-            else:
-                placed = orks_return_capacity(board, unit, returned)
-            if placed:
-                prepare_orks_healed_model(returned, bank.value != SourceBank::battlefield.value)
-                restore_attachment_provenance(unit, returned)
-                unit.models.append(returned)
-                unit.destroyed_models.value.erase(casualty.get())
-                refresh_source_effects(board, TimingWindow::none)
-        count = count - 1
-    board.current_decision_maker = previous_owner
-
-# Reset death-only fields on revival, preserving identity, original wargear,
-# use history and persisting effects (appendix01.02.03/01.02.02; core p88).
-fun prepare_orks_healed_model(Model model, Bool offboard):
-    model.suffered_wounds = max(0, model.profile.wounds() - 1)
-    model.state = ModelState::normal
-    model.off_battlefield = offboard
-    model.destruction_pending = false
-    model.attachment_abilities_retained = false
-    model.destroyed_whole_unit = false
-    model.destruction_released = false
-    model.destruction_attack_suppressed = false
-    model.destroyed_by_attack = false
-    model.destroying_unit_known = false
-    model.destroying_unit_identity = 0
 
 # That'll Learn Ya counts actual living Gretchin, not GROTS keywords or
 # attached Characters. It directly destroys the chosen models, without FNP.

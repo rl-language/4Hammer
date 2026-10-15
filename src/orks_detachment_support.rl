@@ -146,86 +146,6 @@ act orks_movement_abilities(ctx Board board, frm UnitID source) -> OrksMovementA
                 else:
                     commit_orks_watchin(board, board[source])
 
-# Returning Models01.02.03 forbids a new engagement and requires coherency
-# with phase-start members. Quads and intentional circular proxies remain.
-fun orks_return_position_valid(Board board, UnitID target, Model returned, BoardPosition position, Bool surly) -> Bool:
-    let candidate : Model
-    candidate = returned
-    candidate.position = position
-    candidate.off_battlefield = false
-    candidate.state = ModelState::normal
-    if !model_placement_valid(board, candidate):
-        return false
-    let coherent = 0
-    for unit_index in range(board.units.size()):
-        ref unit = board.units[unit_index]
-        for member in range(unit.models.size()):
-            ref other = unit[member]
-            if other.off_battlefield or !fight_model_present(other):
-                continue
-            if model_bases_overlap(candidate, other):
-                return false
-            if unit_index == target.get() and other.is_alive():
-                let phase_start = false
-                for original in range(board[target].history.phase_start_members.size()):
-                    phase_start = phase_start or board[target].history.phase_start_members[original] == other.identity
-                if phase_start and candidate.is_engaged_with(other):
-                    coherent = coherent + 1
-            if unit.owned_by_player1 != board[target].owned_by_player1 and candidate.is_engaged_with(other):
-                if surly:
-                    return false
-                let already_engaged = false
-                for enemy in range(board[target].history.phase_start_engagements.size()):
-                    already_engaged = already_engaged or board[target].history.phase_start_engagements[enemy] == unit.identity
-                if !already_engaged:
-                    return false
-    if !surly and live_attachment_strength(board[target]) > 0:
-        return coherent >= min(2, 1 + int(live_attachment_strength(board[target]) + 1 >= 7))
-    if surly and live_attachment_strength(board[target]) > 0:
-        # Surly still returns to a coherent unit; its special rule lifts only
-        # the phase-start restriction and requires unengaged setup.
-        let neighbours = 0
-        for member in range(board[target].models.size()):
-            if board[target][member].is_alive() and candidate.is_engaged_with(board[target][member]):
-                neighbours = neighbours + 1
-        return neighbours >= 1 + int(live_attachment_strength(board[target]) + 1 >= 7)
-    return true
-
-# Setup searches the finite supported grid for a legal return before asking
-# the controller for a position; unavailable placement cannot deadlock a frame.
-fun orks_return_has_position(Board board, UnitID target, Model returned, Bool surly) -> Bool:
-    let position : BoardPosition
-    for x in range(BOARD_WIDTH):
-        for y in range(BOARD_HEIGHT):
-            position.x = x
-            position.y = y
-            if orks_return_position_valid(board, target, returned, position, surly):
-                return true
-    return false
-
-# Archive selection preserves physical weapon usage and original identity.
-# Heal a wounded living model before reviving a non-Character (02.02.04).
-fun orks_heal_wounded(Unit unit) -> Bool:
-    for member in range(unit.models.size()):
-        if unit[member].is_alive() and unit[member].suffered_wounds > 0:
-            return true
-    return false
-
-# No Character revival is inferred from unit healing. Explicit Surly returns
-# its own bearer separately with the card's3-wound exception (01.02.03).
-fun orks_heal_archive_valid(Board board, UnitID target, ModelID archive) -> Bool:
-    if archive.get() >= board[target].destroyed_models.value.size() or orks_heal_wounded(board[target]) or !board[target].models.has_capacity():
-        return false
-    ref returned = board[target].destroyed_models.value[archive.get()]
-    return !returned.is_character() and orks_return_has_position(board, target, returned, false)
-
-# Unit healing spends one wound at a time and stops at starting strength. It
-# returns original models/equipment with1W, never generates new identities.
-act heal_orks_unit(ctx Board board, frm UnitID target, frm BInt<0, 4> count) -> OrksUnitHealing:
-    board.orks_selected_unit = target
-    board.shared_actions.heal_orks_component = heal_orks_component(board, board[target], SourceBank::battlefield, count)
-    subaction*(board, board[target]) board.shared_actions.heal_orks_component
-
 # Runtherd and War Horde Breakin' Heads are own-unit shock responses in every
 # bank (named source cards; appendix01.02.04). Share eligibility, CP, D3 and
 # shock removal; only mortal allocation dispatch depends on location (p24).
@@ -326,10 +246,11 @@ act use_orks_support_card(ctx Board board, frm UnitID source, frm Stratagem card
                     break
                 act choose_squig_healing_unit(frm UnitID healing) {orks_support_target(board, source, healing, card), !healed[healing.get()]}
                     healed[healing.get()] = true
-                    frm heal_three : BInt<0, 4>
+                    frm heal_three : FixedStat
                     heal_three = 3
-                    board.shared_actions.heal_orks_unit = heal_orks_unit(board, healing, heal_three)
-                    subaction*(board) board.shared_actions.heal_orks_unit
+                    board.orks_selected_unit = healing
+                    board.shared_actions.heal_unit = heal_unit(board, board[healing], SourceBank::battlefield, heal_three)
+                    subaction*(board, board[healing]) board.shared_actions.heal_unit
 
 # Edge withdrawal is measured to any part of any live circular base, while
 # no Enemy Engagement is waived (Instinctive Hunters; supplied Within).
@@ -418,24 +339,6 @@ fun orks_surly_available(Board board, UnitID source, Bool owner, TimingWindow wi
             return true
     return false
 
-# A returned Surly model must choose a nearest legal whole-quad location.
-# Compare squared centre distances; equal circular bases cancel from the
-# nearest-location comparison. Exact continuous/oval geometry stays deferred.
-fun orks_surly_position_valid(Board board, UnitID source, Model model, BoardPosition position) -> Bool:
-    if !orks_return_position_valid(board, source, model, position, true):
-        return false
-    let chosen = (position.x.value - model.position.x.value) * (position.x.value - model.position.x.value) + (position.y.value - model.position.y.value) * (position.y.value - model.position.y.value)
-    let alternative : BoardPosition
-    for x in range(BOARD_WIDTH):
-        for y in range(BOARD_HEIGHT):
-            let other = (x - model.position.x.value) * (x - model.position.x.value) + (y - model.position.y.value) * (y - model.position.y.value)
-            if other < chosen:
-                alternative.x = x
-                alternative.y = y
-                if orks_return_position_valid(board, source, model, alternative, true):
-                    return false
-    return true
-
 # Source mandates the roll even if placement cannot be supported. A passed
 # roll returns the original bearer with3W, retaining once-only weapon history.
 act resolve_orks_surly(ctx Board board, frm UnitID source, frm Bool owner) -> OrksSurly:
@@ -446,27 +349,11 @@ act resolve_orks_surly(ctx Board board, frm UnitID source, frm Bool owner) -> Or
 # One Surly roll/usage/restoration path. Battlefield returns select a nearest
 # legal quad; passengers need capacity; reserves need no position (01.02.03).
 act return_orks_surly(ctx Board board, ctx Unit unit, frm SourceBank bank, frm UnitID source, frm ModelID archive) -> OrksSurlyReturn:
-    frm returned : Model
-    returned = unit.destroyed_models.value[archive.get()]
-    commit_source_usage(board, orks_option_usage(unit, returned, OrksEnhancement::surly_as_a_squiggoth))
+    commit_source_usage(board, orks_option_usage(unit, unit.destroyed_models.value[archive.get()], OrksEnhancement::surly_as_a_squiggoth))
     act roll(Dice surly_face)
-    if surly_face.value >= 2 and unit.models.has_capacity():
-        frm placeable = true
-        if bank.value == SourceBank::battlefield.value:
-            placeable = orks_return_has_position(board, source, returned, true)
-            if placeable:
-                act place_surly_model(BoardPosition position) {orks_surly_position_valid(board, source, returned, position)}
-                returned.position = position
-        else:
-            placeable = orks_return_capacity(board, unit, returned)
-        if placeable:
-            prepare_orks_healed_model(returned, bank.value != SourceBank::battlefield.value)
-            returned.suffered_wounds = max(0, returned.profile.wounds() - 3)
-            restore_attachment_provenance(unit, returned)
-            unit.models.append(returned)
-            unit.retired = false
-            unit.destroyed_models.value.erase(archive.get())
-            refresh_source_effects(board, TimingWindow::none)
+    if surly_face.value >= 2:
+        board.shared_actions.return_model = return_model(board, unit, bank, source, archive, ReturnPlacementPolicy::nearest_unengaged, 3)
+        subaction*(board, unit) board.shared_actions.return_model
 
 # Window dispatch lets the controller interleave faction effects with core
 # effects. A compulsory Surly roll cannot be bypassed by finishing its group.
@@ -1140,26 +1027,6 @@ act choose_orks_offboard_support(ctx Board board, frm Bool owner, frm Bool visio
         subaction*(board) board.shared_actions.use_orks_psychic
     else:
         commit_orks_watchin(board, source_bank_unit(board, bank, source.get()))
-
-# Reviving an embarked model returns it to that unit if capacity permits;
-# lack of capacity destroys it with NO further triggers (01.02.03). A reserve
-# return is offboard too: never use last battlefield coordinates for placement.
-fun orks_return_capacity(Board board, Unit unit, Model model) -> Bool:
-    if unit.embarked_transport.value == 0:
-        return true
-    let carrier = find_passenger_carrier(board, unit.embarked_transport)
-    if !carrier.found:
-        return false
-    let bank = SourceBank::battlefield
-    if carrier.reserve:
-        bank = SourceBank::reserves
-    ref transport = source_bank_unit(board, bank, carrier.unit.get())[carrier.model]
-    if !unit.models.has_capacity():
-        return false
-    let candidate : Unit
-    candidate = unit
-    candidate.models.append(model)
-    return passenger_model_permitted(transport, model) and passenger_space_used(board, unit.embarked_transport) - orks_passenger_space(unit) + orks_passenger_space(candidate) <= transport.transport_capacity.value
 
 # Reserve/passenger phase-end selection delegates to the SAME Surly rule as
 # battlefield timing windows. This adapter only iterates banks (01.02.04);

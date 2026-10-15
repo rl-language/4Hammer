@@ -1,5 +1,6 @@
 import action
 import ability_procedures
+import healing_rules
 import bounded_arg
 import string
 import learn

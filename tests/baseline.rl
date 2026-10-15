@@ -11299,10 +11299,10 @@ fun test_orks17all_infested_current_activation_gate() -> Bool:
 fun test_orks17all_heal_wounded_model_before_revival() -> Bool:
     let board = orks17all_fixture(OrksDetachment::kult_of_speed)
     board[0][0].suffered_wounds = 1
-    let count : BInt<0, 4>
+    let count : FixedStat
     count = 3
-    let healing = heal_orks_unit(board, unit_id(0), count)
-    healing.choose_healed_model(board, damage_test_model(0))
+    let healing = heal_unit(board, board[0], SourceBank::battlefield, count)
+    healing.choose_healed_model(board, board[0], damage_test_model(0))
     return healing.is_done() and board[0][0].suffered_wounds == 0 and board[0].models.size() == 1
 
 # Revival retains identity/equipment/One Shot, uses phase-start coherency and
@@ -11320,11 +11320,11 @@ fun test_orks17all_heal_revives_original_identity_and_usage() -> Bool:
     let identity = board[0][1].identity
     board[0][1].suffered_wounds = board[0][1].profile.wounds()
     board[0].remove_model(1)
-    let count : BInt<0, 4>
+    let count : FixedStat
     count = 1
-    let healing = heal_orks_unit(board, unit_id(0), count)
-    healing.choose_healed_casualty(board, damage_test_model(0))
-    healing.place_returned_model(board, board_position(5, 7))
+    let healing = heal_unit(board, board[0], SourceBank::battlefield, count)
+    healing.choose_healed_casualty(board, board[0], damage_test_model(0))
+    healing.place_returned_model(board, board[0], board_position(5, 7))
     return healing.is_done() and board[0].models.size() == 2 and board[0][1].identity == identity and board[0][1].wounds_left() == 1 and board[0][1].used_once_per_battle_weapon[0] and board[0].destroyed_models.value.empty()
 
 # Unit healing never returns a Character just because other models are full.
@@ -11339,18 +11339,18 @@ fun test_orks17all_healing_excludes_character_casualties() -> Bool:
     board[0].capture_starting_strength()
     board.begin_phase(BattlePhase::movement)
     board[0].remove_model(1)
-    return !orks_heal_archive_valid(board, unit_id(0), damage_test_model(0))
+    return !healing_archive_valid(board, board[0], SourceBank::battlefield, damage_test_model(0))
 
 # A first returned model cannot anchor another return if it was absent at
 # phase start; illegal new enemy engagements remain rejected.
 fun test_orks17all_return_phase_start_and_new_engagement_gates() -> Bool:
     let board = orks17all_fixture(OrksDetachment::kult_of_speed)
     let returned = board[0][0]
-    let old = orks_return_position_valid(board, unit_id(0), returned, board_position(5, 7), false)
+    let old = return_position_valid(board, unit_id(0), returned, board_position(5, 7), ReturnPlacementPolicy::phase_start)
     board[0].history.phase_start_members.clear()
-    let absent = !orks_return_position_valid(board, unit_id(0), returned, board_position(5, 7), false)
+    let absent = !return_position_valid(board, unit_id(0), returned, board_position(5, 7), ReturnPlacementPolicy::phase_start)
     board[1][0].position = board_position(7, 7)
-    return old and absent and !orks_return_position_valid(board, unit_id(0), returned, board_position(5, 7), false)
+    return old and absent and !return_position_valid(board, unit_id(0), returned, board_position(5, 7), ReturnPlacementPolicy::phase_start)
 
 # A psychic1 shocks but still grants Fights First; its level is spent, and a
 # second same-phase use is unavailable (Wurrband/22.03.01).
@@ -11794,7 +11794,7 @@ fun test_orks17all_surly_original_identity_three_wounds() -> Bool:
     let revival = resolve_orks_surly(board, unit_id(1), true)
     revival.choose_surly_casualty(board, damage_test_model(0))
     revival.roll(board, attack_test_die(2))
-    revival.place_surly_model(board, board_position(12, 5))
+    revival.place_returned_model(board, board_position(12, 5))
     return revival.is_done() and board[1][0].identity == identity and board[1][0].wounds_left() == 3 and board[1].destroyed_models.value.empty() and !source_usage_available(board, orks_option_usage(board[1], board[1][0], OrksEnhancement::surly_as_a_squiggoth))
 
 # Returned passengers need a real available seat; no-trigger destruction on
@@ -11804,9 +11804,9 @@ fun test_orks17all_offboard_return_capacity_gate() -> Bool:
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
     let returned = board.embarked_units[0][0]
     board.embarked_units[0].remove_model(0)
-    let available = orks_return_capacity(board, board.embarked_units[0], returned)
+    let available = returned_passenger_permitted(board, board.embarked_units[0], returned)
     board[0][0].transport_capacity = 1
-    return available and !orks_return_capacity(board, board.embarked_units[0], returned)
+    return available and !returned_passenger_permitted(board, board.embarked_units[0], returned)
 
 # At a full source arena, a disabled/dead unreferenced slot can be reused only
 # with a new generation; a frozen pending event must never activate the new
@@ -13050,13 +13050,13 @@ fun test_orks17p2_healing_archive_restores_original_model() -> Bool:
     let identity = board[0][4].identity
     board[0][4].used_once_per_battle_weapon[0] = true
     board[0].damage(4, 3)
-    let count : BInt<0, 4>
+    let count : FixedStat
     count = 3
-    let healing = heal_orks_unit(board, unit_id(0), count)
-    healing.choose_healed_casualty(board, damage_test_model(0))
-    healing.place_returned_model(board, board_position(5, 7))
-    healing.choose_healed_model(board, damage_test_model(4))
-    healing.choose_healed_model(board, damage_test_model(4))
+    let healing = heal_unit(board, board[0], SourceBank::battlefield, count)
+    healing.choose_healed_casualty(board, board[0], damage_test_model(0))
+    healing.place_returned_model(board, board[0], board_position(5, 7))
+    healing.choose_healed_model(board, board[0], damage_test_model(4))
+    healing.choose_healed_model(board, board[0], damage_test_model(4))
     return healing.is_done() and board[0][4].identity == identity and board[0][4].suffered_wounds == 0 and board[0][4].used_once_per_battle_weapon[0] and !board[0][4].destruction_pending and board[0].destroyed_models.value.empty()
 
 # No old battlefield coordinates or range measurements apply in reserves.
@@ -15040,7 +15040,7 @@ fun test_orks17q_shared_surly_all_banks() -> Bool:
         let revival = return_orks_surly(board, unit, bank, unit_id(0), damage_test_model(0))
         revival.roll(board, unit, attack_test_die(2))
         if index == 0:
-            revival.place_surly_model(board, unit, board_position(5, 5))
+            revival.place_returned_model(board, unit, board_position(5, 5))
         valid = valid and revival.is_done() and !unit.retired and unit[0].identity == identity and unit[0].wounds_left() == 3 and !unit[0].destruction_pending and !unit[0].destroying_unit_known and unit[0].off_battlefield == (index != 0)
     return valid
 
@@ -15249,3 +15249,42 @@ fun test_procedures_reactive_move_objective_and_history() -> Bool:
     let constrained = !can sequence.move_to(board, board_position(2, 5)) and can sequence.move_to(board, board_position(8, 5))
     sequence.move_to(board, board_position(8, 5))
     return constrained and sequence.is_done() and sequence.completed and !board.move_requires_objective and board[0].history.last_move_phase == board.phase_serial.value + 1 and board[0].history.move_kind == MovementKind::normal and board[0].movement_distance_limit == 0
+
+# The shared Healing02.02.04 procedure accepts the complete allowance; no
+# faction wrapper or artificial three-wound chunk is needed for five wounds.
+fun test_procedures_heal_full_allowance_without_faction() -> Bool:
+    let board = movement11_fixture()
+    for index in range(4):
+        let extra = board[0][0]
+        extra.identity = 0
+        extra.position.x = 7 + 2 * index
+        board[0].models.append(extra)
+    board.identify_units()
+    board[0].capture_starting_strength()
+    for member in range(5):
+        board[0][member].suffered_wounds = 1
+    let count : FixedStat
+    count = 5
+    board.current_decision_maker = true
+    let sequence = heal_unit(board, board[0], SourceBank::battlefield, count)
+    for selected in range(5):
+        sequence.choose_healed_model(board, board[0], damage_test_model(selected))
+    let healed = true
+    for member in range(5):
+        healed = healed and board[0][member].suffered_wounds == 0
+    return sequence.is_done() and healed and board.current_decision_maker and board[0].models.size() == 5
+
+# An explicit Character-returning ability can use the placement/restoration
+# operation directly. Death flags clear, One Shot and original identity remain
+# (Returning Models01.02.03); nearest is measured from the actual death point.
+fun test_procedures_return_original_model_nearest_without_faction() -> Bool:
+    let board = movement11_fixture()
+    board[0][0].keywords.append(Keyword::character)
+    let identity = board[0][0].identity
+    board[0][0].used_once_per_battle_weapon[0] = true
+    board[0].damage(0, board[0][0].profile.wounds())
+    board[0].retired = true
+    let sequence = return_model(board, board[0], SourceBank::battlefield, unit_id(0), damage_test_model(0), ReturnPlacementPolicy::nearest_unengaged, 3)
+    let nearest = can sequence.place_returned_model(board, board[0], board_position(5, 5)) and !can sequence.place_returned_model(board, board[0], board_position(4, 5))
+    sequence.place_returned_model(board, board[0], board_position(5, 5))
+    return nearest and sequence.is_done() and !board[0].retired and board[0][0].identity == identity and board[0][0].used_once_per_battle_weapon[0] and !board[0][0].destruction_pending and board[0][0].state == ModelState::normal and board[0].destroyed_models.value.empty()

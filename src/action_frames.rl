@@ -42,9 +42,9 @@ cls SharedActionFrames:
     OrksSurlyReturn return_orks_surly
     OrksSurly resolve_orks_surly
     # Command/card healing and on-shock correction are sequential owners.
-    OrksComponentHealing heal_orks_component
+    UnitHealing heal_unit
+    ModelReturn return_model
     OrksRuntherdShock orks_runtherd_shock
-    OrksUnitHealing heal_orks_unit
     OrksWagonChargeEnd orks_wagon_charge_end
     OrksWagonMoveEnd orks_wagon_move_end
     PickFaction pick_army
