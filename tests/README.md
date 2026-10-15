@@ -1,15 +1,13 @@
 # Rule validation baseline
 
-Activate the repository's compatible environment first:
-
-```bash
-source /workspace/4hammer-venv/bin/activate
-python tools/run_rule_tests.py
-```
+The deterministic tests are Rulebook functions compiled into a native library.
+CMake discovers their declarations and a small C executable calls one assertion
+per CTest process. There is no Python runner, wrapper generation/import, or
+Python runtime dependency in this test path.
 
 ## CMake / CTest
 
-Use CMake's CTest runner to see each rule test individually. A tests-only configuration avoids Godot, SDK downloads and web builds:
+Use a tests-only configuration to avoid Godot, SDK downloads and web builds:
 
 ```bash
 source /workspace/4hammer-venv/bin/activate
@@ -17,15 +15,37 @@ cmake -S . -B build-tests -DBUILD_GAME=OFF
 ctest --test-dir build-tests --output-on-failure -j 4
 ```
 
-For another virtual environment, activate it first; if CMake cached a different interpreter, configure with `-DPython3_EXECUTABLE=/path/to/venv/bin/python`. The commands shown use CMake/CTest 3.20+ (`--test-dir`); project configuration supports CMake 3.12+. Use matching `rl_language`/`rl_language_core` **0.4.18**. Each compilation uses four workers by default; set `-DRULE_TEST_COMPILER_JOBS=N` to change it. Debug tests are unoptimized. Use `-DRULE_TEST_OPTIMIZE=ON` only for optimized validation; CTest process parallelism (`ctest -j`) is separate from compiler workers.
+Use CMake/CTest 3.20+ for the commands shown (`--test-dir`); configuration needs
+3.19+ for JSON manifest validation. Put compiler/core **0.4.18** on PATH, or set
+`-DRLC_TEST_COMPILER=/path/to/rlc`. CMake does not find or launch a Python
+interpreter. The activated environment above supplies the compiler and CMake.
+Each compilation uses four workers; change this with
+`-DRULE_TEST_COMPILER_JOBS=N`. Debug tests are unoptimized. Set
+`-DRULE_TEST_OPTIMIZE=ON` only for optimized validation. An explicit linker can
+be supplied with `-DRULE_TEST_CLANG=/path/to/clang`. CTest process parallelism
+(`ctest -j`) is separate from compiler workers.
 
-`ctest -N --test-dir build-tests` lists the tests. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` runs a selected case. Labels `baseline`, `discrepancies` and `expected-failure` allow filtering with `-L`. CTest automatically includes the matching compilation fixture even for a single selected test. Each suite compiles once per invocation with precondition/bounds checks; each assertion runs in its own process. A failed compilation blocks its cases rather than using an old library.
+`ctest -N --test-dir build-tests` lists **1,185 entries**:1,184 assertions and
+one compilation fixture. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` selects one case. Labels `baseline`, `discrepancies` and
+`expected-failure` allow filtering with `-L`. CTest includes the compilation
+fixture for filtered runs. That fixture builds the native runner and suite with
+normal CMake dependencies and precondition/bounds checks; unchanged sources
+need no recompilation. No separate compilation cache is added. Linkage verifies
+that every discovered test symbol exists. Each assertion runs in isolation; a
+crash fails its test. A failed fixture blocks its assertions.
 
-The current discovery lists **995 entries**:994 supported assertions and one compilation fixture. Empty suites do not register a compilation fixture. The discrepancy manifest is empty. Recorded discrepancies, when present, return CTest's skip code and appear as **Skipped / XFAIL**, not semantic passes. Unexpected passes, false supported assertions, crashes, manifest mismatches and compilation failures fail validation. When fixing a discrepancy, promote its assertion into the baseline and remove its manifest entry.
+The discrepancy manifest is empty. Recorded false discrepancy assertions return
+77 and appear as **Skipped / XFAIL**, never semantic passes. Unexpected passes,
+false supported assertions, crashes, malformed declarations, manifest mismatches
+and build failures fail validation. Promote fixed discrepancies into the
+baseline and remove their manifest entries. Empty suites have no fixture.
 
-CTest is also available in a normal game configuration (`BUILD_GAME=ON`, the default), and Make/Ninja support `cmake --build build-tests --target test`. CMake itself has no `--test` command. Reconfigure after changing test declarations or the manifest; CMake also tracks these files for regeneration during a build. Generated libraries stay in the chosen build directory. The original Python runner below remains available.
-
-The runner executes `rlc-test tests/baseline.rl -i src`, checks actual RUN/OK names and counts, then runs the known-discrepancy assertions in a separate process. It rejects a zero-test success, missing tests, crashes and unexpected passes. Separate processes avoid RLC 0.3.3's generated-module cache reusing a previous `sim` module.
+CTest also works with `BUILD_GAME=ON` (the default), and Make/Ninja support
+`cmake --build build-tests --target test`. CMake itself has no `--test` command.
+Reconfigure after changing declarations or the manifest; builds also track them
+for regeneration. Outputs stay in the chosen build directory. The former
+Python test runners have been removed. Python tools below exercise separate
+host/ML integrations and source audits; they do not execute this native suite.
 
 `baseline.rl` tests supported behavior, legality and state transitions. `known_discrepancies.rl` asserts desired behavior that currently fails; its manifest links each failure to a source rule, category and roadmap owner. These failures are reported as XFAIL, never as semantic passes. When fixing one, move its assertion into the passing suite and remove its manifest entry. Do not change the assertion to approve incorrect behavior or broadly skip a failing subsystem.
 
@@ -147,7 +167,7 @@ The deployment harness also presses “Done deploying” for Army 1 and verifies
 
 The suite has **120 PASS, 5 XFAIL, 0 XPASS**. CTest registers **127 entries**, including two compilation fixtures and five explicit expected-failure skips. [The task-7 report](../doc/command-battle-shock.md) gives rule scope, page citations and validation evidence. State/observation schemas are **6**; action schema stays **3**. Matching native Godot artifacts are in `/workspace/4hammer-validation/task7-godot`. The headless harness saves/reloads a pending Command recovery roll and checks chance ownership and shock gates.
 
-CMake now prefers the activated Python environment and checks `rlc.program` during configuration. For an existing build cached with the wrong interpreter, reconfigure with `-DPython3_EXECUTABLE=/workspace/4hammer-venv/bin/python`; fresh builds select the activated environment automatically.
+The former Python interpreter selection described by earlier validation records has been removed from the native CTest path; configure the compiler using `RLC_TEST_COMPILER` instead.
 
 ## Terrain and objectives (task 8)
 
@@ -440,3 +460,55 @@ fourteen-card guide and latest ROADMAP section record the29-card HTML check,
 63 native sanitizer cases, Godot controls, frame/ML checks and fuzzer scope.
 Keep matching native/header clients for schema34/22/34 (next35). Broader
 rendered integration and the known wrapper/runtime performance work remain17.Q.
+
+
+### Sanitizer source diagnostics without llvm-symbolizer
+
+On the prepared Linux environment, GNU `addr2line` is available even when
+`llvm-symbolizer` is not. Use the explicit supported sanitizer configuration:
+
+```bash
+ASAN_OPTIONS=detect_leaks=1:allow_addr2line=1:external_symbolizer_path=/usr/bin/addr2line \
+  /path/to/rules_fuzzer corpus -max_total_time=60
+```
+
+This preserves ASAN/UBSAN/leak instrumentation and supplies source/function
+names for failures. The17.Q validation verified it with an isolated intentional
+use-after-free probe: the report identifies the probe function and exact source
+line. That expected diagnostic-probe failure is not a game regression failure.
+Keep actual game inputs and semantic tests separate from such tool checks.
+
+### Public roster and shared bank checks
+
+The79 added17.Q assertions remain native Rulebook functions in `baseline.rl`.
+They cover all54 roster adapters and common own-unit rules in battlefield,
+reserve and embarked storage. No Python test migration or compilation cache is
+introduced. Use the normal CTest fixture to build the native library and C runner. It does
+not generate or import a Python wrapper; normal CMake dependencies avoid
+recompiling unchanged sources.
+
+New headless scripts are `godot_orks_custom_roster.gd`,
+`godot_shared_bank_rules.gd` and `godot_string_ownership.gd`. The bank script
+checks the shared mortal payload, actual reserve/passenger contexts, labels and
+click suppression. The string probe checks UTF-8/empty values and10,000 native
+conversions. The broad script reads the shared hit-dice collector rather than
+the retired nested hit frame. Use matching state/observation37 and action24 artifacts; the
+earlier host-validation artifacts reused a Python-enabled debug library; the
+current native CTest library and runner have no libpython dependency.
+
+
+### Native CTest runner validation —2026-10-15
+
+All1,184 assertions plus the build fixture pass through the C runner. The fresh
+unoptimized-j4 build takes342.76s; the complete CTest run takes354.69s. A filtered
+repeat includes the fixture and takes0.16s without recompilation. CMake discovers
+all declarations without an interpreter; the fixture produces no Python wrapper.
+`ldd` and native undefined-symbol inspection confirm no libpython/Python symbols;
+a shared-bank case also passes with an empty environment and no Python on PATH.
+
+Isolated tiny Rulebook fixtures outside the checkout verify PASS, FAIL, crashes,
+XFAIL77, XPASS failure, unknown-name rejection, manifest/signature rejection,
+build-failure blocking and filtered-fixture inclusion. They intentionally fail
+where required to verify the runner's contracts; these are not game test failures.
+The three old Python test runners have been removed. Host/ML integration and
+source-audit tools remain separate from the pure Rulebook CTest execution path.

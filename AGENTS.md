@@ -16,7 +16,7 @@ Read and use [ROADMAP.md](ROADMAP.md) before planning or implementing the editio
 
 Task 1's inventory is in [the rule coverage map](doc/11th-edition-rule-coverage.md), with [full excerpt ownership](doc/11th-edition-source-coverage.tsv) and [named reference availability](doc/11th-edition-external-references.tsv). Use its subsection rows, planned regressions, task ownership and D01–D12 gates when implementing later tasks. Update coverage status with actual evidence; the initial partial/different/missing classifications are source-inspection findings, not passing tests or new-edition certification.
 
-Task 2's executed evidence is in [the validation baseline report](doc/validation-baseline.md). Follow [tests/README.md](tests/README.md) and run `python tools/run_rule_tests.py`: it verifies real RUN/OK counts and separately enumerates known discrepancies. Promote fixed discrepancy assertions into the passing suite and remove their manifest entries; an unexpected pass requires review rather than silently keeping an obsolete expected failure. The baseline includes 12 passing assertions and 12 expected failures; it does not certify core-rule coverage. Fixed characteristics currently evaluate to zero, so completed shooting/full-game smoke checks alone do not demonstrate combat resolution.
+Task 2's executed evidence is in [the validation baseline report](doc/validation-baseline.md). Follow [tests/README.md](tests/README.md) and use the native CMake/CTest entrypoint: it discovers and individually runs every assertion and separately enumerates known discrepancies. Promote fixed discrepancy assertions into the passing suite and remove their manifest entries; an unexpected pass requires review rather than silently keeping an obsolete expected failure. The baseline includes 12 passing assertions and 12 expected failures; it does not certify core-rule coverage. Fixed characteristics currently evaluate to zero, so completed shooting/full-game smoke checks alone do not demonstrate combat resolution.
 
 Task 3 is complete; read [the state foundations report](doc/state-foundations.md) before later implementation. Current validation is 45 passing tests and 8 remaining discrepancy assertions. Use standard bounded types for numeric state so Rulebook can infer the ML layout; do not reintroduce an unbounded Quantity wrapper or custom numeric observation encoding. Bounded storage/checked collections are separate from action domains; persistent handles are distinct from UnitID/ModelID selectors. Battlefield unit slots are retired rather than compacted, while model vectors compact and persistent model references must resolve EntityIdentity. Preserve archived weapon usage and attachment provenance. State/observation schemas are 3 and action schema is 2; regenerate matching native libraries and Godot headers together. `has_capacity` avoids a generated `can_append` binding collision. Task 3 alone does not complete later mechanics; consult the task-4 geometry progress below and do not infer complete timing, attachment, revival or combat rules from history/storage fields.
 
@@ -126,9 +126,9 @@ The all-actions panel offers an enumeration-based fallback, but does not establi
 
 ## Validation after rule changes
 
-Prefer the individual CMake/CTest rule checks: activate the compatible environment, configure `cmake -S . -B build-tests -DBUILD_GAME=OFF`, then run `ctest --test-dir build-tests --output-on-failure -j 4`. CTest discovers each zero-argument Bool assertion, compiles each suite once using fixtures and runs each case in isolation. Known discrepancy false results are Skipped/XFAIL, not passes; unexpected passes and crashes fail. Reconfigure after test/manifest changes. See [tests/README.md](tests/README.md); keep the existing Python runner functional.
+Prefer the individual CMake/CTest rule checks: activate the compatible environment, configure `cmake -S . -B build-tests -DBUILD_GAME=OFF`, then run `ctest --test-dir build-tests --output-on-failure -j 4`. CTest discovers each zero-argument Bool assertion, compiles each suite once using fixtures and runs each case in isolation. Known discrepancy false results are Skipped/XFAIL, not passes; unexpected passes and crashes fail. Reconfigure after test/manifest changes. See [tests/README.md](tests/README.md). The user requires no Python in the pure Rulebook test path: CMake discovers declarations, RLC builds a native library without `--python`/`--pylib`, and the C runner executes each assertion. Do not restore a Python runner, wrapper import or interpreter discovery for these tests. Separate host/ML Python tooling is still supported.
 
-Add focused deterministic regression tests for changed mechanics, including legal/illegal actions and relevant boundaries or state transitions. The deterministic entrypoint is `tests/baseline.rl`, with desired-rule discrepancy assertions in `tests/known_discrepancies.rl` and their explicit manifest. `rlc-test` discovers zero-argument `test_*` functions returning Bool. Run `python tools/run_rule_tests.py`, or run `rlc-test tests/baseline.rl -i src` and the separate discrepancy check. Verify actual RUN/OK counts: a zero-test success is not validation. Use Python checks where appropriate for bindings or action enumeration.
+Add focused deterministic regression tests for changed mechanics, including legal/illegal actions and relevant boundaries or state transitions. The deterministic entrypoint is `tests/baseline.rl`, with desired-rule discrepancy assertions in `tests/known_discrepancies.rl` and their explicit manifest. CMake discovers zero-argument `test_*` functions returning Bool and links their native exports into the C runner. Run the individual CTest cases, including the build fixture. Verify discovery and executed counts: a zero-test success is not validation. Use Python checks where appropriate for bindings or action enumeration.
 
 Run these existing headless smoke checks from the repository root:
 
@@ -168,7 +168,7 @@ Read [the task-7 report](doc/command-battle-shock.md). Leadership uses the compl
 
 Use unit-level shock inheritance, `model_objective_control`, `allows_action_start` and `allows_action_completion` when integrating later mechanics. The latter are only shock gates; task 15 must implement full action eligibility and completion. Insane Bravery is own Command-step only, blocked by existing shock targeting, once per battle independently for each player; its Board usage record must survive cleanup and saves. Do not bypass centralized battle/phase/target expenditure checks.
 
-Current validation is **120 PASS, 5 XFAIL, 0 XPASS**; state/observation schemas **6**, action schema **3**. Task 6 remains deferred by user instruction; task 8 is next. Fixed characteristics and objective aggregation/ties remain mandatory fixes. Resolve offboard source gate D10 when integrating reserves/passengers; do not infer a general recovery policy from the battlefield loop. CMake prefers the activated Python and rejects missing `rlc` during configuration; explicitly set `Python3_EXECUTABLE` when replacing a stale cached interpreter.
+Current validation is **120 PASS, 5 XFAIL, 0 XPASS**; state/observation schemas **6**, action schema **3**. Task 6 remains deferred by user instruction; task 8 is next. Fixed characteristics and objective aggregation/ties remain mandatory fixes. Resolve offboard source gate D10 when integrating reserves/passengers; do not infer a general recovery policy from the battlefield loop. That historical Python-based CTest configuration is superseded by the native runner described above; set `RLC_TEST_COMPILER` to select the compiler.
 
 ## User-directed task-8 terrain scope
 
@@ -631,3 +631,39 @@ passed alone with600s timeout; retain the performance fix in17.Q rather than
 claiming a speedup. Native tests remain Rulebook/CTest, with no Python migration
 or build-cache infrastructure. RLC0.4.18 uses-j4 (written `-j 4`); keep debug
 unoptimized and optimized sanitizer builds separate.
+
+
+## Current integration scope —17.Q
+
+The user excludes rendered integration from this batch. Finish public roster
+selection, non-rendering rule/host integration and review corrections. The user
+will optimize valid-action discovery in the compiler: do not optimize, cache or
+replace action enumeration, host filtering, legal masks or wrapper fetching.
+Leave Rules.gd/TraceManager.gd's discovery paths unchanged. Earlier roadmap
+requirements to optimize discovery are superseded by this instruction.
+
+User ruling2026-10-15 requires one connected coherent group, in addition to the
+printed neighbour and maximum-distance conditions. Two disconnected pairs are
+illegal even when each pair has neighbours and the full unit fits within9in.
+Use the2in horizontal/5in vertical neighbour graph over living models; corpses
+cannot connect living groups. This resolves the printed-rule loophole by user
+authority; do not silently remove the extra connectivity requirement.
+
+User instruction2026-10-15: avoid separate rule implementations for offboard
+units. Own-unit eligibility, CP/usage, psychic spending, rolls, grants, healing,
+revival, mortality and death handling must share implementations across all
+banks. Keep only bank selection and genuine range/visibility/placement/capacity
+adapters. Read [the public roster/integration guide](doc/orks-custom-roster.md).
+`orks_became_shocked` and `use_orks_psychic` store stable unit identities;
+`DamageJob.bank` feeds the common damage engine. Do not restore an Orks-specific
+offboard mortal/death engine or duplicate Breakin' Heads/Visions/Surly frames.
+Restore `Board.damage_bank` after nested damage; Godot offboard choices must use
+buttons against the actual bank, never stale battlefield indices. Surly uses the
+normal model reset and reactivates an emptied unit. Destroying an unplaceable
+transport must expire its passengers before the carrier models disappear.
+
+Command Battle-shock must also use one bank scan and freeze recovery eligibility
+for all units at STEP start (core p30; appendix01.02.04). A reserve/passenger unit
+gaining shock during an earlier unit's test must not clear that new shock on a
+later passed test. The final Command-scan follow-up uses state/observation37,
+action24 and next-state38; earlier36/24 completion evidence is historical.

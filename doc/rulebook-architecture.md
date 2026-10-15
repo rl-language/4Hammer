@@ -429,13 +429,13 @@ The full-game fuzzer reads choices while `index + 8 < input.size()`, maps each t
 | Check | What it establishes | Entry points |
 | --- | --- | --- |
 | Deterministic rule assertions | Intended boundaries, ownership, legal/illegal inputs and actual state effects | [baseline.rl](../tests/baseline.rl), [known discrepancies](../tests/known_discrepancies.rl) and manifest |
-| CTest fixtures | Test discovery, matching wrapper/native compilation and isolated assertion execution | [RuleTests.cmake](../cmake/RuleTests.cmake), [ctest_rules.py](../tools/ctest_rules.py) |
+| CTest fixtures | Native declaration discovery, suite compilation and isolated assertion execution without Python | [RuleTests.cmake](../cmake/RuleTests.cmake), [rule_test_runner.c](../tests/rule_test_runner.c) |
 | Native sanitizer cases | Ownership, cleanup, bounds and undefined-behavior checks on focused paths | Prepared native drivers documented in [tests/README.md](../tests/README.md) |
 | Seeded game and Gym | Completion, legal-action/text round trips, owner protocol and finite observation layout | [check_gameplay_baseline.py](../tools/check_gameplay_baseline.py), [check_gym_baseline.py](../tools/check_gym_baseline.py) |
 | Godot interaction checks | Matching bindings, selectors, labels and the exercised controls | [check_godot_state.py](../tools/check_godot_state.py), `tests/godot_*.gd` |
 | Fuzzer replay/mutation | Preserved failures and robustness across legal action sequences | `game_utils.rl:fuzz`, CMake target `rlc_rules_fuzzer`, [fuzz regressions](../tests/fuzz-regressions/README.md) |
 
-CMake discovers zero-argument `test_*() -> Bool` functions. Each suite's fixture generates a Python wrapper and matching native library once per CTest invocation, validates its declarations, then runs each test in a separate process. The baseline rejects zero tests. Known false discrepancy assertions are XFAIL/Skipped; an unexpected pass requires promotion, and crashes/failures fail the run. The current discrepancy manifest is empty.
+CMake discovers zero-argument `test_*() -> Bool` functions. Each suite's fixture builds a native library and C runner using normal CMake dependencies, then runs each test in a separate process. Discovery, compilation and execution use no Python; linking validates every declared test export. The baseline rejects zero tests. Known false discrepancy assertions are XFAIL/Skipped; an unexpected pass requires promotion, and crashes/failures fail the run. The current discrepancy manifest is empty.
 
 For debug checks in the prepared cloud environment:
 
@@ -474,7 +474,7 @@ Test the actual consumer and legal/illegal inputs, then test relevant banks, ove
 
 The resumable-frame model gives the rules, UI, replay and learning clients a shared description of decisions. Its cost is that every retained field/child frame contributes to copying, generated bindings and often observations. Sparse modifier records and linear identities reduce layout growth, but a bounded layout can still be large.
 
-The generic action catalog makes host integration simple and exhaustive. Hosts currently scan it to find legal candidates, and generated wrapper fetching has a measured cost. Small coordinate domains reduce candidates; they do not remove wrapper overhead. Task 17.Q owns the required performance fix and broader rendered/integration validation.
+The generic action catalog makes host integration simple and exhaustive. Hosts currently scan it to find legal candidates, and generated wrapper fetching has a measured cost. Small coordinate domains reduce candidates; they do not remove wrapper overhead. The user assigns valid-action discovery optimization to the compiler and excludes rendered integration from17.Q; preserve the existing host discovery paths. Non-rendering integration evidence remains in ROADMAP.md.
 
 `rules.rl` remains a large orchestration module, with older combat/attachment and faction-specific paths beside the new helpers. A new implementation should follow its callers and the roadmap rather than infer completion from a type, enum entry or factory name. The attachment entrypoint now uses explicit reserve-bank Leader/Support roles and permission metadata; full current datasheet factories remain17.H–P.
 
@@ -547,7 +547,20 @@ unit identities. Hit records separately track Squig Launchas provenance; attack
 grouping cannot merge it with otherwise identical attacks from another weapon.
 Home-objective ownership is explicit mission metadata, not inferred geometry.
 
-All54 included standard cards now have adapters; ROADMAP.md owns their final
-validation status. The arbitrary public roster picker, measured host/runtime
-performance defects and full rendered journeys remain17.Q. No point system,
-Forge World/Legends data or exact oval/hull geometry is added.
+All54 included standard cards now have adapters and public roster selection;
+ROADMAP.md owns their final integration evidence. The user excludes rendered
+journeys and assigns valid-action discovery optimization to the compiler. No
+point system, Forge World/Legends data or exact oval/hull geometry is added.
+
+### Shared rules across storage banks
+
+Own-unit rule logic must not be duplicated for battlefield/reserve/passenger
+storage. Stable unit identities resolve the active bank; selectors and actual
+geometry/capacity checks adapt the shared rule. See
+[the roster and integration guide](orks-custom-roster.md) for the shared shock,
+psychic, Watchin', Dread Power, Surly, healing, damage and source-grant paths.
+`DamageJob.bank` and `PendingDestruction.bank` let the normal damage engine visit
+all real banks. `Board.damage_bank` is temporary editor selector context, restored
+by the resolver. Only battlefield deaths may measure external retaliation/demise
+or require emergency battlefield setup. Phase-end retained fighters are released
+across all banks before common destruction processing.
