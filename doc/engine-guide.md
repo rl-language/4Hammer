@@ -148,6 +148,8 @@ wrapper are separate concepts.
 
 ## Where to read next
 
+- [Game state reference](game-state-reference.md): exact field names, types,
+  sentinels, meanings and lifetimes for the important engine structs.
 - [Technical architecture](rulebook-architecture.md): module boundaries, action
   frames, ownership and extension points for implementation work.
 - [Public Orks roster](orks-custom-roster.md): supported army construction and
