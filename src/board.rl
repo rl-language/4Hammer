@@ -975,7 +975,7 @@ fun valid_model_numeric_history(Model model) -> Bool:
 fun valid_unit_numeric_history(Unit unit) -> Bool:
     if unit.movement_distance_limit.value < 0 or unit.movement_distance_limit.value >= 258:
         return false
-    if unit.psyker_level.value < 0 or unit.psyker_level.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.round_stamp.value < 0 or unit.orks_psychic_usage.round_stamp.value >= MAX_ROUNDS or unit.orks_psychic_usage.spent.value < 0 or unit.orks_psychic_usage.spent.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.roar_phase.value < 0 or unit.orks_psychic_usage.roar_phase.value >= MAX_PHASE_STAMP or unit.orks_psychic_usage.visions_phase.value < 0 or unit.orks_psychic_usage.visions_phase.value >= MAX_PHASE_STAMP:
+    if unit.psyker_level.value < 0 or unit.psyker_level.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.budget.round_stamp.value < 0 or unit.orks_psychic_usage.budget.round_stamp.value >= MAX_ROUNDS or unit.orks_psychic_usage.budget.spent.value < 0 or unit.orks_psychic_usage.budget.spent.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.roar_phase.value < 0 or unit.orks_psychic_usage.roar_phase.value >= MAX_PHASE_STAMP or unit.orks_psychic_usage.visions_phase.value < 0 or unit.orks_psychic_usage.visions_phase.value >= MAX_PHASE_STAMP:
         return false
     if unit.history.embarked_phase.value < 0 or unit.history.embarked_phase.value >= MAX_PHASE_STAMP or unit.history.ingress_turn.value < 0 or unit.history.ingress_turn.value >= MAX_TURN_STAMP:
         return false

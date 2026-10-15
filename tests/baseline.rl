@@ -11361,7 +11361,7 @@ fun test_orks17all_visions_psychic_one_still_grants_effect() -> Bool:
     board.begin_phase(BattlePhase::fight)
     let psychic = use_orks_psychic(board, unit_id(0), true)
     psychic.roll(board, attack_test_die(1))
-    return psychic.is_done() and board[0].battle_socked and fight_first_unit(board[0]) and board[0].orks_psychic_usage.spent == 1 and !orks_psychic_available(board, unit_id(0), true)
+    return psychic.is_done() and board[0].battle_socked and fight_first_unit(board[0]) and board[0].orks_psychic_usage.budget.spent == 1 and !orks_psychic_available(board, unit_id(0), true)
 
 # Warphead's once-per-ability phase restriction is separate from its level2
 # round budget. A new round restores budget; a phase alone does not.
@@ -11369,8 +11369,8 @@ fun test_orks17all_warphead_psychic_round_budget() -> Bool:
     let board = orks17all_fixture(OrksDetachment::wurrband)
     board[0][0].keywords.append(Keyword::psyker)
     board[0][0].orks_enhancement = OrksEnhancement::warphead
-    board[0].orks_psychic_usage.round_stamp = board.current_round.value + 1
-    board[0].orks_psychic_usage.spent = 2
+    board[0].orks_psychic_usage.budget.round_stamp = board.current_round.value + 1
+    board[0].orks_psychic_usage.budget.spent = 2
     let spent = !orks_psychic_available(board, unit_id(0), false)
     board.begin_phase(BattlePhase::fight)
     let still_spent = !orks_psychic_available(board, unit_id(0), true)
@@ -14202,7 +14202,7 @@ fun test_orks17p3_weirdboy_warpath_one_still_grants() -> Bool:
     sequence.use_datasheet_warpath(board, true)
     sequence.roll(board, attack_test_die(1))
     let info = orks17p2_info(board, 1)
-    return sequence.is_done() and board[0].battle_socked and info.reroll1_wounds and info.has_weapon_rule(board, WeaponRuleKind::psychic) and board[0].orks_psychic_usage.spent == 1
+    return sequence.is_done() and board[0].battle_socked and info.reroll1_wounds and info.has_weapon_rule(board, WeaponRuleKind::psychic) and board[0].orks_psychic_usage.budget.spent == 1
 
 # Kill Rig has the other Warpath: Lethal+Psychic, no Weirdboy wound reroll.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Kill-Rig
@@ -14234,8 +14234,8 @@ fun test_orks17p3_da_jump_one_and_same_phase_deep_strike() -> Bool:
 fun test_orks17p3_shared_psychic_budget_and_phase_restriction() -> Bool:
     let board = orks17p2_fixture(make_orks_weirdboy())
     board.begin_phase(BattlePhase::movement)
-    board[0].orks_psychic_usage.round_stamp = board.current_round.value + 1
-    board[0].orks_psychic_usage.spent = 1
+    board[0].orks_psychic_usage.budget.round_stamp = board.current_round.value + 1
+    board[0].orks_psychic_usage.budget.spent = 1
     let spent = !orks_datasheet_psychic_available(board, unit_id(0), 151)
     board.current_round = board.current_round + 1
     let replenished = orks_datasheet_psychic_available(board, unit_id(0), 151)
@@ -14944,7 +14944,7 @@ fun test_orks17q_shared_visions_all_banks() -> Bool:
         let offered = orks_psychic_unit_available(board, unit, true)
         let psychic = use_orks_psychic(board, unit.identity, true)
         psychic.roll(board, attack_test_die(1))
-        valid = valid and offered and psychic.is_done() and unit.battle_socked and fight_first_unit(unit) and unit.orks_psychic_usage.spent == 1 and !orks_psychic_unit_available(board, unit, true) and board.current_decision_maker
+        valid = valid and offered and psychic.is_done() and unit.battle_socked and fight_first_unit(unit) and unit.orks_psychic_usage.budget.spent == 1 and !orks_psychic_unit_available(board, unit, true) and board.current_decision_maker
     return valid
 
 # Shared Watchin' installs the same keyed effect rather than one source per
@@ -15191,3 +15191,28 @@ fun test_orks17q_shared_command_shock_scan_all_banks() -> Bool:
             subsequent.roll_pair(board, attack_test_die(6), attack_test_die(6))
             valid = valid and subsequent.is_done() and !earlier.battle_socked and unit.battle_socked
     return valid
+
+# Shared resource accounting is not tied to a faction or a psychic ability.
+# Appendix22.03.01/01.05.02: a reroll never consumes the resource a second time.
+fun test_procedures_round_resource_reroll_and_owner() -> Bool:
+    let board : Board
+    board.current_decision_maker = true
+    let budget : RoundResourceBudget
+    let sequence = roll_spent_round_resource(board, budget, false, 1, true)
+    let paid = budget.spent == 1 and !budget.available(board.current_round.value + 1, 1)
+    sequence.roll(board, attack_test_die(1))
+    let owns_reroll = !board.current_decision_maker
+    sequence.keep_it(board, false)
+    sequence.reroll(board, attack_test_die(6))
+    return paid and owns_reroll and sequence.is_done() and sequence.result == 6 and budget.spent == 1 and board.current_decision_maker
+
+# Zero capacity is unavailable even at a new round; only the stamp resets use.
+fun test_procedures_round_resource_limits_and_reset() -> Bool:
+    let budget : RoundResourceBudget
+    let starts = !budget.available(1, 0) and budget.available(1, 2)
+    budget.consume(1)
+    let once = budget.available(1, 2) and !budget.available(1, 1)
+    budget.consume(1)
+    let full = !budget.available(1, 2) and budget.available(2, 2)
+    budget.consume(2)
+    return starts and once and full and budget.spent == 1 and budget.round_stamp == 2

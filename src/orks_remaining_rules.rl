@@ -487,36 +487,20 @@ fun orks_datasheet_psychic_available(Board board, UnitID source, Int rule) -> Bo
         ability = AbilityKind::beastscent
     if !unit.has_ability(ability):
         return false
-    let spent = 0
-    if unit.orks_psychic_usage.round_stamp.value == board.current_round.value + 1:
-        spent = unit.orks_psychic_usage.spent.value
     let usage = orks_remaining_usage(unit, rule, rule == 151, false)
     if rule == 151:
         usage.limits.round = 1
-    return spent < orks_psyker_level(unit) and source_usage_available(board, usage)
+    return unit.orks_psychic_usage.budget.available(board.current_round.value + 1, orks_psyker_level(unit)) and source_usage_available(board, usage)
 
-# Shared sequential roll frame; callers snapshot no results and apply their
-# printed effect even after a1. No partial custom lifecycle is used.
-# Orks/Weirdboy and Kill-Rig psychic rolls; Unstable Energies/22.03.01.
-act orks_datasheet_psychic(ctx Board board, frm UnitID source, frm BInt<151, 163> rule) -> OrksDatasheetPsychic:
+# The printed ability keeps its own usage key; the psychic test is shared
+# with Wurrband and other datasheets (Unstable Energies22.03.01).
+fun orks_datasheet_psychic(Board board, UnitID source, BInt<151, 163> rule) -> OrksPsychicTest:
     assert(orks_datasheet_psychic_available(board, source, rule.value), "datasheet psychic unavailable")
-    frm previous_owner = board.current_decision_maker
-    board.current_decision_maker = board[source].owned_by_player1
-    frm usage = orks_remaining_usage(board[source], rule.value, rule.value == 151, false)
+    let usage = orks_remaining_usage(board[source], rule.value, rule.value == 151, false)
     if rule.value == 151:
         usage.limits.round = 1
     commit_source_usage(board, usage)
-    if board[source].orks_psychic_usage.round_stamp.value != board.current_round.value + 1:
-        board[source].orks_psychic_usage.round_stamp = board.current_round.value + 1
-        board[source].orks_psychic_usage.spent = 0
-    board[source].orks_psychic_usage.spent = board[source].orks_psychic_usage.spent + 1
-    board.current_roll = rerollable_dice_roll(board, unit_has_orks_enhancement(board[source], OrksEnhancement::warphead), false, false, board[source].owned_by_player1, source)
-    subaction*(board) board.current_roll
-    if board.current_roll.result == 1:
-        board[source].battle_socked = true
-        board.shared_actions.orks_became_shocked = orks_became_shocked(board, source)
-        subaction*(board) board.shared_actions.orks_became_shocked
-    board.current_decision_maker = previous_owner
+    return orks_psychic_test(board, board[source].identity)
 
 # Warpath is chosen at SelectedFight BEFORE Pile In/Overrun. The shared roll
 # spends the same level budget used by any other psychic ability this round.
@@ -529,8 +513,8 @@ act orks_datasheet_fight_selection(ctx Board board, frm UnitID source) -> OrksDa
     if orks_datasheet_psychic_available(board, source, rule.value):
         act use_datasheet_warpath(Bool warpath)
         if warpath:
-            board.shared_actions.orks_datasheet_psychic = orks_datasheet_psychic(board, source, rule)
-            subaction*(board) board.shared_actions.orks_datasheet_psychic
+            board.shared_actions.orks_psychic_test = orks_datasheet_psychic(board, source, rule)
+            subaction*(board) board.shared_actions.orks_psychic_test
             frm kind = OrksEffectKind::weirdboy_warpath
             if rule.value == 153:
                 kind = OrksEffectKind::psychic_warpath
@@ -636,8 +620,8 @@ act orks_datasheet_movement(ctx Board board, frm UnitID source) -> OrksDatasheet
     if ability.value == OrksDatasheetMoveAbility::da_jump.value:
         frm jump_rule : BInt<151, 163>
         jump_rule = 151
-        board.shared_actions.orks_datasheet_psychic = orks_datasheet_psychic(board, source, jump_rule)
-        subaction*(board) board.shared_actions.orks_datasheet_psychic
+        board.shared_actions.orks_psychic_test = orks_datasheet_psychic(board, source, jump_rule)
+        subaction*(board) board.shared_actions.orks_psychic_test
         if has_live_model(board[source]):
             grant_orks_effect(board, source, source, 163, OrksEffectKind::jump_deep_strike, 1, SourceDuration::phase, invalid_entity_identity())
             assert(reposition_unit(board, source), "Da Jump requires reserve capacity")
@@ -706,8 +690,8 @@ act orks_disembark_selection(ctx Board board, frm UnitID passenger, frm CarrierL
         if beastscent:
             frm rule : BInt<151, 163>
             rule = 162
-            board.shared_actions.orks_datasheet_psychic = orks_datasheet_psychic(board, carrier.unit, rule)
-            subaction*(board) board.shared_actions.orks_datasheet_psychic
+            board.shared_actions.orks_psychic_test = orks_datasheet_psychic(board, carrier.unit, rule)
+            subaction*(board) board.shared_actions.orks_psychic_test
             frm payload : OrksEffectGrant
             payload.kind = OrksEffectKind::beastscent
             payload.amount = 1

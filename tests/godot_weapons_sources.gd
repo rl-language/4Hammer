@@ -6,8 +6,8 @@ func _initialize():
 func check_weapons_sources():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 37)
-	assert(library.get_observation_schema_version() == 37)
+	assert(library.get_state_schema_version() == 38)
+	assert(library.get_observation_schema_version() == 38)
 	assert(library.get_action_schema_version() == 24)
 	var board = RLCBoard.make()
 	var unit = library.make_infernus_squad()

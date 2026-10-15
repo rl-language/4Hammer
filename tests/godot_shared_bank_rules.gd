@@ -19,7 +19,7 @@ func panel_for(rules, library, action):
 func check_banks():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 37)
+	assert(library.get_state_schema_version() == 38)
 	assert(library.get_action_schema_version() == 24)
 	for bank_index in [1, 2]:
 		var board = RLCBoard.make()

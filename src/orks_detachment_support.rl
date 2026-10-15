@@ -38,10 +38,7 @@ fun orks_psyker_level(Unit unit) -> Int:
 fun orks_psychic_unit_available(Board board, Unit unit, Bool visions) -> Bool:
     if !has_live_model(unit) or (!visions and unit.off_battlefield) or unit.battle_socked or !orks_package(board, unit, OrksDetachment::wurrband) or !unit.has_keyword(Keyword::orks) or !unit.has_keyword(Keyword::psyker):
         return false
-    let spent = 0
-    if unit.orks_psychic_usage.round_stamp.value == board.current_round.value + 1:
-        spent = unit.orks_psychic_usage.spent.value
-    return spent < orks_psyker_level(unit) and (visions and unit.orks_psychic_usage.visions_phase != board.phase_serial.value + 1 or !visions and unit.orks_psychic_usage.roar_phase != board.phase_serial.value + 1)
+    return unit.orks_psychic_usage.budget.available(board.current_round.value + 1, orks_psyker_level(unit)) and (visions and unit.orks_psychic_usage.visions_phase != board.phase_serial.value + 1 or !visions and unit.orks_psychic_usage.roar_phase != board.phase_serial.value + 1)
 
 # Battlefield selectors retain their bounded UnitID contract. Eligibility and
 # spending are shared with reserve/passenger own-unit uses (01.02.04).
@@ -61,6 +58,22 @@ fun orks_roar_has_target(Board board, UnitID source) -> Bool:
             return true
     return false
 
+# All Orks psychic abilities use the same budget/roll and final1 response.
+# Unstable Energies22.03.01; Warphead changes reroll permission, not usage.
+act orks_psychic_test(ctx Board board, frm EntityIdentity subject) -> OrksPsychicTest:
+    frm location = locate_source(board, subject, invalid_entity_identity())
+    assert(location.found, "psychic source missing")
+    frm previous_owner = board.current_decision_maker
+    board.current_decision_maker = source_bank_unit(board, location.bank, location.unit.value).owned_by_player1
+    board.current_roll = roll_spent_round_resource(board, source_bank_unit(board, location.bank, location.unit.value).orks_psychic_usage.budget, board.current_decision_maker, orks_psyker_level(source_bank_unit(board, location.bank, location.unit.value)), unit_has_orks_enhancement(source_bank_unit(board, location.bank, location.unit.value), OrksEnhancement::warphead))
+    subaction*(board) board.current_roll
+    location = locate_source(board, subject, invalid_entity_identity())
+    if location.found and board.current_roll.result == 1:
+        source_bank_unit(board, location.bank, location.unit.value).battle_socked = true
+        board.shared_actions.orks_became_shocked = orks_became_shocked(board, subject)
+        subaction*(board) board.shared_actions.orks_became_shocked
+    board.current_decision_maker = previous_owner
+
 # Wurrband uses one identity-backed psychic frame for all banks. Spend before
 # rolling; a final1 shocks but does not cancel Visions (Unstable Energies).
 # Resolve identity again after children: bank slots are storage, not identity.
@@ -68,26 +81,14 @@ act use_orks_psychic(ctx Board board, frm EntityIdentity subject, frm Bool visio
     frm location = locate_source(board, subject, invalid_entity_identity())
     if !location.found or (!visions and location.bank.value != SourceBank::battlefield.value):
         return
-    frm owner = source_bank_unit(board, location.bank, location.unit.value).owned_by_player1
     frm previous_owner = board.current_decision_maker
-    board.current_decision_maker = owner
-    if source_bank_unit(board, location.bank, location.unit.value).orks_psychic_usage.round_stamp.value != board.current_round.value + 1:
-        source_bank_unit(board, location.bank, location.unit.value).orks_psychic_usage.round_stamp = board.current_round.value + 1
-        source_bank_unit(board, location.bank, location.unit.value).orks_psychic_usage.spent = 0
-    source_bank_unit(board, location.bank, location.unit.value).orks_psychic_usage.spent = source_bank_unit(board, location.bank, location.unit.value).orks_psychic_usage.spent + 1
+    board.current_decision_maker = source_bank_unit(board, location.bank, location.unit.value).owned_by_player1
     if visions:
         source_bank_unit(board, location.bank, location.unit.value).orks_psychic_usage.visions_phase = board.phase_serial.value + 1
     else:
         source_bank_unit(board, location.bank, location.unit.value).orks_psychic_usage.roar_phase = board.phase_serial.value + 1
-    # No CP reroll: the unmeasured free Warphead reroll needs no board selector.
-    board.current_roll = rerollable_dice_roll(board, unit_has_orks_enhancement(source_bank_unit(board, location.bank, location.unit.value), OrksEnhancement::warphead), false, false, owner)
-    subaction*(board) board.current_roll
-    frm psychic_result_snapshot_1 = board.current_roll.result
-    location = locate_source(board, subject, invalid_entity_identity())
-    if location.found and psychic_result_snapshot_1 == 1:
-        source_bank_unit(board, location.bank, location.unit.value).battle_socked = true
-        board.shared_actions.orks_became_shocked = orks_became_shocked(board, subject)
-        subaction*(board) board.shared_actions.orks_became_shocked
+    board.shared_actions.orks_psychic_test = orks_psychic_test(board, subject)
+    subaction*(board) board.shared_actions.orks_psychic_test
     location = locate_source(board, subject, invalid_entity_identity())
     if location.found:
         if visions:

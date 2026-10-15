@@ -151,8 +151,7 @@ enum OrksDetachmentAbility:
 # Per-unit psychic level is spent once per ability per phase and per round,
 # including offboard transfers (Orks Unstable Energies; appendix22.03.01).
 cls OrksPsychicUsage:
-    LinearlyDistributedInt<0, MAX_ROUNDS> round_stamp
-    FixedStat spent
+    RoundResourceBudget budget
     PhaseStamp roar_phase
     PhaseStamp visions_phase
 
