@@ -30,7 +30,7 @@ Use [the procedural reference](doc/11th-edition-core-rules-procedural.txt) as th
 | 14 | Complete within preserved-grid scope | Replace the Fight phase workflow | Implement phase-wide Pile In, alternating fights with the correct starting player, changing eligibility/Fights First, and phase-wide consolidation (pp. 38–43, 87). Test Overrun, newly engaged units and legal passing. |
 | 15 | Complete within deferred-data/visibility scope | Implement the revised core stratagems and actions | Implement each core stratagem's exact cost, timing, targets and effects (pp. 54–58). Include end-of-opponent-Movement Overwatch and end-of-Charge Heroic Intervention. Implement generic action eligibility without inventing unavailable mission actions. |
 | 16 | Complete within documented grid/data scope | Add transport and aircraft systems | Capacity, embarkation, disembarkation modes, emergency procedures, passenger/reserve interactions and Aircraft exceptions implemented and validated (pp. 64–65, 74). Actual datasheet permissions remain task 17. |
-| 17 | Orks audit complete; implementation pending | Integrate army data, Godot and full-game validation | Update supplied new-edition datasheets, faction rules and mission configuration. Orks use up to three distinct detachments, no point/DP accounting, and full CP costs. Regenerate bindings and exercise every changed action through Godot, Python and replay. Run deterministic scenarios, completed games and the sanitized fuzzer; turn every discovered failure into a regression case. |
+| 17 | 54-card Orks implementation and public roster complete; final integration review running | Integrate army data, Godot and full-game validation | Update supplied new-edition datasheets, faction rules and mission configuration. Orks use up to three distinct detachments, no point/DP accounting, and full CP costs. Regenerate bindings and exercise every changed action through Godot, Python and replay. Run deterministic scenarios, completed games and the sanitized fuzzer; turn every discovered failure into a regression case. |
 
 ## Dependencies and execution order
 
@@ -436,13 +436,13 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
   - [x] **17.H2:** Each source-specific ability: Dodge Dis!, Keep Huntin', Mobbed, Bomb Squig and Brutal Impact, with actual event/target/damage/shock consumers.
   - [x] **17.H3:** User-authorized temporary circular proxies for supplied75x42/90x52 oval bases: preserve source axes, use75/90mm long-axis diameters consistently on existing quad anchors and in Godot; exact oval geometry deferred.
   - [x] **17.H4:** Promote completed current adapters into the existing Orks roster; validate actual selection, attachments, combat, saves and full games.
-- [ ] **17.I–N:** War Horde one rule/card at a time; healing/revival; carrier permission/seating and Trukk; special/reactive movement; hit/kill provenance and post-attack effects; psychic systems and their units.
+- [x] **17.I–N:** War Horde one rule/card at a time; healing/revival; carrier permission/seating and Trukk; special/reactive movement; hit/kill provenance and post-attack effects; psychic systems and their units.
   - [x] **17.I1:** War Horde Get Stuck In passive, actual selected-package/ORKS-unit/melee gating and duplicate Sustained Hits choice; implemented/tested alongside17.H4 with shared validation.
   - [x] **17.I2:** War Horde enhancements/upgrades and all six CP cards, validated in the combined ordinary-detachment batch below.
-- [ ] **17.O–P:** Remaining ordinary detachments and every remaining datasheet by dependency family. Include the additional Runt Swarm replacement/hit-interception systems. Preserve oval metadata and use the user-authorized long-axis circle approximation for now; hull/multipart dimensions remain explicit dependencies. Keep grid coordinates.
+- [x] **17.O–P:** Remaining ordinary detachments and every remaining datasheet by dependency family. Include the additional Runt Swarm replacement/hit-interception systems. Preserve oval metadata and use the user-authorized long-axis circle approximation for now; hull/multipart dimensions remain explicit dependencies. Keep grid coordinates.
   - [x] **17.O:** All15 ordinary detachment passives,38 enhancements/upgrades and40 CP cards, including Runt Swarm replacements/interception; see combined completion evidence below.
   - [x] **17.P:** All51 additional standard datasheet adapters, actual carrier seating/permissions and source-specific unit rules are implemented and validated in17.P1–P3; all54 included cards have adapters. Arbitrary public roster selection remains17.Q.
-- [ ] **17.Q:** Complete rendered/headless Godot journeys, combination tests, saves/replays/ML, representative full games and sanitized fuzzing. Fix the measured wrapper retrieval bottleneck and every identified new mistake.
+- [ ] **17.Q:** Complete the arbitrary current-card roster picker, non-rendering combination/integration checks, saves/replays/ML, representative full games and sanitized fuzzing; review errors and simplify shared code. User update2026-10-15 excludes rendered integration and assigns valid-action discovery/wrapper-filtering optimization to the compiler; earlier performance/rendered requirements below are historical and superseded. Fix all other identified mistakes.
 
 **Confirmed work that must be fixed:**17.D resolves the eight-slot Stompa capacity defect with a reviewed13-profile envelope; actual unit loadout quotas/data remain pending; 17.C1 resolves the former positive-OR-only weapon/Hunter predicate defect; other scoped condition consumers remain pending; transport permission OR-lists and universal integer seat costs cannot implement all nine included carrier requirements or grouped Gretchin rounding. Static attack-characteristic getters and boolean bonuses lack several modifier consumers. 17.E resolves generic source-instance event/use/effect tracking alongside legacy timing groups; source-specific reactive movement/shooting handlers remain17.L/M. Healing/revival, psychic budgets, post-shoot hit ledgers, Kommandos formation splitting and Runt Swarm replacement/hit interception need implementation. Thirty datasheets require oval/hull/multipart footprint work or additional dimensions. Batch17.B resolves the point-dependent reserve gate through explicit point-free public configuration. These are requirements from source/code inspection, not newly passing tests.
 
@@ -1225,3 +1225,97 @@ geometry approximations and may constrain placement in the legacy mission.
 Exact hull/oval geometry, points and Forge World/Legends remain excluded by the
 user. Preserve all identified remaining issues as mandatory fixes;54 adapters
 alone do not certify complete edition/mission/host integration.
+
+###17.Q — Public roster and shared-bank integration (2026-10-15)
+
+Read [the public roster and integration guide](doc/orks-custom-roster.md).
+User scope excludes rendering and valid-action-discovery optimization; the latter
+belongs to the compiler. Earlier performance/rendered obligations are superseded.
+Points, detachment prices, Forge World/Legends and exact oval/hull geometry stay
+excluded. Mission-specific new-edition scoring still needs mission data; public
+full-game checks use the explicitly labelled legacy four-marker fixture.
+
+- [x] Public custom selection for all54 included cards, source-supported model
+  counts and per-model equipment, full loadout quotas, cancellation/removal,
+  copy/storage/identity limits, all three detachments and actual Warlord handoff.
+- [x] Share effective detachment-granted Battleline copy limits at draft/final
+  validation, preserving three/six limits and enhancement/Epic restrictions.
+- [x] Require one connected coherent live-model group by the user's explicit
+  ruling, while retaining printed neighbour/distance checks (core p14).
+- [x] Use generated ownership and UTF-8 for native Godot strings. The former
+  native-buffer leak and corrupted non-ASCII names have regressions.
+- [x] Share own-unit rules across battlefield/reserves/passengers: shock and
+  Breakin' Heads, psychic budgets/rolls, Watchin', Dread Power, Surly, healing,
+  mortal/FNP/death processing, source grants and turn/phase resets. Remaining
+  offboard selectors only choose real storage; genuine geometry/capacity stays
+  explicit. No temporary battlefield unit is fabricated for an offboard effect.
+- [x] Destroy an unplaceable carrier's passengers before removing that carrier;
+  saved games no longer retain dangling passenger identities. Validate saved
+  Squig Launcha hits as a subset of total successful hits.
+- [x] Source audits:54 cards,63 profiles,253 weapon rows;67 identities/41
+  attachment edges;15 detachments/38 options/13 Upgrade tags/40 CP cards.
+- [x] Four fresh native public-roster games include all54 cards across eight
+  armies and all15 detachments. They finish in985/1,163/1,053/714 actions,
+  terminal owner−4, and all four terminal saves restore successfully. These
+  roster/engine journeys do not mean every source ability fired in each game.
+- [x] Bounded Gym observations remain finite for20 steps:31,319 candidates,
+  16,395,288 observations, seed40000. No new custom lifecycle hooks, Python test
+  migration, compilation cache or product discovery optimization was introduced.
+- [x] The79 new native cases pass the final ASAN/UBSAN/leak sweep (80 runs
+  including empty input). Semantic mutation performs175 runs/62s; active
+  game-action mutation uses a fresh73-byte seed and performs62 runs/62s.
+  Both preserved memory inputs also pass. Fixed replay execution and mutation
+  campaigns are separate evidence.
+- [x] Twenty matching focused Godot scripts pass, including custom roster,
+  shared-bank selectors, string ownership and existing rule controls. Source
+  audits,126-action/67-slot frame audit and20-step finite Gym pass at schema37.
+- [x] Replace Python test orchestration entirely with native CMake discovery,
+  RLC library compilation (no wrapper/`--pylib`) and a C runner per assertion;
+  all1,184 assertions and the fixture pass (354.69s total,342.76s compilation).
+  Error/skip contracts pass; `ldd` and undefined-symbol inspection show no
+  Python dependency. A case also passes with an empty environment and no
+  Python on PATH. Repeating a filtered run takes0.16s with no recompilation.
+- [x] All four schema37 completed-game binaries replay with ASAN/UBSAN/leak
+  checks enabled (77.7/138.8/136.4/92.4s), without diagnostics.
+- [ ] Complete the broad Godot host walkthrough; the1,184-case native CTest
+  result,20 focused headless scripts and four sanitized game replays are done.
+
+Artifacts are under `/workspace/4hammer-validation/orks-q`. The unoptimized
+CTest compilation fixture succeeds with-j4 (693.873s, peak1,866,536KiB under
+concurrent validation). After correcting only an assertion in the new ordering
+fixture, its matching native library was rebuilt without changing wrapper/API
+layout (440.077s, peak1,865,920KiB). The optimized sanitizer build uses-O2/-g/-j4
+(376.268s, peak2,289,280KiB). These concurrent timings are not controlled speed
+comparisons. AddressSanitizer's supported explicit addr2line configuration now
+provides source/function diagnostics without an external-symbolizer warning.
+
+The ordering fixture initially assumed queued removals happened before the next
+pending death trigger. Its corrected assertion checks the chosen bank's trigger
+flag first and both archives at completion. Native and sanitizer results agree;
+the engine ordering was preserved. Godot fixtures were corrected to finish
+available enhancement selection, read the shared hit-dice collector, use typed
+Trukk constructor arguments and label the death-bank enum once. Those were test
+or integration defects, not reasons to weaken rule assertions.
+
+The frame audit passes126 action routines/67 shared slots, zero duplicate frames
+and zero nested re-entry: Game37,648 / Board35,472 inline bytes. This removes four
+frame types and3,016 Game bytes relative to the first custom-roster draft. That completed validation used state/observation36, action24 and next-state37.
+The final Command-scan follow-up below supersedes that internal-state schema.
+
+
+**Final Command-scan follow-up:** the remaining three Command Battle-shock
+loops now share one bank scan and freeze recovery eligibility for all banks at
+the STEP start (core p30; appendix01.02.04). Previously the reserve/passenger
+loops sampled eligibility later. A new regression checks all three banks and
+specifically simulates an offboard unit gaining shock during an earlier unit's
+test: a later passed roll must not clear that newly gained shock. This adds one
+assertion (1,184 total;79 new in17.Q). State/observation37, action24 and next-state38
+require newly matching native/Python/Godot artifacts. The schema37 frame audit
+reports Game37,696 / Board35,472 bytes; candidate count stays31,319 and bounded
+observation size is16,395,288. All1,184 assertions passed with the prior runner;
+the user then required removing Python from CTest entirely. The replacement
+native runner and fresh library pass all1,184 assertions. Native contract
+fixtures confirm false results, crashes and XPASS fail; XFAIL returns77; unknown
+names and malformed signatures/manifests are rejected. The old Python runners
+were removed rather than retained as alternate test entrypoints. Historical
+state36 build timings above are not speed comparisons with the new test path.
