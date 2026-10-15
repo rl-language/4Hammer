@@ -13,8 +13,8 @@ func press(panel, label):
 func check_detachments():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 34)
-	assert(library.get_action_schema_version() == 22)
+	assert(library.get_state_schema_version() == 35)
+	assert(library.get_action_schema_version() == 23)
 	var panel = VBoxContainer.new()
 	panel.set_script(load("res://MultipleChoises.gd"))
 	var buttons = VBoxContainer.new()

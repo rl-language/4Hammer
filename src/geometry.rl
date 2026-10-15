@@ -46,6 +46,8 @@ fun geometry_point_on_grid(StoredTerrainPoint point) -> Bool:
     return point.x.value >= 0 and point.x.value < MAX_TERRAIN_X and point.y.value >= 0 and point.y.value < MAX_TERRAIN_Y and point.z.value >= 0 and point.z.value <= BOARD_HEIGHT
 
 cls ModelGeometry:
+    # Explicit user-provided Use-model circular hull proxy;0 uses source base.
+    LinearlyDistributedInt<0, 1001> proxy_diameter_mm
     GridElevation elevation
     Rotation rotation
     # Ovals use explicit source long-axis circle proxies by user policy.

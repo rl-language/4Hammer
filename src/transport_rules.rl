@@ -5,6 +5,12 @@ import movement_rules
 fun passenger_model_permitted(Model carrier, Model passenger) -> Bool:
     if !carrier.transport_permissions_known or carrier.transport_capacity.value == 0 or !carrier.has_keyword(Keyword::transport):
         return false
+    if carrier.orks_transport_permissions and (!passenger.has_keyword(Keyword::orks) or !passenger.has_keyword(Keyword::infantry)):
+        return false
+    if carrier.beast_snagga_passengers_only and !passenger.has_keyword(Keyword::beast_snagga):
+        return false
+    if carrier.forbid_ghaz_passenger and model_matches_datasheet(passenger, OrksDatasheet::ghazghkull_thraka):
+        return false
     let permitted = carrier.permitted_passenger_keywords.empty()
     for permission in range(carrier.permitted_passenger_keywords.size()):
         permitted = permitted or passenger.has_keyword(carrier.permitted_passenger_keywords[permission])
@@ -225,7 +231,7 @@ fun search_transport_setup(Board board, Unit candidate, CarrierLocation location
                     break
                 # Equal footprints have identical spatial constraints; avoid
                 # equivalent permutations without restricting heterogeneous bases.
-                if depth > 0 and candidate[depth].profile.base_size() == candidate[depth - 1].profile.base_size() and candidate[depth].geometry.elevation == candidate[depth - 1].geometry.elevation:
+                if depth > 0 and candidate[depth].base_radius_micrometres() == candidate[depth - 1].base_radius_micrometres() and candidate[depth].geometry.elevation == candidate[depth - 1].geometry.elevation:
                     if grid_y * BOARD_WIDTH + grid_x <= candidate[depth - 1].position.y.value * BOARD_WIDTH + candidate[depth - 1].position.x.value:
                         continue
                 candidate[depth].position = make_board_position(grid_x, grid_y)
@@ -263,7 +269,7 @@ fun required_disembark_mode(Board board, Unit passenger, CarrierLocation carrier
     assert(carrier.found and !carrier.reserve, "disembark requires battlefield carrier")
     ref carrier_unit = board[carrier.unit]
     if carrier_unit.history.selected_move_phase == board.phase_serial.value + 1 and (carrier_unit.history.move_kind == MovementKind::normal or carrier_unit.history.move_kind == MovementKind::ingress):
-        if unit_orks_effect(board, carrier_unit, OrksEffectKind::assault_disembark) > 0:
+        if unit_orks_effect(board, carrier_unit, OrksEffectKind::assault_disembark) > 0 or carrier_unit.has_ability(AbilityKind::gut_hatch) and carrier_unit.history.move_kind == MovementKind::normal:
             return DisembarkMode::assault
         return DisembarkMode::rapid
     if (carrier_unit.history.selected_move_phase != board.phase_serial.value + 1 or carrier_unit.history.move_kind == MovementKind::stationary) and transport_has_setup(board, passenger, carrier, DisembarkMode::tactical, -1):

@@ -76,6 +76,50 @@ enum AbilityKind:
     thatll_learn_ya
     super_runts
 
+    mobile_fortress
+    raucous_occupants
+    fortification_rules
+    ramshackle_cover
+    boom_bomb
+    kunnin_infiltrator
+    deff_from_shadows
+    burna_bomb
+    strafing_run
+    get_back_in_da_race
+    fuel_mixa_grot
+    deff_from_above
+    aerial_manoover
+    grand_warlords_ladz
+    makari_banner
+    prophet_waaagh
+    gut_hatch
+    big_an_stompy
+    mobile_arsenal
+    fully_loaded_butchery
+    tramplasquig_charge
+    beastscent
+    kill_rig_warpath
+    found_em
+    taktikal_know_wotz
+    nowhere_to_hide
+    bomb_squig
+    madcap_artillery
+    gut_hatch
+    big_an_shooty
+    intimidating_motivation
+    nazdregs_know_wotz
+    supreme_kunnin
+    squig_barrage
+    idol_of_belligerence
+    pilin_out
+    drive_by_skorchin
+    speednob_support
+    bust_em
+    weak_spot
+    full_throttle
+    da_jump
+    weirdboy_warpath
+
     fun equal(AbilityKind other) -> Bool:
         return self.value == other.value
 
@@ -198,6 +242,8 @@ enum Keyword:
     jump_pack
     grots
     runtherd
+
+    frame
 
     fun equal(Keyword other) -> Bool:
         return self.value == other.value
@@ -887,6 +933,318 @@ enum Profile:
         Int feel_no_pain = 10
         Float base_size = 50.0
 
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Battlewagon; Use-model hulls require an explicit proxy input.
+    orks_battlewagon:
+        Int movement = 10
+        Int thoughness = 11
+        Int save = 3
+        Int wounds = 16
+        Int leadership = 7
+        Int control = 5
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 0.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Big-ed-Bossbunka; Use-model hulls require an explicit proxy input.
+    orks_big_ed_bossbunka:
+        Int movement = 0
+        Int thoughness = 10
+        Int save = 3
+        Int wounds = 12
+        Int leadership = 7
+        Int control = 0
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 0.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Blitza-bommer
+    orks_blitza_bommer:
+        Int movement = 0
+        Int thoughness = 9
+        Int save = 3
+        Int wounds = 12
+        Int leadership = 7
+        Int control = 0
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 120.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Boss-Snikrot
+    orks_boss_snikrot:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 6
+        Int leadership = 6
+        Int control = 1
+        Int invuln_save = 5
+        Int feel_no_pain = 10
+        Float base_size = 40.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Burna-bommer
+    orks_burna_bommer:
+        Int movement = 0
+        Int thoughness = 9
+        Int save = 3
+        Int wounds = 12
+        Int leadership = 7
+        Int control = 0
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 120.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Dakkajet
+    orks_dakkajet:
+        Int movement = 0
+        Int thoughness = 9
+        Int save = 3
+        Int wounds = 12
+        Int leadership = 7
+        Int control = 0
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 120.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Deffkilla-Wartrike
+    orks_deffkilla_wartrike:
+        Int movement = 12
+        Int thoughness = 6
+        Int save = 4
+        Int wounds = 9
+        Int leadership = 6
+        Int control = 3
+        Int invuln_save = 5
+        Int feel_no_pain = 10
+        Float base_size = 150.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Deffkoptas
+    orks_deffkoptas:
+        Int movement = 12
+        Int thoughness = 6
+        Int save = 4
+        Int wounds = 4
+        Int leadership = 7
+        Int control = 2
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 75.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka
+    orks_ghazghkull_thraka:
+        Int movement = 8
+        Int thoughness = 10
+        Int save = 2
+        Int wounds = 16
+        Int leadership = 6
+        Int control = 4
+        Int invuln_save = 4
+        Int feel_no_pain = 10
+        Float base_size = 80.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Gorkanaut
+    orks_gorkanaut:
+        Int movement = 9
+        Int thoughness = 12
+        Int save = 2
+        Int wounds = 20
+        Int leadership = 7
+        Int control = 8
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 170.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Gunwagon; Use-model hulls require an explicit proxy input.
+    orks_gunwagon:
+        Int movement = 10
+        Int thoughness = 12
+        Int save = 3
+        Int wounds = 16
+        Int leadership = 7
+        Int control = 5
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 0.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig
+    orks_hunta_rig:
+        Int movement = 10
+        Int thoughness = 10
+        Int save = 3
+        Int wounds = 16
+        Int leadership = 7
+        Int control = 5
+        Int invuln_save = 6
+        Int feel_no_pain = 5
+        Float base_size = 170.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Kill-Rig
+    orks_kill_rig:
+        Int movement = 10
+        Int thoughness = 10
+        Int save = 3
+        Int wounds = 16
+        Int leadership = 7
+        Int control = 5
+        Int invuln_save = 6
+        Int feel_no_pain = 5
+        Float base_size = 170.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos
+    orks_kommando:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 1
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos
+    orks_kommando_nob:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 3
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 32.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Mek-Gunz; Use-model hulls require an explicit proxy input.
+    orks_mek_gunz:
+        Int movement = 5
+        Int thoughness = 6
+        Int save = 4
+        Int wounds = 6
+        Int leadership = 8
+        Int control = 2
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 0.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Morkanaut
+    orks_morkanaut:
+        Int movement = 9
+        Int thoughness = 12
+        Int save = 2
+        Int wounds = 20
+        Int leadership = 7
+        Int control = 8
+        Int invuln_save = 5
+        Int feel_no_pain = 10
+        Float base_size = 170.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg
+    orks_nazdreg:
+        Int movement = 5
+        Int thoughness = 7
+        Int save = 2
+        Int wounds = 8
+        Int leadership = 6
+        Int control = 1
+        Int invuln_save = 5
+        Int feel_no_pain = 10
+        Float base_size = 60.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Rukkatrukk-Squigbuggies
+    orks_rukkatrukk_squigbuggies:
+        Int movement = 12
+        Int thoughness = 7
+        Int save = 4
+        Int wounds = 9
+        Int leadership = 7
+        Int control = 3
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 150.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Stompa; Use-model hulls require an explicit proxy input.
+    orks_stompa:
+        Int movement = 10
+        Int thoughness = 14
+        Int save = 2
+        Int wounds = 30
+        Int leadership = 6
+        Int control = 12
+        Int invuln_save = 5
+        Int feel_no_pain = 10
+        Float base_size = 0.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Trukk; Use-model hulls require an explicit proxy input.
+    orks_trukk:
+        Int movement = 12
+        Int thoughness = 8
+        Int save = 4
+        Int wounds = 10
+        Int leadership = 7
+        Int control = 2
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 0.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Warbuggies
+    orks_warbuggies:
+        Int movement = 12
+        Int thoughness = 7
+        Int save = 4
+        Int wounds = 9
+        Int leadership = 7
+        Int control = 3
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 150.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Wartrakks
+    orks_wartrakks:
+        Int movement = 12
+        Int thoughness = 6
+        Int save = 4
+        Int wounds = 7
+        Int leadership = 7
+        Int control = 3
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 105.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Wazbom-Blastajet
+    orks_wazbom_blastajet:
+        Int movement = 0
+        Int thoughness = 9
+        Int save = 3
+        Int wounds = 12
+        Int leadership = 7
+        Int control = 0
+        Int invuln_save = 6
+        Int feel_no_pain = 10
+        Float base_size = 120.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Wazdakka-Gutsmek
+    orks_wazdakka_gutsmek:
+        Int movement = 14
+        Int thoughness = 8
+        Int save = 3
+        Int wounds = 10
+        Int leadership = 6
+        Int control = 3
+        Int invuln_save = 4
+        Int feel_no_pain = 10
+        Float base_size = 120.0
+
+    # https://wahapedia.ru/wh40k11ed/factions/orks/Weirdboy
+    orks_weirdboy:
+        Int movement = 6
+        Int thoughness = 5
+        Int save = 5
+        Int wounds = 4
+        Int leadership = 7
+        Int control = 1
+        Int invuln_save = 10
+        Int feel_no_pain = 10
+        Float base_size = 50.0
+
     fun equal(Profile other) -> Bool:
         return self.value == other.value
 
@@ -907,6 +1265,34 @@ fun profile_base_width(Profile profile) -> Float:
         return 52.0
     if profile == Profile::orks_warbiker or profile == Profile::orks_biker_nob:
         return 42.0
+    if profile == Profile::orks_blitza_bommer:
+        return 92.0
+    if profile == Profile::orks_burna_bommer:
+        return 92.0
+    if profile == Profile::orks_dakkajet:
+        return 92.0
+    if profile == Profile::orks_deffkilla_wartrike:
+        return 95.0
+    if profile == Profile::orks_deffkoptas:
+        return 42.0
+    if profile == Profile::orks_gorkanaut:
+        return 109.0
+    if profile == Profile::orks_hunta_rig:
+        return 109.0
+    if profile == Profile::orks_kill_rig:
+        return 109.0
+    if profile == Profile::orks_morkanaut:
+        return 109.0
+    if profile == Profile::orks_rukkatrukk_squigbuggies:
+        return 95.0
+    if profile == Profile::orks_warbuggies:
+        return 95.0
+    if profile == Profile::orks_wartrakks:
+        return 70.0
+    if profile == Profile::orks_wazbom_blastajet:
+        return 92.0
+    if profile == Profile::orks_wazdakka_gutsmek:
+        return 92.0
     return profile.base_size()
 
 enum Stratagem:
@@ -1085,4 +1471,4 @@ enum Stratagem:
 # Original shape metadata survives the user-authorized long-axis circle proxy.
 # Sources: Orks/Squighog-Boyz75x42 and90x52mm; exact ovals are deferred.
 fun profile_has_oval_base(Profile profile) -> Bool:
-    return profile == Profile::orks_squighog_boy or profile == Profile::orks_nob_on_smasha_squig or profile == Profile::orks_warbiker or profile == Profile::orks_biker_nob
+    return profile == Profile::orks_squighog_boy or profile == Profile::orks_nob_on_smasha_squig or profile == Profile::orks_warbiker or profile == Profile::orks_biker_nob or profile == Profile::orks_blitza_bommer or profile == Profile::orks_burna_bommer or profile == Profile::orks_dakkajet or profile == Profile::orks_deffkilla_wartrike or profile == Profile::orks_deffkoptas or profile == Profile::orks_gorkanaut or profile == Profile::orks_hunta_rig or profile == Profile::orks_kill_rig or profile == Profile::orks_morkanaut or profile == Profile::orks_rukkatrukk_squigbuggies or profile == Profile::orks_warbuggies or profile == Profile::orks_wartrakks or profile == Profile::orks_wazbom_blastajet or profile == Profile::orks_wazdakka_gutsmek

@@ -34,6 +34,10 @@ cls Model:
     # Bank/staged offboard units have no battlefield visibility/ranges
     # (supplied appendix01.02.04, transport pp.64–65).
     Bool off_battlefield
+    Bool orks_transport_permissions
+    Bool beast_snagga_passengers_only
+    Bool forbid_ghaz_passenger
+    Bool blastajet_force_field
     Bool transport_permissions_known
     LinearlyDistributedInt<0, 33> transport_capacity
     LinearlyDistributedInt<1, 33> transport_space
@@ -116,8 +120,10 @@ cls Model:
     fun is_alive() -> Bool:
         return self.state == ModelState::normal and self.wounds_left() > 0
 
+    # Core p12 measurement, using an intentional temporary circle for hulls
+    # authorized by the user; Orks Use-model cards do not print dimensions.
     fun base_size_in_inches() -> Float:
-        return self.profile.base_size() / 25.4
+        return self.base_radius_micrometres() / 12700.0
 
     fun is_below_half_wounds() -> Bool:
         return self.suffered_wounds * 2 > self.profile.wounds()
@@ -129,6 +135,8 @@ cls Model:
                 return true
             if keyword == Keyword::fly and self.orks_effects[effect].kind.value == OrksEffectKind::lifted.value:
                 return true
+        if self.blastajet_force_field and keyword == Keyword::smoke:
+            return false
         # Painboss Runnin' wiv da Herd: no keyword spread to other models.
         if self.painboss_mounted_attachment:
             if keyword == Keyword::infantry:
@@ -154,6 +162,14 @@ cls Model:
     # Properties stay readable to explicit death hooks; active use is gated
     # by Unit.has_ability/is_alive (p.87). Avoid an owning temporary here.
     fun has_ability(AbilityKind kind) -> Bool:
+        if kind == AbilityKind::deep_strike:
+            for intrinsic in range(self.abilities.size()):
+                if self.abilities[intrinsic] == AbilityKind::nazdregs_know_wotz:
+                    return true
+        if kind == AbilityKind::deep_strike:
+            for jump_effect in range(self.orks_effects.size()):
+                if self.orks_effects[jump_effect].kind.value == OrksEffectKind::jump_deep_strike.value:
+                    return true
         for effect in range(self.orks_effects.size()):
             if kind == AbilityKind::keep_huntin and self.orks_effects[effect].kind.value == OrksEffectKind::borrowed_keep_huntin.value or kind == AbilityKind::intimidating_motivation and self.orks_effects[effect].kind.value == OrksEffectKind::borrowed_intimidation.value:
                 return true
@@ -199,6 +215,8 @@ cls Model:
     # Existing profile diameters are millimetres; retain their circular fixture
     # interpretation explicitly. Hull/oval data needs a supplied footprint (p.9/62).
     fun base_radius_micrometres() -> Float:
+        if self.geometry.proxy_diameter_mm.value > 0:
+            return float(self.geometry.proxy_diameter_mm.value) * 500.0
         return self.profile.base_size() * 500.0
 
     # Nearest points of circular bases, clamped to zero for intersecting bases
@@ -235,10 +253,11 @@ cls Model:
         let vertical = float(self.vertical_distance_micrometres(model))
         return sqrt(horizontal * horizontal + vertical * vertical) / float(MICROMETRES_PER_INCH)
 
+    # Orks/Big-ed-Bossbunka and Aircraft print M-; modifiers cannot change it.
     # Effective model characteristics retain one printed arithmetic policy
     # (appendix02.02.01); source selection and expiry are separate consumers.
     fun effective_movement(Int base) -> Int:
-        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, false, 4 * int(self.painboss_mounted_attachment) + 2 * int(self.orks_enhancement.value == OrksEnhancement::cybork_boosta.value))
+        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, self.profile.movement() == 0, 4 * int(self.painboss_mounted_attachment) + 2 * int(self.orks_enhancement.value == OrksEnhancement::cybork_boosta.value))
 
     # Multiple Toughness uses each model's effective value (appendix05.02.01).
     fun effective_toughness() -> Int:
@@ -250,8 +269,11 @@ cls Model:
 
     # Legacy profiles use >6 for no InSv. This is '-', not a modifiable save
     # that a bonus can turn into an invulnerable permission (appendix02.02.01).
+    # Orks/Wazbom-Blastajet Blastajet Force Field is selected equipment.
     fun effective_invulnerable_save() -> Int:
         let base = self.profile.invuln_save()
+        if self.blastajet_force_field:
+            base = min(base, 5)
         if self.is_riled_up():
             base = min(base, 5)
         for effect in range(self.orks_effects.size()):
@@ -272,7 +294,7 @@ cls Model:
 
     # Battle-shocked '-' OC is handled by the unit before this query (p.9).
     fun effective_objective_control() -> Int:
-        return effective_characteristic_value(self.profile.control(), ModifiedCharacteristic::objective_control, self.characteristic_modifiers, false)
+        return effective_characteristic_value(self.profile.control(), ModifiedCharacteristic::objective_control, self.characteristic_modifiers, self.has_keyword(Keyword::aircraft))
 
     # Damaged X applies at equal-or-fewer remaining wounds, including retained
     # Fight on Death models. Source: core ability24.39, reproduced in the

@@ -563,5 +563,5 @@ fun orks_passenger_space(Unit unit) -> Int:
         if model_matches_datasheet(unit[member], OrksDatasheet::gretchin):
             gretchin = gretchin + 1
         else:
-            ordinary = ordinary + unit[member].transport_space.value
+            ordinary = ordinary + max(unit[member].transport_space.value, 2 * int(unit[member].has_keyword(Keyword::mega_armour) or unit[member].has_keyword(Keyword::jump_pack)))
     return ordinary + (gretchin + 1) / 2

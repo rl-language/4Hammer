@@ -1,4 +1,5 @@
 import full_game
+import orks_remaining_data
 
 # ANTI grants in the temporary attack list must obey their source exclusion,
 # just as selected/intrinsic instances do (p.79; appendix02.05.01).
@@ -13361,3 +13362,461 @@ fun test_orks17p2_repair_reuses_prototype_across_turns() -> Bool:
             repair.choose_mek_repair_model(board, damage_test_model(0))
             repair.quantity(board, attack_test_die(1))
     return board.source_instances.size() == original_sources + 1 and model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 2 and valid_source_foundations(board)
+
+
+# Final25 standard Orks datasheets: printed profiles and procedural consumers.
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Battlewagon: literal printed profile/InSv/FNP.
+fun test_orks17p3_battlewagon_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_battlewagon, 10, 11, 3, 6, 16, 7, 5, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-ed-Bossbunka: literal printed profile/InSv/FNP.
+fun test_orks17p3_big_ed_bossbunka_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_big_ed_bossbunka, 0, 10, 3, 10, 12, 7, 0, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Blitza-bommer: literal printed profile/InSv/FNP.
+fun test_orks17p3_blitza_bommer_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_blitza_bommer, 0, 9, 3, 6, 12, 7, 0, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Boss-Snikrot: literal printed profile/InSv/FNP.
+fun test_orks17p3_boss_snikrot_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_boss_snikrot, 6, 5, 5, 5, 6, 6, 1, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Burna-bommer: literal printed profile/InSv/FNP.
+fun test_orks17p3_burna_bommer_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_burna_bommer, 0, 9, 3, 6, 12, 7, 0, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Dakkajet: literal printed profile/InSv/FNP.
+fun test_orks17p3_dakkajet_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_dakkajet, 0, 9, 3, 6, 12, 7, 0, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deffkilla-Wartrike: literal printed profile/InSv/FNP.
+fun test_orks17p3_deffkilla_wartrike_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_deffkilla_wartrike, 12, 6, 4, 5, 9, 6, 3, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deffkoptas: literal printed profile/InSv/FNP.
+fun test_orks17p3_deffkoptas_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_deffkoptas, 12, 6, 4, 6, 4, 7, 2, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka: literal printed profile/InSv/FNP.
+fun test_orks17p3_ghazghkull_thraka_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_ghazghkull_thraka, 8, 10, 2, 4, 16, 6, 4, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Gorkanaut: literal printed profile/InSv/FNP.
+fun test_orks17p3_gorkanaut_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_gorkanaut, 9, 12, 2, 6, 20, 7, 8, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Gunwagon: literal printed profile/InSv/FNP.
+fun test_orks17p3_gunwagon_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_gunwagon, 10, 12, 3, 6, 16, 7, 5, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig: literal printed profile/InSv/FNP.
+fun test_orks17p3_hunta_rig_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_hunta_rig, 10, 10, 3, 6, 16, 7, 5, 5)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Kill-Rig: literal printed profile/InSv/FNP.
+fun test_orks17p3_kill_rig_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_kill_rig, 10, 10, 3, 6, 16, 7, 5, 5)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos: literal printed profile/InSv/FNP.
+fun test_orks17p3_kommando_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_kommando, 6, 5, 5, 10, 1, 7, 1, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos: literal printed profile/InSv/FNP.
+fun test_orks17p3_kommando_nob_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_kommando_nob, 6, 5, 5, 10, 3, 7, 1, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Mek-Gunz: literal printed profile/InSv/FNP.
+fun test_orks17p3_mek_gunz_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_mek_gunz, 5, 6, 4, 6, 6, 8, 2, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Morkanaut: literal printed profile/InSv/FNP.
+fun test_orks17p3_morkanaut_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_morkanaut, 9, 12, 2, 5, 20, 7, 8, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg: literal printed profile/InSv/FNP.
+fun test_orks17p3_nazdreg_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_nazdreg, 5, 7, 2, 5, 8, 6, 1, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Rukkatrukk-Squigbuggies: literal printed profile/InSv/FNP.
+fun test_orks17p3_rukkatrukk_squigbuggies_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_rukkatrukk_squigbuggies, 12, 7, 4, 6, 9, 7, 3, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Stompa: literal printed profile/InSv/FNP.
+fun test_orks17p3_stompa_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_stompa, 10, 14, 2, 5, 30, 6, 12, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Trukk: literal printed profile/InSv/FNP.
+fun test_orks17p3_trukk_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_trukk, 12, 8, 4, 6, 10, 7, 2, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warbuggies: literal printed profile/InSv/FNP.
+fun test_orks17p3_warbuggies_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_warbuggies, 12, 7, 4, 6, 9, 7, 3, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wartrakks: literal printed profile/InSv/FNP.
+fun test_orks17p3_wartrakks_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_wartrakks, 12, 6, 4, 6, 7, 7, 3, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wazbom-Blastajet: literal printed profile/InSv/FNP.
+fun test_orks17p3_wazbom_blastajet_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_wazbom_blastajet, 0, 9, 3, 6, 12, 7, 0, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wazdakka-Gutsmek: literal printed profile/InSv/FNP.
+fun test_orks17p3_wazdakka_gutsmek_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_wazdakka_gutsmek, 14, 8, 3, 4, 10, 6, 3, 10)
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Weirdboy: literal printed profile/InSv/FNP.
+fun test_orks17p3_weirdboy_profile() -> Bool:
+    return orks17h1_profile_values(Profile::orks_weirdboy, 6, 5, 5, 10, 4, 7, 1, 10)
+
+# Test-only fixed constructors keep army-specific choices explicit. The large
+# circular hulls are knowingly approximate by user instruction2026-10-15.
+fun orks17p3_koptas(Int count, Int swaps) -> Unit:
+    let equipment : OrksVehicleSwaps
+    for index in range(count):
+        equipment.append(index < swaps)
+    return make_orks_deffkoptas(equipment)
+
+fun orks17p3_buggies(Int count, Int swaps) -> Unit:
+    let equipment : OrksVehicleSwaps
+    for index in range(count):
+        equipment.append(index < swaps)
+    return make_orks_warbuggies(equipment)
+
+fun orks17p3_guns(Int count, OrksMekGun gun) -> Unit:
+    let guns : OrksMekGuns
+    for index in range(count):
+        guns.append(gun)
+    return make_orks_mek_gunz(guns, 0)
+
+fun orks17p3_kommandos() -> Unit:
+    let equipment : OrksKommandoLoadout
+    equipment.resize(10)
+    return make_orks_kommandos(equipment)
+
+# All25 adapter families coexist in a serializable roster without legacy data.
+fun orks17p3_units() -> UnitVector:
+    let units : UnitVector
+    units.append(make_orks_battlewagon(0, 4, true, true))
+    units.append(make_orks_big_ed_bossbunka(0, 3))
+    units.append(make_orks_blitza_bommer())
+    units.append(make_orks_boss_snikrot())
+    units.append(make_orks_burna_bommer(true))
+    units.append(make_orks_dakkajet(true))
+    units.append(make_orks_deffkilla_wartrike())
+    units.append(orks17p3_koptas(6, 2))
+    units.append(make_orks_ghazghkull_thraka())
+    units.append(make_orks_gorkanaut())
+    units.append(make_orks_gunwagon(0, 4, true, true, true, OrksGunwagonGun::kannon))
+    units.append(make_orks_hunta_rig())
+    units.append(make_orks_kill_rig())
+    units.append(orks17p3_kommandos())
+    units.append(orks17p3_guns(3, OrksMekGun::smasha_gun))
+    units.append(make_orks_morkanaut())
+    units.append(make_orks_nazdreg())
+    units.append(make_orks_rukkatrukk_squigbuggies(2))
+    units.append(make_orks_stompa(0))
+    units.append(make_orks_trukk(0, true, OrksTrukkExtra::buzzsaw))
+    units.append(orks17p3_buggies(2, 1))
+    units.append(make_orks_wartrakks(2))
+    units.append(make_orks_wazbom_blastajet(true, true, true))
+    units.append(make_orks_wazdakka_gutsmek())
+    units.append(make_orks_weirdboy())
+    return units
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Battlewagon: named metadata/loadout coherence.
+fun test_orks17p3_battlewagon_factory_metadata() -> Bool:
+    let unit = make_orks_battlewagon(0, 4, true, true)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::battlewagon.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-ed-Bossbunka: named metadata/loadout coherence.
+fun test_orks17p3_big_ed_bossbunka_factory_metadata() -> Bool:
+    let unit = make_orks_big_ed_bossbunka(0, 3)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::big_ed_bossbunka.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Blitza-bommer: named metadata/loadout coherence.
+fun test_orks17p3_blitza_bommer_factory_metadata() -> Bool:
+    let unit = make_orks_blitza_bommer()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::blitza_bommer.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Boss-Snikrot: named metadata/loadout coherence.
+fun test_orks17p3_boss_snikrot_factory_metadata() -> Bool:
+    let unit = make_orks_boss_snikrot()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::boss_snikrot.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Burna-bommer: named metadata/loadout coherence.
+fun test_orks17p3_burna_bommer_factory_metadata() -> Bool:
+    let unit = make_orks_burna_bommer(true)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::burna_bommer.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Dakkajet: named metadata/loadout coherence.
+fun test_orks17p3_dakkajet_factory_metadata() -> Bool:
+    let unit = make_orks_dakkajet(true)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::dakkajet.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deffkilla-Wartrike: named metadata/loadout coherence.
+fun test_orks17p3_deffkilla_wartrike_factory_metadata() -> Bool:
+    let unit = make_orks_deffkilla_wartrike()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::deffkilla_wartrike.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deffkoptas: named metadata/loadout coherence.
+fun test_orks17p3_deffkoptas_factory_metadata() -> Bool:
+    let unit = orks17p3_koptas(6, 2)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::deffkoptas.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka: named metadata/loadout coherence.
+fun test_orks17p3_ghazghkull_thraka_factory_metadata() -> Bool:
+    let unit = make_orks_ghazghkull_thraka()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::ghazghkull_thraka.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Gorkanaut: named metadata/loadout coherence.
+fun test_orks17p3_gorkanaut_factory_metadata() -> Bool:
+    let unit = make_orks_gorkanaut()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::gorkanaut.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Gunwagon: named metadata/loadout coherence.
+fun test_orks17p3_gunwagon_factory_metadata() -> Bool:
+    let unit = make_orks_gunwagon(0, 4, true, true, true, OrksGunwagonGun::kannon)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::gunwagon.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig: named metadata/loadout coherence.
+fun test_orks17p3_hunta_rig_factory_metadata() -> Bool:
+    let unit = make_orks_hunta_rig()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::hunta_rig.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Kill-Rig: named metadata/loadout coherence.
+fun test_orks17p3_kill_rig_factory_metadata() -> Bool:
+    let unit = make_orks_kill_rig()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::kill_rig.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos: named metadata/loadout coherence.
+fun test_orks17p3_kommandos_factory_metadata() -> Bool:
+    let unit = orks17p3_kommandos()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::kommandos.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Mek-Gunz: named metadata/loadout coherence.
+fun test_orks17p3_mek_gunz_factory_metadata() -> Bool:
+    let unit = orks17p3_guns(3, OrksMekGun::smasha_gun)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::mek_gunz.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Morkanaut: named metadata/loadout coherence.
+fun test_orks17p3_morkanaut_factory_metadata() -> Bool:
+    let unit = make_orks_morkanaut()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::morkanaut.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg: named metadata/loadout coherence.
+fun test_orks17p3_nazdreg_factory_metadata() -> Bool:
+    let unit = make_orks_nazdreg()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::nazdreg.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Rukkatrukk-Squigbuggies: named metadata/loadout coherence.
+fun test_orks17p3_rukkatrukk_squigbuggies_factory_metadata() -> Bool:
+    let unit = make_orks_rukkatrukk_squigbuggies(2)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::rukkatrukk_squigbuggies.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Stompa: named metadata/loadout coherence.
+fun test_orks17p3_stompa_factory_metadata() -> Bool:
+    let unit = make_orks_stompa(0)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::stompa.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Trukk: named metadata/loadout coherence.
+fun test_orks17p3_trukk_factory_metadata() -> Bool:
+    let unit = make_orks_trukk(0, true, OrksTrukkExtra::buzzsaw)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::trukk.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warbuggies: named metadata/loadout coherence.
+fun test_orks17p3_warbuggies_factory_metadata() -> Bool:
+    let unit = orks17p3_buggies(2, 1)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::warbuggies.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wartrakks: named metadata/loadout coherence.
+fun test_orks17p3_wartrakks_factory_metadata() -> Bool:
+    let unit = make_orks_wartrakks(2)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::wartrakks.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wazbom-Blastajet: named metadata/loadout coherence.
+fun test_orks17p3_wazbom_blastajet_factory_metadata() -> Bool:
+    let unit = make_orks_wazbom_blastajet(true, true, true)
+    let valid = unit.roster_datasheet.value == OrksDatasheet::wazbom_blastajet.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wazdakka-Gutsmek: named metadata/loadout coherence.
+fun test_orks17p3_wazdakka_gutsmek_factory_metadata() -> Bool:
+    let unit = make_orks_wazdakka_gutsmek()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::wazdakka_gutsmek.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# https://wahapedia.ru/wh40k11ed/factions/orks/Weirdboy: named metadata/loadout coherence.
+fun test_orks17p3_weirdboy_factory_metadata() -> Bool:
+    let unit = make_orks_weirdboy()
+    let valid = unit.roster_datasheet.value == OrksDatasheet::weirdboy.value and !unit.empty()
+    for member_index in range(unit.models.size()):
+        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+    return valid
+
+# Large bounded proxy dimensions and new effect/action enums round trip.
+fun test_orks17p3_all_adapters_round_trip() -> Bool:
+    let state = play()
+    state.board.reserve_units = orks17p3_units()
+    state.board.identify_units()
+    state.board.capture_starting_strengths()
+    register_orks_passive_rules(state.board)
+    register_orks_unit_rules(state.board)
+    refresh_source_effects(state.board, TimingWindow::none)
+    let restored = play()
+    return set_state(restored, to_string(state)) and restored.board.reserve_units.size() == 25 and valid_state_foundations(restored.board)
+
+# Temporary hull circles are explicit bounded geometry, not source dimensions.
+fun test_orks17p3_intentionally_approximate_hulls_and_explicit_override() -> Bool:
+    let wagon = make_orks_battlewagon(0, 0, false, false)
+    let measured = make_orks_battlewagon(130, 0, false, false)
+    return Profile::orks_battlewagon.base_size() == 0.0 and wagon[0].geometry.proxy_diameter_mm == 160 and wagon[0].base_radius_micrometres() == 80000.0 and measured[0].base_radius_micrometres() == 65000.0 and make_orks_stompa(0)[0].geometry.proxy_diameter_mm == 240
+
+# Source axes survive deliberate long-axis circles for every remaining oval.
+fun test_orks17p3_all_oval_axes_are_retained() -> Bool:
+    return profile_has_oval_base(Profile::orks_wazdakka_gutsmek) and profile_base_width(Profile::orks_wazdakka_gutsmek) == 92.0 and Profile::orks_wazdakka_gutsmek.base_size() == 120.0 and profile_base_width(Profile::orks_gorkanaut) == 109.0 and profile_base_width(Profile::orks_wartrakks) == 70.0 and profile_base_width(Profile::orks_deffkoptas) == 42.0
+
+# All physical copies have different groups; profiles within each copy share.
+fun test_orks17p3_gorkanaut_physical_weapon_copies() -> Bool:
+    let unit = make_orks_gorkanaut()
+    return unit[0].weapons.size() == 10 and unit[0].weapon_profile_groups[0] == unit[0].weapon_profile_groups[1] and unit[0].weapon_profile_groups[2] != unit[0].weapon_profile_groups[3] and unit[0].weapon_profile_groups[4] == unit[0].weapon_profile_groups[5] and unit[0].weapon_profile_groups[6] == unit[0].weapon_profile_groups[7] and unit[0].weapon_profile_groups[4] != unit[0].weapon_profile_groups[6]
+
+# Nazdreg's explicit exception includes all THREE ranged profiles, not melee.
+fun test_orks17p3_nazdreg_three_profiles_and_unit_deep_strike() -> Bool:
+    let unit = make_orks_nazdreg()
+    return unit[0].weapons.size() == 5 and unit[0].simultaneous_ranged_profiles[0] and unit[0].simultaneous_ranged_profiles[1] and unit[0].simultaneous_ranged_profiles[2] and !unit[0].simultaneous_ranged_profiles[3] and unit.has_ability(AbilityKind::deep_strike)
+
+# Equipment removes SMOKE only when the force field was actually selected.
+fun test_orks17p3_blastajet_field_changes_keyword_and_invulnerable() -> Bool:
+    let field = make_orks_wazbom_blastajet(false, true, false)
+    let smoke = make_orks_wazbom_blastajet(false, false, false)
+    return field[0].effective_invulnerable_save() == 5 and !field[0].has_keyword(Keyword::smoke) and smoke[0].effective_invulnerable_save() == 6 and smoke[0].has_keyword(Keyword::smoke)
+
+# The4-card all-option envelope fits the audited13 slots; no capacity inflation.
+fun test_orks17p3_largest_equipment_envelope() -> Bool:
+    return make_orks_gunwagon(0, 4, true, true, true, OrksGunwagonGun::kannon)[0].weapons.size() == 10 and make_orks_stompa(0)[0].weapons.size() == 10 and MAX_WEAPONS == 13
+
+# Kommandos' one each/two Shootas quotas do not forbid independent extras on
+# the same Boy, or silently give a Boy replacement to the Nob.
+fun test_orks17p3_kommando_loadout_quotas_and_extras() -> Bool:
+    let equipment : OrksKommandoLoadout
+    equipment.resize(10)
+    equipment[1].burna = true
+    equipment[1].rokkit = true
+    equipment[1].breacha_ram = true
+    equipment[1].kustom_shoota = true
+    equipment[2].kustom_shoota = true
+    let valid = orks_kommando_loadout_valid(equipment)
+    let unit = make_orks_kommandos(equipment)
+    equipment[3].kustom_shoota = true
+    return valid and unit[1].weapons.size() == 6 and !orks_kommando_loadout_valid(equipment)
+
+# Gork/Mork exclude Ghaz while Battlewagon/Gunwagon/Stompa admit4 seats.
+fun test_orks17p3_transport_literal_permissions() -> Bool:
+    let ghaz = make_orks_ghazghkull_thraka()
+    let wagon = make_orks_battlewagon(0, 0, false, false)
+    let gork = make_orks_gorkanaut()
+    let trukk = make_orks_trukk(0, false, OrksTrukkExtra::none)
+    let boyz = make_orks_beast_snagga_boyz(1, 9, 0)
+    let rig = make_orks_hunta_rig()
+    let ordinary = orks17p3_kommandos()
+    return passenger_model_permitted(wagon[0], ghaz[0]) and orks_passenger_space(ghaz) == 4 and !passenger_model_permitted(gork[0], ghaz[0]) and !passenger_model_permitted(trukk[0], ghaz[0]) and passenger_model_permitted(rig[0], boyz[0]) and !passenger_model_permitted(rig[0], ordinary[0])
+
+# Gretchin alone halves seats; Jump Pack models really occupy2 seats and a
+# Trukk forbids them regardless of its remaining capacity.
+fun test_orks17p3_transport_jump_and_gretchin_seats() -> Bool:
+    let stormboyz = make_orks_stormboyz(4, false)
+    let trukk = make_orks_trukk(0, false, OrksTrukkExtra::none)
+    return orks_passenger_space(stormboyz) == 10 and orks_passenger_space(make_orks_gretchin(11)) == 6 and !passenger_model_permitted(trukk[0], stormboyz[0])
+
+# Verify actual keyword matching, not just that Lethal Hits exists.
+# Current weapon rows' non-Monster/Vehicle clauses; appendix02.05.01.
+fun orks17p3_lethal_excludes(Weapon weapon) -> Bool:
+    let rules = weapon.rules()
+    let infantry : Unit
+    let model : Model
+    model.keywords.append(Keyword::infantry)
+    infantry.models.append(model)
+    let monster = infantry
+    monster[0].keywords.append(Keyword::monster)
+    let vehicle = infantry
+    vehicle[0].keywords.append(Keyword::vehicle)
+    for index in range(rules.size()):
+        if rules[index].kind == WeaponRuleKind::letal_hits:
+            return unit_matches_keywords(infantry, rules[index].target_condition) and !unit_matches_keywords(monster, rules[index].target_condition) and !unit_matches_keywords(vehicle, rules[index].target_condition)
+    return false
+
+# All27 printed conditional Lethal rules, including duplicated weapon families.
+fun test_orks17p3_all_printed_lethal_exclusions() -> Bool:
+    return orks17p3_lethal_excludes(Weapon::orks_battlewagon_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_big_ed_bossbunka_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_blitza_bommer_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_blitza_bommer_dual_supa_shoota) and orks17p3_lethal_excludes(Weapon::orks_boss_snikrot_slugga) and orks17p3_lethal_excludes(Weapon::orks_burna_bommer_dual_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_burna_bommer_dual_supa_shoota) and orks17p3_lethal_excludes(Weapon::orks_dakkajet_dual_supa_shoota) and orks17p3_lethal_excludes(Weapon::orks_deffkilla_wartrike_boomstikks) and orks17p3_lethal_excludes(Weapon::orks_deffkoptas_slugga) and orks17p3_lethal_excludes(Weapon::orks_ghazghkull_thraka_mork_s_roar_aimed) and orks17p3_lethal_excludes(Weapon::orks_gorkanaut_deffstorm_mega_shoota_aimed) and orks17p3_lethal_excludes(Weapon::orks_gorkanaut_dual_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_gunwagon_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_kommandos_kustom_shoota) and orks17p3_lethal_excludes(Weapon::orks_kommandos_slugga) and orks17p3_lethal_excludes(Weapon::orks_morkanaut_dual_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_nazdreg_kustom_blasta_x_shoota) and orks17p3_lethal_excludes(Weapon::orks_rukkatrukk_squigbuggies_sawn_off_shotgun) and orks17p3_lethal_excludes(Weapon::orks_stompa_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_stompa_supa_gatler_aimed) and orks17p3_lethal_excludes(Weapon::orks_trukk_dual_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_warbuggies_extra_dakka) and orks17p3_lethal_excludes(Weapon::orks_warbuggies_mek_speshul_aimed) and orks17p3_lethal_excludes(Weapon::orks_wartrakks_kustom_shoota) and orks17p3_lethal_excludes(Weapon::orks_wazbom_blastajet_dual_supa_shoota) and orks17p3_lethal_excludes(Weapon::orks_wazdakka_gutsmek_psyko_gatler)

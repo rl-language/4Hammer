@@ -100,6 +100,22 @@ enum OrksEffectKind:
     rokkit_charge
     clever_hit
     pulsa_target
+    burna_mark
+    found_detection
+    wobbled
+    grounded
+    covered_squigs
+    busted
+    overwatch_blocked
+    beastscent
+    psychic_warpath
+    weirdboy_warpath
+    jump_deep_strike
+    turbo_engine
+    shokk_engine
+    pulse_engine
+    pulse_defence
+    no_action
 
 cls OrksEffectGrant:
     SourceEffectKey source_effect
@@ -114,6 +130,7 @@ using OrksEffectGrants = CheckedVector<OrksEffectGrant, MAX_ORKS_MODEL_EFFECTS>
 # declarations. Stable identities survive model/unit bank transitions (p87).
 cls OrksAttackRecord:
     EntityIdentity target
+    CombatCounter squig_launcha_hits
     CombatCounter successful_hits
     CombatCounter wounds_lost
     Bool destroyed
