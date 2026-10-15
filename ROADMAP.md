@@ -1459,31 +1459,32 @@ the separate documentation/validation commit refreshes architecture and the
 frame inventory. Public gameplay, state layout, coordinates and discovery are
 unchanged. Active generic-grant/source work remains a future task.
 
-## Planned reader documentation —40K and Godot audience
+## Reader documentation —40K and Godot audience
 
-User request: plan a guide explaining implemented scope, architecture and the
+The user requested a guide explaining implemented scope, architecture and the
 properties of important structs for readers who know Warhammer40,000 and Godot
-but need not know Rulebook. This section is a writing plan, not documentation
-completion or authorization to change rules.
+but need not know Rulebook, then authorized writing it as Markdown only.
+The four writing batches below are complete; no game rules were changed.
 
-Proposed deliverables: `doc/engine-guide.md` for the reading path and worked
-examples, and `doc/game-state-reference.md` for navigable struct/property tables.
+Deliverables: [the engine guide](doc/engine-guide.md) for the reading path and
+worked examples, and [the state reference](doc/game-state-reference.md) for
+navigable struct/property tables.
 Keep `doc/rulebook-architecture.md` as the deeper implementation reference;
 cross-link it instead of repeating its language/toolchain internals.
 
-- [ ] **A. Scope and mental model.** Explain the included54 standard Orks cards,
+- [x] **A. Scope and mental model.** Explain the included54 standard Orks cards,
   detachments/enhancements/CP, legacy faction fixtures and mission limitations.
   List intentional quads/circular proxies/visibility abstractions and excluded
   prices, Forge World/Legends and continuous geometry. Separate printed rules,
   user rulings and implementation limits. Map army/unit/model/weapon/profile
   to engine concepts, and distinguish native values from Godot Nodes/resources.
-- [ ] **B. Ownership and state reference.** Draw Game→Board→battlefield/reserve/
+- [x] **B. Ownership and state reference.** Draw Game→Board→battlefield/reserve/
   embarked units→models, with archives and persistent identities. Document
   `Game`, `Board`, `ArmyConfiguration`, `Unit`, `Model`, `AttachmentComponent`,
   `BoardPosition`, `ModelGeometry`, `UnitID`, `ModelID` and `EntityIdentity`.
   Explain real storage banks, compacting model indices, retired unit slots,
   attached-unit provenance and identity-preserving returns.
-- [ ] **C. Rules in progress.** Document Profile/Weapon/Stat and physical-copy
+- [x] **C. Rules in progress.** Document Profile/Weapon/Stat and physical-copy
   versus profile identity, printed versus effective characteristics,
   `TimingState`, `UnitHistory`/`ModelHistory`, `DeclaredWeapon`,
   `AttackSequenceInfo`, `DamageJob`/`PendingDestruction`, `SourceInstance`,
@@ -1491,7 +1492,7 @@ cross-link it instead of repeating its language/toolchain internals.
   shooting attack and one Leader casualty/model return, including declarations,
   dice, allocation, delayed removal, persistent effects and expiry. Explain
   turn owner, active role, decision owner, chance and terminal states.
-- [ ] **D. Godot usage and review.** Show how GlobalRules/RLCLib/native Game
+- [x] **D. Godot usage and review.** Show how GlobalRules/RLCLib/native Game
   relate, how a legal action advances state, and why a gameplay mutation goes
   through actions. Give short GDScript examples for reading units/wounds,
   checking/applying a choice and inspecting a pending decision. Explain generated
@@ -1506,11 +1507,30 @@ field of the selected important structs in the reference, while the main guide
 focuses on the fields needed to understand the examples. Explain unfamiliar
 storage concepts in gameplay terms before introducing Rulebook terminology.
 
-Write A/B/C/D as separate reviewable documentation commits. Check property
+Maintain A/B/C/D in separate reviewable documentation commits. Check property
 names, bounds, defaults and lifecycle against current declarations and their
 actual consumers; connect examples to existing named regressions. Distinguish
 current behavior from future generalization. Validate links/diagrams and run
 only new executable GDScript examples against matching bindings; prose-only
 changes do not require recompiling/rerunning the entire rule suite. Do not add
 a second generated API dump or repeat historical test/schema ledgers in this
-reader guide. No guide has been written by this planning task yet.
+reader guide.
+
+**Writing/verification complete:** the authored reference covers all413 declared
+fields in26 selected structs with exact name/type tables, plus Game/selectors,
+printed data, companion records and shared procedure frames. Each table explains
+meaning/lifecycle with source ownership, common bounds/defaults and computed
+queries. Eight named regression references exist in the native suite. Local
+Markdown targets/heading anchors and fenced blocks are checked; the three simple
+Mermaid diagrams were reviewed as source (no Mermaid renderer is installed).
+
+The complete GDScript example was extracted from its Markdown fence to an
+external validation directory and executed headlessly against the matching
+cleanup bindings. It reads a current Warboss preview's identity, remaining
+wounds and effective save, inspects the actual root choice, applies one legal
+input and checks the normal state-change notification; it exits with its PASS
+and no reported errors/leaked instances. The example is kept only inside the
+Markdown guide, with no new tracked scripts, generated API dump or non-Markdown
+documentation artifacts. Runtime sources and schemas remain unchanged; native
+suite/fuzzer rebuilds were not repeated for prose. Artifacts are under
+`/workspace/4hammer-validation/reader-docs`.

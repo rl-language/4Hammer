@@ -6,6 +6,14 @@ Use the existing isolated checkout; do not create a Git worktree unless requeste
 
 Read [the Rulebook design and architecture guide](doc/rulebook-architecture.md) for module responsibilities, frame/context ownership, identity, combat/movement/source pipelines and host integration. Keep it aligned when those structures change. ROADMAP.md remains the source of implementation status and validation evidence; the architecture guide does not certify pending mechanics.
 
+For readers who know40K and Godot, start with [the engine guide](doc/engine-guide.md)
+and [the state/property reference](doc/game-state-reference.md). Keep their field
+meanings, lifetimes, source/derived distinction and examples aligned with actual
+consumers when changing structs. The user requires these docs to remain Markdown;
+code examples/diagrams belong in fenced blocks. Do not replace the authored
+explanations with a generated declaration dump. Documentation-only changes need
+field/link checks and execution of new examples, not another full rules build.
+
 Preserve the existing quad-based game representation. Model positions, placement choices and movement destinations must remain on the whole-inch quad grid, using the existing BoardPosition action domain and Godot grid interactions. Do not introduce fractional model positions or migrate to continuous/non-quad coordinates during the edition update. Physical distance calculations may account for base sizes without changing the coordinate representation. A migration away from quads is deferred until the user explicitly requests it; document rules that the grid cannot faithfully express.
 
 Earlier task-specific schema versions and test counts below are historical completion records. Use the latest completed batch section and ROADMAP.md for current versions and validation.

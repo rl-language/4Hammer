@@ -6,6 +6,25 @@ native game from Godot. Code names, including historical spellings such as
 `battle_socked`, `starting_strenght` and `strenght`, are written exactly as they
 appear in the bindings.
 
+## Contents
+
+- [Conventions and bounds](#reading-the-tables)
+- [Game](#game), [selectors/identity](#selectors-and-identity), [Board](#board)
+- [Army configuration](#armyconfiguration), [Unit](#unit), [Model](#model),
+  [attachment components](#attachmentcomponent)
+- [Positions](#boardposition), [geometry](#modelgeometry), [computed queries](#useful-computed-queries)
+- [Timing](#timingstate), [unit history](#unithistory), [model history](#modelhistory),
+  [mission actions](#unitactionprogress), [movement paths](#modelpath)
+- [Declarations](#declaredweapon), [attack context](#attacksequenceinfo),
+  [allocation](#allocationgroup), [damage](#damagejob), [pending death](#pendingdestruction)
+- [Characteristic modifiers](#characteristicmodifier), [incoming modifiers](#incomingattackmodifier),
+  [ignore permissions](#attackmodifierpermission), [resource budget](#roundresourcebudget)
+- [Ability sources](#sourceinstance), [events](#sourceevent), [pending events](#pendingsourceevent),
+  [use records](#sourceuserecord), [lasting effects](#sourceeffect)
+- [Printed data](#printed-profiles-weapons-and-stat), [payload companions](#modifier-and-source-payload-companions),
+  [shared frames](#shared-procedure-frames), [other nested state](#other-nested-state-encountered-in-the-tables)
+- [Godot access](#finding-a-property-in-godot)
+
 ## Reading the tables
 
 Each heading identifies the owning type, its source declaration and its main
@@ -47,6 +66,12 @@ the normal ML observation, not from the opponent through a fog-of-war system.
 | `MovementOverride` | 0 means no override; positive N encodes a distance/characteristic of N−1 inches |
 | `Dice`, `Stat` | `Dice` is an integer 1–6; `Stat` is a fixed value, a die or a compound dice expression |
 | Player Bool/array indices | false maps to player index 0; true maps to index 1. Historical `owned_by_player1` uses this convention |
+| `UnitVector`, `ModelVector`, `WeaponsVector` | Up to 32 units per bank, 32 current models per unit, 13 equipped profile slots per model |
+| `Abilities`, `Keywords`, `WeaponAbilitySet` | Up to 16 ability kinds, 32 keywords, 32 selected weapon rules respectively |
+| `RuleModifiers`, `CharacteristicModifiers` | Up to 16 arithmetic operations/characteristic records in each collection |
+| `IncomingAttackModifiers`, `AttackModifierPermissions` | Up to eight recipient reductions/ignore-permission records respectively |
+| `SourceInstances`, `SourceUseRecords`, `PendingSourceEvents`, `SourceEffects` | Up to 512 entries in each corresponding collection |
+| `DatasheetCode`, `WeaponNameCode`, `WeaponProfileCode` | Codes 0–67, 0–139, 0–176; zero is unknown/unrestricted where the owning field specifies it |
 
 For exact aliases and capacities see [state_types.rl](../src/state_types.rl),
 [units.rl](../src/units.rl) and [geometry.rl](../src/geometry.rl). Do not interpret
@@ -905,6 +930,10 @@ See [modifiers.rl](../src/modifiers.rl) and
 | `SourceWeaponGrant.profile_name` | `WeaponProfileCode` | Optional named-profile filter, zero means none |
 | `SourceWeaponGrant.physical_scope` | `Bool` | Extend the representative slot to linked profiles of that physical copy |
 | `RiledUpGrant.enabled` | `Bool` | Installs the source-owned riled state when enabled; source keys preserve overlapping grants |
+| `OrksEffectGrant.source_effect` | `SourceEffectKey` | Owner key of the installed faction effect; supports keyed expiry |
+| `OrksEffectGrant.kind` | `OrksEffectKind` | Which current Orks effect the explicit consumer interprets |
+| `OrksEffectGrant.amount` | `FixedStat` | That effect's magnitude where relevant; not a universal characteristic modifier |
+| `OrksEffectGrant.associated_unit` | `EntityIdentity` | Related unit identity where that particular effect requires one |
 
 All modifiers accumulate through the shared arithmetic policy. Round up after
 the ordered operations, then enforce the characteristic's own limits. Roll
@@ -1049,8 +1078,11 @@ has a blocks_movement flag. These are distinct uses of terrain data.
 
 A stored property `field_name` normally has a generated `get_field_name()`
 getter. A bounded value/enum is usually another wrapper with `get_value()`;
-an ID selector instead exposes its bounded `id` field. Collections are accessed
-through `library.size(collection)` and `library.get(collection, index)`.
+an ID selector instead exposes its bounded `id` field. Growable native
+collections are accessed through `library.size(collection)` and
+`library.get(collection, index)`. Fixed-array getters may take an element index
+or require a typed accessor; check their generated signature rather than assuming
+the vector API applies to every array field.
 The [engine guide](engine-guide.md) contains executable, checked examples.
 
 Use this reference to understand state, then follow the linked source's actual

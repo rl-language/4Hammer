@@ -11,6 +11,19 @@ when changing the implementation. This document describes the current engine;
 it is not a replacement for the rules or a claim that every possible 40K army
 and mission is implemented.
 
+## Reading path
+
+- [Implemented scope](#what-game-can-this-engine-represent)
+- [Tabletop vocabulary](#tabletop-words-and-engine-words)
+- [Godot and the native rules](#how-the-godot-scene-relates-to-the-rules)
+- [Ownership](#who-owns-what) and [indices versus identities](#a-slot-is-not-an-identity)
+- [Turn and decision ownership](#whose-turn-is-it-and-whose-choice-is-it)
+- Worked flows: [shooting](#worked-flow-a-shooting-attack),
+  [casualties/returns](#worked-flow-a-leader-dies-or-a-model-returns),
+  [lasting effects](#worked-flow-a-repair-buff-expires)
+- [Godot example](#godot-example-read-state-inspect-a-choice-and-apply-it)
+- [Property reference](game-state-reference.md)
+
 ## What game can this engine represent?
 
 The current migration implements the supplied 11th-edition core rules within
@@ -20,6 +33,8 @@ the 15 ordinary detachments, enhancements/upgrades and CP-based stratagems.
 Public roster selection can build these units rather than only a fixed starter.
 Other factions still have legacy scenario/Combat Patrol data. Their presence in
 a menu, enum or test fixture does not certify their current-edition datasheets.
+The non-rendering Godot bindings/controls have validation coverage; complete
+rendered integration of the new roster is outside the current migration scope.
 
 Several deliberate choices affect what you see:
 
@@ -111,6 +126,8 @@ flowchart TD
     B --> Effects[Ability sources, effects and use records]
 ```
 
+The diagram shows ownership types: an active unit occupies one real bank at a
+time, while a retired battlefield slot can retain bookkeeping for its return.
 The three collections of units are storage locations, also called **banks**.
 An embarked unit belongs in `embarked_units`, linked to the carrier model's
 identity. It is not represented by a second miniature on the battlefield.
@@ -145,6 +162,11 @@ Re-fetch native references after an input that can replace a board, move a unit
 between banks or resize a vector. A wrapper obtained before that operation is
 not a promise of a stable object address. Stable game identity and a live Godot
 wrapper are separate concepts.
+
+Numbers also carry meaning beyond their primitive type. A movement limit can
+encode inches+1 so zero means 'no override', while a normal position of zero is
+a real coordinate. Read the [bounds/sentinel conventions](game-state-reference.md#numbers-units-and-sentinels)
+before interpreting an unfamiliar numeric property.
 
 ## Whose turn is it, and whose choice is it?
 
@@ -296,6 +318,139 @@ The [reference](game-state-reference.md) gives the fields behind these flows.
 The [test instructions](../tests/README.md) explain how to select an individual
 native assertion. Read a fixture as evidence for its specific case, not as a
 datasheet permission for a different army.
+
+## Godot example: read state, inspect a choice and apply it
+
+This is a complete headless `SceneTree` script for a project configured with
+the current native extension and `GlobalRules` autoload, like the existing
+[Godot checks](../tests/godot_shared_procedures.gd). The first part creates an
+**isolated data-preview fixture** so it can demonstrate a model read before a
+real game has finished choosing armies. Those direct fixture assignments are
+not the route for playing or changing an ongoing battle.
+
+The second part uses the actual autoload's legal choices. It applies exactly
+one currently legal input through `GlobalRules.apply_action`, which refreshes
+the legal list and emits its ordinary notifications. It does not assume that
+the next input is a move, an attack or a complete turn.
+
+```gdscript
+extends SceneTree
+
+var change_notifications = 0
+
+func _initialize():
+    call_deferred("demo")
+
+func on_changed():
+    change_notifications += 1
+
+func print_unit(library, bank, index):
+    assert(index >= 0 and index < library.size(bank))
+    var unit = library.get(bank, index)
+    print("Unit identity: ", unit.get_identity().get_value())
+    for member in range(library.size(unit.get_models())):
+        var model = library.get(unit.get_models(), member)
+        print("Model ", model.get_identity().get_value(),
+              ": W remaining = ", library.wounds_left(model),
+              ", effective Sv = ", library.effective_save(model))
+
+func demo():
+    var rules = root.get_node("GlobalRules")
+    var library = rules.library
+    assert(library.get_state_schema_version() == 40)
+    assert(library.get_observation_schema_version() == 40)
+    assert(library.get_action_schema_version() == 26)
+
+    # Isolated preview data; this does not modify rules.state.
+    var preview = RLCBoard.make()
+    library.append(preview.get_units(), library.make_orks_warboss())
+    library.identify_units(preview)
+    var unit = library.get(preview.get_units(), 0)
+    var model = library.get(unit.get_models(), 0)
+    model.get_position().get_x().set_value(5)
+    model.get_position().get_y().set_value(5)
+    assert(model.get_identity().get_value() > 0)
+    assert(library.wounds_left(model) == library.wounds(model.get_profile()))
+    print_unit(library, preview.get_units(), 0)
+
+    # Inspect the real pending decision using the existing legal-action list.
+    assert(not library.is_done(rules.state))
+    print("Decision owner: ", library.get_current_player(rules.state))
+    assert(not rules.valid_actions.is_empty())
+    var choice = rules.valid_actions[0]
+    var payload = choice.unwrap()
+    print("Input type: ", payload.get_class())
+    for member in range(payload.members_count()):
+        print("Argument ", member, ": ", payload.get_member(member))
+
+    rules.on_state_changed.connect(on_changed)
+    assert(rules.can_apply(choice))
+    rules.apply_action(choice)
+    assert(change_notifications == 1)
+    # Re-fetch Board/Unit/Model wrappers after an input that may change storage.
+    var current_board = rules.state.get_board()
+    print("Battlefield units now: ", library.size(current_board.get_units()))
+
+    print("PASS: Godot schema exports and engine-guide examples")
+    library.free() # Tear down this headless demo; keep it alive in a running app.
+    quit(0)
+```
+
+For a real reserve-unit inspection, pass
+`rules.state.get_board().get_reserve_units()` to `print_unit`; for passengers,
+pass `get_embarked_units()`. Check that an index exists before reading it. The
+bank is supplied explicitly, so 'unit 0' cannot silently select an unrelated
+battlefield unit when you meant a passenger.
+
+An ability/property read is not a full legality check. For example,
+`library.is_alive(model)` does not prove that its unit can shoot. The current
+action's `can_*`/`can_apply` check includes the relevant state-machine position
+and eligibility. Direct child procedures in a test need their declared contexts
+again on each input; normal UI play advances the root Game through its payloads.
+
+### How payloads become controls
+
+The `RLCAnyGameAction` wrapper carries one concrete payload, returned by
+`unwrap()`. Inspect its member count **before** reading a member. The current
+client recognizes these shapes:
+
+| Payload members | Usual interaction | Context that must remain correct |
+| --- | --- | --- |
+| None | Choice button | Current decision still permits the input |
+| One Bool or enum | Choice buttons | Explicit value and rule-specific label |
+| One UnitID | Unit selection | Reserve/passenger choices need the actual bank and dedicated buttons |
+| Two UnitIDs | Source then target | Source is member 0, target is member 1 |
+| One ModelID | Model selection | Current target/mover or explicit offboard unit; not any arbitrary sprite |
+| One BoardPosition | Grid position | Whole-inch x/y, converted by the existing interaction layer |
+| Other bounded selectors | Rule-specific choice control | Source/allocation/profile context supplied by the relevant handler |
+
+The source code for this bridge is [MultipleChoises.gd](../scripts/MultipleChoises.gd),
+[InteractionManager.gd](../scripts/InteractionManager.gd) and
+[SelectPointManager.gd](../scripts/SelectPointManager.gd). The source filename
+`MultipleChoises` retains its historical spelling. A globally enumerated payload
+can still be illegal now; do not offer every payload merely because it exists.
+
+### Native wrappers and saves
+
+Keep `RLCLib` and the owning Game alive while using their generated wrappers.
+A getter/library `get` can expose a reference into native storage. To retain a
+value independently, construct the appropriate wrapper and use the generated
+assignment/clone mechanism deliberately; do not assume ordinary GDScript
+variable assignment copies the native value. After vector replacement, state
+assignment or bank transfer, obtain fresh references and resolve identities.
+
+Saves contain both Board and procedure progress. Use the root `set_state`
+validation path when restoring; it parses into a candidate and rejects invalid
+state before committing. Action payload traces, full saves and fuzzer files of
+legal-choice ranks are different formats. A replay from another action catalog
+is not made compatible just by having the same filename or army names.
+
+Build the native library and generated Godot header/extension from matching
+sources. The current compatibility markers are state/observation 40 and action
+26, with next-state bound 41. These are storage/API markers, not 'edition 40'.
+The last cleanup removed unused exports while retaining the public Game layout;
+an old extension still needs rebuilding if it refers to removed native exports.
+Use [ROADMAP.md](../ROADMAP.md) and source version helpers for later revisions.
 
 ## Where to read next
 

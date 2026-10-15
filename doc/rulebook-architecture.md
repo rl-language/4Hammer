@@ -1,5 +1,9 @@
 # Rulebook design and architecture
 
+For a gameplay-first explanation, start with the [40K/Godot engine guide](engine-guide.md)
+and [struct/property reference](game-state-reference.md). This page is the deeper
+implementation guide.
+
 This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes all54 standard Orks adapters through17.Q and the shared ability procedures, using Rulebook compiler0.4.18. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
 Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and [supplied appendix](11th-edition-supplied-appendix.md) for game rules. The architecture supports those rules, but its storage bounds, schemas and UI protocols are project decisions. [AGENTS.md](../AGENTS.md) records development constraints and the language conventions used here.
@@ -293,7 +297,7 @@ For a spatial extension, update the common predicates and the relevant caller po
 
 ## Combat resolution
 
-The main current attack path is `attack` in `rules.rl`. Selected shooting, fighting and suitable nested effects configure it and generally store/delegate `Board.attack`. Earlier per-model/per-weapon functions remain in the module, so follow the caller before choosing a place to modify combat.
+The main current attack path is `attack` in `rules.rl`. Selected shooting, fighting and suitable nested effects configure it and generally store/delegate `Board.attack`. The unused earlier per-model/per-weapon chain was removed; the tested `single_attack` compatibility entrypoint remains. Follow actual callers before modifying combat.
 
 ```mermaid
 flowchart TD

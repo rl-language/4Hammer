@@ -6,7 +6,13 @@
 
 [Documentation](https://rl-language.github.io/4hammer.html) [paper](https://arxiv.org/abs/2505.13638)
 
-For the current rules engine, read the [Rulebook design and architecture guide](doc/rulebook-architecture.md). It maps the modules, state/action lifetimes, combat and movement pipelines, source effects, and Godot/ML integration. [ROADMAP.md](ROADMAP.md) tracks the edition migration and validated scope.
+For the current rules engine, start with the [guide for 40K and Godot users](doc/engine-guide.md)
+and its [game-state/property reference](doc/game-state-reference.md). They explain
+implemented scope, units/models, ownership, combat progress and Godot access.
+The [technical architecture guide](doc/rulebook-architecture.md) covers implementation
+and extension points. [ROADMAP.md](ROADMAP.md) tracks the edition migration and
+validated scope; historical project descriptions below are not a current-edition
+datasheet/mission coverage claim.
 
 ### Rationale
 
