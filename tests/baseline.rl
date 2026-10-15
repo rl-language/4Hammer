@@ -14511,3 +14511,19 @@ fun test_orks17q_coherency_dead_bridge_does_not_connect() -> Bool:
     let before = unit.is_coherent()
     unit[2].state = ModelState::fight_on_death
     return before and !unit.is_coherent()
+
+# An unplaceable carrier is destroyed with its passengers, just like a carrier
+# that misses reserve arrival. Otherwise saved games retain dangling links
+# (user setup-failure ruling; core pp64/69).
+fun test_orks17q_unplaceable_carrier_removes_passenger_links() -> Bool:
+    let board = transport16_fixture()
+    let carrier = board[0]
+    let passenger = board[1]
+    board.units.clear()
+    board.reserve_units.append(carrier)
+    board.reserve_units.append(passenger)
+    mark_unit_offboard(board.reserve_units[0], true)
+    mark_unit_offboard(board.reserve_units[1], true)
+    embark_formation_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    destroy_unplaceable_reserve(board, unit_id(0))
+    return board.reserve_units.empty() and board.embarked_units.empty() and board.expired_reserves.value.size() == 2 and valid_passenger_links(board)

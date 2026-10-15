@@ -623,6 +623,7 @@ fun deployment_candidate_has_position(Board board, Unit unit, Unit candidate) ->
 # in the off-table archive. No battlefield death position is fabricated.
 fun destroy_unplaceable_reserve(Board board, UnitID id):
     assert(id.get() < board.reserve_units.size(), "invalid undeployable reserve")
+    expire_carrier_passengers(board, board.reserve_units[id.get()])
     while !board.reserve_units[id.get()].models.empty():
         board.reserve_units[id.get()].remove_model(board.reserve_units[id.get()].models.size() - 1)
     board.expired_reserves.value.append(board.reserve_units[id.get()])
