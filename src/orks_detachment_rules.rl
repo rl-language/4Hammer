@@ -1114,6 +1114,10 @@ fun valid_orks_detachment_foundations(Board board) -> Bool:
         ref entry = board.orks_attack_records[record]
         if entry.target.value <= 0 or entry.target.value > board.next_identity.value or entry.successful_hits.value < 0 or entry.successful_hits.value >= MAX_COMBAT_COUNTER or entry.wounds_lost.value < 0 or entry.wounds_lost.value >= MAX_COMBAT_COUNTER:
             return false
+        # Squig Barrage's weapon-specific hits are a subset of all hits;
+        # malformed saves cannot fabricate post-shot triggers (Squigbuggies).
+        if entry.squig_launcha_hits.value < 0 or entry.squig_launcha_hits.value > entry.successful_hits.value:
+            return false
         for previous in range(record):
             if board.orks_attack_records[previous].target == entry.target:
                 return false

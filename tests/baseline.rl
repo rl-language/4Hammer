@@ -14759,3 +14759,15 @@ fun test_orks17q_shared_destruction_bank_order() -> Bool:
     death.choose_destruction_unit(board, unit_id(1))
     death.resolve_destruction_model(board, damage_test_model(0))
     return offered and first and death.is_done() and board[1].models.empty() and board.reserve_units[0].models.empty() and board.reserve_units[0].destroyed_models.value[0].identity == identity and board.damage_bank.value == SourceBank::battlefield.value
+
+# Source-specific hit provenance must remain a subset of the attack's actual
+# hits across saves (Orks/Rukkatrukk-Squigbuggies, Squig Barrage).
+fun test_orks17q_saved_squig_hits_cannot_exceed_total() -> Bool:
+    let board = orks17p2_fixture(make_orks_rukkatrukk_squigbuggies(1))
+    begin_orks_attack(board)
+    ref record = orks_attack_record(board, board[1].identity)
+    record.successful_hits = 1
+    record.squig_launcha_hits = 2
+    let invalid = !valid_orks_detachment_foundations(board)
+    record.squig_launcha_hits = 1
+    return invalid and valid_orks_detachment_foundations(board)
