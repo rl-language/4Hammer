@@ -1926,41 +1926,26 @@ act resolve_orks_mobbed(ctx Board board, frm UnitID source) -> OrksMobbed:
 # never clear the opponent's shock or automatically expire a friendly effect.
 act battle_shock_step(ctx Board board) -> BattleShockStep:
     subaction*(board) mob_mentality = orks_mob_mentality_step(board)
-    frm shocked_at_start : Bool[MAX_UNIT_COUNT]
-    for index in range(board.units.size()):
-        shocked_at_start[index] = board[index].battle_socked
-    frm i : UnitIterator
-    while i != board.units.size():
-        if board[i.value].empty() or board[i.value].owned_by_player1 != board.current_player:
-            i = i + 1
-            continue
-        if !board[i.value].battle_socked and !board[i.value].is_at_or_below_half_strength():
-            i = i + 1
-            continue
-        board.shared_actions.battle_shock_test = battle_shock_test(board, board[i.value], true, shocked_at_start[i.value])
-        subaction*(board, board[i.value]) board.shared_actions.battle_shock_test
-        i = i + 1
-
-    # Supplied appendix 01.02.04 explicitly requires the same Command tests
-    # for strategic reserves (core cross-reference pp.68–69). These are army
-    # units, without granting battlefield visibility or distance eligibility.
-    frm reserve_index : UnitIterator
-    while reserve_index.value < board.reserve_units.size():
-        if !board.reserve_units[reserve_index.value].empty() and board.reserve_units[reserve_index.value].owned_by_player1 == board.current_player and (board.reserve_units[reserve_index.value].battle_socked or board.reserve_units[reserve_index.value].is_at_or_below_half_strength()):
-            frm reserve_recover = board.reserve_units[reserve_index.value].battle_socked
-            board.shared_actions.battle_shock_test = battle_shock_test(board, board.reserve_units[reserve_index.value], true, reserve_recover)
-            subaction*(board, board.reserve_units[reserve_index.value]) board.shared_actions.battle_shock_test
-        reserve_index = reserve_index + 1
-    # Supplied appendix 01.02.04 explicitly requires the same Command tests
-    # for strategic reserves (core cross-reference pp.68–69). These are army
-    # units, without granting battlefield visibility or distance eligibility.
-    frm passenger_index : UnitIterator
-    while passenger_index.value < board.embarked_units.size():
-        if !board.embarked_units[passenger_index.value].empty() and board.embarked_units[passenger_index.value].owned_by_player1 == board.current_player and (board.embarked_units[passenger_index.value].battle_socked or board.embarked_units[passenger_index.value].is_at_or_below_half_strength()):
-            frm passenger_recover = board.embarked_units[passenger_index.value].battle_socked
-            board.shared_actions.battle_shock_test = battle_shock_test(board, board.embarked_units[passenger_index.value], true, passenger_recover)
-            subaction*(board, board.embarked_units[passenger_index.value]) board.shared_actions.battle_shock_test
-        passenger_index = passenger_index + 1
+    # Freeze recovery eligibility at the step's start for EVERY bank (p30;
+    # appendix01.02.04). Storage location must not change the printed test.
+    frm shocked_at_start : Bool[MAX_UNIT_COUNT][3]
+    let initial_bank : SourceBank
+    for initial_bank_index in range(3):
+        initial_bank.value = initial_bank_index
+        for initial_slot in range(source_bank_size(board, initial_bank)):
+            shocked_at_start[initial_bank_index][initial_slot] = source_bank_unit(board, initial_bank, initial_slot).battle_socked
+    frm bank : SourceBank
+    frm bank_index : BInt<0, 4>
+    while bank_index.value < 3:
+        bank.value = bank_index.value
+        frm slot : UnitIterator
+        slot = 0
+        while slot.value < source_bank_size(board, bank):
+            if !source_bank_unit(board, bank, slot.value).empty() and source_bank_unit(board, bank, slot.value).owned_by_player1 == board.current_player and (source_bank_unit(board, bank, slot.value).battle_socked or source_bank_unit(board, bank, slot.value).is_at_or_below_half_strength()):
+                board.shared_actions.battle_shock_test = battle_shock_test(board, source_bank_unit(board, bank, slot.value), true, shocked_at_start[bank_index.value][slot.value])
+                subaction*(board, source_bank_unit(board, bank, slot.value)) board.shared_actions.battle_shock_test
+            slot = slot + 1
+        bank_index = bank_index + 1
 
 
 # tyranids shadow in the warp rules

@@ -15159,3 +15159,35 @@ fun test_orks17q_shared_destruction_bank_order() -> Bool:
     death.choose_destruction_unit(board, unit_id(1))
     death.resolve_destruction_model(board, damage_test_model(0))
     return offered and first and death.is_done() and board[1].models.empty() and board.reserve_units[0].models.empty() and board.reserve_units[0].destroyed_models.value[0].identity == identity and board.damage_bank.value == SourceBank::battlefield.value
+
+# Command Battle-shock uses one scan and one frozen recovery policy for every
+# bank (core p30; supplied Not On The Battlefield01.02.04).
+fun test_orks17q_shared_command_shock_scan_all_banks() -> Bool:
+    let bank : SourceBank
+    let valid = true
+    for index in range(3):
+        bank.value = index
+        let board = orks17q_bank_fixture(bank, OrksDetachment::war_horde)
+        board.begin_phase(BattlePhase::command)
+        board.has_used_insane_bravery[0] = true
+        ref unit = source_bank_unit(board, bank, 0)
+        unit.battle_socked = true
+        let sequence = battle_shock_step(board)
+        sequence.roll_pair(board, attack_test_die(6), attack_test_die(6))
+        valid = valid and sequence.is_done() and !unit.battle_socked and unit.off_battlefield == (index != 0) and board.current_decision_maker == false
+        if index > 0:
+            # A later bank gaining shock during an earlier unit's test was
+            # not shocked at STEP start. Passing must not clear that new shock.
+            board.units.append(make_infernus_squad())
+            ref earlier = board.units.back()
+            earlier.models.resize(1)
+            earlier.capture_starting_strength()
+            board.identify_unit(earlier)
+            earlier.battle_socked = true
+            unit[0].suffered_wounds = unit[0].profile.wounds() - 1
+            let subsequent = battle_shock_step(board)
+            unit.battle_socked = true
+            subsequent.roll_pair(board, attack_test_die(6), attack_test_die(6))
+            subsequent.roll_pair(board, attack_test_die(6), attack_test_die(6))
+            valid = valid and subsequent.is_done() and !earlier.battle_socked and unit.battle_socked
+    return valid
