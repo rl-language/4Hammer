@@ -1,4 +1,4 @@
-import orks_unit_data
+import factions.orks.orks_unit_data
 import source_effects
 import terrain_rules
 import attack_declarations

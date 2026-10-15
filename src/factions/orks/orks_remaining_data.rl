@@ -1,4 +1,4 @@
-import orks_elite_data
+import factions.orks.orks_elite_data
 
 # Hull sizes are explicit millimetre circle proxies, never inferred dimensions.
 # User authorizes circular treatment of all noncircles; core p12 measurements.

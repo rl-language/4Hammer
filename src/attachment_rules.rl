@@ -94,7 +94,7 @@ fun orks_bodyguard_permission(BodyguardPermissions permissions, OrksDatasheet ta
     permissions.append(code)
 
 # Supplies core p66/19.01 eligibility from the17 included card permission
-# lists, whose exact URLs are in doc/orks-unit-requirements.tsv.
+# lists, whose exact URLs are in doc/factions/orks/orks-unit-requirements.tsv.
 # https://wahapedia.ru/wh40k11ed/factions/orks/ (Leader/Support on each card).
 fun configure_orks_attachment(Unit unit, OrksDatasheet tag):
     assert(tag.value >= 0 and tag.value < MAX_DATASHEETCODE, "invalid Orks attachment datasheet")

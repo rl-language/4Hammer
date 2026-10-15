@@ -17,7 +17,7 @@ def normalized(value):
 
 def enum_values(module, typename):
     source = Path(__file__).resolve().parents[1] / 'src'
-    text = '\n'.join(path.read_text() for path in source.glob('*.rl'))
+    text = '\n'.join(path.read_text() for path in source.rglob('*.rl'))
     body = re.search(r'^enum ' + typename + r':\n((?:[ \t].*\n|\n)*)', text, re.M)[1]
     names = re.findall(r'^    ([a-z][a-z0-9_]*)(?::)?$', body, re.M)
     result = {}

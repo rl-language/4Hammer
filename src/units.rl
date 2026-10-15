@@ -6,7 +6,7 @@ import range
 import state_types
 import geometry
 import modifiers
-import orks_detachment_types
+import factions.orks.orks_detachment_types
 
 using Wounds = LinearlyDistributedInt<0, MAX_WOUNDS>
 using WeaponsVector = CheckedVector<Weapon, MAX_WEAPONS>

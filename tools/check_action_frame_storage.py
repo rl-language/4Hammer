@@ -54,7 +54,7 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     actions, producers, functions = {}, {}, collections.defaultdict(list)
-    for path in sorted((root / 'src').glob('*.rl')):
+    for path in sorted((root / 'src').rglob('*.rl')):
         source = path.read_text()
         # Ordinary helpers may construct a child without returning its frame.
         # Follow their bodies too, including multiline signatures and overloads.

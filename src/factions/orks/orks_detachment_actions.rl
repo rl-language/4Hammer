@@ -1,4 +1,4 @@
-import orks_detachment_rules
+import factions.orks.orks_detachment_rules
 
 # Literal selection windows for source cards. Ranged cards say YOUR Shooting
 # phase; Fight cards apply in either player's Fight phase. Unit CP targeting

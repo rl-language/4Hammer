@@ -1,4 +1,4 @@
-import orks_detachment_actions
+import factions.orks.orks_detachment_actions
 
 # Usage belongs to the printed bearer/army scope, not an action-frame address.
 # Da Boss is Watchin'/Morgog/Surly are once per battle PER ARMY. Psychic phase

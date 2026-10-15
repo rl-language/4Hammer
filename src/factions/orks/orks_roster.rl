@@ -1,8 +1,8 @@
-import orks_remaining_data
+import factions.orks.orks_remaining_data
 
 # Pre-identity muster metadata, not model state. Small bounded ordinals are
 # translated into the existing typed loadout validators/factories below.
-# Sources: all54 included cards, doc/orks-unit-requirements.tsv; prices excluded.
+# Sources: all54 included cards, doc/factions/orks/orks-unit-requirements.tsv; prices excluded.
 cls OrksMusterEquipment:
     LinearlyDistributedInt<0, 6> primary
     LinearlyDistributedInt<0, 6> secondary

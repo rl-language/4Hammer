@@ -1425,7 +1425,7 @@ enum Stratagem:
         Int cost = 1
 
     # Configuration gates only: effects/targets/windows remain later batches.
-    # Source cards and CP values: doc/orks-stratagem-costs.tsv (Orks faction URL).
+    # Source cards and CP values: doc/factions/orks/orks-stratagem-costs.tsv (Orks faction URL).
     fun orks_detachment() -> OrksDetachment:
         if self == Stratagem::orks_breakin_heads or self == Stratagem::orks_hit_em_harder or self == Stratagem::orks_orks_is_never_beaten or self == Stratagem::orks_mow_em_down or self == Stratagem::orks_fungus_fuel_injection or self == Stratagem::orks_close_range_dakka:
             return OrksDetachment::war_horde

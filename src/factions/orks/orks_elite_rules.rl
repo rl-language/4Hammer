@@ -1,6 +1,6 @@
-import orks_elite_data
-import orks_datasheet_rules
-import orks_detachment_support
+import factions.orks.orks_elite_data
+import factions.orks.orks_datasheet_rules
+import factions.orks.orks_detachment_support
 
 # Rule codes retain per-original-unit token history through attachments and
 # revival. Source: Orks/Painboy, Painboss, Big-Mek-In-Mega-Armour, Tankbustas.

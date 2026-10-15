@@ -2,7 +2,7 @@ import bounded_arg
 import string
 
 # Source-backed name catalog only, not profiles/stats or faction grants.
-# See doc/orks-named-identities.tsv and the 67-datasheet audit.
+# See doc/factions/orks/orks-named-identities.tsv and the 67-datasheet audit.
 # IDs are append-only within a storage schema; stored fields use standard
 # LinearlyDistributedInt rather than one-hot catalog enums.
 const MAX_DATASHEETCODE = 68

@@ -82,7 +82,7 @@
   {
     "function": "attack_with_orks_reactions",
     "frame": "AttackWithOrksReactions",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 535,
     "game_copies": 1,
     "native_bytes": 56,
@@ -145,7 +145,7 @@
   {
     "function": "build_orks_roster",
     "frame": "BuildOrksRoster",
-    "source": "src/orks_roster.rl",
+    "source": "src/factions/orks/orks_roster.rl",
     "line": 638,
     "game_copies": 1,
     "native_bytes": 568,
@@ -572,7 +572,7 @@
   {
     "function": "muster_orks_unit",
     "frame": "MusterOrksUnit",
-    "source": "src/orks_roster.rl",
+    "source": "src/factions/orks/orks_roster.rl",
     "line": 615,
     "game_copies": 1,
     "native_bytes": 552,
@@ -607,7 +607,7 @@
   {
     "function": "orks_attack_selection",
     "frame": "OrksAttackSelection",
-    "source": "src/orks_detachment_actions.rl",
+    "source": "src/factions/orks/orks_detachment_actions.rl",
     "line": 46,
     "game_copies": 1,
     "native_bytes": 72,
@@ -618,7 +618,7 @@
   {
     "function": "orks_attack_targeted",
     "frame": "OrksAttackTargeted",
-    "source": "src/orks_detachment_actions.rl",
+    "source": "src/factions/orks/orks_detachment_actions.rl",
     "line": 135,
     "game_copies": 1,
     "native_bytes": 64,
@@ -629,7 +629,7 @@
   {
     "function": "resolve_orks_bank_returns",
     "frame": "OrksBankReturns",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 1024,
     "game_copies": 1,
     "native_bytes": 72,
@@ -642,7 +642,7 @@
   {
     "function": "orks_became_shocked",
     "frame": "OrksBecameShocked",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 152,
     "game_copies": 1,
     "native_bytes": 72,
@@ -657,7 +657,7 @@
   {
     "function": "orks_datasheet_fight_selection",
     "frame": "OrksDatasheetFightSelection",
-    "source": "src/orks_remaining_rules.rl",
+    "source": "src/factions/orks/orks_remaining_rules.rl",
     "line": 508,
     "game_copies": 1,
     "native_bytes": 32,
@@ -670,7 +670,7 @@
   {
     "function": "orks_datasheet_movement",
     "frame": "OrksDatasheetMovement",
-    "source": "src/orks_remaining_rules.rl",
+    "source": "src/factions/orks/orks_remaining_rules.rl",
     "line": 592,
     "game_copies": 1,
     "native_bytes": 120,
@@ -683,7 +683,7 @@
   {
     "function": "orks_datasheet_selection",
     "frame": "OrksDatasheetSelection",
-    "source": "src/orks_datasheet_rules.rl",
+    "source": "src/factions/orks/orks_datasheet_rules.rl",
     "line": 53,
     "game_copies": 1,
     "native_bytes": 48,
@@ -696,7 +696,7 @@
   {
     "function": "orks_disembark_selection",
     "frame": "OrksDisembarkSelection",
-    "source": "src/orks_remaining_rules.rl",
+    "source": "src/factions/orks/orks_remaining_rules.rl",
     "line": 683,
     "game_copies": 1,
     "native_bytes": 80,
@@ -709,7 +709,7 @@
   {
     "function": "orks_dreadherder_shooting",
     "frame": "OrksDreadherderShooting",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 827,
     "game_copies": 1,
     "native_bytes": 520,
@@ -720,7 +720,7 @@
   {
     "function": "orks_elite_command",
     "frame": "OrksEliteCommand",
-    "source": "src/orks_elite_rules.rl",
+    "source": "src/factions/orks/orks_elite_rules.rl",
     "line": 307,
     "game_copies": 1,
     "native_bytes": 1048,
@@ -734,7 +734,7 @@
   {
     "function": "select_orks_enemy_move_reaction",
     "frame": "OrksEnemyMoveReaction",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 569,
     "game_copies": 1,
     "native_bytes": 80,
@@ -745,7 +745,7 @@
   {
     "function": "orks_fallback_selection",
     "frame": "OrksFallbackSelection",
-    "source": "src/orks_detachment_actions.rl",
+    "source": "src/factions/orks/orks_detachment_actions.rl",
     "line": 264,
     "game_copies": 1,
     "native_bytes": 32,
@@ -756,7 +756,7 @@
   {
     "function": "intercept_orks_hits",
     "frame": "OrksHitInterception",
-    "source": "src/orks_detachment_actions.rl",
+    "source": "src/factions/orks/orks_detachment_actions.rl",
     "line": 279,
     "game_copies": 1,
     "native_bytes": 48,
@@ -769,7 +769,7 @@
   {
     "function": "orks_kaptin_redeploy",
     "frame": "OrksKaptinRedeploy",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 926,
     "game_copies": 1,
     "native_bytes": 1240,
@@ -780,7 +780,7 @@
   {
     "function": "orks_kommando_formations",
     "frame": "OrksKommandoFormations",
-    "source": "src/orks_remaining_rules.rl",
+    "source": "src/factions/orks/orks_remaining_rules.rl",
     "line": 741,
     "game_copies": 1,
     "native_bytes": 48,
@@ -791,7 +791,7 @@
   {
     "function": "orks_krushin_impetus",
     "frame": "OrksKrushinImpetus",
-    "source": "src/orks_elite_rules.rl",
+    "source": "src/factions/orks/orks_elite_rules.rl",
     "line": 389,
     "game_copies": 1,
     "native_bytes": 56,
@@ -804,7 +804,7 @@
   {
     "function": "orks_mob_mentality_step",
     "frame": "OrksMobMentalityStep",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 870,
     "game_copies": 1,
     "native_bytes": 16,
@@ -830,7 +830,7 @@
   {
     "function": "orks_move_mode",
     "frame": "OrksMoveMode",
-    "source": "src/orks_detachment_actions.rl",
+    "source": "src/factions/orks/orks_detachment_actions.rl",
     "line": 238,
     "game_copies": 1,
     "native_bytes": 24,
@@ -841,7 +841,7 @@
   {
     "function": "orks_move_selection",
     "frame": "OrksMoveSelection",
-    "source": "src/orks_detachment_actions.rl",
+    "source": "src/factions/orks/orks_detachment_actions.rl",
     "line": 217,
     "game_copies": 1,
     "native_bytes": 40,
@@ -852,7 +852,7 @@
   {
     "function": "orks_movement_abilities",
     "frame": "OrksMovementAbilities",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 137,
     "game_copies": 1,
     "native_bytes": 16,
@@ -865,7 +865,7 @@
   {
     "function": "choose_orks_offboard_dread_power",
     "frame": "OrksOffboardDreadPower",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 1087,
     "game_copies": 1,
     "native_bytes": 32,
@@ -876,7 +876,7 @@
   {
     "function": "choose_orks_offboard_support",
     "frame": "OrksOffboardSupportSelection",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 1010,
     "game_copies": 1,
     "native_bytes": 32,
@@ -889,7 +889,7 @@
   {
     "function": "orks_package_window",
     "frame": "OrksPackageWindow",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 381,
     "game_copies": 1,
     "native_bytes": 72,
@@ -906,7 +906,7 @@
   {
     "function": "orks_phase_support",
     "frame": "OrksPhaseSupport",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 859,
     "game_copies": 1,
     "native_bytes": 24,
@@ -920,7 +920,7 @@
   {
     "function": "resolve_orks_post_attack",
     "frame": "OrksPostAttack",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 483,
     "game_copies": 1,
     "native_bytes": 88,
@@ -934,7 +934,7 @@
   {
     "function": "use_orks_psychic",
     "frame": "OrksPsychic",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 80,
     "game_copies": 1,
     "native_bytes": 80,
@@ -948,7 +948,7 @@
   {
     "function": "orks_psychic_test",
     "frame": "OrksPsychicTest",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 63,
     "game_copies": 1,
     "native_bytes": 48,
@@ -962,7 +962,7 @@
   {
     "function": "orks_pulsa_selection",
     "frame": "OrksPulsaSelection",
-    "source": "src/orks_elite_rules.rl",
+    "source": "src/factions/orks/orks_elite_rules.rl",
     "line": 433,
     "game_copies": 1,
     "native_bytes": 24,
@@ -973,7 +973,7 @@
   {
     "function": "orks_remaining_post_shoot",
     "frame": "OrksRemainingPostShoot",
-    "source": "src/orks_remaining_rules.rl",
+    "source": "src/factions/orks/orks_remaining_rules.rl",
     "line": 441,
     "game_copies": 1,
     "native_bytes": 40,
@@ -984,7 +984,7 @@
   {
     "function": "orks_remaining_window",
     "frame": "OrksRemainingWindow",
-    "source": "src/orks_remaining_rules.rl",
+    "source": "src/factions/orks/orks_remaining_rules.rl",
     "line": 356,
     "game_copies": 1,
     "native_bytes": 608,
@@ -998,7 +998,7 @@
   {
     "function": "orks_rokkit_barrage",
     "frame": "OrksRokkitBarrage",
-    "source": "src/orks_elite_rules.rl",
+    "source": "src/factions/orks/orks_elite_rules.rl",
     "line": 457,
     "game_copies": 1,
     "native_bytes": 40,
@@ -1011,7 +1011,7 @@
   {
     "function": "orks_rokkit_selection",
     "frame": "OrksRokkitSelection",
-    "source": "src/orks_datasheet_rules.rl",
+    "source": "src/factions/orks/orks_datasheet_rules.rl",
     "line": 70,
     "game_copies": 1,
     "native_bytes": 24,
@@ -1022,7 +1022,7 @@
   {
     "function": "orks_runtherd_shock",
     "frame": "OrksRuntherdShock",
-    "source": "src/orks_elite_rules.rl",
+    "source": "src/factions/orks/orks_elite_rules.rl",
     "line": 346,
     "game_copies": 1,
     "native_bytes": 584,
@@ -1036,7 +1036,7 @@
   {
     "function": "orks_shokka_selection",
     "frame": "OrksShokkaSelection",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 747,
     "game_copies": 1,
     "native_bytes": 40,
@@ -1047,7 +1047,7 @@
   {
     "function": "orks_shooting_option_end",
     "frame": "OrksShootingOptionEnd",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 779,
     "game_copies": 1,
     "native_bytes": 120,
@@ -1061,7 +1061,7 @@
   {
     "function": "use_orks_support_card",
     "frame": "OrksSupportCard",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 230,
     "game_copies": 1,
     "native_bytes": 80,
@@ -1074,7 +1074,7 @@
   {
     "function": "resolve_orks_surly",
     "frame": "OrksSurly",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 344,
     "game_copies": 1,
     "native_bytes": 32,
@@ -1087,7 +1087,7 @@
   {
     "function": "return_orks_surly",
     "frame": "OrksSurlyReturn",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 351,
     "game_copies": 1,
     "native_bytes": 32,
@@ -1100,7 +1100,7 @@
   {
     "function": "orks_trukk_reactions",
     "frame": "OrksTrukkReactions",
-    "source": "src/orks_remaining_rules.rl",
+    "source": "src/factions/orks/orks_remaining_rules.rl",
     "line": 664,
     "game_copies": 1,
     "native_bytes": 296,
@@ -1113,7 +1113,7 @@
   {
     "function": "orks_unpredictable_genius",
     "frame": "OrksUnpredictableGenius",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 692,
     "game_copies": 1,
     "native_bytes": 64,
@@ -1127,7 +1127,7 @@
   {
     "function": "repair_orks_vehicle",
     "frame": "OrksVehicleRepair",
-    "source": "src/orks_elite_rules.rl",
+    "source": "src/factions/orks/orks_elite_rules.rl",
     "line": 241,
     "game_copies": 1,
     "native_bytes": 1040,
@@ -1140,7 +1140,7 @@
   {
     "function": "orks_wagon_charge_end",
     "frame": "OrksWagonChargeEnd",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 626,
     "game_copies": 1,
     "native_bytes": 64,
@@ -1153,7 +1153,7 @@
   {
     "function": "orks_wagon_move_end",
     "frame": "OrksWagonMoveEnd",
-    "source": "src/orks_detachment_support.rl",
+    "source": "src/factions/orks/orks_detachment_support.rl",
     "line": 615,
     "game_copies": 1,
     "native_bytes": 16,
@@ -1324,7 +1324,7 @@
   {
     "function": "select_orks_options",
     "frame": "SelectOrksOptions",
-    "source": "src/orks_detachment_rules.rl",
+    "source": "src/factions/orks/orks_detachment_rules.rl",
     "line": 411,
     "game_copies": 1,
     "native_bytes": 32,
@@ -1335,7 +1335,7 @@
   {
     "function": "select_orks_warlord",
     "frame": "SelectOrksWarlord",
-    "source": "src/orks_army_rules.rl",
+    "source": "src/factions/orks/orks_army_rules.rl",
     "line": 237,
     "game_copies": 1,
     "native_bytes": 40,

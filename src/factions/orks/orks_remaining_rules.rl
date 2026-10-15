@@ -1,5 +1,5 @@
-import orks_remaining_data
-import orks_elite_rules
+import factions.orks.orks_remaining_data
+import factions.orks.orks_elite_rules
 
 # Non-stacking live aura: same named ability contributes once. The source
 # unit itself qualifies; offboard units cannot measure to others (01.02.04).

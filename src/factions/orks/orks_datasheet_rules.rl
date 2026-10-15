@@ -1,4 +1,4 @@
-import orks_infantry_data
+import factions.orks.orks_infantry_data
 import source_effects
 
 # Unit-token use follows original component identity through attachment and

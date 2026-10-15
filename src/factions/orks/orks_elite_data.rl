@@ -1,4 +1,4 @@
-import orks_infantry_data
+import factions.orks.orks_infantry_data
 
 # Big Mek in Mega Armour's independent replacement and optional extra slots.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour

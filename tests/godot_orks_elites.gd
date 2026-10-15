@@ -2,7 +2,7 @@ extends SceneTree
 
 # These production bindings expose actual current cards and preserve the
 # editor's one-UnitID/one-ModelID action discovery. Sources: Orks card URLs
-# in src/orks_elite_data.rl and src/orks_elite_rules.rl.
+# in src/factions/orks/orks_elite_data.rl and src/factions/orks/orks_elite_rules.rl.
 func _initialize():
 	call_deferred("check_units")
 

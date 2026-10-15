@@ -1,6 +1,6 @@
 import modifiers
 import weapons
-import orks_detachment_types
+import factions.orks.orks_detachment_types
 
 # Event kinds describe actual core boundaries; source cards install their own
 # eligibility/payload rather than synthesizing abilities (pp.28–38/87;17.E).

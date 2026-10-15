@@ -1,4 +1,4 @@
-import orks_unit_data
+import factions.orks.orks_unit_data
 
 # Finite per-model muster choices encode the printed replacements, not prices.
 # Sources: Orks/Boyz, Nobz, Warboss and Deff-Dread (11th-edition version1.2).

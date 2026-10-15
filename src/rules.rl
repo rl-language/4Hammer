@@ -18,20 +18,20 @@ import fight_rules
 import core_stratagem_rules
 import transport_rules
 import firing_deck_rules
-import orks_detachment_rules
-import orks_detachment_support
+import factions.orks.orks_detachment_rules
+import factions.orks.orks_detachment_support
 import source_effects
 import modifier_choices
-import orks_army_rules
+import factions.orks.orks_army_rules
 import attachment_rules
-import orks_unit_data
-import orks_unit_rules
-import orks_datasheet_rules
-import orks_roster
-import orks_remaining_rules
-import orks_remaining_data
-import orks_elite_data
-import orks_elite_rules
+import factions.orks.orks_unit_data
+import factions.orks.orks_unit_rules
+import factions.orks.orks_datasheet_rules
+import factions.orks.orks_roster
+import factions.orks.orks_remaining_rules
+import factions.orks.orks_remaining_data
+import factions.orks.orks_elite_data
+import factions.orks.orks_elite_rules
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.
