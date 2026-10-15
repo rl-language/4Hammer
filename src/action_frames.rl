@@ -33,16 +33,13 @@ cls SharedActionFrames:
     OrksMoveMode orks_move_mode
     OrksMoveSelection orks_move_selection
     OrksMovementAbilities orks_movement_abilities
-    OrksOffboardBreakinHeads orks_offboard_breakin_heads
-    OrksOffboardDeath resolve_orks_offboard_death
-    OrksOffboardMortals orks_offboard_mortals
-    OrksOffboardSupport use_orks_offboard_support
     OrksOffboardSupportSelection choose_orks_offboard_support
     OrksPackageWindow orks_package_window
     OrksPostAttack resolve_orks_post_attack
     OrksPsychic use_orks_psychic
     OrksReactiveMove orks_reactive_move
     OrksSupportCard use_orks_support_card
+    OrksSurlyReturn return_orks_surly
     OrksSurly resolve_orks_surly
     # Command/card healing and on-shock correction are sequential owners.
     OrksComponentHealing heal_orks_component

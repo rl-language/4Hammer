@@ -256,31 +256,13 @@ fun orks_psychic_contributors(Board board, Unit unit, Model model) -> Int:
 # effect identity, not a mutable source payload, owns each installed copy.
 # Orks cards and appendix01.02.02; no additional rule-use limit is invented.
 fun grant_orks_effect(Board board, UnitID source, UnitID target, Int rule, OrksEffectKind kind, Int amount, SourceDuration duration, EntityIdentity associated):
-    let instance : SourceInstance
-    instance.rule = rule
-    instance.name.value = "Orks detachment effect"s
-    instance.source_unit = board[source].identity
-    instance.owner = board[source].owned_by_player1
-    instance.recipient = SourceTarget::target_unit
-    instance.duration = duration
-    instance.offboard_allowed = true
-    instance.allow_retained_source = true
     let grant : OrksEffectGrant
     grant.kind = kind
     grant.amount = amount
     grant.associated_unit = associated
-    instance.grant = grant
-    let found = -1
-    for source_index in range(board.source_instances.size()):
-        if board.source_instances[source_index].rule.value == rule and board.source_instances[source_index].source_unit == instance.source_unit and board.source_instances[source_index].owner == instance.owner:
-            found = source_index
-    if found < 0:
-        let handle = register_source_instance(board, instance)
-        found = handle.value
-    else:
-        board.source_instances[found].grant = grant
-        board.source_instances[found].duration = duration
-    commit_source_effect_to_unit(board, board.source_instances[found], found, board[target].identity)
+    let payload : SourceGrant
+    payload = grant
+    grant_orks_typed_payload(board, board[source].identity, board[source].owned_by_player1, board[target].identity, rule, payload, duration)
 
 # Duplicate upgrades count by original unit/component, not per equipped model;
 # configuration precedes interactive attachment so options may add permissions.
@@ -653,12 +635,12 @@ fun orks_retained_source_present(Board board, SourceInstance instance) -> Bool:
 
 # Characteristic grants use the same keyed lifecycle as flag grants. Multiple
 # typed payloads remain separate sources, not flattened final values (02.02.01).
-fun grant_orks_typed_payload(Board board, UnitID source, UnitID target, Int rule, SourceGrant payload, SourceDuration duration):
+fun grant_orks_typed_payload(Board board, EntityIdentity source, Bool owner, EntityIdentity target, Int rule, SourceGrant payload, SourceDuration duration):
     let instance : SourceInstance
     instance.rule = rule
     instance.name.value = "Orks detachment modifier"s
-    instance.source_unit = board[source].identity
-    instance.owner = board[source].owned_by_player1
+    instance.source_unit = source
+    instance.owner = owner
     instance.recipient = SourceTarget::target_unit
     instance.duration = duration
     instance.offboard_allowed = true
@@ -674,7 +656,24 @@ fun grant_orks_typed_payload(Board board, UnitID source, UnitID target, Int rule
     else:
         board.source_instances[found].grant = payload
         board.source_instances[found].duration = duration
-    commit_source_effect_to_unit(board, board.source_instances[found], found, board[target].identity)
+    commit_source_effect_to_unit(board, board.source_instances[found], found, target)
+
+# UnitID callers and own-unit bank adapters share one keyed source installer.
+# Effects retain identity and duration across transfers (01.02.02/01.02.04).
+fun grant_orks_typed_payload(Board board, UnitID source, UnitID target, Int rule, SourceGrant payload, SourceDuration duration):
+    grant_orks_typed_payload(board, board[source].identity, board[source].owned_by_player1, board[target].identity, rule, payload, duration)
+
+# Own-unit grants never measure a range; use the same lifetime/key handling
+# on battlefield, in reserves and embarked (appendix01.02.04).
+fun grant_orks_own_payload(Board board, Unit unit, Int rule, SourceGrant payload, SourceDuration duration):
+    grant_orks_typed_payload(board, unit.identity, unit.owned_by_player1, unit.identity, rule, payload, duration)
+
+# The typed overload preserves the finite generated binding surface while
+# sharing the same installer and expiry logic (appendix01.02.02).
+fun grant_orks_own_payload(Board board, Unit unit, Int rule, OrksEffectGrant payload, SourceDuration duration):
+    let typed : SourceGrant
+    typed = payload
+    grant_orks_own_payload(board, unit, rule, typed, duration)
 
 # Concrete alternatives keep the exported binding surface finite; the common
 # keyed installer owns expiry and provenance for both printed payload kinds.

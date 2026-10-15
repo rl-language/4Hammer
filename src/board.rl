@@ -210,6 +210,8 @@ cls Board:
     # Explicit mission roster limit and movement editor context (pp.68/12).
     LinearlyDistributedInt<0, 10001> battle_points_limit
     UnitID moving_unit
+    # Editor context for common damage choices across real banks (p24/87).
+    SourceBank damage_bank
     # Explicit exception for the supplied Fight on Death's own-unit attack.
     Bool allow_destroyed_attack
     UnitID destroyed_attack_unit
@@ -325,46 +327,22 @@ cls Board:
         assert(self.turn_serial.value + 1 < MAX_TURN_SERIAL, "turn serial capacity exceeded")
         self.turn_serial = self.turn_serial + 1
         refresh_source_effects(self, TimingWindow::none)
-        let i = 0
-        while i < self.units.size():
-            self.units[i].reset_turn_history()
-            # Advance/Fall Back and charge-move effects expire at every turn boundary,
-            # including before the opponent's Snap Shooting/Fight opportunities (pp.33/57/82).
-            self.units[i].has_run = false
-            self.units[i].has_moved = false
-            self.units[i].has_charged = false
-            self.units[i].can_shoot = true
-            self.units[i].can_charge = true
-            if self.units[i].owned_by_player1 == self.current_player:
-                self.units[i].has_fought = false
-                self.units[i].has_shoot = false
-            i = i + 1
-        i = 0
-        while i < self.reserve_units.size():
-            self.reserve_units[i].reset_turn_history()
-            self.reserve_units[i].has_run = false
-            self.reserve_units[i].has_moved = false
-            self.reserve_units[i].has_charged = false
-            self.reserve_units[i].can_shoot = true
-            self.reserve_units[i].can_charge = true
-            # Turn-limited compatibility gates expire off-table too (p.68).
-            if self.reserve_units[i].owned_by_player1 == self.current_player:
-                self.reserve_units[i].has_fought = false
-                self.reserve_units[i].has_shoot = false
-            i = i + 1
-        i = 0
-        while i < self.embarked_units.size():
-            self.embarked_units[i].reset_turn_history()
-            self.embarked_units[i].has_run = false
-            self.embarked_units[i].has_moved = false
-            self.embarked_units[i].has_charged = false
-            self.embarked_units[i].can_shoot = true
-            self.embarked_units[i].can_charge = true
-            # Turn-limited compatibility gates expire off-table too (p.68).
-            if self.embarked_units[i].owned_by_player1 == self.current_player:
-                self.embarked_units[i].has_fought = false
-                self.embarked_units[i].has_shoot = false
-            i = i + 1
+        # Turn-local restrictions expire identically in all storage banks;
+        # embark/reserve must not preserve a stale Advance/Fall Back gate.
+        let bank : SourceBank
+        for bank_index in range(3):
+            bank.value = bank_index
+            for slot in range(source_bank_size(self, bank)):
+                ref unit = source_bank_unit(self, bank, slot)
+                unit.reset_turn_history()
+                unit.has_run = false
+                unit.has_moved = false
+                unit.has_charged = false
+                unit.can_shoot = true
+                unit.can_charge = true
+                if unit.owned_by_player1 == self.current_player:
+                    unit.has_fought = false
+                    unit.has_shoot = false
 
     # Freeze combined model counts after attachments, before casualties change
     # current strength (starting strength p.86; attachment pp.66–67).
@@ -381,32 +359,18 @@ cls Board:
         self.phase_serial = self.phase_serial + 1
         self.phase_info.already_used_stratagems[0].clear()
         self.phase_info.already_used_stratagems[1].clear()
-        let i = 0
-        while i != self.units.size():
-            self.units[i].clear_phase_modifiers()
-            # Every army may fight once in a Fight phase (pp.38–40).
-            self.units[i].has_fought = false
-            self.units[i].history.used_stratagem_this_phase = false
-            self.units[i].history.stratagem_targeted_by_player[0] = false
-            self.units[i].history.stratagem_targeted_by_player[1] = false
-            i = i + 1
-
-        i = 0
-        while i < self.reserve_units.size():
-            self.reserve_units[i].clear_phase_modifiers()
-            self.reserve_units[i].has_fought = false
-            self.reserve_units[i].history.used_stratagem_this_phase = false
-            self.reserve_units[i].history.stratagem_targeted_by_player[0] = false
-            self.reserve_units[i].history.stratagem_targeted_by_player[1] = false
-            i = i + 1
-        i = 0
-        while i < self.embarked_units.size():
-            self.embarked_units[i].clear_phase_modifiers()
-            self.embarked_units[i].has_fought = false
-            self.embarked_units[i].history.used_stratagem_this_phase = false
-            self.embarked_units[i].history.stratagem_targeted_by_player[0] = false
-            self.embarked_units[i].history.stratagem_targeted_by_player[1] = false
-            i = i + 1
+        # Phase limits/effect expiry do not depend on battlefield presence
+        # (pp28–30/54; appendix01.02.02/01.02.04).
+        let bank : SourceBank
+        for bank_index in range(3):
+            bank.value = bank_index
+            for slot in range(source_bank_size(self, bank)):
+                ref unit = source_bank_unit(self, bank, slot)
+                unit.clear_phase_modifiers()
+                unit.has_fought = false
+                unit.history.used_stratagem_this_phase = false
+                unit.history.stratagem_targeted_by_player[0] = false
+                unit.history.stratagem_targeted_by_player[1] = false
 
     # A phase starts with fresh phase usage and effects, before its start window
     # (pp.28–30/54). End effects are resolved before this state is expired.
@@ -415,15 +379,14 @@ cls Board:
         self.timing.phase = phase
         # Offboard banks have no battlefield anchors in this phase. Arrival
         # must not reuse last phase's coherency/engagement snapshot (01.02.03).
-        for reserve in range(self.reserve_units.size()):
-            self.reserve_units[reserve].history.phase_start_members.clear()
-            self.reserve_units[reserve].history.phase_start_engagements.clear()
-        for passenger in range(self.embarked_units.size()):
-            self.embarked_units[passenger].history.phase_start_members.clear()
-            self.embarked_units[passenger].history.phase_start_engagements.clear()
+        let bank : SourceBank
+        for bank_index in range(3):
+            bank.value = bank_index
+            for bank_slot in range(source_bank_size(self, bank)):
+                ref unit = source_bank_unit(self, bank, bank_slot)
+                unit.history.phase_start_members.clear()
+                unit.history.phase_start_engagements.clear()
         for slot in range(self.units.size()):
-            self.units[slot].history.phase_start_members.clear()
-            self.units[slot].history.phase_start_engagements.clear()
             for member in range(self.units[slot].models.size()):
                 if self.units[slot][member].is_alive() and !self.units[slot][member].off_battlefield:
                     self.units[slot].history.phase_start_members.append(self.units[slot][member].identity)

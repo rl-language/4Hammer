@@ -142,6 +142,7 @@ enum DamageKind:
 
 cls DamageJob:
     DamageKind kind
+    SourceBank bank
     UnitID target
     UnitID source
     Bool source_known
@@ -168,6 +169,7 @@ fun damage_job(DamageKind kind, UnitID target, UnitID source, Bool known, Bool a
 # Keep selector wrappers and a validity flag for pending trigger scans (p.87).
 cls PendingDestruction:
     Bool found
+    SourceBank bank
     UnitID unit
     ModelID model
 
@@ -176,12 +178,17 @@ cls PendingDestruction:
 fun next_destruction(Board board, Bool finish_attacks, UnitID finished_source) -> PendingDestruction:
     let found : PendingDestruction
     for owner in range(2):
-        for u in range(board.units.size()):
-            for m in range(board[u].models.size()):
-                if !found.found and board[u].owned_by_player1 == (board.current_player == (owner == 0)) and destruction_ready(board[u][m], finish_attacks, finished_source):
-                    found.found = true
-                    found.unit = u
-                    found.model = m
+        let bank : SourceBank
+        for bank_index in range(3):
+            bank.value = bank_index
+            for u in range(source_bank_size(board, bank)):
+                ref unit = source_bank_unit(board, bank, u)
+                for m in range(unit.models.size()):
+                    if !found.found and unit.owned_by_player1 == (board.current_player == (owner == 0)) and destruction_ready(unit[m], finish_attacks, finished_source):
+                        found.found = true
+                        found.bank = bank
+                        found.unit = u
+                        found.model = m
     return found
 
 # User-supplied Rules Sequencing: current player's triggers, in their chosen
@@ -193,13 +200,37 @@ fun destruction_ready(Model model, Bool finish_attacks, UnitID source) -> Bool:
 
 # A unit choice belongs to the controller of the next trigger tier (supplied
 # Rules Sequencing); stale/foreign unit slots cannot consume a destruction.
-fun destruction_unit_valid(Board board, UnitID unit, Bool player, Bool finish, UnitID source) -> Bool:
-    if unit.get() >= board.units.size() or board[unit].owned_by_player1 != player:
+fun destruction_unit_valid(Board board, SourceBank bank, UnitID unit, Bool player, Bool finish, UnitID source) -> Bool:
+    if unit.get() >= source_bank_size(board, bank) or source_bank_unit(board, bank, unit.get()).owned_by_player1 != player:
         return false
-    for i in range(board[unit].models.size()):
-        if destruction_ready(board[unit][i], finish, source):
+    for i in range(source_bank_unit(board, bank, unit.get()).models.size()):
+        if destruction_ready(source_bank_unit(board, bank, unit.get())[i], finish, source):
             return true
     return false
+
+# Existing battlefield callers retain their selector contract (p87).
+fun destruction_unit_valid(Board board, UnitID unit, Bool player, Bool finish, UnitID source) -> Bool:
+    return destruction_unit_valid(board, SourceBank::battlefield, unit, player, finish, source)
+
+# Bank choices expose only the next controller's pending deaths. Bank is
+# storage, not a second destruction rule (p87; appendix01.02.04).
+fun destruction_bank_valid(Board board, SourceBank bank, Bool owner, Bool finish, UnitID source) -> Bool:
+    let unit : UnitID
+    for index in range(source_bank_size(board, bank)):
+        unit = index
+        if destruction_unit_valid(board, bank, unit, owner, finish, source):
+            return true
+    return false
+
+# One-bank pending deaths need no redundant choice. Multiple banks preserve
+# the controller's ordering across all their simultaneous deaths (p87).
+fun destruction_bank_count(Board board, Bool owner, Bool finish, UnitID source) -> Int:
+    let result = 0
+    let bank : SourceBank
+    for index in range(3):
+        bank.value = index
+        result = result + int(destruction_bank_valid(board, bank, owner, finish, source))
+    return result
 
 # Trigger presence determines retention, not merely taking attack damage
 # (p.87). Existing faction hooks retain their legacy definitions until task 17.
@@ -210,40 +241,43 @@ fun has_destruction_trigger(Board board, UnitID source, Bool source_known, Model
 # Snapshot provenance before removal so deferred hooks cannot target a new slot
 # (p.87); prevention is resolved separately first (p.81).
 fun commit_wound_loss(Board board, DamageJob job, ModelID model, Int lost, Bool fight_on_death):
+    ref unit = source_bank_unit(board, job.bank, job.target.get())
     assert(lost >= 0, "negative wound loss")
     if lost > 0 and job.from_attack and board.orks_attack_active:
-        ref record = orks_attack_record(board, board[job.target].identity)
-        add_attack_count(record.wounds_lost, min(lost, board[job.target][model].wounds_left()))
+        ref record = orks_attack_record(board, unit.identity)
+        add_attack_count(record.wounds_lost, min(lost, unit[model].wounds_left()))
     if lost > 0:
-        board[job.target][model].suffered_wounds = min(board[job.target][model].profile.wounds(), board[job.target][model].suffered_wounds.value + lost)
-    if board[job.target][model].wounds_left() <= 0:
-        board[job.target][model].destroyed_phase = board.phase_serial.value + 1
+        unit[model].suffered_wounds = min(unit[model].profile.wounds(), unit[model].suffered_wounds.value + lost)
+    if unit[model].wounds_left() <= 0:
+        unit[model].destroyed_phase = board.phase_serial.value + 1
         # Source lifetime p.67 independently requires retaining the bearer,
         # even if it has no Deadly Demise or other death-trigger ability.
-        if board.orks_attack_active and live_attachment_strength(board[job.target]) == 0:
-            ref destruction_record = orks_attack_record(board, board[job.target].identity)
+        if board.orks_attack_active and live_attachment_strength(unit) == 0:
+            ref destruction_record = orks_attack_record(board, unit.identity)
             destruction_record.destroyed = true
-            board[job.target].orks_destroyed_attack = board.orks_attack_serial
-            board[job.target].orks_destroyed_phase = board.phase_serial.value + 1
-        let retained_rules = retain_attachment_rules_for_attack(board, job.target, model, job)
-        board[job.target][model].attachment_abilities_retained = retained_rules
-        let unit_death = !board[job.target].unit_destruction_event_issued and live_attachment_strength(board[job.target]) == 0 and (has_source_unit_destruction_trigger(board, job) or orks_package(board, board[job.target], OrksDetachment::flyboyz) and board[job.target][model].has_keyword(Keyword::aircraft))
-        board[job.target][model].destroyed_whole_unit = unit_death
+            unit.orks_destroyed_attack = board.orks_attack_serial
+            unit.orks_destroyed_phase = board.phase_serial.value + 1
+        let retained_rules = false
+        if job.bank.value == SourceBank::battlefield.value:
+            retained_rules = retain_attachment_rules_for_attack(board, job.target, model, job)
+        unit[model].attachment_abilities_retained = retained_rules
+        let unit_death = !unit.unit_destruction_event_issued and live_attachment_strength(unit) == 0 and (has_source_unit_destruction_trigger(board, job) or orks_package(board, unit, OrksDetachment::flyboyz) and unit[model].has_keyword(Keyword::aircraft))
+        unit[model].destroyed_whole_unit = unit_death
         if unit_death:
-            board[job.target].unit_destruction_event_issued = true
-        if unit_death or retained_rules or has_destruction_trigger(board, job.source, job.source_known, board[job.target][model], fight_on_death):
-            board[job.target][model].state = ModelState::pending_destruction
+            unit.unit_destruction_event_issued = true
+        if unit_death or retained_rules or fight_on_death or has_source_destruction_trigger(board, job.source, job.source_known, unit[model]) or unit[model].orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value or (job.bank.value == SourceBank::battlefield.value and has_destruction_trigger(board, job.source, job.source_known, unit[model], fight_on_death)):
+            unit[model].state = ModelState::pending_destruction
             if fight_on_death:
-                board[job.target][model].state = ModelState::fight_on_death
-            board[job.target][model].destruction_pending = true
-            board[job.target][model].destroyed_by_attack = job.from_attack
-            board[job.target][model].destroying_unit_known = job.source_known
-            board[job.target][model].destroying_unit = job.source
+                unit[model].state = ModelState::fight_on_death
+            unit[model].destruction_pending = true
+            unit[model].destroyed_by_attack = job.from_attack
+            unit[model].destroying_unit_known = job.source_known
+            unit[model].destroying_unit = job.source
             if job.source_known:
-                board[job.target][model].destroying_unit_identity = board[job.source].identity
-            board[job.target][model].destruction_fight_roll = board.attack_info.fight_on_death_roll
+                unit[model].destroying_unit_identity = board[job.source].identity
+            unit[model].destruction_fight_roll = board.attack_info.fight_on_death_roll
         else:
-            board[job.target].remove_model(model.get())
+            unit.remove_model(model.get())
 
 # Source-backed death events require retention just like other destruction
 # effects (p.87); generic grants resolve through the source dispatcher.
@@ -264,7 +298,7 @@ fun has_source_destruction_trigger(Board board, UnitID attacker, Bool known, Mod
 # A Bodyguard/Leader/Support component dying does not destroy the attached
 # unit. Only its final live member emits the unit event (p.66/19.02).
 fun has_source_unit_destruction_trigger(Board board, DamageJob job) -> Bool:
-    let event = source_event(SourceEventKind::unit_destroyed, board[job.target].identity, invalid_entity_identity(), invalid_entity_identity())
+    let event = source_event(SourceEventKind::unit_destroyed, source_bank_unit(board, job.bank, job.target.get()).identity, invalid_entity_identity(), invalid_entity_identity())
     if job.source_known and job.source.get() < board.units.size():
         event.target = board[job.source].identity
     let found = false

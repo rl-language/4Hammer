@@ -21,8 +21,15 @@ func on_state_change():
 	if current_select_unit_action is RLCGameChooseOffboardDreadUnit or current_select_unit_action is RLCGameChooseOrksOffboardUnit or current_select_unit_action is RLCGameChooseOrksOptionUnit or current_select_unit_action is RLCGameChooseWarlordUnit or current_select_unit_action is RLCGameSelectUnit or current_select_unit_action is RLCGameSelectReserveUnit or current_select_unit_action is RLCGameSelectIngressUnit or current_select_unit_action is RLCGameSelectScoutReserve or current_select_unit_action is RLCGameChooseStrategicReserve or current_select_unit_action is RLCGameChooseFormationPassenger or current_select_unit_action is RLCGameChooseFormationTransport or current_select_unit_action is RLCGameSelectDisembarkingUnit or current_select_unit_action is RLCGameChooseEmergencyPassenger or current_select_unit_action is RLCGameSelectFiringDeckPassenger or current_select_unit_action is RLCGameChooseMakariUnit or current_select_unit_action is RLCGameChoosePilinOutPassenger:
 		current_select_unit_action = null
 	# Passenger/formation model choices use buttons because these models are offboard.
-	if current_select_model_action is RLCGameChooseOffboardMortalModel or current_select_model_action is RLCGameChooseOrksOptionBearer or current_select_model_action is RLCGameChooseHealedCasualty or current_select_model_action is RLCGameChooseSurlyCasualty or current_select_model_action is RLCGameChooseWarlordModel or current_select_model_action is RLCGameChooseFormationCarrierModel or current_select_model_action is RLCGameSelectFiringDeckModel or current_select_model_action is RLCGameSelectDisembarkingModel or current_select_model_action is RLCGameChooseSplitKommando:
+	if current_select_model_action is RLCGameChooseOrksOptionBearer or current_select_model_action is RLCGameChooseHealedCasualty or current_select_model_action is RLCGameChooseSurlyCasualty or current_select_model_action is RLCGameChooseWarlordModel or current_select_model_action is RLCGameChooseFormationCarrierModel or current_select_model_action is RLCGameSelectFiringDeckModel or current_select_model_action is RLCGameSelectDisembarkingModel or current_select_model_action is RLCGameChooseSplitKommando:
 		current_select_model_action = null
+	# Shared damage selectors address the bank recorded by the engine. Offboard
+	# choices remain buttons; battlefield clicks must not supply their indices.
+	if GlobalRules.state.get_board().get_damage_bank().get_value() != 0:
+		if current_select_unit_action is RLCGameChooseDestructionUnit:
+			current_select_unit_action = null
+		if current_select_model_action is RLCGameSelectMortalModel or current_select_model_action is RLCGameResolveDestructionModel:
+			current_select_model_action = null
 	mark_possible_targets()
 		
 

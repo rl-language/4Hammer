@@ -24,8 +24,8 @@ func panel_for(rules, library, action):
 func check_rules():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 35)
-	assert(library.get_action_schema_version() == 23)
+	assert(library.get_state_schema_version() == 36)
+	assert(library.get_action_schema_version() == 24)
 	var board = RLCBoard.make()
 	var boss = library.make_orks_beastboss()
 	library.get(boss.get_models(), 0).get_position().get_x().set_value(5)

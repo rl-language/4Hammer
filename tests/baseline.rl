@@ -11801,9 +11801,9 @@ fun test_orks17all_offboard_return_capacity_gate() -> Bool:
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
     let returned = board.embarked_units[0][0]
     board.embarked_units[0].remove_model(0)
-    let available = orks_offboard_return_capacity(board, board.embarked_units[0], returned)
+    let available = orks_return_capacity(board, board.embarked_units[0], returned)
     board[0][0].transport_capacity = 1
-    return available and !orks_offboard_return_capacity(board, board.embarked_units[0], returned)
+    return available and !orks_return_capacity(board, board.embarked_units[0], returned)
 
 # At a full source arena, a disabled/dead unreferenced slot can be reused only
 # with a new generation; a frozen pending event must never activate the new
@@ -12038,7 +12038,7 @@ fun test_orks17all_offboard_surly_original_return() -> Bool:
     board.reserve_units[0][0].suffered_wounds = board.reserve_units[0][0].profile.wounds()
     board.reserve_units[0][0].destroyed_phase = board.phase_serial.value + 1
     board.reserve_units[0].remove_model(0)
-    let revival = resolve_orks_offboard_surly(board, board.reserve_units[0], damage_test_model(0))
+    let revival = return_orks_surly(board, board.reserve_units[0], SourceBank::reserves, unit_id(0), damage_test_model(0))
     revival.roll(board, board.reserve_units[0], attack_test_die(2))
     return moved and revival.is_done() and board.reserve_units[0][0].identity == identity and board.reserve_units[0][0].wounds_left() == 3 and board.reserve_units[0][0].off_battlefield
 
@@ -14527,3 +14527,235 @@ fun test_orks17q_unplaceable_carrier_removes_passenger_links() -> Bool:
     embark_formation_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
     destroy_unplaceable_reserve(board, unit_id(0))
     return board.reserve_units.empty() and board.embarked_units.empty() and board.expired_reserves.value.size() == 2 and valid_passenger_links(board)
+
+# Shared-rule fixtures vary storage only; real unit identity, owners and
+# explicit passenger permissions remain intact (appendix01.02.04).
+fun orks17q_bank_fixture(SourceBank bank, OrksDetachment package) -> Board:
+    let board = orks17all_fixture(package)
+    board[0][0].keywords.append(Keyword::psyker)
+    board[0].psyker_level = 1
+    if bank.value == SourceBank::reserves.value:
+        let moved = reposition_unit(board, unit_id(0))
+        assert(moved, "bank fixture transfer failed")
+    if bank.value == SourceBank::embarked.value:
+        board[1].owned_by_player1 = false
+        board[1][0].keywords.append(Keyword::transport)
+        board[1][0].transport_permissions_known = true
+        board[1][0].transport_capacity = 20
+        board[1][0].permitted_passenger_keywords.append(Keyword::infantry)
+        transfer_embarked_unit(board, unit_id(0), board[1][0].identity)
+    return board
+
+# Wurrband Visions has one roll, budget, shock and phase effect in all banks.
+# A final1 does not cancel the power; the caller's decision owner is restored.
+fun test_orks17q_shared_visions_all_banks() -> Bool:
+    let bank : SourceBank
+    let valid = true
+    for index in range(3):
+        bank.value = index
+        let board = orks17q_bank_fixture(bank, OrksDetachment::wurrband)
+        board.begin_phase(BattlePhase::fight)
+        board.current_decision_maker = true
+        ref unit = source_bank_unit(board, bank, 0)
+        let offered = orks_psychic_unit_available(board, unit, true)
+        let psychic = use_orks_psychic(board, unit.identity, true)
+        psychic.roll(board, attack_test_die(1))
+        valid = valid and offered and psychic.is_done() and unit.battle_socked and fight_first_unit(unit) and unit.orks_psychic_usage.spent == 1 and !orks_psychic_unit_available(board, unit, true) and board.current_decision_maker
+    return valid
+
+# Shared Watchin' installs the same keyed effect rather than one source per
+# bank/use. Duplicate calls cannot grow the source registry (01.02.02).
+fun test_orks17q_shared_watchin_all_banks() -> Bool:
+    let bank : SourceBank
+    let valid = true
+    for index in range(3):
+        bank.value = index
+        let board = orks17q_bank_fixture(bank, OrksDetachment::war_horde)
+        board.begin_phase(BattlePhase::movement)
+        ref unit = source_bank_unit(board, bank, 0)
+        unit[0].orks_enhancement = OrksEnhancement::da_boss_is_watchin
+        let before = orks_watchin_available(board, unit)
+        commit_orks_watchin(board, unit)
+        let sources = board.source_instances.size()
+        grant_orks_own_payload(board, unit, 200 + OrksEnhancement::da_boss_is_watchin.value, riled_up_grant(), SourceDuration::next_own_turn)
+        valid = valid and before and unit_is_riled_up(unit) and !orks_watchin_available(board, unit) and board.source_instances.size() == sources
+    return valid
+
+# Dread Power has identical CP/history/effect behavior in all banks. Genuine
+# external-target rules (Roar) remain unavailable offboard (01.02.04).
+fun test_orks17q_shared_dread_power_all_banks() -> Bool:
+    let bank : SourceBank
+    let valid = true
+    for index in range(3):
+        bank.value = index
+        let board = orks17q_bank_fixture(bank, OrksDetachment::dread_mob)
+        board.begin_phase(BattlePhase::movement)
+        ref unit = source_bank_unit(board, bank, 0)
+        unit[0].keywords.append(Keyword::walker)
+        let before = orks_dread_power_valid(board, unit, false)
+        commit_orks_dread_power(board, unit)
+        valid = valid and before and unit_is_riled_up(unit) and board.command_points[0] == 9 and unit.history.stratagem_targeted_by_player[0] and !orks_dread_power_valid(board, unit, false)
+        if index > 0:
+            valid = valid and !orks_psychic_unit_available(board, unit, false)
+    return valid
+
+# Mortal allocation, FNP and remaining wounds now share the same damage job
+# and action shape in all banks (core pp24/81; appendix01.02.04).
+fun test_orks17q_shared_mortals_and_prevention_all_banks() -> Bool:
+    let bank : SourceBank
+    let valid = true
+    for index in range(3):
+        bank.value = index
+        let board = orks17q_bank_fixture(bank, OrksDetachment::war_horde)
+        ref unit = source_bank_unit(board, bank, 0)
+        unit[0].profile = Profile::beastboss_morgrim
+        let original = unit[0].wounds_left()
+        let count : CombatCounter
+        count = 2
+        let mortals = resolve_mortal_wounds(board, bank, unit_id(0), unit_id(0), false, count)
+        mortals.select_mortal_model(board, damage_test_model(0))
+        mortals.roll(board, attack_test_die(6))
+        mortals.select_mortal_model(board, damage_test_model(0))
+        mortals.roll(board, attack_test_die(1))
+        valid = valid and mortals.is_done() and unit[0].wounds_left() == original - 1 and board.damage_bank.value == SourceBank::battlefield.value
+    return valid
+
+# Offboard deaths use common ordering and source cleanup, without a Deadly
+# Demise range/roll. Battlefield deaths still retain that printed effect.
+fun test_orks17q_shared_offboard_death_skips_external_geometry() -> Bool:
+    let board = orks17q_bank_fixture(SourceBank::reserves, OrksDetachment::brute_bosses)
+    ref unit = board.reserve_units[0]
+    unit[0].has_deadly_demise = true
+    unit[0].orks_enhancement = OrksEnhancement::surly_as_a_squiggoth
+    let identity = unit[0].identity
+    let job = damage_job(DamageKind::normal, unit_id(0), unit_id(0), false, false, unit[0].wounds_left(), identity)
+    job.bank = SourceBank::reserves
+    commit_wound_loss(board, job, damage_test_model(0), unit[0].wounds_left(), false)
+    let jobs : DamageJobs
+    let death = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    death.choose_destruction_unit(board, unit_id(0))
+    death.resolve_destruction_model(board, damage_test_model(0))
+    return death.is_done() and unit.models.empty() and unit.destroyed_models.value.size() == 1 and unit.destroyed_models.value[0].identity == identity
+
+# Surly shares roll/token/three-wound reset in all banks. Only battlefield
+# returns request placement; reserve/passenger returns need no coordinate.
+fun test_orks17q_shared_surly_all_banks() -> Bool:
+    let bank : SourceBank
+    let valid = true
+    for index in range(3):
+        bank.value = index
+        let board = orks17q_bank_fixture(bank, OrksDetachment::brute_bosses)
+        ref unit = source_bank_unit(board, bank, 0)
+        unit[0].orks_enhancement = OrksEnhancement::surly_as_a_squiggoth
+        unit[0].destroyed_phase = board.phase_serial.value + 1
+        unit[0].destruction_pending = true
+        unit[0].destroying_unit_known = true
+        unit[0].suffered_wounds = unit[0].profile.wounds()
+        let identity = unit[0].identity
+        unit.remove_model(0)
+        let revival = return_orks_surly(board, unit, bank, unit_id(0), damage_test_model(0))
+        revival.roll(board, unit, attack_test_die(2))
+        if index == 0:
+            revival.place_surly_model(board, unit, board_position(5, 5))
+        valid = valid and revival.is_done() and !unit.retired and unit[0].identity == identity and unit[0].wounds_left() == 3 and !unit[0].destruction_pending and !unit[0].destroying_unit_known and unit[0].off_battlefield == (index != 0)
+    return valid
+
+# Breakin' Heads has one action sequence and one CP/D3/shock-removal rule in
+# every bank. Source: War Horde card; appendix01.02.04; mortals core p24.
+fun test_orks17q_shared_breakin_heads_all_banks() -> Bool:
+    let bank : SourceBank
+    let valid = true
+    for index in range(3):
+        bank.value = index
+        let attached = orks17p2_attached(make_orks_beast_snagga_boyz(1, 9, 1), make_orks_beastboss())
+        let board = orks17p2_fixture(attached)
+        board.armies[0].faction = ArmyFaction::orks
+        let selected = board.armies[0].record_detachment(OrksDetachment::war_horde)
+        board.command_points[0] = 10
+        if index == 1:
+            let moved = reposition_unit(board, unit_id(0))
+            assert(moved, "shock fixture reserve transfer failed")
+        if index == 2:
+            board[1][0].transport_permissions_known = true
+            board[1][0].transport_capacity = 20
+            board[1][0].permitted_passenger_keywords.append(Keyword::infantry)
+            transfer_embarked_unit(board, unit_id(0), board[1][0].identity)
+        ref unit = source_bank_unit(board, bank, 0)
+        unit[0].profile = Profile::beastboss_morgrim
+        unit.battle_socked = true
+        board.current_decision_maker = true
+        let sequence = orks_became_shocked(board, unit.identity)
+        sequence.breakin_heads(board)
+        sequence.quantity(board, attack_test_die(1))
+        sequence.select_mortal_model(board, damage_test_model(0))
+        sequence.roll(board, attack_test_die(6))
+        valid = valid and sequence.is_done() and !unit.battle_socked and board.command_points[0] == 9 and unit.history.stratagem_targeted_by_player[0] and board.current_decision_maker
+    return valid
+
+# Common mortal jobs preserve their bank through a suspended-frame roundtrip;
+# a restored reserve decision cannot accidentally allocate to board slot0.
+fun test_orks17q_shared_mortal_frame_roundtrip() -> Bool:
+    let board = orks17q_bank_fixture(SourceBank::reserves, OrksDetachment::war_horde)
+    let original = board.reserve_units[0][0].wounds_left()
+    let count : CombatCounter
+    count = 1
+    let pending = resolve_mortal_wounds(board, SourceBank::reserves, unit_id(0), unit_id(0), false, count)
+    let text = to_string(pending)
+    let restored : MortalWounds
+    let parsed = from_string(restored, text)
+    restored.select_mortal_model(board, damage_test_model(0))
+    return parsed and restored.is_done() and board.reserve_units[0][0].wounds_left() == original - 1 and board[0].retired
+
+# Turn/phase limits and movement flags reset identically in all three banks,
+# while the opponent's turn-only fight/shoot usage survives (pp28–30/33/54).
+fun test_orks17q_shared_boundary_resets_all_banks() -> Bool:
+    let bank : SourceBank
+    let valid = true
+    for index in range(3):
+        bank.value = index
+        let board = orks17q_bank_fixture(bank, OrksDetachment::war_horde)
+        ref unit = source_bank_unit(board, bank, 0)
+        unit.has_run = true
+        unit.has_moved = true
+        unit.has_charged = true
+        unit.can_shoot = false
+        unit.can_charge = false
+        unit.has_shoot = true
+        unit.has_fought = true
+        unit.history.used_stratagem_this_phase = true
+        unit.history.stratagem_targeted_by_player[0] = true
+        board.current_player = true
+        board.start_turn_history()
+        valid = valid and !unit.has_run and !unit.has_moved and !unit.has_charged and unit.can_shoot and unit.can_charge and unit.has_shoot and unit.has_fought
+        board.begin_phase(BattlePhase::fight)
+        valid = valid and !unit.has_fought and !unit.history.used_stratagem_this_phase and !unit.history.stratagem_targeted_by_player[0]
+        board.current_player = false
+        board.start_turn_history()
+        valid = valid and !unit.has_shoot
+    return valid
+
+# Pending deaths across different banks belong to the same controller's
+# ordering group. Selecting reserves first must not consume a battlefield ID
+# with the same numeric slot (p87; supplied Rules Sequencing).
+fun test_orks17q_shared_destruction_bank_order() -> Bool:
+    let board = orks17q_bank_fixture(SourceBank::reserves, OrksDetachment::war_horde)
+    board[1].owned_by_player1 = false
+    board[1][0].state = ModelState::pending_destruction
+    board[1][0].destruction_pending = true
+    board[1][0].suffered_wounds = board[1][0].profile.wounds()
+    board.reserve_units[0][0].state = ModelState::pending_destruction
+    board.reserve_units[0][0].destruction_pending = true
+    board.reserve_units[0][0].suffered_wounds = board.reserve_units[0][0].profile.wounds()
+    let identity = board.reserve_units[0][0].identity
+    let jobs : DamageJobs
+    let death = resolve_damage_jobs(board, jobs, false, unit_id(0))
+    let offered = can death.choose_destruction_bank(board, SourceBank::reserves)
+    death.choose_destruction_bank(board, SourceBank::reserves)
+    death.choose_destruction_unit(board, unit_id(0))
+    death.resolve_destruction_model(board, damage_test_model(0))
+    # The work stack resolves pending death triggers before queued removals.
+    # Check which trigger was consumed, then check both archives at completion.
+    let first = !board.reserve_units[0][0].destruction_pending and board[1][0].destruction_pending and board.reserve_units[0][0].identity == identity
+    death.choose_destruction_unit(board, unit_id(1))
+    death.resolve_destruction_model(board, damage_test_model(0))
+    return offered and first and death.is_done() and board[1].models.empty() and board.reserve_units[0].models.empty() and board.reserve_units[0].destroyed_models.value[0].identity == identity and board.damage_bank.value == SourceBank::battlefield.value

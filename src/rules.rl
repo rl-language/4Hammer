@@ -411,15 +411,15 @@ act declare_allocation_order(ctx Board board, frm AllocationGroups groups, frm B
 
 # Feel No Pain rolls for every would-be wound in a normal damage application
 # before committing losses; mortals call this with one wound (p.81).
-act prevent_wound_loss(ctx Board board, frm UnitID target, frm ModelID model, frm CombatCounter amount) -> WoundPrevention:
+act prevent_wound_loss(ctx Board board, frm SourceBank bank, frm UnitID target, frm ModelID model, frm CombatCounter amount) -> WoundPrevention:
     frm lost : CombatCounter
     frm count : CombatCounter
     frm threshold : LinearlyDistributedInt<0, 11>
-    threshold = board[target][model].profile.feel_no_pain()
+    threshold = source_bank_unit(board, bank, target.get())[model].profile.feel_no_pain()
     if threshold > 6:
         lost = amount
         return
-    board.current_decision_maker = board[target].owned_by_player1
+    board.current_decision_maker = source_bank_unit(board, bank, target.get()).owned_by_player1
     board.current_state = CurrentStateDescription::feel_no_pain_roll
     while count < amount:
         act roll(Dice prevention)
@@ -427,12 +427,17 @@ act prevent_wound_loss(ctx Board board, frm UnitID target, frm ModelID model, fr
             lost = lost + 1
         count = count + 1
 
+# Battlefield compatibility shares the same prevention frame (p81).
+fun prevent_wound_loss(Board board, UnitID target, ModelID model, CombatCounter amount) -> WoundPrevention:
+    return prevent_wound_loss(board, SourceBank::battlefield, target, model, amount)
+
 # Finite jobs and a nonrecursive destruction scan let immediate death effects
 # interrupt mortal allocation, while attack-triggered deaths wait (pp.24/80/87).
 # Job snapshots, not references into the work vector, survive child actions.
 act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_attacks, frm UnitID finished_source) -> DamageResolution:
     frm previous_owner = board.current_decision_maker
     frm previous_target = board.attack_info.target_unit_id
+    frm previous_bank = board.damage_bank
     # P67 conferral ends once this attacking unit's full sequence is finished,
     # before its delayed destruction effects and removals are resolved.
     if finish_attacks:
@@ -445,13 +450,17 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
     while true:
         event = next_destruction(board, finish_attacks, finished_source)
         if event.found:
-            board.current_decision_maker = board[event.unit].owned_by_player1
-            act choose_destruction_unit(frm UnitID dying_unit) {destruction_unit_valid(board, dying_unit, board.current_decision_maker, finish_attacks, finished_source)}
+            board.current_decision_maker = source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1
+            if destruction_bank_count(board, board.current_decision_maker, finish_attacks, finished_source) > 1:
+                act choose_destruction_bank(frm SourceBank death_bank) {destruction_bank_valid(board, death_bank, board.current_decision_maker, finish_attacks, finished_source)}
+                event.bank = death_bank
+            board.damage_bank = event.bank
+            act choose_destruction_unit(frm UnitID dying_unit) {destruction_unit_valid(board, event.bank, dying_unit, board.current_decision_maker, finish_attacks, finished_source)}
             event.unit = dying_unit
             board.attack_info.target_unit_id = dying_unit
-            act resolve_destruction_model(frm ModelID dying_model) {dying_model.get() < board[dying_unit].models.size(), destruction_ready(board[dying_unit][dying_model], finish_attacks, finished_source)}
+            act resolve_destruction_model(frm ModelID dying_model) {dying_model.get() < source_bank_unit(board, event.bank, dying_unit.get()).models.size(), destruction_ready(source_bank_unit(board, event.bank, dying_unit.get())[dying_model], finish_attacks, finished_source)}
             event.model = dying_model
-            casualty = board[event.unit][event.model]
+            casualty = source_bank_unit(board, event.bank, event.unit.get())[event.model]
             frm destroying_identity : EntityIdentity
             destroying_identity = 0
             if casualty.destroying_unit_known:
@@ -460,11 +469,11 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             frm headbutt_recipient : UnitID
             frm crash_mortals : CombatCounter
             crash_mortals = 0
-            if casualty.has_keyword(Keyword::aircraft) and casualty.destroyed_whole_unit and board.can_target_strat(board[event.unit].owned_by_player1, Stratagem::orks_flyin_headbutt, board[event.unit]) and orks_headbutt_has_target(board, event.unit, casualty):
+            if event.bank.value == SourceBank::battlefield.value and casualty.has_keyword(Keyword::aircraft) and casualty.destroyed_whole_unit and board.can_target_strat(source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1, Stratagem::orks_flyin_headbutt, source_bank_unit(board, event.bank, event.unit.get())) and orks_headbutt_has_target(board, event.unit, casualty):
                 actions:
                     act decline_flyin_headbutt()
                     act flyin_headbutt()
-                        board.commit_stratagem(board[event.unit].owned_by_player1, Stratagem::orks_flyin_headbutt, board[event.unit])
+                        board.commit_stratagem(source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1, Stratagem::orks_flyin_headbutt, source_bank_unit(board, event.bank, event.unit.get()))
                         suppress_demise = true
                         act choose_headbutt_target(frm UnitID crash_target) {orks_headbutt_target(board, event.unit, casualty, crash_target)}
                         headbutt_recipient = crash_target
@@ -476,24 +485,27 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
                             headbutt_mortals = headbutt_mortals.value + int(crash_face.value >= 4)
                         if headbutt_mortals > 0:
                             crash_mortals = headbutt_mortals
-            board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::model_destroyed, board[event.unit].identity, destroying_identity, casualty.identity), casualty.destroyed_whole_unit)
+            board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::model_destroyed, source_bank_unit(board, event.bank, event.unit.get()).identity, destroying_identity, casualty.identity), casualty.destroyed_whole_unit)
             subaction*(board) board.shared_actions.resolve_source_event
-            board[event.unit][event.model].destruction_pending = false
-            board[event.unit][event.model].destroyed_whole_unit = false
-            absent_source.owned_by_player1 = !board[event.unit].owned_by_player1
+            source_bank_unit(board, event.bank, event.unit.get())[event.model].destruction_pending = false
+            source_bank_unit(board, event.bank, event.unit.get())[event.model].destroyed_whole_unit = false
+            absent_source.owned_by_player1 = !source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1
             retaliation = 0
-            if casualty.destroying_unit_known:
+            if event.bank.value == SourceBank::battlefield.value and casualty.destroying_unit_known:
                 board.shared_actions.on_model_destroyed = on_model_destroyed(board, board[casualty.destroying_unit], casualty)
                 subaction*(board, board[casualty.destroying_unit], casualty) board.shared_actions.on_model_destroyed
                 frm triggered_generated_mortal_snapshot_2 = board.shared_actions.on_model_destroyed.generated_mortal
                 retaliation = triggered_generated_mortal_snapshot_2
             else:
-                board.shared_actions.on_model_destroyed = on_model_destroyed(board, absent_source, casualty)
-                subaction*(board, absent_source, casualty) board.shared_actions.on_model_destroyed
+                if event.bank.value == SourceBank::battlefield.value:
+                    board.shared_actions.on_model_destroyed = on_model_destroyed(board, absent_source, casualty)
+                    subaction*(board, absent_source, casualty) board.shared_actions.on_model_destroyed
             # Retain physical presence through the triggered effects; removal
             # is queued beneath their mortal jobs (Deadly Demise p.80).
             if casualty.state == ModelState::pending_destruction:
-                jobs.append(damage_job(DamageKind::remove_destroyed, event.unit, casualty.destroying_unit, casualty.destroying_unit_known, false, 0, casualty.identity))
+                let removal = damage_job(DamageKind::remove_destroyed, event.unit, casualty.destroying_unit, casualty.destroying_unit_known, false, 0, casualty.identity)
+                removal.bank = event.bank
+                jobs.append(removal)
             # Headbutt says before removal. This LIFO work stack must put the
             # chosen mortals ABOVE removal, just like other death retaliation.
             if crash_mortals > 0:
@@ -502,9 +514,9 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
                 jobs.append(damage_job(DamageKind::mortal, casualty.destroying_unit, event.unit, true, false, retaliation.value, invalid_entity_identity()))
             # p.65 requires passenger hazards/setup before carrier Deadly
             # Demise. Deferred jobs keep that ordering without recursive frames.
-            if casualty.has_deadly_demise and !suppress_demise:
+            if event.bank.value == SourceBank::battlefield.value and casualty.has_deadly_demise and !suppress_demise:
                 jobs.append(damage_job(DamageKind::deferred_demise, event.unit, event.unit, true, false, 0, casualty.identity))
-            if carrier_has_passengers(board, casualty.identity):
+            if event.bank.value == SourceBank::battlefield.value and carrier_has_passengers(board, casualty.identity):
                 jobs.append(damage_job(DamageKind::emergency_next, event.unit, event.unit, true, false, 0, casualty.identity))
             continue
         if jobs.empty():
@@ -533,15 +545,15 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             continue
         if current_job.kind == DamageKind::emergency_setup:
             frm emergency_location = find_passenger_carrier(board, current_job.recipient)
-            frm emergency_original = board[current_job.target]
+            frm emergency_original = source_bank_unit(board, current_job.bank, current_job.target.get())
             frm emergency_candidate : Unit
             arrange_emergency_survivors(board, emergency_original, emergency_candidate, emergency_location, current_job.target.get())
-            board[current_job.target] = emergency_candidate
+            source_bank_unit(board, current_job.bank, current_job.target.get()) = emergency_candidate
             finish_disembark(board, current_job.target, DisembarkMode::emergency)
             # Models unable to set up are destroyed, without a damage/FNP roll
             # (p.65). Retain any own destruction hook in the same work engine.
             for unplaced_index in range(emergency_original.models.size()):
-                if board[current_job.target].find_model(emergency_original[unplaced_index].identity) < 0:
+                if source_bank_unit(board, current_job.bank, current_job.target.get()).find_model(emergency_original[unplaced_index].identity) < 0:
                     let unplaced = emergency_original[unplaced_index]
                     unplaced.suffered_wounds = unplaced.profile.wounds()
                     unplaced.off_battlefield = true
@@ -550,18 +562,18 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
                         unplaced.destruction_pending = true
                         unplaced.destroyed_by_attack = false
                         unplaced.destroying_unit_known = false
-                        board[current_job.target].models.append(unplaced)
+                        source_bank_unit(board, current_job.bank, current_job.target.get()).models.append(unplaced)
                     else:
-                        board[current_job.target].destroyed_models.value.append(unplaced)
+                        source_bank_unit(board, current_job.bank, current_job.target.get()).destroyed_models.value.append(unplaced)
             continue
         if current_job.kind == DamageKind::deferred_demise:
             frm demise_index : ModelID
-            let found_demise = board[current_job.target].find_model(current_job.recipient)
+            let found_demise = source_bank_unit(board, current_job.bank, current_job.target.get()).find_model(current_job.recipient)
             if found_demise < 0:
                 continue
             demise_index = found_demise
-            casualty = board[current_job.target][demise_index]
-            board.current_decision_maker = board[current_job.target].owned_by_player1
+            casualty = source_bank_unit(board, current_job.bank, current_job.target.get())[demise_index]
+            board.current_decision_maker = source_bank_unit(board, current_job.bank, current_job.target.get()).owned_by_player1
             board.current_state = CurrentStateDescription::destruction_roll
             act roll(Dice explosion)
             if explosion == 6:
@@ -578,44 +590,45 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
                         jobs.append(damage_job(DamageKind::mortal, affected, current_job.target, true, false, demise_amount_result_snapshot_5.value, invalid_entity_identity()))
             continue
         if current_job.kind == DamageKind::remove_destroyed:
-            let removed = board[current_job.target].find_model(current_job.recipient)
+            let removed = source_bank_unit(board, current_job.bank, current_job.target.get()).find_model(current_job.recipient)
             if removed >= 0:
-                board[current_job.target].remove_model(removed)
+                source_bank_unit(board, current_job.bank, current_job.target.get()).remove_model(removed)
             continue
-        if current_job.amount == 0 or !has_live_damage_recipient(board[current_job.target]):
+        if current_job.amount == 0 or !has_live_damage_recipient(source_bank_unit(board, current_job.bank, current_job.target.get())):
             continue
+        board.damage_bank = current_job.bank
         board.attack_info.target_unit_id = current_job.target
-        board.current_decision_maker = board[current_job.target].owned_by_player1
+        board.current_decision_maker = source_bank_unit(board, current_job.bank, current_job.target.get()).owned_by_player1
         frm recipient : ModelID
         if current_job.recipient.value > 0:
-            let existing = board[current_job.target].find_model(current_job.recipient)
-            if existing < 0 or !board[current_job.target][existing].is_alive():
+            let existing = source_bank_unit(board, current_job.bank, current_job.target.get()).find_model(current_job.recipient)
+            if existing < 0 or !source_bank_unit(board, current_job.bank, current_job.target.get())[existing].is_alive():
                 continue
             recipient = existing
         else:
             board.current_state = CurrentStateDescription::mortal_wound
-            act select_mortal_model(frm ModelID mortal_model) {mortal_model_valid(board[current_job.target], mortal_model)}
+            act select_mortal_model(frm ModelID mortal_model) {mortal_model_valid(source_bank_unit(board, current_job.bank, current_job.target.get()), mortal_model)}
             recipient = mortal_model
-        frm identity = board[current_job.target][recipient].identity
+        frm identity = source_bank_unit(board, current_job.bank, current_job.target.get())[recipient].identity
         frm application : CombatCounter
         application = 1
         if current_job.kind == DamageKind::normal:
             application = current_job.amount
-        board.shared_actions.prevent_wound_loss = prevent_wound_loss(board, current_job.target, recipient, application)
+        board.shared_actions.prevent_wound_loss = prevent_wound_loss(board, current_job.bank, current_job.target, recipient, application)
         subaction*(board) board.shared_actions.prevent_wound_loss
         frm prevention_lost_snapshot_6 = board.shared_actions.prevent_wound_loss.lost
         frm faction_fight_death = false
         frm faction_threshold : BInt<0, 5>
-        faction_threshold = orks_fight_death_threshold(board, board[current_job.target], board[current_job.target][recipient])
-        if prevention_lost_snapshot_6 > 0 and prevention_lost_snapshot_6.value >= board[current_job.target][recipient].wounds_left() and faction_threshold > 0:
-            board.current_decision_maker = board[current_job.target].owned_by_player1
+        faction_threshold = orks_fight_death_threshold(board, source_bank_unit(board, current_job.bank, current_job.target.get()), source_bank_unit(board, current_job.bank, current_job.target.get())[recipient])
+        if prevention_lost_snapshot_6 > 0 and prevention_lost_snapshot_6.value >= source_bank_unit(board, current_job.bank, current_job.target.get())[recipient].wounds_left() and faction_threshold > 0:
+            board.current_decision_maker = source_bank_unit(board, current_job.bank, current_job.target.get()).owned_by_player1
             act roll(Dice fight_death_face)
             faction_fight_death = fight_death_face.value >= faction_threshold.value
         commit_wound_loss(board, current_job, recipient, prevention_lost_snapshot_6.value, faction_fight_death or (current_job.from_attack and board.attack_info.fight_on_death and current_job.target.get() == previous_target.get()))
         if faction_fight_death:
             # The faction permission was already rolled at destruction. Do not
             # ask its successful retained fighter to roll again on selection.
-            board[current_job.target][recipient].destruction_fight_roll = 1
+            source_bank_unit(board, current_job.bank, current_job.target.get())[recipient].destruction_fight_roll = 1
         refresh_source_effects(board, TimingWindow::none)
         if !(current_job.kind == DamageKind::normal):
             current_job.amount = current_job.amount - 1
@@ -623,11 +636,12 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
                 if prevention_lost_snapshot_6 > 0:
                     current_job.recipient = identity
                 else:
-                    if current_job.recipient.value == identity.value and board[current_job.target].find_model(identity) >= 0 and board[current_job.target][board[current_job.target].find_model(identity)].suffered_wounds == 0:
+                    if current_job.recipient.value == identity.value and source_bank_unit(board, current_job.bank, current_job.target.get()).find_model(identity) >= 0 and source_bank_unit(board, current_job.bank, current_job.target.get())[source_bank_unit(board, current_job.bank, current_job.target.get()).find_model(identity)].suffered_wounds == 0:
                         current_job.recipient = invalid_entity_identity()
             if current_job.amount > 0:
                 jobs.append(current_job)
     board.attack_info.target_unit_id = previous_target
+    board.damage_bank = previous_bank
     board.current_decision_maker = previous_owner
     board.current_state = CurrentStateDescription::none
 
@@ -639,11 +653,18 @@ fun invalid_entity_identity() -> EntityIdentity:
 
 # Ordinary mortals spill by one-wound allocation; damage jobs process immediate
 # destruction before the next recipient, with no save roll (pp.24/87).
-act resolve_mortal_wounds(ctx Board board, frm UnitID target, frm UnitID source, frm Bool source_known, frm CombatCounter amount) -> MortalWounds:
+act resolve_mortal_wounds(ctx Board board, frm SourceBank bank, frm UnitID target, frm UnitID source, frm Bool source_known, frm CombatCounter amount) -> MortalWounds:
     frm jobs : DamageJobs
-    jobs.append(damage_job(DamageKind::mortal, target, source, source_known, false, amount.value, invalid_entity_identity()))
+    let job = damage_job(DamageKind::mortal, target, source, source_known, false, amount.value, invalid_entity_identity())
+    job.bank = bank
+    jobs.append(job)
     board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, source)
     subaction*(board) board.shared_actions.resolve_damage_jobs
+
+# Battlefield selectors use the same damage engine as reserve/passenger
+# own-unit mortals; only jobs' bank differs (p24; appendix01.02.04).
+fun resolve_mortal_wounds(Board board, UnitID target, UnitID source, Bool source_known, CombatCounter amount) -> MortalWounds:
+    return resolve_mortal_wounds(board, SourceBank::battlefield, target, source, source_known, amount)
 
 # Ordered group saves use ascending rerolled results; evaluate each against
 # the live current group's characteristics, then apply that attack alone (p.19).
@@ -1862,19 +1883,8 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         if command_step and recover_shock:
             unit.battle_socked = false
     if !shocked_before and unit.battle_socked:
-        frm shocked_slot : UnitIterator
-        shocked_slot = board.units.size()
-        for index in range(board.units.size()):
-            if board.units[index].identity == unit.identity:
-                shocked_slot = index
-        if shocked_slot.value < board.units.size():
-            frm shock_target : UnitID
-            shock_target = shocked_slot.value
-            board.shared_actions.orks_became_shocked = orks_became_shocked(board, shock_target)
-            subaction*(board) board.shared_actions.orks_became_shocked
-    if !shocked_before and unit.battle_socked and unit.off_battlefield:
-        board.shared_actions.orks_offboard_breakin_heads = orks_offboard_breakin_heads(board, unit)
-        subaction*(board, unit) board.shared_actions.orks_offboard_breakin_heads
+        board.shared_actions.orks_became_shocked = orks_became_shocked(board, unit.identity)
+        subaction*(board) board.shared_actions.orks_became_shocked
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::shock_end, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
     board.current_decision_maker = previous_owner
@@ -2175,12 +2185,12 @@ fun move(Board board, UnitID unit, Int additional_movement) -> Move:
 # retained models, resolve destruction effects in the common ordering, then
 # archive/remove them. Turn reuses one bounded cleanup frame across all phases.
 act cleanup_phase_retained(ctx Board board) -> PhaseRetainedCleanup:
-    subaction*(board) offboard = cleanup_orks_offboard_retained(board)
     release_phase_retained_fighters(board)
     frm jobs : DamageJobs
     let source : UnitID
     board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, source)
     subaction*(board) board.shared_actions.resolve_damage_jobs
+    subaction*(board) returns = resolve_orks_bank_returns(board)
 
 # Pile In/consolidation are optional staged per-model moves, separate from
 # attack selection (pp.38/42). No partial path changes live positions; closest

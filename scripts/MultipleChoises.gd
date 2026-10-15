@@ -52,6 +52,8 @@ func on_state_change():
 			added += 1
 		if unwrapped.members_count() == 1 and GlobalRules.library.is_enum(unwrapped.get_member(0)):
 			var label = str(GlobalRules.library.as_string_literal(unwrapped.get_member(0))).replace("_", " ")
+			if unwrapped is RLCGameChooseDestructionBank:
+				label = "Resolve destruction in " + label
 			if unwrapped is RLCGameChooseShootingKind:
 				label += " shooting"
 			if unwrapped is RLCGameChooseFightKind:
@@ -207,10 +209,6 @@ func on_state_change():
 			var unit = GlobalRules.library.get(units, slot)
 			make_choise("Own-unit ability: " + RLCLib.convert_string(unit.get_name().get_value()), action)
 			added += 1
-		if unwrapped is RLCGameChooseOffboardMortalModel:
-			var model_id = unwrapped.get_member(0).get_id().get_value()
-			make_choise("Offboard mortal wound: model " + str(model_id + 1), action)
-			added += 1
 		# Embarked selectors address the passenger bank, never battlefield IDs.
 		if unwrapped is RLCGameSelectDisembarkingUnit or unwrapped is RLCGameChooseEmergencyPassenger or unwrapped is RLCGameSelectFiringDeckPassenger or unwrapped is RLCGameChoosePilinOutPassenger:
 			var passenger_id = unwrapped.get_member(0).get_id().get_value()
@@ -237,7 +235,7 @@ func on_state_change():
 			added += 1
 		if unwrapped is RLCGameChooseDestructionUnit:
 			var dying_id = unwrapped.get_member(0).get_id().get_value()
-			var dying_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_units(), dying_id)
+			var dying_unit = GlobalRules.library.get(damage_units(GlobalRules.state.get_board()), dying_id)
 			var offboard_death = dying_unit.get_off_battlefield()
 			for dying_model_id in range(GlobalRules.library.size(dying_unit.get_models())):
 				offboard_death = offboard_death or GlobalRules.library.get(dying_unit.get_models(), dying_model_id).get_off_battlefield()
@@ -247,7 +245,7 @@ func on_state_change():
 		# Hazard allocation/destruction can occur before passengers are placed.
 		if unwrapped is RLCGameSelectMortalModel or unwrapped is RLCGameResolveDestructionModel:
 			var allocation_board = GlobalRules.state.get_board()
-			var allocation_unit = GlobalRules.library.get(allocation_board.get_units(), allocation_board.get_attack_info().get_target_unit_id().get_id().get_value())
+			var allocation_unit = GlobalRules.library.get(damage_units(allocation_board), allocation_board.get_attack_info().get_target_unit_id().get_id().get_value())
 			var allocation_model_id = unwrapped.get_member(0).get_id().get_value()
 			var allocation_model = GlobalRules.library.get(allocation_unit.get_models(), allocation_model_id)
 			if allocation_unit.get_off_battlefield() or allocation_model.get_off_battlefield():
@@ -354,3 +352,12 @@ func clear():
 	for node in $ChoiseList.get_children():
 		node.queue_free()
 	visible = false
+
+# Damage rules share one selector; this adapter chooses its actual bank.
+func damage_units(board):
+	match board.get_damage_bank().get_value():
+		1:
+			return board.get_reserve_units()
+		2:
+			return board.get_embarked_units()
+	return board.get_units()

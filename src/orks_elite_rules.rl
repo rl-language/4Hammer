@@ -382,7 +382,7 @@ act heal_orks_component(ctx Board board, ctx Unit unit, frm SourceBank bank, frm
                 act place_returned_model(BoardPosition position) {orks_return_position_valid(board, target, returned, position, false)}
                 returned.position = position
             else:
-                placed = orks_offboard_return_capacity(board, unit, returned)
+                placed = orks_return_capacity(board, unit, returned)
             if placed:
                 prepare_orks_healed_model(returned, bank.value != SourceBank::battlefield.value)
                 restore_attachment_provenance(unit, returned)
@@ -439,23 +439,16 @@ act orks_runtherd_shock(ctx Board board, ctx Unit unit) -> OrksRuntherdShock:
         frm remaining = board.shared_actions.evaluate_random_stat.result
         while remaining.value > 0:
             act choose_punished_gretchin(frm ModelID casualty) {casualty.get() < unit.models.size(), unit[casualty].is_alive(), model_matches_datasheet(unit[casualty], OrksDatasheet::gretchin)}
-            if !unit.off_battlefield:
-                frm slot : UnitID
-                slot = board.find_unit(unit.identity)
-                let job = damage_job(DamageKind::normal, slot, slot, false, false, unit[casualty].wounds_left(), unit[casualty].identity)
-                commit_wound_loss(board, job, casualty, unit[casualty].wounds_left(), false)
-                frm jobs : DamageJobs
-                board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, slot)
-                subaction*(board) board.shared_actions.resolve_damage_jobs
-            else:
-                unit[casualty].suffered_wounds = unit[casualty].profile.wounds()
-                unit[casualty].state = ModelState::pending_destruction
-                unit[casualty].destruction_pending = true
-                unit[casualty].destroyed_by_attack = false
-                unit[casualty].destroying_unit_known = false
-                unit[casualty].destroyed_whole_unit = false
-                board.shared_actions.resolve_orks_offboard_death = resolve_orks_offboard_death(board, unit, casualty)
-                subaction*(board, unit) board.shared_actions.resolve_orks_offboard_death
+            frm location = locate_source(board, unit.identity, invalid_entity_identity())
+            assert(location.found, "Runtherd unit lost its bank")
+            frm slot : UnitID
+            slot = location.unit.value
+            let job = damage_job(DamageKind::normal, slot, slot, false, false, unit[casualty].wounds_left(), unit[casualty].identity)
+            job.bank = location.bank
+            commit_wound_loss(board, job, casualty, unit[casualty].wounds_left(), false)
+            frm jobs : DamageJobs
+            board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, slot)
+            subaction*(board) board.shared_actions.resolve_damage_jobs
             remaining = remaining - 1
         unit.battle_socked = false
     board.current_decision_maker = previous_owner

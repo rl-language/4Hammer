@@ -340,7 +340,7 @@ fun commit_orks_race(Board board, SourceInstance instance, UnitID target):
         ref cargo = board.embarked_units[passenger]
         if board[target].find_model(cargo.embarked_transport) >= 0:
             cargo.battle_socked = false
-            grant_orks_offboard_payload(board, cargo, 168, riled_up_grant(), SourceDuration::next_own_turn)
+            grant_orks_own_payload(board, cargo, 168, riled_up_grant(), SourceDuration::next_own_turn)
 
 # The selected engine lasts to next own Command, including offboard time.
 # No point/CP expenditure or unstated bonus is introduced.
@@ -397,7 +397,7 @@ act orks_remaining_window(ctx Board board, frm SourceInstance instance) -> OrksR
             payload.kind = OrksEffectKind::shokk_engine
         if engine.value == OrksEngine::pulse.value:
             payload.kind = OrksEffectKind::pulse_engine
-        grant_orks_offboard_payload(board, source_bank_unit(board, location.bank, location.unit.value), 170 + engine.value, payload, SourceDuration::next_own_command)
+        grant_orks_own_payload(board, source_bank_unit(board, location.bank, location.unit.value), 170 + engine.value, payload, SourceDuration::next_own_command)
         if engine.value == OrksEngine::shokk.value and location.bank.value == SourceBank::battlefield.value and !board.is_in_melee(board[source]) and board.reserve_units.has_capacity():
             act use_shokk_attack_engine(Bool shokk)
             if shokk:
@@ -623,7 +623,7 @@ act orks_datasheet_movement(ctx Board board, frm UnitID source) -> OrksDatasheet
                         act choose_makari_unit(UnitID target) {orks_makari_target(board, bank, target, board[source].owned_by_player1, chosen)}
                             ref unit = source_bank_unit(board, bank, target.get())
                             chosen[count.value] = unit.identity
-                            grant_orks_offboard_payload(board, unit, 165, riled_up_grant(), SourceDuration::next_own_turn)
+                            grant_orks_own_payload(board, unit, 165, riled_up_grant(), SourceDuration::next_own_turn)
                             count = count + 1
     if ability.value == OrksDatasheetMoveAbility::found_em.value or ability.value == OrksDatasheetMoveAbility::drive_by_skorchin.value:
         frm skorch = ability.value == OrksDatasheetMoveAbility::drive_by_skorchin.value
@@ -700,7 +700,7 @@ act orks_disembark_selection(ctx Board board, frm UnitID passenger, frm CarrierL
     if board.timing.phase.value != BattlePhase::movement.value or board[carrier.unit].owned_by_player1 != board.current_player:
         return
     if board[carrier.unit].has_ability(AbilityKind::idol_of_belligerence):
-        grant_orks_offboard_payload(board, board.embarked_units[passenger.get()], 164, riled_up_grant(), SourceDuration::next_own_turn)
+        grant_orks_own_payload(board, board.embarked_units[passenger.get()], 164, riled_up_grant(), SourceDuration::next_own_turn)
     if orks_datasheet_psychic_available(board, carrier.unit, 162):
         act use_beastscent(Bool beastscent)
         if beastscent:
@@ -711,7 +711,7 @@ act orks_disembark_selection(ctx Board board, frm UnitID passenger, frm CarrierL
             frm payload : OrksEffectGrant
             payload.kind = OrksEffectKind::beastscent
             payload.amount = 1
-            grant_orks_offboard_payload(board, board.embarked_units[passenger.get()], 169, payload, SourceDuration::turn)
+            grant_orks_own_payload(board, board.embarked_units[passenger.get()], 169, payload, SourceDuration::turn)
 
 # Taktikal Know-wotz splits the exact10 models into two five-model components
 # BEFORE attachments/transport formations. Original model identities/equipment

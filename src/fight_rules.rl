@@ -349,10 +349,15 @@ fun release_retained_fighters(Board board, UnitID source):
 # Phase end is the fallback for units that cannot/will not attack again. The
 # common destruction engine retains trigger ordering and exact-once archives.
 fun release_phase_retained_fighters(Board board):
-    for i in range(board.units.size()):
-        let source : UnitID
-        source = i
-        release_retained_fighters(board, source)
+    let bank : SourceBank
+    for bank_index in range(3):
+        bank.value = bank_index
+        for slot in range(source_bank_size(board, bank)):
+            ref unit = source_bank_unit(board, bank, slot)
+            for member in range(unit.models.size()):
+                if unit[member].state == ModelState::fight_on_death:
+                    unit[member].state = ModelState::pending_destruction
+                    unit[member].destruction_released = true
 
 # Engaging consolidation obliges each newly engaged unfought enemy to be
 # selected once; the pending stamp persists if earlier response attacks kill
