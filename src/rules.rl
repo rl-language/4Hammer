@@ -24,13 +24,11 @@ import source_effects
 import modifier_choices
 import factions.orks.orks_army_rules
 import attachment_rules
-import factions.orks.orks_unit_data
+import factions.orks.datasheets
 import factions.orks.orks_unit_rules
 import factions.orks.orks_datasheet_rules
 import factions.orks.orks_roster
 import factions.orks.orks_remaining_rules
-import factions.orks.orks_remaining_data
-import factions.orks.orks_elite_data
 import factions.orks.orks_elite_rules
 
 # User-supplied sequencing: turn owner's source instances in their chosen

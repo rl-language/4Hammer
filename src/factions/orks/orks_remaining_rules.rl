@@ -1,4 +1,4 @@
-import factions.orks.orks_remaining_data
+import factions.orks.datasheets
 import factions.orks.orks_elite_rules
 
 # Non-stacking live aura: same named ability contributes once. The source

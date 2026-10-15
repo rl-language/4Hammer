@@ -1,4 +1,4 @@
-import factions.orks.orks_remaining_data
+import factions.orks.datasheets
 
 # Pre-identity muster metadata, not model state. Small bounded ordinals are
 # translated into the existing typed loadout validators/factories below.
@@ -793,3 +793,20 @@ fun orks_muster_value_label(OrksMusterDraft draft, Int member_index, OrksMusterF
             return "Tankhammer"s
         return "Smash hammer"s
     return to_string(value)
+
+# Point-free current starter roster replaces the old public Morgrim data:
+# one Beastboss, four Squighogs and two ten-model Snagga units, each with its
+# permitted extra Thump Gun. This is a starter configuration, not all54 cards.
+# Sources: the three Orks card URLs above; prices are excluded by the user.
+fun make_orks_starter_roster(UnitVector out, Bool owner) -> Faction:
+    assert(out.size() + 4 <= MAX_UNIT_COUNT, "starter roster capacity exceeded")
+    out.append(make_orks_beastboss())
+    out.back().owned_by_player1 = owner
+    out.append(make_orks_squighog_boyz(1, 3))
+    out.back().owned_by_player1 = owner
+    for mob_index in range(2):
+        out.append(make_orks_beast_snagga_boyz(1, 9, 1))
+        out.back().owned_by_player1 = owner
+    # Keep the stable six-roster identifier/action API; its current Orks
+    # content is now explicit, rather than inferred from the old name.
+    return Faction::morgrim_butchas
