@@ -14485,3 +14485,29 @@ fun test_orks17p3_immobile_cannot_charge_surge_or_pile_in() -> Bool:
     let start = board[0][0].geometry_position()
     let finish = geometry_point(6 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0)
     return !charge_source_valid(board, unit_id(0), false) and !model_segment_valid(board, board[0], board[0][0], start, finish, policy) and melee_model_locked(board, board[0][0], board[0], MeleeMoveKind::pile_in)
+
+# User ruling2026-10-15 and core Coherency FAQ: multiple nearby groups cannot replace one contiguous
+# unit, even when every model has a neighbour and all pairs are within9in.
+fun test_orks17q_coherency_rejects_disconnected_pairs() -> Bool:
+    let unit = make_infernus_squad()
+    unit.models.resize(4)
+    unit[0].position = board_position(5, 5)
+    unit[1].position = board_position(6, 5)
+    unit[2].position = board_position(11, 5)
+    unit[3].position = board_position(12, 5)
+    let disconnected = !unit.is_coherent()
+    unit[2].position = board_position(8, 5)
+    unit[3].position = board_position(10, 5)
+    return disconnected and unit.is_coherent()
+
+# A retained destroyed model cannot bridge living groups (core pp14/87).
+fun test_orks17q_coherency_dead_bridge_does_not_connect() -> Bool:
+    let unit = make_infernus_squad()
+    unit[0].position = board_position(5, 5)
+    unit[1].position = board_position(6, 5)
+    unit[2].position = board_position(8, 5)
+    unit[3].position = board_position(10, 5)
+    unit[4].position = board_position(11, 5)
+    let before = unit.is_coherent()
+    unit[2].state = ModelState::fight_on_death
+    return before and !unit.is_coherent()

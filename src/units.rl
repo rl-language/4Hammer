@@ -802,7 +802,28 @@ cls Unit:
             if !has_neighbour:
                 return false
             i = i + 1
-        return true
+        # User ruling2026-10-15: require one connected group in addition
+        # to the printed neighbour/maximum-distance limits (core p14).
+        # Connectivity uses that same2in horizontal/5in vertical relation.
+        let reached : Bool[MAX_UNIT_MODELS]
+        let reached_count = 0
+        for seed_index in range(self.models.size()):
+            if self.models[seed_index].is_alive():
+                reached[seed_index] = true
+                reached_count = 1
+                break
+        let changed = true
+        while changed:
+            changed = false
+            for from_index in range(self.models.size()):
+                if !reached[from_index]:
+                    continue
+                for to_index in range(self.models.size()):
+                    if !reached[to_index] and self.models[to_index].is_alive() and within_geometry_limits(self.models[from_index].horizontal_distance_micrometres(self.models[to_index]), self.models[from_index].vertical_distance_micrometres(self.models[to_index]), 2, 5):
+                        reached[to_index] = true
+                        reached_count = reached_count + 1
+                        changed = true
+        return reached_count == live
 
     fun distance(Model model) -> Float:
         assert(self.models.size() != 0, "calculanting distance to empty unit")
