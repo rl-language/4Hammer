@@ -29,7 +29,7 @@ Several deliberate choices affect what you see:
 | Mission | Public play explicitly uses a legacy four-marker scoring fixture | Core objective-control support does not supply every published mission |
 | Position | Whole-inch positions on a 44-by-30-inch grid | A legal tabletop placement between grid points may be unavailable here |
 | Bases and hulls | Circular bases; ovals intentionally use a circle based on their long axis; Use-model hulls have explicitly imprecise circular proxies | Distances, overlap and fitting through gaps reflect the proxy, not a sculpted hull |
-| Visibility | Units are treated as at least visible when on the battlefield; intervening terrain areas supply partial obscuring | No model-body ray casting through windows or individual terrain features |
+| Visibility | Physical body occlusion is assumed away; terrain areas supply partial obscuring; Hidden, Lone Operative and offboard restrictions still apply | No model-body ray casting through windows or individual terrain features |
 | Coherency | Printed neighbour/distance checks plus one connected group of living models | Disconnected coherent-looking clusters are rejected by an explicit user ruling |
 | Source ordering | Current player's simultaneous effects first, in their chosen order, then the opponent's | This is the supplied sequencing ruling used by the engine |
 | Excluded data | Forge World and Legends, including Gargantuan Squiggoth | Historical catalog names for excluded units are not playable implementations |
@@ -70,7 +70,7 @@ flowchart LR
     Rules -->|generated RLCLib calls| Game[Native Game]
     Game --> Board[Board and current procedure]
     Board -->|updated state| Rules
-    Rules -->|state_changed| UI
+    Rules -->|on_state_changed| UI
 ```
 
 The simulation is native Rulebook code exposed by the generated Godot extension.
@@ -145,6 +145,157 @@ Re-fetch native references after an input that can replace a board, move a unit
 between banks or resize a vector. A wrapper obtained before that operation is
 not a promise of a stable object address. Stable game identity and a live Godot
 wrapper are separate concepts.
+
+## Whose turn is it, and whose choice is it?
+
+These questions have different answers during an attack or reaction:
+
+| Value | Meaning | Example during player 0's Shooting phase |
+| --- | --- | --- |
+| `board.current_player` | Turn owner | Remains player 0 while player 1 allocates damage |
+| `board.timing.active_player` | Active role in the nested operation | A reaction can temporarily use player 1's role and restore the caller afterward |
+| `board.current_decision_maker` | Owner of an ordinary pending decision | Player 1 can choose a defending model |
+| `library.get_current_player(game)` | Public decision classification | 0/1 for player input, -1 for chance, -4 when the game is done |
+
+The Boolean player fields use false/true for engine player indices 0/1. Do not
+read the legacy name `owned_by_player1` as a reliable human-facing 'Player 1'
+label. Use the application's player-index mapping consistently.
+
+The public classification recognizes dice-shaped inputs before consulting the
+ordinary decision-owner Bool. Consequently the Bool can still contain a player
+while `get_current_player` correctly reports chance. Completion is similarly
+queried through the frame, not through a current phase label alone.
+
+An ability's **trigger**, **use**, and **effect** also differ. A `SourceInstance`
+defines a real ability and its eligibility. A `PendingSourceEvent` is a collected
+candidate to resolve. Accepting it commits a `SourceUseRecord` where required;
+it can then install a lasting `SourceEffect`. Two abilities with similar text
+do not automatically share a use limit: their explicit rule/scope keys decide.
+
+## Worked flow: a shooting attack
+
+Suppose a unit fires a selected plasma profile into an enemy unit. This example
+explains the engine stages; the actual equipped profile and source rules still
+determine what is permitted.
+
+1. **Select the attacker and mode.** Eligibility checks timing, setup, movement,
+   engagement and source permissions. Selection effects resolve before weapons
+   and targets are committed.
+2. **Declare equipped weapons, profiles and targets.** A `DeclaredWeapon`
+   remembers the physical bearer, selected profile, target choices and required
+   declaration snapshots. Standard/supercharge profiles of one physical copy
+   are normally alternatives, not two independent guns. One Shot and Hazardous
+   bookkeeping follow the physical copy.
+3. **Recheck targets and choose the group to resolve.** A target that became
+   ineligible uses the defined retarget/discard path. Resolve one target fully
+   before switching. Gather compatible attacks; determine random A separately
+   for each selected weapon. Grouping does not discard source/provenance facts.
+4. **Gather the active attack context.** `AttackSequenceInfo` combines the
+   selected profile/rules with the effective bearer and target facts needed for
+   this group. It distinguishes WS/BS operations from hit-roll operations.
+5. **Resolve hit and wound dice.** Original dice are explicit inputs; rerolls
+   precede modifiers. An original die cannot be rerolled twice. Natural and
+   critical-result rules are distinct from modified totals. Supported optional
+   modifier choices retain each operation's provenance.
+6. **Resolve defender save groups and allocation.** `AllocationGroup` records
+   compatible live recipients by identity. The defender orders legal groups;
+   characters and wounded priorities are respected, with Precision's explicit
+   override where eligible. Save results are collected before the corresponding
+   reroll/damage processing. A save is not a second independent InSv roll.
+7. **Apply each failed save's attack.** Choose the actual eligible recipient,
+   determine random D at the required point, combine outgoing and incoming
+   modifiers, apply prevention and commit wound loss through the common damage
+   runner. Ordinary damage does not freely spill across models.
+8. **Finish the activation's aftermath.** Remaining groups/targets, deferred
+   destruction, selected physical Hazardous weapons and source-specific
+   after-effects follow their prescribed order. A nested reaction restores its
+   caller's roles/selection context when it finishes.
+
+```mermaid
+flowchart LR
+    Declare[Declare physical weapons and targets] --> Gather[Gather attack group]
+    Gather --> Dice[Hits and wounds]
+    Dice --> Saves[Save groups and recipient allocation]
+    Saves --> Damage[Damage jobs and prevention]
+    Damage --> Death[Destruction timing and after-effects]
+```
+
+Several of these stages can be waiting for input at once in the call chain;
+only the currently exposed inputs are legal. `Board.attack_info` describes the
+current group, while the declaration collection remembers the wider commitment.
+Neither is a complete historical battle log.
+
+## Worked flow: a Leader dies, or a model returns
+
+Consider a bodyguard unit with an attached Leader. The combined `Unit` retains
+the bodyguard identity and an `AttachmentComponent` for the Leader's original
+unit. Each model retains its own identity and original component.
+
+If the Leader is destroyed during an enemy activation, these are separate facts:
+the model has no remaining wounds; its destruction can be pending; it may still
+be physically retained for a source-defined timing; and applicable conferred
+unit rules may survive until the attacking unit's attacks end. The retained
+model is not thereby a normal living recipient or an arbitrary active ability
+source. Conversely, losing all the bodyguards does not split/recreate the
+combined unit or reset its original component histories.
+
+When removal is allowed, the original model is archived and the live model
+vector can compact. This is why a model index is unsuitable for a delayed
+'return that model' instruction. A source which returns it must preserve the
+original identity, equipment, physical weapon use and component provenance.
+
+Ordinary `heal_unit` first heals wounded living models. If its remaining wound
+allowance can return a casualty, it offers eligible original non-Characters and
+uses phase-start placement constraints. It does not infer Character resurrection
+from the presence of a dead Leader. An explicit rule such as Surly supplies its
+own trigger, expenditure, roll, wound count and nearest-unengaged policy, then
+calls the shared `return_model` procedure directly.
+
+A successful return clears death-only state and restores the original model;
+an explicit return can reactivate the retired unit slot. A battlefield return
+needs a supported legal grid position. A reserve return needs no battlefield
+coordinate; an embarked return still needs actual carrier permission and room.
+The same model-return mechanism handles those banks without constructing an
+imaginary battlefield copy.
+
+## Worked flow: a repair buff expires
+
+A Mek repair can install a source-owned hit contribution on its actual vehicle
+recipient. The `SourceInstance` records the rule/bearer and permission; a use
+record tracks the printed limit; the `SourceEffect` identifies the recipients
+and expiry; the model's modifier/grant records carry that effect key.
+
+When a rule lasts until the next own Movement phase, it does not expire at the
+start of next turn or Command phase. Source refresh tests the named boundary
+and owner. If two independent legal effects grant matching bonuses, removing
+one key must not remove the other. If a source requires a live conferring bearer,
+that condition is checked separately from elapsed duration.
+
+Embarking or entering reserves does not automatically cancel a persisting
+effect. Offboard units keep their actual records, and effect expiry/reset scans
+operate across all banks. That does not let a passenger measure an aura to an
+unrelated battlefield unit from its stale position.
+
+## Examples backed by regressions
+
+These names in [baseline.rl](../tests/baseline.rl) are useful entry points when
+you want to check a particular explanation rather than replay a full game:
+
+| Topic | Existing assertion |
+| --- | --- |
+| Effective range and declaration snapshots | `test_orks17c2b_half_range_snapshot_uses_effective_range` |
+| Effective characteristics separate attack groups | `test_orks17c2b_group_identity_splits_effective_strength` |
+| Precision allocation | `test_damage_precision_character_group_and_fallback` |
+| Attached unit versus model keywords | `test_attachment17g_keyword_union_not_model_spread` |
+| Bodyguard destruction preserves the unit | `test_attachment17g_bodyguard_death_keeps_combined_unit` |
+| Generic healing allowance | `test_procedures_heal_full_allowance_without_faction` |
+| Original model identity on return | `test_procedures_return_original_model_nearest_without_faction` |
+| Same return behavior in all banks | `test_orks17q_shared_surly_all_banks` |
+
+The [reference](game-state-reference.md) gives the fields behind these flows.
+The [test instructions](../tests/README.md) explain how to select an individual
+native assertion. Read a fixture as evidence for its specific case, not as a
+datasheet permission for a different army.
 
 ## Where to read next
 

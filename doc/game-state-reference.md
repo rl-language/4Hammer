@@ -53,6 +53,10 @@ For exact aliases and capacities see [state_types.rl](../src/state_types.rl),
 zero as 'unset' for every bounded field: source indices, positions and player
 indices legitimately use zero.
 
+The nonnegative `StatModifier` alias is used for selected allowances/increments;
+it is not the signed arithmetic record. Use `RuleModifier`'s operation/magnitude/
+sign representation for an actual negative modifier.
+
 ## Game
 
 Source: [full_game.rl](../src/full_game.rl). Owner: `GlobalRules.state` in Godot.
@@ -98,7 +102,7 @@ selects the legacy four-marker fixture.
 | `pending_weapon_abilities` | `CheckedVector<WeaponRule, 32>` | Choices shown while resolving duplicate/selectable weapon abilities; replaced for each such decision. |
 | `schema_version` | `StateSchema` | Save-layout marker, initialized to the current state schema; not an edition number. |
 | `next_identity` | `IdentitySequence` | Number of identities allocated so far; identification increments it rather than recycling dead entities' handles. |
-| `phase_serial` | `PhaseSerial` | Engine phase counter advanced by phase entry; history stamps compare against it. |
+| `phase_serial` | `PhaseSerial` | Phase-cleanup epoch advanced by clear_phase_modifiers, including phase entry; history stamps compare against it, not modulo-five phase arithmetic. |
 | `turn_serial` | `TurnSerial` | Engine turn counter advanced by turn entry; expiry and turn-limited use compare against it. |
 | `battle_points_limit` | `LinearlyDistributedInt<0, 10001>` | Explicit roster-limit metadata for configured point-aware fixtures; public point-free play does not invent costs. |
 | `moving_unit` | `UnitID` | Battlefield unit being manipulated by the movement context; restored after nested movement. |
@@ -378,4 +382,679 @@ For setup/visibility use the board-aware helpers in
 [movement_rules.rl](../src/movement_rules.rl) and
 [terrain_rules.rl](../src/terrain_rules.rl). A raw model coordinate or an
 isolated distance calculation cannot establish all setup/targeting permissions.
+
+## TimingState
+
+Source: [state_types.rl](../src/state_types.rl).
+
+Owned by Board.timing. Phase and timing-window runners write these values;
+eligibility/source dispatch read them. The turn owner remains Board.current_player
+when an enemy reaction changes the active role or decision owner.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `active_player` | `Bool` | Player whose active rule role is being resolved; nested movement/attacks restore the previous role. |
+| `phase` | `BattlePhase` | none/command/movement/shooting/charge/fight; entered by the turn runner, cleared between phases. |
+| `window` | `TimingWindow` | Current named boundary such as movement_end; use it with open/stage, not on its own as proof of an offered decision. |
+| `stage` | `TimingStage` | closed, current_player_rules, opposing_player_rules or mission_rules; follows controller sequencing. |
+| `open` | `Bool` | Whether a timing window is currently resolving; opening an already-open window is rejected. |
+| `controller` | `Bool` | Controller group being resolved in that window; separate from the turn owner and any nested choice owner. |
+
+## UnitHistory
+
+Source: [state_types.rl](../src/state_types.rl).
+
+Owned by Unit.history in every bank. Board phase/turn entry, movement,
+shooting, transport, fighting and mission-action helpers are the writers. A
+phase stamp normally means serial+1; zero means not recorded. Some flags are
+turn-local, others preserve deployment/battle history as noted below.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `phase_start_members` | `CheckedVector<EntityIdentity, MAX_UNIT_MODELS>` | Stable identities of live members at phase start; ordinary returning models cannot use a newly returned model as a phase-start anchor. |
+| `phase_start_engagements` | `CheckedVector<EntityIdentity, MAX_UNIT_COUNT>` | Enemy unit identities engaged at phase start; ordinary returns cannot create a new enemy engagement. |
+| `embarked_phase` | `PhaseStamp` | Embarkation phase stamp used by disembark eligibility; updated on embark rather than each turn. |
+| `ingress_turn` | `TurnStamp` | Turn stamp of battlefield arrival; retains when that arrival happened. |
+| `ingress_used_deep_strike` | `Bool` | Whether the recorded arrival used Deep Strike; supports setup-specific restrictions. |
+| `disembarked_this_turn` | `Bool` | Turn-local disembark history, reset at the turn boundary. |
+| `tactical_move_required` | `Bool` | Tactical disembarkation still requires its prescribed move; cleared only by completion/appropriate cleanup. |
+| `deck_shooting_locked` | `Bool` | Borrowed Firing Deck shooting prevents the passengers' prohibited later shooting in the turn. |
+| `last_move_phase` | `PhaseStamp` | Phase stamp of an actual completed move, including a granted out-of-phase move; a declined move does not set it. |
+| `selected_move_phase` | `PhaseStamp` | Phase stamp of movement selection; differs from a completed move and prevents duplicate selection. |
+| `declared_charge_phase` | `PhaseStamp` | Phase stamp of a charge declaration; not evidence that the charge move succeeded. |
+| `charge_move_phase` | `PhaseStamp` | Phase stamp of a completed charge move. |
+| `pile_in_phase` | `PhaseStamp` | Phase stamp of this unit's resolved Pile In selection. |
+| `consolidation_phase` | `PhaseStamp` | Phase stamp of its Consolidation selection. |
+| `engaged_fight_start_phase` | `PhaseStamp` | Whether/when engaged at Fight-phase start, preserving that eligibility after other units move. |
+| `fight_eligible_phase` | `PhaseStamp` | Frozen Fight eligibility stamp used alongside live engagement/status checks. |
+| `consolidation_fight_pending` | `PhaseStamp` | Fight eligibility granted by the specific consolidation follow-up; consumed by the fight runner. |
+| `move_kind` | `MovementKind` | Recorded movement mode; stationary is the enum default, but actual eligibility also checks setup and path history. |
+| `made_move_this_turn` | `Bool` | Completed movement history for turn-local effects; reset each turn. |
+| `advanced_this_turn` | `Bool` | Advance history for turn-local shooting/charge restrictions. |
+| `advance_allows_charge` | `Bool` | Permission captured when that Advance was selected, even if a grant later changes. |
+| `fell_back_this_turn` | `Bool` | Fall-back history; separate source permissions may waive particular restrictions. |
+| `fallback_allows_charge` | `Bool` | Captured charge exception for that retreat; not permission for every other restricted operation. |
+| `fallback_allows_shooting` | `Bool` | Captured shooting exception for that retreat. |
+| `selected_move_allows_action` | `Bool` | Explicit action-start permission associated with the selected movement rule. |
+| `ingress_locked` | `Bool` | Arrival locks ordinary movement; the turn runner releases the battlefield lock after Shooting-end resolution, before Charge. |
+| `strategic_reserve` | `Bool` | The unit actually has Strategic Reserve status; ordinary offboard placement alone does not infer it. |
+| `repositioned` | `Bool` | History of leaving/repositioning after battle start; distinguishes original reserve-expiry handling. |
+| `has_ingressed` | `Bool` | Whether an arrival has already occurred; retained across later reserve round trips. |
+| `scouts_resolved` | `Bool` | Prebattle Scouts choice already resolved; not reset to give another Scout move each turn. |
+| `last_ranged_attack_turn` | `TurnStamp` | Turn stamp of actual ranged attacks, not merely selecting or declining shooting; preserves previous-turn Hidden checks. |
+| `was_set_up_this_turn` | `Bool` | Setup/arrival history used by Heavy, movement and target rules; reset at a turn boundary. |
+| `used_stratagem_this_phase` | `Bool` | Unit-level use restriction for that phase; distinct from army/player card usage. |
+| `stratagem_targeted_by_player` | `Bool[2]` | Two per-player targeting flags, so a different payer does not accidentally bypass that player's limit. |
+| `shot_this_phase` | `Bool` | Actual shooting history used by current phase permissions/after-effects. |
+| `wrecka_objective_selection` | `Bool` | Wreckas' objective proximity snapshot for the relevant selection; not a permanent objective-control flag. |
+| `action_started` | `Bool` | A mission action has been started this turn; does not mean a Rulebook input/coroutine has started. |
+| `action_completed` | `Bool` | Summary of the last resolved mission-action completion result. |
+| `action_records` | `CheckedVector<UnitActionProgress, MAX_TURN_STAMP>` | Distinct mission-action starts/completions, allowing cross-turn pending work without overwriting an earlier record. |
+| `action_pending` | `Bool` | At least one mission-action record is unresolved. |
+| `action_failed` | `Bool` | Current/last mission-action failure summary; interruption also marks the relevant unresolved records. |
+
+## ModelHistory
+
+Source: [state_types.rl](../src/state_types.rl).
+
+Owned by Model.history. Movement records path segments and turn entry clears
+turn-local distance/setup history; Epic Challenge is scoped by its rule/cleanup.
+The path representation stores bounded integers, not a persistent floating sum.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `horizontal_segments` | `CheckedVector<HorizontalSquare, MAX_MOVEMENT_SEGMENTS>` | Up to 128 squared whole-grid horizontal lengths, each 0–2690; summing square roots recovers travelled horizontal distance. |
+| `vertical_distance` | `VerticalDistance` | Accumulated vertical inch distance, 0–3840; added to horizontal path lengths by distance_moved_this_turn. |
+| `was_set_up_this_turn` | `Bool` | This miniature's setup history; affects per-bearer conditions even in a mixed unit. |
+| `epic_challenge` | `Bool` | The selected CHARACTER model's current melee Precision permission; not inherited by every model in its unit. |
+
+## UnitActionProgress
+
+Source: [state_types.rl](../src/state_types.rl).
+
+Owned by UnitHistory.action_records. Mission-action helpers create and resolve
+records; interruption marks failure. This describes a tabletop mission action,
+not an arbitrary generated input or a unit's ordinary activation.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `started_turn` | `TurnStamp` | Turn stamp identifying this particular action start, not its completion deadline supplied by a mission. |
+| `failed` | `Bool` | An interruption/invalid completion has made this record unsuccessful. |
+| `resolved` | `Bool` | Completion was evaluated; repeated completion cannot award the result again. |
+| `completed` | `Bool` | The resolved record completed successfully; unresolved/default false is not itself a failure. |
+
+## ModelPath
+
+Source: [movement_geometry.rl](../src/movement_geometry.rl).
+
+Temporary staged movement owned by a movement procedure. Waypoints are
+validated before committing the final model position; finishing a model and
+finishing the complete unit move are separate choices.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `model` | `ModelID` | Index of the original model being moved in this staged unit context. |
+| `points` | `CheckedVector<StoredGridPoint, 16>` | Up to 16 stored grid waypoints; physical geometry is reconstructed for route checks. |
+| `final_rotation` | `Rotation` | Staged rotation in thousandths of a degree; does not change the live model until the relevant commit. |
+
+## DeclaredWeapon
+
+Source: [attack_declarations.rl](../src/attack_declarations.rl).
+
+Owned by the attack declaration collection, not by the equipped-model catalog.
+Selection freezes the physical bearer/profile and per-target declaration facts;
+gathering refreshes the facts that the rules require live. Arrays are indexed by
+battlefield target UnitID. Do not reuse a casualty-compacted ModelID without
+resolving model_identity.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `model` | `ModelID` | Bearer model index at declaration; retained for context, with identity used to recover its current location. |
+| `model_identity` | `EntityIdentity` | Persistent identity of the firing/fighting model used by the attack pipeline. |
+| `weapon_owner` | `EntityIdentity` | Original physical weapon owner's identity; Firing Deck can borrow a passenger weapon for a carrier attack. |
+| `physical_group` | `LinearlyDistributedInt<0, MAX_WEAPON_SCOPES>` | Selected physical weapon's group; nonzero values link its alternative profiles. |
+| `slot` | `BInt<0, MAX_WEAPONS>` | Equipped profile slot, 0–12; not a global Weapon enum ordinal. |
+| `weapon` | `Weapon` | Chosen printed numeric Weapon profile; selecting it commits that profile for this declaration. |
+| `borrowed_weapon` | `Bool` | True for a borrowed profile such as Firing Deck; carrier slot-specific grants must not leak onto it. |
+| `weapon_name` | `WeaponNameCode` | Physical weapon-family code used by named-family predicates. |
+| `profile_name` | `WeaponProfileCode` | Named profile code used by profile-specific predicates. |
+| `hunter_condition` | `WeaponRule` | Selected Hunter profile's target-keyword condition. |
+| `selected_rules` | `WeaponAbilitySet` | Effective/selectable rules captured for the selected weapon. |
+| `current_target_rules` | `WeaponAbilitySet` | Rule choice set for the target currently being resolved; target-conditioned duplicate choices may differ. |
+| `made_attacks` | `Bool` | Whether this declaration actually made attacks; mere selection is different for after-effects/use history. |
+| `target_model_counts` | `CombatCounter[MAX_UNIT_COUNT]` | Per-target live-count snapshot at declaration, including Blast-relevant facts. |
+| `half_range` | `Bool[MAX_UNIT_COUNT]` | Per-target range snapshot, not recalculated solely because later casualties change the nearest model. |
+| `targeted` | `Bool[MAX_UNIT_COUNT]` | Which targets were declared for this weapon/profile. |
+| `resolved` | `Bool[MAX_UNIT_COUNT]` | Which declared target shares have been processed or discarded. |
+| `shares` | `AttackShare[MAX_UNIT_COUNT]` | Fixed melee attack shares assigned to each target; random-A melee is explicitly unsupported/asserted by user policy. |
+| `melta_bonus` | `LinearlyDistributedInt<0, MAX_STAT_MODIFIER>[MAX_UNIT_COUNT]` | Per-target declared Melta amount associated with half-range/rule selection. |
+
+## AttackSequenceInfo
+
+Source: [board.rl](../src/board.rl).
+
+Owned by Board.attack_info for the active attack context. Configuration and
+declared-group gathering write it; hit/wound/save/damage queries consume it.
+It is not a battle log or a substitute for declarations. Group snapshots must
+not be confused with a printed Weapon or with a target's current live state.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `squig_launcha_weapon` | `Bool` | Tracks Squig Launcha hit provenance through grouping for its actual source ability. |
+| `shooting_kind` | `ShootingKind` | Mode of this attack, including source-granted Snap/Indirect restrictions. |
+| `weapon_rules_known` | `Bool` | Whether selected_weapon_rules is the authoritative selected set; direct legacy fixtures can fall back to profile rules. |
+| `selected_weapon_rules` | `CheckedVector<WeaponRule, 32>` | Applicable chosen weapon rules for the gathered group, at most 32. |
+| `indirect_stationary_visible` | `Bool` | Snapshot enabling the printed improved Indirect gate when stationary and a friendly unit sees the target. |
+| `heavy_bonus` | `Bool` | Whether the bearer meets Heavy's actual movement/phase conditions for this group. |
+| `damaged_hit_penalty` | `Bool` | This group's bearer-local Damaged contribution, before the cumulative hit modifier cap. |
+| `engaged_hit_penalties` | `LinearlyDistributedInt<0, 3>` | 0–2 applicable engaged Monster/Vehicle penalties, combined with other hit terms before capping. |
+| `source_unit_id` | `UnitID` | Battlefield attacker slot in this attack context. |
+| `target_unit_id` | `UnitID` | Battlefield target slot; nested damage temporarily installs/restores the appropriate context. |
+| `penetration_bonus` | `Bool` | Legacy/core AP-improvement contribution; effective penetration applies it with the correct AP direction. |
+| `melta_damage_bonus` | `LinearlyDistributedInt<0, MAX_STAT_MODIFIER>` | Applicable additional damage for this group, a characteristic contribution rather than a second damage event. |
+| `precision_visibility_known` | `Bool` | Whether the per-target-model Precision visibility snapshot has been established. |
+| `precision_visible_targets` | `Bool[32]` | Which target model slots satisfy the current Precision visibility selection condition. |
+| `dodge_dis_hit_bonus` | `Bool` | Beastboss unit-rule hit contribution, distinct from a BS/WS characteristic modifier. |
+| `hit_roll_bonus` | `Bool` | Retained generic/legacy positive hit contribution; combine it with other terms before the +/-1 cap. |
+| `orks_hit_modifiers` | `RuleModifiers` | Source-owned Orks hit arithmetic for this attack group. |
+| `orks_unit_hit_modifiers` | `CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS>` | Separately retained unit/repair hit contributions so optional ignoring can distinguish sources. |
+| `orks_wound_modifiers` | `RuleModifiers` | Source-owned Orks wound arithmetic for the group. |
+| `orks_fail_hits_three` | `Bool` | Rule-specific unmodified low-hit failure gate; not just a -1 arithmetic modifier. |
+| `target_has_cover` | `Bool` | Cover snapshot used by the current edition's BS handling, not a copied armour-save bonus. |
+| `plunging_fire` | `Bool` | Printed Plunging Fire condition; current handling affects BS and excludes Aircraft as required. |
+| `hit_roll_malus` | `Bool` | Retained negative hit contribution; does not bypass the cumulative modifier cap. |
+| `profile_hit_roll_bonus` | `CheckedVector<Profile, 8>` | Legacy selective hit bonuses keyed by source model Profile; not all models in a mixed unit qualify. |
+| `temporary_weapon_abilities` | `CheckedVector<WeaponRule, 8>` | Attack-local granted weapon rules, distinct from permanent equipped profile data. |
+| `wound_roll_malus` | `Bool` | Retained negative wound contribution, combined before the wound modifier cap. |
+| `wound_roll_bonus` | `Bool` | Retained positive wound contribution. |
+| `profile_wound_roll_bonus` | `CheckedVector<Profile, 8>` | Legacy selective wound bonuses keyed by source model Profile. |
+| `reroll_hits` | `Bool` | Permission for eligible full hit rerolls in this attack context. |
+| `reroll1_hits` | `Bool` | Permission for eligible unmodified hit rolls of 1; replacement dice cannot be rerolled again. |
+| `only_hits_on_6` | `Bool` | Explicit unmodified-six hit requirement for the granting rule. |
+| `reroll_wounds` | `Bool` | Permission for eligible full wound rerolls. |
+| `reroll1_wounds` | `Bool` | Permission for eligible wound rolls of 1. |
+| `greater_strenght_wound_protection` | `Bool` | Legacy protection when incoming strength exceeds target toughness; enters the wound arithmetic. |
+| `fight_on_death` | `Bool` | Accepted attack-context permission for the recipient's delayed destruction attack. |
+| `fight_on_death_roll` | `Dice` | Supplied threshold for that permission; not the current hit/wound die. |
+| `target_toughness` | `Toughness` | Gathered effective target T; attached-bodyguard selection and earlier group casualties are handled before setting it. |
+| `source` | `Weapon` | Selected Weapon profile for the group; not the source Unit/Model object. |
+| `characteristics_known` | `Bool` | Whether gathered characteristic snapshots/modifier operations are authoritative rather than direct-fixture fallback. |
+| `weapon_strength` | `FixedStat` | Gathered effective S when characteristics_known is true. |
+| `skill_modifiers` | `RuleModifiers` | WS/BS characteristic operations; kept separate from modifications to the hit roll itself. |
+| `may_ignore_skill_modifiers` | `Bool` | Bearer permission to choose which supported skill operations apply. |
+| `may_ignore_hit_modifiers` | `Bool` | Bearer permission to choose which supported hit operations apply. |
+| `ap_modifiers` | `RuleModifiers` | Outgoing AP arithmetic, combined with actual recipient-scoped incoming modifiers at allocation. |
+| `damage_modifiers` | `RuleModifiers` | Outgoing D arithmetic, applied with the allocated recipient's modifiers after any random damage determination. |
+| `source_profile` | `Profile` | Model Profile of the actual group bearer for profile-scoped rules. |
+| `current_round` | `BInt<0, MAX_ROUNDS>` | Retained attack-context round metadata; not the authoritative battle clock, which is Board.current_round. |
+
+## AllocationGroup
+
+Source: [state_types.rl](../src/state_types.rl).
+
+Owned by the current damage/allocation procedure and exposed through Board
+for defender controls. Groups describe compatible recipients, not new units.
+Rebuild/recheck as casualties change the target.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `members` | `CheckedVector<EntityIdentity, 32>` | Stable identities of candidate models, avoiding accidental retargeting after vector compaction. |
+| `wounds` | `FixedStat` | Printed maximum W shared by these candidates; wounded allocation priority is tracked separately. |
+| `save` | `FixedStat` | Effective armour-save grouping value. |
+| `invulnerable` | `FixedStat` | Effective invulnerable-save grouping value; an unavailable save is not made usable by its numeric sentinel. |
+| `character` | `Bool` | Whether this group contains Character recipients under the allocation policy. |
+| `wounded` | `Bool` | Whether the recipients already have suffered wounds, relevant to allocation priority. |
+| `precision_visible` | `Bool` | Whether the group's Character selection meets the current Precision visibility condition. |
+
+## DamageJob
+
+Source: [damage_rules.rl](../src/damage_rules.rl).
+
+Owned by a pending damage-job list and consumed by the common damage runner.
+It identifies real storage and provenance. Amount is an input to that stage;
+it is not a license to subtract that many wounds without prevention/allocation.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `kind` | `DamageKind` | DamageKind chooses the required damage/direct-destruction behavior; interpret amount with that kind. |
+| `bank` | `SourceBank` | battlefield by default, or reserves/embarked for an actual offboard recipient. |
+| `target` | `UnitID` | Target unit index in bank, not necessarily Board.units. |
+| `source` | `UnitID` | Source unit slot when source_known; an unknown source does not become unit 0. |
+| `source_known` | `Bool` | Whether source provenance is supplied and may be queried. |
+| `from_attack` | `Bool` | Whether this job is caused by an attack; attack-end destruction timing depends on it. |
+| `amount` | `CombatCounter` | Bounded requested amount of the job's kind; the runner performs the corresponding rules processing. |
+| `recipient` | `EntityIdentity` | Persistent model recipient where the job specifies one; zero leaves the applicable selection policy to the runner. |
+
+## PendingDestruction
+
+Source: [damage_rules.rl](../src/damage_rules.rl).
+
+Returned by the common destruction scan. The indices refer to the current
+scan result, not a permanent handle; another resolution can change them.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `found` | `Bool` | Whether the scan found an eligible pending death; false makes the other selectors non-authoritative. |
+| `bank` | `SourceBank` | Actual collection containing that pending model/unit. |
+| `unit` | `UnitID` | Unit index within bank for the current result. |
+| `model` | `ModelID` | Model index within that unit for the current result. |
+
+## CharacteristicModifier
+
+Source: [modifiers.rl](../src/modifiers.rl).
+
+Owned by model.characteristic_modifiers or used as a source payload.
+Effective characteristic/declaration queries consume it; keyed source refresh
+removes only the entries associated with that effect.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `source_effect` | `SourceEffectKey` | Effect ownership key; zero denotes intrinsic/manual metadata rather than a timed owned grant. |
+| `characteristic` | `ModifiedCharacteristic` | Which model/weapon characteristic changes; distinct from changing a dice result. |
+| `modifier` | `RuleModifier` | Operation, magnitude and sign, applied in the common modifier order. |
+| `weapon_scope` | `LinearlyDistributedInt<0, MAX_WEAPON_SCOPES>` | Zero covers the applicable equipped weapons; positive value is representative slot+1. |
+| `weapon_name` | `WeaponNameCode` | Optional physical-family filter; zero means unrestricted by family. |
+| `profile_name` | `WeaponProfileCode` | Optional named-profile filter; zero means unrestricted by named profile. |
+| `physical_scope` | `Bool` | When true, the representative slot can cover linked profiles of the same physical weapon. |
+
+## IncomingAttackModifier
+
+Source: [modifiers.rl](../src/modifiers.rl).
+
+Owned by the allocated recipient Model, not by the incoming weapon's bearer.
+Save/damage processing combines applicable recipient operations with outgoing
+operations. This is how recipient-specific AP/D reduction keeps its scope.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `source_effect` | `SourceEffectKey` | Owner effect key; zero is an intrinsic/manual entry. |
+| `characteristic` | `ModifiedCharacteristic` | Incoming AP or D being modified; constructors reject unrelated characteristics. |
+| `modifier` | `RuleModifier` | Arithmetic operation and signed amount, not an already capped final result. |
+| `scope` | `IncomingAttackScope` | any_attack, ranged or melee; does not silently turn ranged protection into melee protection. |
+
+## AttackModifierPermission
+
+Source: [modifiers.rl](../src/modifiers.rl).
+
+Owned by Model.attack_modifier_permissions. Choice collection tests its scope;
+the Apply/Ignore procedure selects individual operations before resolving them.
+Permission does not itself alter a characteristic.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `source_effect` | `SourceEffectKey` | Owner effect key for expiry; zero denotes intrinsic/manual permission. |
+| `scope` | `IncomingAttackScope` | Attack scope for this permission: any, ranged or melee. |
+| `skill` | `Bool` | May choose supported WS/BS characteristic modifiers. |
+| `hit_roll` | `Bool` | May choose supported hit-roll modifiers, separately from the skill permission. |
+
+## RoundResourceBudget
+
+Source: [state_types.rl](../src/state_types.rl).
+
+Owned by a source's usage state; currently the Orks psychic usage record embeds
+one. Sources supply capacity. available checks the interval/capacity;
+roll_spent_round_resource spends before accepting the die and rerolls do not
+spend again. A budget alone grants no psychic ability.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `round_stamp` | `LinearlyDistributedInt<0, MAX_ROUNDS>` | Round index+1 of the last spend; zero is unused. A different requested stamp makes the prior count inapplicable. |
+| `spent` | `FixedStat` | Uses committed in that stamped round; a spend in a new round resets the count to 1. |
+
+## SourceInstance
+
+Source: [source_effect_types.rl](../src/source_effect_types.rl).
+
+Owned by Board.source_instances. Registration allocates a slot/generation;
+event collection freezes candidates and resolution rechecks conditions/use.
+A registered source is an ability definition tied to actual game identities,
+not the continuing buff produced by using it.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `generation` | `SourceEffectKey` | Assigned registration generation; a pending event must match it before reusing a source slot. |
+| `required_embarked_model` | `EntityIdentity` | Optional dependent passenger identity for cargo-granted rules; zero means no such dependency. |
+| `required_carrier_model` | `EntityIdentity` | Optional carrier dependency identity; moving/destroying the carrier can invalidate the source. |
+| `rule` | `SourceRuleCode` | Explicit source rule code 1–512 on registration; shared use is determined by code/scope, not name equality. |
+| `name` | `Hidden<String>` | Display label for source choices; outside normal ML observation, not its unique use key. |
+| `source_unit` | `EntityIdentity` | Original source/component unit identity, including a component later attached into another unit. |
+| `source_model` | `EntityIdentity` | Specific bearer identity where applicable; zero denotes a unit/component source. |
+| `owner` | `Bool` | Controlling player for this source and its usage/effect ownership. |
+| `trigger` | `SourceEventKind` | Core event kind which can trigger the ability, such as move_end or model_destroyed. |
+| `window` | `TimingWindow` | Named timing boundary for timing-window sources. |
+| `phase` | `BattlePhase` | Phase condition where the source specifies it; none denotes no specific phase restriction. |
+| `own_turn_only` | `Bool` | Restricts activation to the owner's turn. |
+| `opposing_turn_only` | `Bool` | Restricts activation to the opponent's turn; not a change of source ownership. |
+| `requires_unengaged` | `Bool` | Requires the relevant unit to be outside enemy engagement when checked. |
+| `restrict_movement` | `Bool` | Whether the movement kind filter is active. |
+| `movement` | `MovementKind` | Required movement kind when restrict_movement is true. |
+| `subject` | `SourceSubject` | Relationship of the event subject to the source, such as own/friendly/enemy/target unit. |
+| `use_scope` | `SourceUseScope` | Army/unit/model scope for the explicit rule's shared use key. |
+| `limits` | `SourceUseLimits` | Per-phase/turn/round/battle limits; zero in an interval means unlimited for that interval. |
+| `disabled` | `Bool` | Source slot no longer active; keeping the slot prevents stale pending references being reassigned silently. |
+| `aura` | `Bool` | Source has continuously refreshed recipients rather than only a one-off event grant. |
+| `own_unit_passive` | `Bool` | Source-bound own-unit passive, including permitted offboard own-unit use. |
+| `requires_leading` | `Bool` | Source applies under its actual while-leading condition, not merely because the model is a CHARACTER. |
+| `model_specific_rule` | `Bool` | Use the bearer-specific live-source policy rather than retained conferred unit rules. |
+| `recipient_condition` | `KeywordPredicate` | ALL/ANY/NONE keyword predicate for recipient selection. |
+| `optional` | `Bool` | Whether the controller can decline this source; false is the default, not an automatic consent choice. |
+| `allow_retained_source` | `Bool` | Explicitly permits the rule's retained-source handling during the appropriate death lifecycle. |
+| `offboard_allowed` | `Bool` | Permitted source context can be offboard; this does not create external visibility/range. |
+| `trigger_range` | `FixedStat` | Range in inches for ranged source checks; interpret zero with the source's own subject/eligibility policy. |
+| `grant` | `SourceGrant` | Typed payload, e.g. characteristic modifier, weapon rule, riled state or current Orks effect. |
+| `recipient` | `SourceTarget` | Which source/event/target unit or source model receives the payload. |
+| `duration` | `SourceDuration` | Expiry policy, phase by default; actual source adapters supply their printed duration. |
+| `requires_live_source` | `Bool` | Continuing grant depends on the source remaining eligible to confer rules; retained attack-end exceptions remain explicit. |
+
+## SourceEvent
+
+Source: [source_effect_types.rl](../src/source_effect_types.rl).
+
+A core event value supplied to source collection. It records what happened;
+it is not an installed ability or a player action payload.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `movement` | `MovementKind` | Move kind accompanying a movement event, where applicable. |
+| `kind` | `SourceEventKind` | Event kind, such as attack_targeted, shock_end or unit_destroyed. |
+| `window` | `TimingWindow` | Named boundary for a timing-window event. |
+| `unit` | `EntityIdentity` | Stable identity of the event's subject unit. |
+| `target` | `EntityIdentity` | Stable identity of the event's target where applicable; zero when absent. |
+| `model` | `EntityIdentity` | Stable identity of the event's subject model where applicable; zero when absent. |
+
+## PendingSourceEvent
+
+Source: [source_effect_types.rl](../src/source_effect_types.rl).
+
+Owned by a controller's candidate list. Earlier effects can remove a bearer,
+change a condition or spend a shared limit, so selection always revalidates it.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `generation` | `SourceEffectKey` | Generation captured when this candidate was collected; must still match its source slot. |
+| `source` | `LinearlyDistributedInt<0, MAX_SOURCE_INSTANCES>` | Index into Board.source_instances, not a SourceEffectKey or EntityIdentity. |
+| `event` | `SourceEvent` | The original core event being resolved. |
+| `resolved` | `Bool` | This candidate has already been processed; it cannot be selected a second time. |
+
+## SourceUseRecord
+
+Source: [source_effect_types.rl](../src/source_effect_types.rl).
+
+Owned by Board.source_uses. Commitment finds the explicit rule/owner/scope/
+subject key; interval changes reset the relevant count. Phase/turn/round stamps
+here are raw serial values, not the history serial+1 convention.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `rule` | `SourceRuleCode` | Rule whose usage is counted; compatible explicit keys can intentionally share a limit. |
+| `owner` | `Bool` | Player whose army/unit/model use is being charged. |
+| `scope` | `SourceUseScope` | army, unit or model, determining the subject key. |
+| `subject` | `EntityIdentity` | Zero for army scope, current containing-unit identity for unit scope, bearer identity for model scope. |
+| `phase_stamp` | `LinearlyDistributedInt<0, MAX_PHASE_STAMP>` | Raw phase serial associated with phase_uses. |
+| `turn_stamp` | `LinearlyDistributedInt<0, MAX_TURN_STAMP>` | Raw turn serial associated with turn_uses. |
+| `round_stamp` | `LinearlyDistributedInt<0, MAX_ROUNDS>` | Raw round index associated with round_uses. |
+| `phase_uses` | `FixedStat` | Committed uses in the stamped phase. |
+| `turn_uses` | `FixedStat` | Committed uses in the stamped turn. |
+| `round_uses` | `FixedStat` | Committed uses in the stamped round. |
+| `battle_uses` | `FixedStat` | Committed battle-long uses; phase/turn changes do not reset them. |
+
+## SourceEffect
+
+Source: [source_effect_types.rl](../src/source_effect_types.rl).
+
+Owned by Board.source_effects. Recipient models carry the actual typed grants
+keyed to this effect. Refresh/expiry can remove one effect without erasing a
+second source's matching bonus. The payload itself is not duplicated in this
+record. Raw serial stamps locate the interval in which it began.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `identity` | `SourceEffectKey` | Unique owned-effect key, not an entity/model identity. |
+| `source` | `LinearlyDistributedInt<0, MAX_SOURCE_INSTANCES>` | Index of the registered conferring source; source-slot reuse waits while an effect still references it. |
+| `target_unit` | `EntityIdentity` | Stable recipient unit identity for unit-scoped effect maintenance. |
+| `unit_scope` | `Bool` | Whether refreshed unit membership determines the recipient set. |
+| `recipients` | `CheckedVector<EntityIdentity, MAX_UNIT_MODELS>` | Stable model identities carrying this effect; includes the appropriate lifecycle/archived recipients for cleanup. |
+| `duration` | `SourceDuration` | Actual phase/turn/round/next-own-boundary/battle expiry policy. |
+| `requires_live_source` | `Bool` | Remove when the source can no longer confer the rule, subject to its explicit retained-source timing. |
+| `owner` | `Bool` | Player used to interpret next-own-turn/phase boundaries. |
+| `phase_stamp` | `LinearlyDistributedInt<0, MAX_PHASE_STAMP>` | Raw phase serial when installed, used for phase-duration expiry. |
+| `turn_stamp` | `LinearlyDistributedInt<0, MAX_TURN_STAMP>` | Raw turn serial when installed, used for turn and next-turn expiry. |
+| `round_stamp` | `LinearlyDistributedInt<0, MAX_ROUNDS>` | Raw round index when installed, used for round expiry. |
+
+## Printed profiles, weapons and Stat
+
+Sources: [stats.rl](../src/stats.rl) and [weapons.rl](../src/weapons.rl).
+These catalogs describe printed data. A stored `Profile`/`Weapon` value selects
+an entry; the attributes below are **computed catalog accessors**, not mutable
+per-miniature fields. Factory equipment choices select entries and populate
+the model's slot/provenance arrays.
+
+| Profile accessor | Result type | Meaning |
+| --- | --- | --- |
+| `movement()` | `Int` | Printed M in inches; zero represents an unmodifiable M- source |
+| `thoughness()` | `Int` | Printed T; use effective/attached-unit queries for an actual attack |
+| `save()` | `Int` | Printed Sv threshold, e.g. 3 means 3+ |
+| `invuln_save()` | `Int` | Printed InSv threshold; values above 6 are legacy no-save sentinels |
+| `feel_no_pain()` | `Int` | Profile FNP threshold/sentinel; actual wound-loss prevention also checks current grants and scope |
+| `wounds()` | `Int` | Printed maximum W; subtract the model's suffered_wounds for remaining wounds |
+| `leadership()` | `Int` | Printed Ld threshold, before applicable modifiers |
+| `control()` | `Int` | Printed OC, before effective characteristics and unit status |
+| `base_size()` | `Float` | Source/default base diameter in millimetres; float is calculated/static catalog data, not a persisted model coordinate |
+
+| Weapon accessor | Result type | Meaning |
+| --- | --- | --- |
+| `range()` | `Int` | Printed inches; zero is Melee, not a zero-inch ranged weapon |
+| `attacks()` | `Stat` | Printed A expression; random A is generated per selected weapon at gathering |
+| `skill()` | `Int` | Printed BS/WS threshold; range determines which characteristic applies |
+| `strenght()` | `Int` | Printed S before group-effective strength |
+| `penetration()` | `Int` | Signed AP; improving -1 by 1 produces -2 |
+| `damage()` | `Stat` | Printed D expression; random D is determined per damaging attack after recipient allocation |
+| `rules()` | `WeaponRules` | Printed weapon rules; selected/granted/target-conditioned rules require the effective selection pipeline |
+
+`Stat` has three alternatives: `FixedStat`, `Dice`, and `CompoundDice`.
+`raw_stat(N)` constructs a fixed value; `dice_stat(3)`/`dice_stat(6)` describe
+one D3/D6; `compound_stat(count, sides, constant)` describes supported compound
+expressions. A D3 still receives its result through the bounded die input,
+with the actual expression limiting the accepted faces. Never infer a random
+expression's value from the default storage of its alternative.
+
+| CompoundDice field | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `count` | `LinearlyDistributedInt<1, 4>` | Number of dice, 1–3, supplied at construction |
+| `d3` | `Bool` | true uses three-sided results; false uses six-sided results |
+| `constant` | `FixedStat` | Intrinsic +N part of the characteristic; it is not an extra modifier and is not rerolled |
+
+`WeaponRule` is either printed metadata or a source-owned granted rule:
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `source_effect` | `SourceEffectKey` | Owner of a granted rule; zero denotes intrinsic/manual metadata |
+| `parameter_increment_source` | `SourceEffectKey` | Separate owner of a temporary increase to an existing rule's magnitude |
+| `parameter_increment_amount` | `FixedStat` | Increment to exclude again when that increasing source is no longer active |
+| `kind` | `WeaponRuleKind` | Ability such as Blast, Lethal Hits or Sustained Hits |
+| `parameter` | `LinearlyDistributedInt<0, MAX_CHARACTERISTIC>` | Rule magnitude where relevant; presence-only rules need no positive magnitude |
+| `target_condition` | `KeywordPredicate` | Target keyword restriction where supplied |
+
+`KeywordPredicate` combines ALL, ANY and NONE groups. It stores
+`required_count`, `alternative_count` and `excluded_count`, each a
+`LinearlyDistributedInt<0, KEYWORD_TERM_BOUND>`, and a fixed
+`keywords: LinearlyDistributedInt<0, 128>[MAX_KEYWORD_TERMS]` array. The counts
+identify contiguous groups of keyword codes; the combined capacity is nine
+terms, not nine independent terms per clause. Empty groups impose no extra
+condition. A family/profile code is an exact named selector, not string
+comparison against a display name.
+
+## Modifier and source payload companions
+
+These small records explain the nested values in the complete tables above.
+See [modifiers.rl](../src/modifiers.rl) and
+[source_effect_types.rl](../src/source_effect_types.rl).
+
+| Record/property | Type | Meaning |
+| --- | --- | --- |
+| `RuleModifier.operation` | `ModifierOperation` | replace, multiply, add, divide, subtract, in that application order |
+| `RuleModifier.amount` | `LinearlyDistributedInt<0, MAX_RULE_MODIFIER>` | Magnitude 0–4096; not a signed field |
+| `RuleModifier.negative` | `Bool` | Sign of the operand; `signed_amount()` reconstructs it |
+| `SourceUseLimits.phase` | `FixedStat` | Maximum uses in a phase; zero is unlimited in this interval |
+| `SourceUseLimits.turn` | `FixedStat` | Maximum uses in a turn; zero is unlimited |
+| `SourceUseLimits.round` | `FixedStat` | Maximum uses in a round; zero is unlimited |
+| `SourceUseLimits.battle` | `FixedStat` | Maximum uses in the battle; zero is unlimited |
+| `SourceWeaponGrant.rule` | `WeaponRule` | Granted weapon ability and any condition/parameter |
+| `SourceWeaponGrant.weapon_scope` | `LinearlyDistributedInt<0, MAX_WEAPON_SCOPES>` | Zero is unrestricted by slot; a positive value identifies representative slot+1 |
+| `SourceWeaponGrant.weapon_name` | `WeaponNameCode` | Optional named-family filter, zero means none |
+| `SourceWeaponGrant.profile_name` | `WeaponProfileCode` | Optional named-profile filter, zero means none |
+| `SourceWeaponGrant.physical_scope` | `Bool` | Extend the representative slot to linked profiles of that physical copy |
+| `RiledUpGrant.enabled` | `Bool` | Installs the source-owned riled state when enabled; source keys preserve overlapping grants |
+
+All modifiers accumulate through the shared arithmetic policy. Round up after
+the ordered operations, then enforce the characteristic's own limits. Roll
+modifiers apply after rerolls; a WS/BS characteristic change and a hit-roll
+modifier are different operations. Optional ignoring chooses individual
+supported operations, rather than erasing every negative number wholesale.
+
+`SourceGrant` is a typed alternative of `CharacteristicModifier`,
+`IncomingAttackModifier`, `SourceWeaponGrant`, `AttackModifierPermission`,
+`RiledUpGrant` or the current `OrksEffectGrant`. Source conditions and timing
+do not make every payload faction-independent yet. The existing Orks adapters
+still own unique effects and permissions.
+
+## Shared procedure frames
+
+Sources: [ability_procedures.rl](../src/ability_procedures.rl),
+[healing_rules.rl](../src/healing_rules.rl) and [rules.rl](../src/rules.rl).
+These are a procedure's saved progress, not additional tabletop entities.
+Every frame also has the opaque generated `resume_index` described under Game.
+Fields can be provisional until the frame is done. Do not set them to make an
+unavailable input legal.
+
+`ctx` in a source declaration means a borrowed caller-owned context. The Board
+and Unit contexts of healing/return are supplied again when calling its input;
+they are not copied into the frame. `frm` values are retained progress or
+results. Shared completed frames are reusable storage, so copy a needed result
+before a later operation can overwrite the same slot.
+
+### GrantedMove
+
+Stored in `Board.shared_actions.granted_move`. Normal reactions and Surge use
+the same core Move; the source still supplies the actual trigger/permission.
+The `reactive_move` factory supplies a normal granted move.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `source` | `UnitID` | Battlefield mover |
+| `distance` | `StatModifier` | Supplied allowance in inches; not a newly calculated M characteristic |
+| `kind` | `MovementKind` | Supported normal or surge mode |
+| `objective_required` | `Bool` | This grant requires an objective-range endpoint |
+| `permitted` | `Bool` | Caller-validated invocation permission; false finishes without offering movement |
+| `previous_owner` | `Bool` | Decision owner restored on completion |
+| `previous_kind` | `MovementKind` | Mode to restore; Surge deliberately leaves ordinary normal-mode state |
+| `previous_limit` | `MovementOverride` | Prior absolute movement limit, using the +1 encoding |
+| `previous_skies` | `Bool` | Prior flight-mode selection |
+| `previous_target` | `UnitID` | Prior Surge-target context |
+| `previous_objective` | `Bool` | Prior endpoint-restriction flag |
+| `previous_mover` | `UnitID` | Prior constrained-mover context |
+| `target` | `UnitID` | Chosen closest enemy for a Surge; not used by a Normal reaction |
+| `completed` | `Bool` | Actual completed move, as opposed to declining/skipping; read after completion |
+
+### UnitHealing
+
+Stored in `Board.shared_actions.heal_unit`; contexts are the actual Board and
+Unit in the selected bank. It accepts the complete bounded wound allowance,
+heals wounded living models before returning eligible non-Character casualties,
+and delegates any return to ModelReturn.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `bank` | `SourceBank` | Location of the real unit |
+| `count` | `FixedStat` | Remaining wound allowance, decremented one wound at a time |
+| `previous_owner` | `Bool` | Caller decision owner restored when healing ends |
+| `available` | `Bool` | Current scan found a legally returnable casualty; provisional loop state |
+| `casualty` | `ModelID` | Chosen archive index, not a live-model index |
+| `target` | `UnitID` | Resolved battlefield slot where battlefield placement is required |
+
+### ModelReturn
+
+Stored in `Board.shared_actions.return_model`; contexts are the actual Board
+and receiving Unit. Explicit Character-returning rules can call it directly;
+ordinary healing's Character exclusion is enforced before that call. The source
+chooses `phase_start` or `nearest_unengaged` placement and restored wound count.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `bank` | `SourceBank` | Receiving unit's real location |
+| `source` | `UnitID` | Battlefield slot supplied explicitly, even for a retired unit that identity lookup skips |
+| `archive` | `ModelID` | Original casualty's index in destroyed_models |
+| `policy` | `ReturnPlacementPolicy` | Phase-start anchors or an explicitly permitted nearest-unengaged return |
+| `restored_wounds` | `FixedStat` | Wounds to restore, bounded by the model's printed W through the reset calculation |
+| `returned` | `Model` | Owning staged copy of the original casualty, including identity/equipment/use history |
+| `placed` | `Bool` | Provisional capacity/placement feasibility; after completion indicates that restoration was committed |
+
+On success, death-only flags are cleared, provenance is restored, the model is
+appended, the original archive entry is erased and source effects are refreshed.
+It is an original-model return, not creation of a fresh identity. Offboard
+returns have no battlefield-position choice; embarked returns still require
+actual carrier permission/capacity. Failure does not create another death-event
+chain. The granting rule owns its own roll and expenditure.
+
+### RerollableDice
+
+Stored for common one-die rolls in `Board.current_roll`; it can also be returned
+to a caller as its active child. A result remains a `Dice` wrapper in Godot:
+read `frame.get_result().get_value()`.
+
+| Property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `reroll` | `Bool` | Free full reroll permission supplied by the caller |
+| `reroll_1s` | `Bool` | Free reroll permission restricted to an original 1 |
+| `cp_rerollable` | `Bool` | Whether this type of roll may offer the CP reroll after target/cost checks |
+| `current_player` | `Bool` | Controller of this roll's ordinary reroll decision; not necessarily the turn owner |
+| `strat_target` | `UnitID` | Real friendly unit target for Command Re-roll where target_known is true |
+| `target_known` | `Bool` | Targetless compatibility cannot invent a valid CP stratagem target |
+| `original_decision_maker` | `Bool` | Caller role restored after the die/decision sequence |
+| `result` | `Dice` | Current die result; replaced by the one permitted reroll |
+| `is_non_cp_rerollable` | `Bool` | Original result qualifies for a supplied free reroll; the decision uses this captured fact |
+
+## Other nested state encountered in the tables
+
+These records have no separate scene representation. Their containing Unit or
+Board owns their lifetime.
+
+| Record/property | Type | Meaning and lifecycle |
+| --- | --- | --- |
+| `PhaseModifiers.greater_strenght_wound_protection` | `Bool` | Unit's current phase-scoped wound protection |
+| `PhaseModifiers.charge_roll` | `RuleModifiers` | Current phase's charge-roll operations |
+| `PhaseModifiers.smokescreen` | `Bool` | Current Smokescreen permission/effect, cleared with phase modifiers |
+| `PhaseModifiers.counteroffensive` | `Bool` | Pending Counteroffensive effect consumed by the fight-order policy |
+| `PhaseInfo.already_used_stratagems` | `AlreadyUsedStratagems[2]` | Each player's used cards in the phase; each list is a CheckedVector of at most 32 Stratagem entries |
+| `OrksPsychicUsage.budget` | `RoundResourceBudget` | Shared level-based round expenditure for the unit's supported psychic abilities |
+| `OrksPsychicUsage.roar_phase` | `PhaseStamp` | Last Roar use, with zero/serial+1 history convention |
+| `OrksPsychicUsage.visions_phase` | `PhaseStamp` | Last Visions use under the same convention |
+| `Objective.home` | `ObjectiveHome` | Explicit mission designation: none/army_0/army_1; not inferred from marker number |
+| `Objective.position` | `BoardPosition` | Configured whole-inch marker position where custom_position is true |
+| `Objective.custom_position` | `Bool` | Use the stored point instead of the legacy default marker point |
+| `Objective.terrain_objective` | `Bool` | Objective range is linked to an agreed terrain area rather than the bare-marker test |
+| `Objective.area_id` | `BInt<0, 16>` | Actual terrain-area index when terrain_objective is true; zero is a valid area |
+| `Objective.controller` | `ObjectiveController` | Stored control at the relevant boundary, not a continuously recalculated display score |
+| `Objective.secured_by` | `ObjectiveController` | Securing state retained according to the objective-control rules |
+
+Sources: [units.rl](../src/units.rl), [board.rl](../src/board.rl) and
+[orks_detachment_types.rl](../src/orks_detachment_types.rl). Use
+`objective_range_definition`/`model_in_objective_range` for a query against the
+configured/default marker or linked area. Reading a raw position alone omits
+that policy. Both terrain collections use lower/upper `StoredTerrainPoint`
+corners; terrain areas have exposed/light/dense flags, while movement geometry
+has a blocks_movement flag. These are distinct uses of terrain data.
+
+## Finding a property in Godot
+
+A stored property `field_name` normally has a generated `get_field_name()`
+getter. A bounded value/enum is usually another wrapper with `get_value()`;
+an ID selector instead exposes its bounded `id` field. Collections are accessed
+through `library.size(collection)` and `library.get(collection, index)`.
+The [engine guide](engine-guide.md) contains executable, checked examples.
+
+Use this reference to understand state, then follow the linked source's actual
+writer/query before changing a rule. A display-only field, an archived identity,
+a current selector and an effective characteristic serve different purposes even
+when they all ultimately contain small integers.
 
