@@ -1,6 +1,6 @@
 # Rulebook design and architecture
 
-This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the ordinary detachment/frame-sharing work and all54 standard Orks adapters through17.P3, using Rulebook compiler0.4.18. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
+This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes all54 standard Orks adapters through17.Q and the shared ability procedures, using Rulebook compiler0.4.18. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
 Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and [supplied appendix](11th-edition-supplied-appendix.md) for game rules. The architecture supports those rules, but its storage bounds, schemas and UI protocols are project decisions. [AGENTS.md](../AGENTS.md) records development constraints and the language conventions used here.
 
@@ -67,6 +67,7 @@ The module map below describes responsibility boundaries. Imports expose shared 
 | --- | --- | --- |
 | Public environment | [full_game.rl](../src/full_game.rl), [game_utils.rl](../src/game_utils.rl) | `Game`, `play`, scoring, player classification, action instantiation and `fuzz` |
 | Interactive orchestration | [rules.rl](../src/rules.rl) | Battle/round/turn/phase frames, dice decisions, declarations, attacks, movement, damage resolution and timing choices |
+| Shared ability procedures | [ability_procedures.rl](../src/ability_procedures.rl), [healing_rules.rl](../src/healing_rules.rl) | Limited-resource rolls, granted moves, wound healing and original-model return; faction adapters supply triggers and permissions |
 | Shared storage contracts | [state_types.rl](../src/state_types.rl) | Bounds, schemas, `CheckedVector`, histories, timing, allocation and setup metadata |
 | Board and entities | [board.rl](../src/board.rl), [units.rl](../src/units.rl) | `Board`, `Unit`, `Model`, positional selectors, identity allocation, banks, query contexts and roster factories |
 | Attachments | [attachment_rules.rl](../src/attachment_rules.rl) | Explicit roles/permissions, bounded component provenance, bodyguard T and source lifetime integration |
@@ -110,7 +111,7 @@ act play() -> Game:
     subaction*(board) battle = battle(board)
 ```
 
-The nested frames form the active call chain. For example, `Game` may be suspended inside a battle, turn, Shooting phase, attack, allocation and dice sequence. `subaction*` forwards the child's inputs through the parent until the child finishes. All current game delegations use this form; a single-step `subaction` has different delegation semantics.
+The nested frames form the active call chain. For example, `Game` may be suspended inside a battle, turn, Shooting phase, attack, allocation and dice sequence. `subaction*` forwards the child's inputs through the parent until the child finishes. All current game delegations use this form. With multiple children, `subaction x, y` accepts one input step from either child; `subaction* x, y` continues delegation until both finish, allowing interleaving. Use that form only when the rules permit the sequences to mix, and account for both children's overlapping lifetimes before sharing storage.
 
 ### Sharing frames with disjoint active lifetimes
 
@@ -199,7 +200,7 @@ The project requires authored persistent numeric game/frame values to use `BInt`
 
 There is no z-coordinate action. Model elevation and terrain/path metadata retain their bounded domains. Physical calculations can reconstruct micrometre coordinates and use local floats while actual saved positions remain quads. `ModelHistory` stores bounded squared horizontal segment lengths plus vertical distance, then computes square roots on demand; it does not persist a float distance cache.
 
-The current full-game layout is state/observation schema **31**, action schema **19**, with next-state bound **32**. The validated catalog has **22,907** candidates and **28,980,462** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Finite layout is necessary for learning; its size and the cost of fetching wrappers still need attention.
+The current full-game layout is state/observation schema **40**, action schema **26**, with next-state bound **41**. The validated catalog has **30,072** candidates and **16,390,831** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Observations pass the finite-value check; the user owns valid-action discovery optimization in the compiler.
 
 ## Turn sequence and decision ownership
 
@@ -224,6 +225,47 @@ Most unit history markers store serial+1 so zero means unset. Source effect/use 
 Timing/source sequences implement the supplied current-player-first ordering, with each controller choosing its effects before the opponent's group. Nested attack, movement, source and damage frames save the roles/selector contexts they replace and restore them when finished. Opponent allocation, reaction movement and chance therefore do not change the owner of the overall turn.
 
 The existing timing dispatcher still has nine legacy `TimingRule` kinds. Registered source instances share the controller groups through `choose_window_source`; general move/attack/shock/destruction events use `resolve_source_event`. These paths coexist while source-specific abilities migrate.
+
+## Shared ability procedures
+
+`ability_procedures.rl` supplies faction-independent operations rather than a
+universal ability interpreter. `RoundResourceBudget` stores a round stamp and
+spent count; the caller supplies its capacity. `roll_spent_round_resource`
+asserts availability, spends once before chance input and returns the existing
+`RerollableDice` frame. Rerolls do not spend again. Orks' shared psychic adapter
+still owns Psyker level, Warphead permission and failed-test Battle-shock;
+individual cards own their eligibility, timing stamps and resulting effects.
+
+`granted_move` uses the core `Move` for reactive Normal moves and Surge. The
+caller supplies the allowance, move kind and optional objective destination
+restriction. Surge retains closest-target selection and its own movement goals.
+The procedure restores the caller's decision owner and temporary movement
+constraints, and records only completed moves. The one shared `GrantedMove`
+slot is safe because neither caller can start another granted move while this
+one is suspended. A future ability that permits such nesting needs a new
+lifetime review, rather than blindly reusing the slot.
+
+`healing_rules.rl` provides `heal_unit` and `return_model` for every bank.
+Healing takes the complete bounded wound allowance, heals wounded living models
+first, then offers original non-Character casualties. Model return shares
+placement, transport capacity, death-flag reset, attachment provenance and
+source refresh. `ReturnPlacementPolicy` selects phase-start anchors or an
+explicit nearest-unengaged return; it does not grant the ability itself.
+Sources such as Surly retain their own roll, usage and restored wound count.
+`return_model` receives the battlefield slot explicitly because identity lookup
+skips a retired unit that an explicit resurrection can reactivate.
+
+Both healing frames receive the real `Board` and `Unit` contexts; callers must
+forward both when delegating. A return preserves identity, equipment and weapon
+usage. Offboard placement checks only actual passenger permission/capacity,
+never stale coordinates. Wounded-first rules and Character exclusions belong
+to ordinary healing; explicit resurrection calls the return operation directly.
+
+These procedures have non-Orks regression fixtures. Existing mortality,
+damage-job and source-effect pipelines already serve targeted effects with
+different roll meanings; retain their explicit card adapters instead of adding
+an unused generic target/effect interpreter. Generic faction catalogs and
+replacement of Orks-specific grant metadata are separate work.
 
 ## Movement and placement
 

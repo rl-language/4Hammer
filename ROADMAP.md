@@ -1335,3 +1335,72 @@ The legacy four-marker mission, whole-inch quads, intentional circular footprint
 proxies and unavailable mission-specific new-edition data retain their explicit
 limits; this is scoped integration completion, not certification of unspecified
 missions or every possible army/ability combination.
+
+## Shared ability procedures — generic-army refactor step5
+
+This is step5 of the subsequent generic-army refactor, separate from migration
+task5 (timing). The user approved independent commits and then clarified that
+reuse by other armies takes priority over forcing a line reduction. This batch
+extracts common procedures; it does not replace the faction catalogs, source
+registries or the remaining Orks-specific effect metadata.
+
+- [x] Share round-resource accounting and the spent-before-roll/reroll procedure.
+  Orks Wurrband and datasheet psychic actions share one psychic-test adapter;
+  capacities, failure Battle-shock and card effects remain source decisions.
+- [x] Share reactive Normal moves and Surge through `granted_move` and core
+  `Move`. Preserve Surge goals, optional objective destinations, completed-move
+  history and caller role/constraint restoration.
+- [x] Share wound healing and original-model return across abilities/banks.
+  Remove the faction healing wrapper, repeated restoration/placement paths and
+  three-wound chunking. Keep phase-start versus nearest-unengaged placement,
+  wounded-first/Character restrictions, passenger capacity and original usage.
+- [x] Review recurring targeted effects. Their mortality/jobs/grant pipelines
+  are already shared; differing roll meanings and eligibility stay explicit.
+  No additional universal target/effect interpreter is justified in this batch.
+- [x] Native CTest:1,190 assertions plus compilation fixture pass, with no
+  Python test runtime. Six new assertions exercise generic resource accounting,
+  rerolls, context restoration, objective restrictions, full healing allowances
+  and explicit Character return on non-Orks fixtures. Existing all-bank,
+  psychic, Surge, healing, Surly and capacity regressions remain passing.
+- [x] Frame audit:125 action routines/66 shared slots, no duplicate frames or
+  nested re-entry; Game34,160 / Board31,936 bytes. Both shrink by3,536 bytes
+  compared with the final17.Q schema37 layout.
+- [x] Sanitizer sweep:34 focused semantic inputs plus empty input pass with
+  ASAN/UBSAN/leak detection. Both preserved memory inputs pass. Separate semantic
+  mutation performs131 runs/62s; actual action mutation performs42 runs/62s.
+- [x] Fresh native985-action game finishes at owner−4 and restores its final
+  save. Twenty Gym steps retain finite observations:30,072 candidates and
+  16,390,831 observation values, seed40000. Discovery remains unchanged.
+- [x] All21 matching focused Godot scripts pass, including the new faction-free
+  shared-procedure bindings and existing roster/attachment/save/selector paths.
+  The fresh985-action game also replays with ASAN/UBSAN/leak checks in61.67s.
+
+State/observation40, action26 and next-state41 require matching generated
+artifacts. Surly and ordinary return now share the existing one-BoardPosition
+`place_returned_model` input; `place_surly_model` is removed. Stored quantities
+remain bounded; generated lifecycle, whole-inch quads and intentional circular
+proxies are retained. Rules.gd, TraceManager and action discovery are unchanged.
+
+Measured against984267d, all runtime `src` files together lose15 physical lines
+and28 nonblank/noncomment lines, including both new generic modules. Orks-named
+files lose264 physical lines, mostly moved into shared code. This is a modest
+net text reduction, not a264-line removal from the whole engine. Regression
+tests and architecture/validation documentation grow separately. Artifacts and
+per-file measurements are under `/workspace/4hammer-validation/shared-procedures`.
+
+The initial new objective fixture wrongly treated a diagonal destination as out
+of range: circular model and marker radii made it legal. The corrected fixture
+compares equally distant east/west moves and preserves the base-edge rule.
+Final native validation takes329.14s including309.11s for the unoptimized-j4
+compile fixture; those concurrent timings are not a speed comparison. Sanitized
+compilation remains a separate optimized-O2/-g build. The earlier instruction to
+avoid Python in pure rule tests remains in force; Python here only orchestrates
+host/ML checks, reads generated metadata and prepares sanitizer artifacts.
+
+**Step5 complete.** The three implementation commits independently cover
+resource/psychic procedures, granted movement, and healing/model return. A
+separate validation/documentation commit records the host regression and
+architecture. Earlier17.Q broad-walkthrough/source-audit results remain their
+historical evidence; this batch reruns the21 focused host scripts, native suite,
+frame/ML checks, fresh game and sanitizer checks above. Future generic catalog,
+grant and source-dispatch work remains outside this completed procedure batch.

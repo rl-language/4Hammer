@@ -47,7 +47,7 @@ share their rule logic:
 | Da Boss is Watchin' | `orks_watchin_available`, `commit_orks_watchin` | Bank selectors only |
 | Dread Power | `orks_dread_power_valid`, `commit_orks_dread_power` | Bank selectors only |
 | Surly | `orks_surly_casualty_valid`, `return_orks_surly` | Nearest legal quad on battlefield, capacity for passengers, no reserve coordinate |
-| Healing | Existing `heal_orks_component` and model reset | Legal placement or passenger capacity |
+| Healing | Generic `heal_unit`, `return_model` and model reset in `healing_rules.rl` | Legal placement or passenger capacity |
 | Mortals / FNP / death | `resolve_mortal_wounds`, `prevent_wound_loss`, `commit_wound_loss`, `resolve_damage_jobs` | A `DamageJob.bank` identifies real storage; external death effects require battlefield membership |
 | Turn/phase resets | Shared `Board` bank iteration for histories, flags, usage and phase snapshots | Only battlefield units acquire geometry anchors |
 | Retained fighters | `release_phase_retained_fighters`, common destruction scan | Iterate all banks |

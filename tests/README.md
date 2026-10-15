@@ -25,7 +25,7 @@ Each compilation uses four workers; change this with
 be supplied with `-DRULE_TEST_CLANG=/path/to/clang`. CTest process parallelism
 (`ctest -j`) is separate from compiler workers.
 
-`ctest -N --test-dir build-tests` lists **1,185 entries**:1,184 assertions and
+`ctest -N --test-dir build-tests` lists **1,191 entries**:1,190 assertions and
 one compilation fixture. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` selects one case. Labels `baseline`, `discrepancies` and
 `expected-failure` allow filtering with `-L`. CTest includes the compilation
 fixture for filtered runs. That fixture builds the native runner and suite with
@@ -46,6 +46,18 @@ Reconfigure after changing declarations or the manifest; builds also track them
 for regeneration. Outputs stay in the chosen build directory. The former
 Python test runners have been removed. Python tools below exercise separate
 host/ML integrations and source audits; they do not execute this native suite.
+
+The six `test_procedures_*` assertions cover shared resource/reroll, granted
+movement and healing/return operations with non-Orks fixtures. Their generated
+host contexts and position payload also have a focused Godot check:
+
+```bash
+python tools/check_godot_state.py --build-path /path/to/matching/native/bindings \
+  --script tests/godot_shared_procedures.gd --timeout 120
+```
+
+Generate both native bindings and headers at state/observation40, action26
+(next-state41). This is a host integration check, separate from native CTest.
 
 `baseline.rl` tests supported behavior, legality and state transitions. `known_discrepancies.rl` asserts desired behavior that currently fails; its manifest links each failure to a source rule, category and roadmap owner. These failures are reported as XFAIL, never as semantic passes. When fixing one, move its assertion into the passing suite and remove its manifest entry. Do not change the assertion to approve incorrect behavior or broadly skip a failing subsystem.
 

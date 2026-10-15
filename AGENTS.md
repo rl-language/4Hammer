@@ -677,3 +677,32 @@ replays,79 new semantic sanitizer cases and separate semantic/action mutation
 campaigns. See ROADMAP.md for exact evidence and remaining mission/geometry
 limits. The broad Godot run is slow through unchanged discovery; the user owns
 that compiler optimization. Pure Rulebook tests must remain entirely native.
+
+## Shared ability procedures — generic-army refactor step5
+
+User clarification2026-10-15: prioritize mechanics that other armies can reuse;
+a refactor need not shrink every commit. Still measure all runtime sources,
+including new generic modules, and report tests/docs separately. Keep distinct
+concerns in distinct commits and preserve actual rule behavior.
+
+Use `RoundResourceBudget` and `roll_spent_round_resource` for round-limited
+resource rolls; callers own capacity, eligibility and effects. Use `reactive_move`
+or `granted_move` for supported out-of-phase moves, retaining source restrictions
+and restoring caller roles/constraints. `healing_rules.rl` owns `heal_unit` and
+`return_model`: supply the real Board/Unit contexts, bank, placement policy and
+bounded amount. Ordinary healing excludes Character casualties; explicit return
+abilities call the shared return directly. Do not recreate faction/offboard
+versions or three-wound chunk wrappers. Preserve original identity/equipment,
+phase-start anchors, nearest-return constraints and real passenger capacity.
+
+Orks adapters still own psychic failure/shock, source-specific usage, target
+eligibility and effects. Generic procedures are not permission to apply an
+ability absent from a datasheet. Targeted effects already use core damage/jobs
+and source grants; do not add an unused universal ability interpreter. Review
+shared frame lifetimes before introducing nested granted moves or returns.
+
+Read the architecture guide and the final step5 ROADMAP evidence for the current
+schema40/26 (state and observation40, action26, next-state41), validation and
+remaining scope. The6 new faction-free assertions bring native CTest to1,190
+assertions plus its compilation fixture. The generated Godot procedure test
+also covers faction-free resource/reroll, movement, healing and model return.

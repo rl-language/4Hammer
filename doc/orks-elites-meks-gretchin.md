@@ -31,8 +31,9 @@ component identities retain token use through attachment, casualty compaction,
 revival and saves. Repair prototypes are reused across turns; each accepted
 repair still installs its own effect key for cumulative modifiers and expiry.
 
-Unit healing delegates to one `Board.shared_actions.heal_orks_component` frame,
-shared with the older detachment healing wrapper. It heals wounded live models
+Unit healing delegates to the faction-independent `Board.shared_actions.heal_unit`
+frame in `healing_rules.rl`, with the complete allowance rather than three-wound
+chunks. It heals wounded live models
 before returning archived non-Characters, preserves original identities and
 weapon-use history, clears death-only flags and asks for a legal grid position
 on the battlefield. Offboard own-unit healing requires no external range
