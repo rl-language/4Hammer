@@ -4,7 +4,7 @@ import terrain_rules
 # p.58: mission definitions supply timing, units, use limits and effects.
 # This generic gate deliberately does not create the unplayable example action.
 fun action_start_valid(Board board, UnitID source, Bool player) -> Bool:
-    if source.get() >= board.units.size() or board[source].off_battlefield or board[source].owned_by_player1 != player or !has_live_model(board[source]) or !board[source].allows_action_start():
+    if source.get() >= board.units.size() or board[source].off_battlefield or board[source].owned_by_player1 != player or !has_live_model(board[source]) or !board[source].allows_action_start() or unit_orks_effect(board, board[source], OrksEffectKind::no_action) > 0:
         return false
     # Boyz/Never Too Busy to Fight waives engagement alone; all other p58
     # gates (shock, OC, shooting, movement and once/turn) stay in effect.

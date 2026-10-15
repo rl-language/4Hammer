@@ -117,6 +117,10 @@ fun battlefield_move_eligible(Board board, UnitID id, MovementKind kind) -> Bool
         return false
     if kind == MovementKind::stationary:
         return true
+    if !unit_has_movable_model(board[id]):
+        return false
+    if kind == MovementKind::pulse_jet:
+        return !board.is_in_melee(board[id]) and unit_orks_effect(board, board[id], OrksEffectKind::pulse_engine) > 0
     if kind == MovementKind::ordered_retreat:
         return board.is_in_melee(board[id]) and !board[id].battle_socked and !orks_forces_escape(board, board[id])
     if kind == MovementKind::desperate_escape:
@@ -149,6 +153,11 @@ fun record_move(Board board, UnitID id, MovementKind kind):
         board[id].interrupt_actions()
         board[id].history.last_move_phase = board.phase_serial.value + 1
         board[id].history.made_move_this_turn = true
+    if kind == MovementKind::pulse_jet:
+        board[id].can_charge = false
+        grant_orks_effect(board, id, id, 173, OrksEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
+        grant_orks_effect(board, id, id, 174, OrksEffectKind::no_action, 1, SourceDuration::turn, invalid_entity_identity())
+        grant_orks_effect(board, id, id, 175, OrksEffectKind::pulse_defence, 1, SourceDuration::next_own_turn, invalid_entity_identity())
     if kind == MovementKind::advance:
         board[id].history.advanced_this_turn = true
         board[id].has_run = true
@@ -302,6 +311,7 @@ fun scouts_distance(Unit unit) -> Int:
     assert(scouts_values_uniform(unit), "Scouts values must all be identical")
     return unit[0].scout_distances[0].value
 
+# Orks index PULSE JET MOVE grants traverse-all/horizontal costs, independent ofFLY.
 # Flying traversal belongs only to flying models when Take to the Skies was
 # chosen; ordinary/desperate permissions still apply to all models (pp.33/71).
 fun movement_policy(Unit unit, Model model, MovementKind kind, Bool skies) -> MovementGeometryPolicy:
@@ -321,15 +331,22 @@ fun movement_policy(Unit unit, Model model, MovementKind kind, Bool skies) -> Mo
         policy.traverse_terrain = true
         policy.free_vertical_movement = true
         policy.exclude_titanic = false
+    if kind == MovementKind::pulse_jet:
+        policy.traverse_enemies = true
+        policy.traverse_terrain = true
+        policy.free_vertical_movement = true
+        policy.exclude_titanic = false
+        policy.exclude_monster_vehicle = false
     return policy
 
+# Orks index Special Move Types/PULSE JET MOVE has its own D6+18 budget.
 # Per-model distance, optional fixed scout/surge limit and FLY -2 exception
 # (pp.33/71/82/84/87). Random unit M is already rolled by the caller.
 fun model_move_budget(Model model, MovementKind kind, Int extra, Int override_m, Bool skies) -> Int:
     let budget = model.profile.movement()
     if override_m > 0:
         budget = override_m - 1
-    if kind == MovementKind::scout or kind == MovementKind::surge:
+    if kind == MovementKind::scout or kind == MovementKind::surge or kind == MovementKind::pulse_jet:
         return max(0, extra)
     budget = model.effective_movement(budget) + extra
     if skies and !model.has_ability(AbilityKind::hover):
@@ -342,7 +359,7 @@ fun path_distance(Model model, ModelPath path, Bool skies) -> Float:
     let start = model.geometry_position()
     let distance = 0.0
     for i in range(path.points.size()):
-        if skies and model.has_keyword(Keyword::fly):
+        if skies:
             distance = distance + horizontal_length(start, path.points[i].as_geometry_point())
         else:
             distance = distance + segment_length(start, path.points[i].as_geometry_point())
@@ -361,14 +378,14 @@ fun waypoint_valid(Board board, Unit original, ModelPath path, BoardPosition pos
     let finish = geometry_point(position.x.value * MICROMETRES_PER_INCH, position.y.value * MICROMETRES_PER_INCH, start.z.value)
     let policy = movement_policy(original, model, kind, skies)
     let segment = segment_length(start, finish)
-    if skies and model.has_keyword(Keyword::fly):
+    if skies and model.has_keyword(Keyword::fly) or kind == MovementKind::pulse_jet:
         segment = horizontal_length(start, finish)
     # HOVER exempts the unit's maximum distance, not just its bearer (p.82).
     let skies_penalty = skies and !original.has_ability(AbilityKind::hover)
     let budget = model_move_budget(model, kind, extra, override_m, skies_penalty)
     if original.movement_distance_limit.value > 0:
         budget = max(0, original.movement_distance_limit.value - 1 - 2 * int(skies_penalty))
-    if path_distance(model, path, skies) + segment > float(budget * MICROMETRES_PER_INCH):
+    if path_distance(model, path, skies and model.has_keyword(Keyword::fly) or kind == MovementKind::pulse_jet) + segment > float(budget * MICROMETRES_PER_INCH):
         return false
     return model_segment_valid(board, original, model, start, finish, policy)
 

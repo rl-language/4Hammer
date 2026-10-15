@@ -23,6 +23,8 @@ enum CurrentStateDescription:
     overwatch 
 
 cls AttackSequenceInfo:
+    # Hit provenance for Squig Barrage survives identical-attack gathering.
+    Bool squig_launcha_weapon
     ShootingKind shooting_kind
     Bool weapon_rules_known
     CheckedVector<WeaponRule, 32> selected_weapon_rules
@@ -166,7 +168,14 @@ enum ObjectiveController:
 
 # Objectives use the existing four-slot editor domain; this is a supported
 # mission configuration capacity, not a restriction imposed by p.52.
+enum ObjectiveHome:
+    none
+    army_0
+    army_1
+
 cls Objective:
+    # Explicit mission assignment; never infer a home marker from its index.
+    ObjectiveHome home
     BoardPosition position
     Bool custom_position
     Bool terrain_objective
@@ -504,6 +513,8 @@ cls Board:
     # Only the named Orks cards override shocked/destroyed target gates;
     # their future actions still check the full printed timing/keywords.
     fun can_target_strat_with_cost(Bool player, Stratagem strat, Unit target, Int cost) -> Bool:
+        if strat == Stratagem::overwatch and unit_orks_effect(self, target, OrksEffectKind::overwatch_blocked) > 0:
+            return false
         let policy = strat.target_policy()
         let present = !target.empty()
         if policy == StratagemTargetPolicy::destroyed_unit:
@@ -511,9 +522,10 @@ cls Board:
         let friendly = strat.orks_detachment() == OrksDetachment::none or target.owned_by_player1 == player
         return self.can_use_strat_with_cost(player, strat, cost) and friendly and present and !target.history.stratagem_targeted_by_player[int(player)] and !(target.battle_socked and target.owned_by_player1 == player and policy != StratagemTargetPolicy::allow_shocked)
 
-    # Each player may target a unit only once per phase (p.54).
+    # Each player may target a unit once per phase (p54); Orks/Hunta-Rig
+    # Tramplasquig Charge applies its discount before affordability.
     fun can_target_strat(Bool player, Stratagem strat, Unit target) -> Bool:
-        return self.can_target_strat_with_cost(player, strat, target, strat.cost())
+        return self.can_target_strat_with_cost(player, strat, target, orks_datasheet_stratagem_cost(strat, target))
 
     # Untargeted legacy faction options still need supplied target definitions;
     # their expenditure/phase bookkeeping is nevertheless atomic (p.54).
@@ -530,9 +542,10 @@ cls Board:
         target.history.stratagem_targeted_by_player[int(player)] = true
         target.history.used_stratagem_this_phase = true
 
-    # Normal targeted use uses the printed base cost (p.54).
+    # Targeted use pays the actual cost (p54), including Orks/Hunta-Rig
+    # Tramplasquig Charge; free use still consumes phase/target limits.
     fun commit_stratagem(Bool player, Stratagem strat, Unit target):
-        self.commit_stratagem_with_cost(player, strat, target, strat.cost())
+        self.commit_stratagem_with_cost(player, strat, target, orks_datasheet_stratagem_cost(strat, target))
 
     # Invalid targets/costs fail without partial expenditure or history changes
     # (p.54); this recoverable primitive supports legality/rollback tests.
@@ -720,6 +733,8 @@ cls Board:
                 for j in range(unit.models.size()):
                     if self.model_in_objective_range(unit[j], objective):
                         total = total + max(0, unit.model_objective_control(j))
+                        if !unit.battle_socked:
+                            total = total + orks_bunka_passenger_control(self, unit[j], player)
         return total
 
     # Stateless marker query retained for existing diagnostic fixtures. Real
@@ -907,6 +922,8 @@ fun valid_state_foundations(Board board) -> Bool:
             return false
     for index in range(4):
         ref objective = board.objectives[index]
+        if objective.home.value < 0 or objective.home.value > 2:
+            return false
         if objective.terrain_objective:
             if objective.area_id.value >= board.terrain_areas.size() or !point_in_terrain_area(board.objective_position(index), board.terrain_areas[objective.area_id.value]):
                 return false
@@ -945,6 +962,10 @@ fun valid_state_foundations(Board board) -> Bool:
 # Reject malformed bounded history on load before it can change range/Heavy
 # decisions or inferred observations (p.82 / user numeric-storage requirement).
 fun valid_model_numeric_history(Model model) -> Bool:
+    if model.profile.base_size() == 0.0 and model.geometry.proxy_diameter_mm.value == 0 and !model.geometry.unsupported_footprint:
+        return false
+    if model.geometry.proxy_diameter_mm.value < 0 or model.geometry.proxy_diameter_mm.value > 1000:
+        return false
     if model.orks_enhancement.value < 0 or model.orks_enhancement.value > OrksEnhancement::warphead.value or model.orks_upgrade_origin.value < 0 or model.orks_upgrade_origin.value >= MAX_IDENTITY_SEQUENCE or model.destroying_unit_identity.value < 0 or model.destroying_unit_identity.value >= MAX_IDENTITY_SEQUENCE or model.destroyed_phase.value < 0 or model.destroyed_phase.value >= MAX_PHASE_STAMP:
         return false
     for ork_effect in range(model.orks_effects.size()):

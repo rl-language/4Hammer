@@ -4,6 +4,8 @@
 # when they must outlive reuse. Core sequence pp28-30; this is representation,
 # not a tabletop rule. See doc/action-frame-lifetimes.json and the design guide.
 cls SharedActionFrames:
+    Disembark disembark
+    OrksDatasheetPsychic orks_datasheet_psychic
     AttackDiceBatch collect_attack_dice
     AttackWithOrksReactions attack_with_orks_reactions
     BattleShockTest battle_shock_test

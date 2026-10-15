@@ -25,6 +25,8 @@ import attachment_rules
 import orks_unit_data
 import orks_unit_rules
 import orks_datasheet_rules
+import orks_remaining_rules
+import orks_remaining_data
 import orks_elite_data
 import orks_elite_rules
 
@@ -1166,6 +1168,7 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
             info.engaged_hit_penalties = info.engaged_hit_penalties + 1
         if board.is_in_melee(board[target]) and (board[target].has_keyword(Keyword::monster) or board[target].has_keyword(Keyword::vehicle)):
             info.engaged_hit_penalties = info.engaged_hit_penalties + 1
+    info.squig_launcha_weapon = weapon.weapon_name.value == NamedWeapon::squig_launchas.value
     append_orks_attack_effects(board, source, target, weapon, info)
     return info
 
@@ -1361,6 +1364,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     subaction*(board) board.shared_actions.resolve_damage_jobs
     remove_orks_scoped_effect(board, genius_effect)
     if !melee and board.timing.phase == BattlePhase::shooting and board[source].owned_by_player1 == board.current_player:
+        subaction*(board) remaining_end = orks_remaining_post_shoot(board, source)
         subaction*(board) options_end = orks_shooting_option_end(board, source)
     hazardous_uses = declared_hazardous_uses(declarations)
     board.shared_actions.resolve_hazards = resolve_hazards(board, source, hazardous_uses)
@@ -1743,17 +1747,21 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
                     resolve_orks_timing_rule(board, player, orks_rule)
                 act choose_window_source(frm SourceEventID event) {pending_source_valid(board, pending, event, player)}
                     frm chosen_source = board.source_instances[pending[event.value].source.value]
-                    if chosen_source.rule.value >= ORKS_SURGERY_RULE and chosen_source.rule.value <= ORKS_PAINBOSS_RULE:
-                        commit_source_usage(board, chosen_source)
+                    if chosen_source.rule.value >= 140 and chosen_source.rule.value <= 145:
                         pending[event.value].resolved = true
-                        subaction*(board) elite_healing = orks_elite_command(board, chosen_source)
+                        subaction*(board) remaining_window = orks_remaining_window(board, chosen_source)
                     else:
-                        if chosen_source.rule.value == ORKS_SCAVENGERS_RULE:
-                            secure_orks_gretchin_objectives(board, chosen_source)
+                        if chosen_source.rule.value >= ORKS_SURGERY_RULE and chosen_source.rule.value <= ORKS_PAINBOSS_RULE:
                             commit_source_usage(board, chosen_source)
                             pending[event.value].resolved = true
+                            subaction*(board) elite_healing = orks_elite_command(board, chosen_source)
                         else:
-                            commit_pending_source(board, pending, event, player)
+                            if chosen_source.rule.value == ORKS_SCAVENGERS_RULE:
+                                secure_orks_gretchin_objectives(board, chosen_source)
+                                commit_source_usage(board, chosen_source)
+                                pending[event.value].resolved = true
+                            else:
+                                commit_pending_source(board, pending, event, player)
                 act choose_timing_rule(frm TimingRule rule) {
                     !resolved[int(rule.value)],
                     timing_rule_available(board, window, player, rule)
@@ -2021,45 +2029,50 @@ act resolve_movement_sources(ctx Board board, frm SourceEvent trigger) -> Moveme
                 act choose_movement_source(frm SourceEventID event) {orks_move_source_valid(board, pending, event, player)}
                     frm source_index : SourceInstanceID
                     source_index = pending[event.value].source.value
-                    if board.source_instances[source_index.value].rule.value == ORKS_KEEP_HUNTIN_RULE or board.source_instances[source_index.value].rule.value == ORKS_INTIMIDATING_RULE:
-                        act choose_keep_huntin_target(frm UnitID hunt_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], hunt_target)}
-                        commit_orks_keep_huntin(board, pending, event, player, hunt_target)
+                    if board.source_instances[source_index.value].rule.value == 147:
+                        act choose_race_target(frm UnitID race_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], race_target)}
+                        pending[event.value].resolved = true
+                        commit_orks_race(board, board.source_instances[source_index.value], race_target)
                     else:
-                        if board.source_instances[source_index.value].rule.value == ORKS_BOMB_SQUIG_RULE:
-                            act choose_bomb_squig_target(frm UnitID bomb_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], bomb_target)}
-                            commit_source_usage(board, board.source_instances[source_index.value])
-                            pending[event.value].resolved = true
-                            frm location = locate_source(board, board.source_instances[source_index.value].source_unit, invalid_entity_identity())
-                            frm bomb_source : UnitID
-                            bomb_source = location.unit.value
-                            act roll(Dice bomb_result)
-                            if bomb_result.value >= 3:
-                                board.shared_actions.evaluate_random_stat = evaluate_random_stat(dice_stat(3))
-                                subaction* board.shared_actions.evaluate_random_stat
-                                frm bomb_damage_result_snapshot_1 = board.shared_actions.evaluate_random_stat.result
-                                frm amount : CombatCounter
-                                amount = bomb_damage_result_snapshot_1.value
-                                board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, bomb_target, bomb_source, true, amount)
-                                subaction*(board) board.shared_actions.resolve_mortal_wounds
+                        if board.source_instances[source_index.value].rule.value == ORKS_KEEP_HUNTIN_RULE or board.source_instances[source_index.value].rule.value == ORKS_INTIMIDATING_RULE:
+                            act choose_keep_huntin_target(frm UnitID hunt_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], hunt_target)}
+                            commit_orks_keep_huntin(board, pending, event, player, hunt_target)
                         else:
-                            if board.source_instances[source_index.value].rule.value == ORKS_MEK_REPAIR_RULE:
+                            if board.source_instances[source_index.value].rule.value == ORKS_BOMB_SQUIG_RULE:
+                                act choose_bomb_squig_target(frm UnitID bomb_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], bomb_target)}
+                                commit_source_usage(board, board.source_instances[source_index.value])
                                 pending[event.value].resolved = true
-                                subaction*(board) mek_repair = repair_orks_vehicle(board, board.source_instances[source_index.value])
+                                frm location = locate_source(board, board.source_instances[source_index.value].source_unit, invalid_entity_identity())
+                                frm bomb_source : UnitID
+                                bomb_source = location.unit.value
+                                act roll(Dice bomb_result)
+                                if bomb_result.value >= 3:
+                                    board.shared_actions.evaluate_random_stat = evaluate_random_stat(dice_stat(3))
+                                    subaction* board.shared_actions.evaluate_random_stat
+                                    frm bomb_damage_result_snapshot_1 = board.shared_actions.evaluate_random_stat.result
+                                    frm amount : CombatCounter
+                                    amount = bomb_damage_result_snapshot_1.value
+                                    board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, bomb_target, bomb_source, true, amount)
+                                    subaction*(board) board.shared_actions.resolve_mortal_wounds
                             else:
-                                if board.source_instances[source_index.value].rule.value == ORKS_SHOKK_BOOST_RULE:
+                                if board.source_instances[source_index.value].rule.value == ORKS_MEK_REPAIR_RULE:
                                     pending[event.value].resolved = true
-                                    frm boost_location = locate_source(board, board.source_instances[source_index.value].source_unit, invalid_entity_identity())
-                                    frm boosting_unit : UnitID
-                                    boosting_unit = boost_location.unit.value
-                                    frm boost_hazards : HazardousUses
-                                    for member_index in range(board[boosting_unit].models.size()):
-                                        if board[boosting_unit][member_index].is_alive():
-                                            boost_hazards = boost_hazards + 1
-                                    board.shared_actions.resolve_hazards = resolve_hazards(board, boosting_unit, boost_hazards)
-                                    subaction*(board) board.shared_actions.resolve_hazards
+                                    subaction*(board) mek_repair = repair_orks_vehicle(board, board.source_instances[source_index.value])
                                 else:
-                                    commit_pending_source(board, pending, event, player)
-                    board.current_decision_maker = player
+                                    if board.source_instances[source_index.value].rule.value == ORKS_SHOKK_BOOST_RULE:
+                                        pending[event.value].resolved = true
+                                        frm boost_location = locate_source(board, board.source_instances[source_index.value].source_unit, invalid_entity_identity())
+                                        frm boosting_unit : UnitID
+                                        boosting_unit = boost_location.unit.value
+                                        frm boost_hazards : HazardousUses
+                                        for member_index in range(board[boosting_unit].models.size()):
+                                            if board[boosting_unit][member_index].is_alive():
+                                                boost_hazards = boost_hazards + 1
+                                        board.shared_actions.resolve_hazards = resolve_hazards(board, boosting_unit, boost_hazards)
+                                        subaction*(board) board.shared_actions.resolve_hazards
+                                    else:
+                                        commit_pending_source(board, pending, event, player)
+                        board.current_decision_maker = player
         player = !player
         controllers = controllers + 1
     board.active_source_events = previous_candidates
@@ -2132,7 +2145,7 @@ act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement)
                             model_done = true
                         act waypoint(BoardPosition position) {waypoint_valid(board, original, path, position, kind, extra.value, override_m.value, skies)}
                             path.append_point(geometry_point(position.x.value * MICROMETRES_PER_INCH, position.y.value * MICROMETRES_PER_INCH, original[model].geometry_position().z.value))
-                        act rotate_model(MovementRotation rotation) {!rotated}
+                        act rotate_model(MovementRotation rotation) {!rotated, model_can_move(original[model])}
                             path.final_rotation = rotation.value * 1000
                             rotated = true
     if completed:
@@ -2292,6 +2305,7 @@ act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
     board[source].history.fight_eligible_phase = board.phase_serial.value + 1
     board[source].history.consolidation_fight_pending = 0
     board.current_decision_maker = board[source].owned_by_player1
+    subaction*(board) datasheet_psychic_fight = orks_datasheet_fight_selection(board, source)
     subaction*(board) rokkit_selection = orks_rokkit_selection(board, source)
     if epic_source_valid(board, source):
         actions:
@@ -2476,7 +2490,7 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
                             model_done = true
                         act charge_waypoint(BoardPosition position) {charge_waypoint_valid(board, original, path, position, maximum.value, skies)}
                             path.append_point(geometry_point(position.x.value * MICROMETRES_PER_INCH, position.y.value * MICROMETRES_PER_INCH, original[model].geometry_position().z.value))
-                        act rotate_charge_model(MovementRotation rotation) {!rotated}
+                        act rotate_charge_model(MovementRotation rotation) {!rotated, model_can_move(original[model])}
                             path.final_rotation = rotation.value * 1000
                             rotated = true
     # A candidate snapshot predates declaration. Preserve declaration after
@@ -2557,6 +2571,9 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
 # Desperate Escape rolls one complete hazard batch per model, then applies
 # ordinary mortal allocation/FNP/destruction instead of deleting models (pp.24/33).
 act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
+    # Orks/Big-ed-Bossbunka Fortification automatically passes these hazards.
+    if !board[id].battle_socked and orks_engaged_only_fortifications(board, board[id]):
+        return
     frm count : CombatCounter
     count = live_attachment_strength(board[id])
     frm penalty : FixedStat
@@ -2611,6 +2628,11 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
             act remain_stationary() {battlefield_move_eligible(board, id, MovementKind::stationary)}
                 record_move(board, id, MovementKind::stationary)
                 selected = true
+            act pulse_jet_move() {battlefield_move_eligible(board, id, MovementKind::pulse_jet), unit_orks_effect(board, board[id], OrksEffectKind::pulse_engine) > 0}
+                kind = MovementKind::pulse_jet
+                act roll(Dice pulse_roll)
+                extra = pulse_roll.value + 18
+                selected = true
             act normal_move() {battlefield_move_eligible(board, id, MovementKind::normal)}
                 kind = MovementKind::normal
                 extra = 2 * int(use_the_gilded_spear)
@@ -2636,7 +2658,7 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
                         act use_unstoppable_advance(Bool six_instead)
                         if six_instead:
                             board.current_roll.result = 6
-                    extra = board.current_roll.result.value + 2 * unit_orks_effect(board, board[id], OrksEffectKind::advance_plus_two)
+                    extra = board.current_roll.result.value + int(board[id].has_ability(AbilityKind::fuel_mixa_grot)) + 2 * unit_orks_effect(board, board[id], OrksEffectKind::advance_plus_two)
                     capture_orks_selected_move(board, id, kind)
                 selected = true
             act ordered_retreat() {battlefield_move_eligible(board, id, MovementKind::ordered_retreat)}
@@ -2661,7 +2683,7 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
     if !(board[id].history.selected_move_phase == board.phase_serial.value + 1) and has_live_model(board[id]):
         board[id].pending_move_kind = kind
         board[id].move_takes_to_skies = false
-        if board[id].has_keyword(Keyword::fly):
+        if board[id].has_keyword(Keyword::fly) and unit_orks_effect(board, board[id], OrksEffectKind::grounded) == 0:
             act take_to_skies(Bool do_it)
             board[id].move_takes_to_skies = do_it
         frm mobile = false
@@ -2702,6 +2724,7 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
     if board[id].history.last_move_phase == board.phase_serial.value + 1 and !(board[id].history.move_kind == MovementKind::stationary) and has_live_model(board[id]):
         board.shared_actions.orks_wagon_move_end = orks_wagon_move_end(board, id)
         subaction*(board) board.shared_actions.orks_wagon_move_end
+        subaction*(board) trukk_reactions = orks_trukk_reactions(board, id)
         while orks_enemy_move_available(board, id):
             board.shared_actions.select_orks_enemy_move_reaction = select_orks_enemy_move_reaction(board, id)
             subaction*(board) board.shared_actions.select_orks_enemy_move_reaction
@@ -2742,10 +2765,14 @@ act post_move_embark(ctx Board board, frm UnitID passenger_source) -> PostMoveEm
 # Stage a compulsory mode's hazard damage before battlefield placement;
 # bank histories/usage persist and legal individual/preset setups share the
 # exact same geometry kernel (18.04 p.65, appendix01.02.02).
-act disembark(ctx Board board, frm UnitID passenger_bank) -> Disembark:
-    assert(ordinary_disembark_valid(board, passenger_bank), "illegal disembarkation")
+act disembark(ctx Board board, frm UnitID passenger_bank, frm Bool reactive) -> Disembark:
+    frm completed = false
+    assert(reactive or ordinary_disembark_valid(board, passenger_bank), "illegal disembarkation")
     frm carrier_location = find_passenger_carrier(board, board.embarked_units[passenger_bank.get()].embarked_transport)
     frm mode = required_disembark_mode(board, board.embarked_units[passenger_bank.get()], carrier_location)
+    if reactive:
+        mode = DisembarkMode::rapid
+    subaction*(board) selected_passenger = orks_disembark_selection(board, passenger_bank, carrier_location)
     if mode == DisembarkMode::assault:
         act choose_assault_disembark(Bool use_assault)
         if !use_assault:
@@ -2791,9 +2818,7 @@ act disembark(ctx Board board, frm UnitID passenger_bank) -> Disembark:
                 complete = true
     board[passenger_slot] = candidate
     finish_disembark(board, passenger_slot, mode)
-    if mode == DisembarkMode::tactical and !board[passenger_slot].empty():
-        board.shared_actions.movement = movement(board, passenger_slot, false)
-        subaction*(board) board.shared_actions.movement
+    completed = true
     board.moving_unit = previous_mover
 
 # Every friendly unit must be selected exactly once, including reserves.
@@ -2803,7 +2828,14 @@ act movement_phase(ctx Board board) -> MovementPhase:
     while true:
         actions:
             act select_disembarking_unit(frm UnitID disembark_passenger) {ordinary_disembark_valid(board, disembark_passenger)}
-                subaction*(board) passenger_disembark = disembark(board, disembark_passenger)
+                board.shared_actions.disembark = disembark(board, disembark_passenger, false)
+                subaction*(board) board.shared_actions.disembark
+                frm disembark_completed = board.shared_actions.disembark.completed
+                frm disembark_mode_snapshot = board.shared_actions.disembark.mode
+                frm disembark_slot_snapshot = board.shared_actions.disembark.passenger_slot
+                if disembark_completed and disembark_mode_snapshot == DisembarkMode::tactical and !board[disembark_slot_snapshot].empty():
+                    board.shared_actions.movement = movement(board, disembark_slot_snapshot, false)
+                    subaction*(board) board.shared_actions.movement
             act end_move() {movement_selection_complete(board, board.current_player)}
                 break
             act use_orks_offboard_dread_power() {orks_offboard_dread_power_available(board, SourceBank::reserves, board.current_player) or orks_offboard_dread_power_available(board, SourceBank::embarked, board.current_player)}
@@ -2811,6 +2843,8 @@ act movement_phase(ctx Board board) -> MovementPhase:
             act use_orks_offboard_watchin() {orks_offboard_support_available(board, SourceBank::reserves, board.current_player, false) or orks_offboard_support_available(board, SourceBank::embarked, board.current_player, false)}
                 board.shared_actions.choose_orks_offboard_support = choose_orks_offboard_support(board, board.current_player, false)
                 subaction*(board) board.shared_actions.choose_orks_offboard_support
+            act use_orks_datasheet_movement(frm UnitID datasheet_unit) {orks_datasheet_move_any(board, datasheet_unit)}
+                subaction*(board) datasheet_move = orks_datasheet_movement(board, datasheet_unit)
             act use_orks_movement_support(frm UnitID support_unit) {orks_phase_support_available(board, support_unit)}
                 subaction*(board) support = orks_phase_support(board, support_unit)
             act move_unit(frm UnitID id) {id.get() < board.units.size(), has_live_model(board[id]), !board[id].off_battlefield, !board[id].has_keyword(Keyword::aircraft), board[id].owned_by_player1 == board.current_player, board[id].history.selected_move_phase != board.phase_serial.value + 1}
@@ -3128,6 +3162,7 @@ act battle(ctx Board board) -> Battle:
     board.identify_units()
     register_orks_force_dispositions(board)
     assert(orks_muster_copies_valid(board), "muster exceeds unit copy limits")
+    subaction*(board) kommando_formations = orks_kommando_formations(board)
     subaction*(board) attach_leaders = attach_leaders(board)
     board.capture_starting_strengths()
     register_orks_option_passives(board)

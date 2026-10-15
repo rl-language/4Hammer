@@ -188,7 +188,7 @@ fun melee_model_distance(Model model, Unit target) -> Float:
 # Models already in base contact cannot change position/rotation during Pile
 # In or ongoing consolidation (pp.38/42); retained corpses also stay put.
 fun melee_model_locked(Board board, Model model, Unit original, MeleeMoveKind kind) -> Bool:
-    if !model.is_alive():
+    if !model.is_alive() or !model_can_move(model):
         return true
     if kind == MeleeMoveKind::pile_in or kind == MeleeMoveKind::ongoing:
         for i in range(board.units.size()):

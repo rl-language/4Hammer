@@ -226,6 +226,8 @@ fun orks_move_charge_permission(Board board, Unit unit, MovementKind kind) -> Bo
     let fallback = kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape
     if !fallback and !(kind == MovementKind::advance):
         return false
+    if unit_orks_effect(board, unit, OrksEffectKind::turbo_engine) > 0:
+        return true
     if orks_package(board, unit, OrksDetachment::kult_of_speed) and unit.has_keyword(Keyword::speed_freeks):
         return true
     if !fallback:
@@ -411,10 +413,14 @@ fun orks_enhancement_attachment_valid(Unit leader, Unit bodyguard) -> Bool:
     let bodyguard_option = orks_unit_has_any_option(bodyguard)
     return !(leader_option or bodyguard_option) or (!leader.has_keyword(Keyword::epic_hero) and !bodyguard.has_keyword(Keyword::epic_hero))
 
+# Nazdreg/Nazdreg's Know-wotz gives the whole attached unit Deep Strike.
 # Tellyporta Boss is a unit grant excluding Vehicle units, whereas Kill
 # Kommanda grants only its attached bearer Infiltrators/Stealth (source cards).
 fun orks_unit_grants_ability(Unit unit, AbilityKind kind) -> Bool:
     if kind == AbilityKind::deep_strike:
+        for member_index in range(unit.models.size()):
+            if model_confers_attached_abilities(unit[member_index]) and unit[member_index].has_ability(AbilityKind::nazdregs_know_wotz):
+                return true
         return !unit.has_keyword(Keyword::vehicle) and unit_has_orks_enhancement(unit, OrksEnhancement::tellyporta_boss)
     return false
 
@@ -885,7 +891,7 @@ fun orks_model_grants_ability(Unit unit, Model model, AbilityKind kind) -> Bool:
 # Dreadherder grants the unit Lone Operative while within3in of a friendly
 # non-Big-Mek ORKS Walker; offboard units cannot measure this distance.
 fun orks_lone_operative(Board board, Unit unit) -> Bool:
-    if unit.is_lone_operative() or orks_snagga_following(board, unit) or orks_shokka_supported(board, unit):
+    if orks_remaining_lone_operative(board, unit) or unit.is_lone_operative() or orks_snagga_following(board, unit) or orks_shokka_supported(board, unit):
         return true
     if unit.off_battlefield or !unit.attached_units.empty() or !unit_has_orks_enhancement(unit, OrksEnhancement::dreadherder):
         return false
@@ -923,6 +929,8 @@ fun record_orks_hits(Board board, UnitID target, Int count):
     if board.orks_attack_active and count > 0:
         ref record = orks_attack_record(board, board[target].identity)
         add_attack_count(record.successful_hits, count)
+        if board.attack_info.squig_launcha_weapon:
+            add_attack_count(record.squig_launcha_hits, count)
 
 # Brute Force Warbosses roll3+, riled+1; paid Fight-on-Death cards roll4+,
 # with riled+1 or Crazed Rampage's Deff Dread+3. Selection of their own unit

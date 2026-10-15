@@ -9,6 +9,8 @@ fun terrain_cover_model_kind(Model model) -> Bool:
 # Hidden requires a dense area and no ranged attacks in this or the previous
 # turn (p.50). Negative history means never fired, not an actual previous turn.
 fun model_is_hidden(Board board, Unit unit, Model model) -> Bool:
+    if unit_orks_effect(board, unit, OrksEffectKind::burna_mark) > 0:
+        return false
     if !terrain_cover_model_kind(model):
         return false
     if unit.history.last_ranged_attack_turn > 0 and unit.history.last_ranged_attack_turn >= board.turn_serial.value:
@@ -31,7 +33,7 @@ fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model 
     let lone_range = 12
     if target_unit.lone_operative_range.value > 0:
         lone_range = characteristic_limit(ModifiedCharacteristic::detection_range, target_unit.lone_operative_range.value)
-    return (!orks_lone_operative(board, target_unit) or observer.distance(target) <= float(lone_range)) and detection_range >= 0 and (!model_is_hidden(board, target_unit, target) or observer.distance(target) <= float(characteristic_limit(ModifiedCharacteristic::detection_range, detection_range - 3 * int(unit_has_orks_enhancement(target_unit, OrksEnhancement::extra_sneaky)))))
+    return (!orks_lone_operative(board, target_unit) or observer.distance(target) <= float(lone_range)) and detection_range >= 0 and (!model_is_hidden(board, target_unit, target) or observer.distance(target) <= float(characteristic_limit(ModifiedCharacteristic::detection_range, detection_range + 3 * unit_orks_effect(board, target_unit, OrksEffectKind::found_detection) - 3 * int(unit_has_orks_enhancement(target_unit, OrksEnhancement::extra_sneaky)))))
 
 # Printed default detection is inclusive 15in; this is not model-silhouette LOS.
 fun model_visible_to_model(Board board, Model observer, Unit target_unit, Model target) -> Bool:
@@ -78,13 +80,15 @@ fun model_partially_obscured(Board board, Model observer, Model target) -> Bool:
     for i in range(board.terrain_areas.size()):
         if sight_crosses_terrain_area(observer, target, board.terrain_areas[i]):
             return true
-    return false
+    return orks_ramshackle_obscures(board, observer, target)
 
 # Every target model needs at least one cover condition (p.50), possibly a
 # different condition per model. Other keywords cannot borrow Infantry cover.
 fun unit_has_benefit_of_cover(Board board, Model observer, Unit target) -> Bool:
     if target.empty():
         return false
+    if orks_wobbled_observer(board, observer):
+        return true
     for i in range(target.models.size()):
         let covered = model_partially_obscured(board, observer, target[i])
         if terrain_cover_model_kind(target[i]):

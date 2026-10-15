@@ -1,5 +1,4 @@
 import full_game
-import orks_remaining_data
 
 # ANTI grants in the temporary attack list must obey their source exclusion,
 # just as selected/intrinsic instances do (p.79; appendix02.05.01).
@@ -6619,14 +6618,17 @@ fun test_transport16_tactical_requires_followup_move() -> Bool:
     let board = transport16_fixture()
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
     board.begin_phase(BattlePhase::movement)
-    let sequence = disembark(board, unit_id(0))
+    let sequence = disembark(board, unit_id(0), false)
     sequence.confirm_disembark_mode(board, DisembarkMode::tactical)
     sequence.use_legal_disembark_setup(board)
-    if (can sequence.remain_stationary(board)) or !(can sequence.normal_move(board)) or !(can sequence.advance(board, true)):
+    if !sequence.is_done() or !sequence.completed:
         return false
-    sequence.normal_move(board)
-    sequence.finish_move(board)
-    return sequence.is_done() and board.embarked_units.size() == 0 and board[1].history.disembarked_this_turn and board[1].history.move_kind == MovementKind::normal and valid_state_foundations(board)
+    let followup = movement(board, sequence.passenger_slot, false)
+    if (can followup.remain_stationary(board)) or !(can followup.normal_move(board)) or !(can followup.advance(board, true)):
+        return false
+    followup.normal_move(board)
+    followup.finish_move(board)
+    return followup.is_done() and board.embarked_units.size() == 0 and board[1].history.disembarked_this_turn and board[1].history.move_kind == MovementKind::normal and valid_state_foundations(board)
 
 # p.65: Rapid completes setup, forbids charge, and preserves original slot.
 fun test_transport16_rapid_action_reuses_passenger_slot() -> Bool:
@@ -6635,7 +6637,7 @@ fun test_transport16_rapid_action_reuses_passenger_slot() -> Bool:
     embark_battlefield_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
     board.begin_phase(BattlePhase::movement)
     record_move(board, unit_id(0), MovementKind::normal)
-    let sequence = disembark(board, unit_id(0))
+    let sequence = disembark(board, unit_id(0), false)
     if (can sequence.confirm_disembark_mode(board, DisembarkMode::combat)):
         return false
     sequence.confirm_disembark_mode(board, DisembarkMode::rapid)
@@ -6755,7 +6757,7 @@ fun test_transport16_combat_priority_and_enemy_permissions() -> Bool:
     let carrier = find_passenger_carrier(board, board.embarked_units[0].embarked_transport)
     if !(required_disembark_mode(board, board.embarked_units[0], carrier) == DisembarkMode::combat):
         return false
-    let sequence = disembark(board, unit_id(0))
+    let sequence = disembark(board, unit_id(0), false)
     sequence.confirm_disembark_mode(board, DisembarkMode::combat)
     sequence.roll(board, attack_test_die(3))
     sequence.roll(board, attack_test_die(3))
@@ -13747,6 +13749,15 @@ fun test_orks17p3_intentionally_approximate_hulls_and_explicit_override() -> Boo
 fun test_orks17p3_all_oval_axes_are_retained() -> Bool:
     return profile_has_oval_base(Profile::orks_wazdakka_gutsmek) and profile_base_width(Profile::orks_wazdakka_gutsmek) == 92.0 and Profile::orks_wazdakka_gutsmek.base_size() == 120.0 and profile_base_width(Profile::orks_gorkanaut) == 109.0 and profile_base_width(Profile::orks_wartrakks) == 70.0 and profile_base_width(Profile::orks_deffkoptas) == 42.0
 
+# '-' M/OC cannot become movable/control-bearing characteristics via modifiers.
+fun test_orks17p3_immobile_and_aircraft_absent_characteristics() -> Bool:
+    let board = orks17p2_fixture(make_orks_big_ed_bossbunka(0, 0))
+    board.begin_phase(BattlePhase::movement)
+    board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 5))
+    let aircraft = make_orks_dakkajet(false)
+    aircraft[0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::objective_control, ModifierOperation::add, 4))
+    return !battlefield_move_eligible(board, unit_id(0), MovementKind::normal) and battlefield_move_eligible(board, unit_id(0), MovementKind::stationary) and board[0][0].effective_movement(0) == 0 and aircraft[0].effective_objective_control() == 0
+
 # All physical copies have different groups; profiles within each copy share.
 fun test_orks17p3_gorkanaut_physical_weapon_copies() -> Bool:
     let unit = make_orks_gorkanaut()
@@ -13800,6 +13811,648 @@ fun test_orks17p3_transport_jump_and_gretchin_seats() -> Bool:
     let trukk = make_orks_trukk(0, false, OrksTrukkExtra::none)
     return orks_passenger_space(stormboyz) == 10 and orks_passenger_space(make_orks_gretchin(11)) == 6 and !passenger_model_permitted(trukk[0], stormboyz[0])
 
+# Passive query assertions exercise the same gathered attack snapshots as play.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Dakkajet (Strafing Run).
+fun test_orks17p3_dakkajet_own_phase_non_fly_only() -> Bool:
+    let board = orks17p2_fixture(make_orks_dakkajet(false))
+    let own = orks17p2_info(board, 0)
+    board[1][0].keywords.append(Keyword::fly)
+    let flying = orks17p2_info(board, 0)
+    board[1][0].keywords.clear()
+    board.begin_phase(BattlePhase::fight)
+    let other_phase = orks17p2_info(board, 0)
+    return own.total_hit_modifier() == 1 and flying.total_hit_modifier() == 0 and other_phase.total_hit_modifier() == 0
+
+# The ingress bonus requires this TURN, not merely having arrived before.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deffkoptas
+fun test_orks17p3_kopta_ingress_turn_bonus() -> Bool:
+    let board = orks17p2_fixture(orks17p3_koptas(3, 0))
+    let before = orks17p2_info(board, 0)
+    board[0].history.has_ingressed = true
+    board[0].history.ingress_turn = board.turn_serial.value + 1
+    let arrived = orks17p2_info(board, 0)
+    board.turn_serial = board.turn_serial + 1
+    let later = orks17p2_info(board, 0)
+    return before.total_hit_modifier() == 0 and arrived.total_hit_modifier() == 1 and later.total_hit_modifier() == 0
+
+# Only ranged incoming Damage receives Mobile Fortress's-1 before the D floor.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Battlewagon
+fun test_orks17p3_mobile_fortress_ranged_damage_floor() -> Bool:
+    let board = orks17p2_fixture(make_orks_warboss())
+    board[1] = make_orks_battlewagon(0, 0, false, false)
+    board[1].owned_by_player1 = true
+    board.identify_units()
+    let ranged = orks17p2_info(board, 1)
+    let melee = orks17p2_info(board, 0)
+    return modified_characteristic(1, ModifiedCharacteristic::damage, ranged.damage_modifiers, false) == 1 and modified_characteristic(3, ModifiedCharacteristic::damage, ranged.damage_modifiers, false) == 2 and modified_characteristic(3, ModifiedCharacteristic::damage, melee.damage_modifiers, false) == 3
+
+# Big an' Stompy is melee-only; Big an' Shooty/Mobile Arsenal are own Shooting.
+# https://wahapedia.ru/wh40k11ed/factions/orks/{Gorkanaut,Morkanaut,Gunwagon}
+fun test_orks17p3_naut_and_gunwagon_rerolls() -> Bool:
+    let board = orks17p2_fixture(make_orks_gorkanaut())
+    let ranged = orks17p2_info(board, 0)
+    let melee = orks17p2_info(board, 9)
+    board[0] = make_orks_morkanaut()
+    board.identify_units()
+    let mork = orks17p2_info(board, 0)
+    board[0] = make_orks_gunwagon(0, 0, false, false, false, OrksGunwagonGun::kannon)
+    board.identify_units()
+    let gun = orks17p2_info(board, 1)
+    board.begin_phase(BattlePhase::fight)
+    let out_of_phase = orks17p2_info(board, 1)
+    return !ranged.reroll1_hits and melee.reroll1_hits and mork.reroll1_hits and gun.reroll1_hits and !out_of_phase.reroll1_hits
+
+# Ghaz cannot be his own nearby Infantry unit, but his aura affects himself.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka
+fun test_orks17p3_ghaz_live_aura_and_other_unit_guard() -> Bool:
+    let board = orks17p2_fixture(make_orks_ghazghkull_thraka())
+    let alone = !orks_remaining_lone_operative(board, board[0])
+    let melee = orks17p2_info(board, 3)
+    board.units.append(make_orks_runtherd())
+    board[2][0].position = board_position(8, 5)
+    board.identify_units()
+    let guarded = orks_remaining_lone_operative(board, board[0])
+    mark_unit_offboard(board[2], true)
+    return alone and melee.total_hit_modifier() == 1 and melee.total_wound_modifier() == 1 and guarded and !orks_remaining_lone_operative(board, board[0])
+
+# Wartrakks need support near EVERY model; another Wartrakk never qualifies.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wartrakks
+fun test_orks17p3_wartrakk_per_model_support() -> Bool:
+    let board = orks17p2_fixture(make_orks_wartrakks(2))
+    board[0][0].position = board_position(5, 5)
+    board[0][1].position = board_position(25, 5)
+    board.units.append(make_orks_deffkilla_wartrike())
+    board[2][0].position = board_position(7, 5)
+    board.identify_units()
+    let incomplete = !orks_remaining_lone_operative(board, board[0])
+    board[0][1].position = board_position(9, 5)
+    let supported = orks_remaining_lone_operative(board, board[0])
+    board[2] = make_orks_wartrakks(1)
+    board[2][0].position = board_position(7, 5)
+    return incomplete and supported and !orks_remaining_lone_operative(board, board[0])
+
+# Go fer da Weak Spot never improves attacks against ordinary Infantry.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wazbom-Blastajet
+fun test_orks17p3_weak_spot_monster_vehicle_and_phase() -> Bool:
+    let board = orks17p2_fixture(make_orks_wazbom_blastajet(false, false, false))
+    let infantry = orks17p2_info(board, 0)
+    board[1][0].keywords.append(Keyword::vehicle)
+    let vehicle = orks17p2_info(board, 0)
+    board.current_player = true
+    let opponent_turn = orks17p2_info(board, 0)
+    return infantry.total_wound_modifier() == 0 and vehicle.total_wound_modifier() == 1 and opponent_turn.total_wound_modifier() == 0
+
+# Non-stacking Prophet aura is lost when the source is offboard/dead.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka
+fun test_orks17p3_prophet_no_offboard_or_stacked_aura() -> Bool:
+    let board = orks17p2_fixture(make_orks_runtherd())
+    board.units.append(make_orks_ghazghkull_thraka())
+    board.units.append(make_orks_ghazghkull_thraka())
+    board[2][0].position = board_position(8, 5)
+    board[3][0].position = board_position(9, 5)
+    board.identify_units()
+    let nearby = orks17p2_info(board, 1)
+    mark_unit_offboard(board[2], true)
+    board[3][0].suffered_wounds = board[3][0].profile.wounds()
+    return nearby.total_hit_modifier() == 1 and nearby.total_wound_modifier() == 1 and !orks_prophet_aura(board, board[0])
+
+# Intentional circular bunker occlusion supplies cover, never invisibility.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-ed-Bossbunka
+fun test_orks17p3_bunka_partial_obscuration() -> Bool:
+    let board = orks17p2_fixture(make_orks_runtherd())
+    board[0][0].position = board_position(5, 10)
+    board[1][0].position = board_position(20, 10)
+    board.units.append(make_orks_big_ed_bossbunka(0, 0))
+    board[2][0].position = board_position(12, 10)
+    board.identify_units()
+    let covered = unit_has_benefit_of_cover(board, board[0][0], board[1])
+    board[2][0].position = board_position(12, 20)
+    return covered and unit_visible_to_unit(board, board[0], board[1]) and !unit_has_benefit_of_cover(board, board[0][0], board[1])
+
+# Only-fortifications engagement is waived; another engaged enemy closes it.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-ed-Bossbunka
+fun test_orks17p3_fortification_engagement_and_hazard_exception() -> Bool:
+    let board = orks17p2_fixture(make_orks_runtherd())
+    board[1] = make_orks_big_ed_bossbunka(0, 0)
+    board[1].owned_by_player1 = true
+    board[1][0].position = board_position(8, 5)
+    board.identify_units()
+    board.begin_phase(BattlePhase::movement)
+    let exempt = orks_engaged_only_fortifications(board, board[0])
+    let hazards = desperate_escape(board, unit_id(0))
+    board.units.append(make_orks_runtherd())
+    board[2].owned_by_player1 = true
+    board[2][0].position = board_position(6, 5)
+    board.identify_units()
+    return exempt and hazards.is_done() and !orks_engaged_only_fortifications(board, board[0])
+
+# Test-only cargo fixture uses the same stable carrier links as real embark.
+# Sources: transports pp64-65; current source-specific passenger permissions.
+fun orks17p3_cargo(Unit carrier, Unit passenger) -> Board:
+    let board = orks17p2_fixture(carrier)
+    board[1][0].position = board_position(35, 20)
+    board.embarked_units.append(passenger)
+    board.embarked_units[0].embarked_transport = board[0][0].identity
+    board.identify_unit(board.embarked_units[0])
+    mark_unit_offboard(board.embarked_units[0], true)
+    board.identify_units()
+    board.capture_starting_strengths()
+    board.begin_phase(BattlePhase::movement)
+    return board
+
+# Raucous uses explicit friendly HOME assignment, not arbitrary marker index.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-ed-Bossbunka
+fun test_orks17p3_bunka_home_objective_embarked_oc() -> Bool:
+    let board = orks17p3_cargo(make_orks_big_ed_bossbunka(0, 0), make_orks_gretchin(10))
+    board.objectives[0].custom_position = true
+    board.objectives[0].position = board_position(5, 5)
+    let unspecified = orks_bunka_passenger_control(board, board[0][0], false)
+    board.objectives[0].home = ObjectiveHome::army_0
+    let occupied = orks_bunka_passenger_control(board, board[0][0], false)
+    let control = board.objective_control_level(board.objective_range_definition(0), false)
+    board.embarked_units[0].battle_socked = true
+    return unspecified == 0 and occupied == 10 and control == 10 and orks_bunka_passenger_control(board, board[0][0], false) == 0
+
+# Butchery counts bodies, caps at22 and affects the named melee weapon only.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig
+fun test_orks17p3_hunta_butchery_actual_bodies_and_cap() -> Bool:
+    let board = orks17p3_cargo(make_orks_hunta_rig(), make_orks_beast_snagga_boyz(2, 18, 0))
+    let butcha = make_declared_weapon(board, unit_id(0), 0, 2)
+    let other = make_declared_weapon(board, unit_id(0), 0, 3)
+    let modifiers = declaration_modifiers(board, unit_id(0), butcha, ModifiedCharacteristic::attacks)
+    let others = declaration_modifiers(board, unit_id(0), other, ModifiedCharacteristic::attacks)
+    return apply_rule_modifiers(0, modifiers, false) == 22 and apply_rule_modifiers(0, others, false) == 0
+
+# The CP discount is applied before affordability; accepted free use consumes
+# all ordinary target/phase limits (not a later refund).
+# https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig
+fun test_orks17p3_hunta_crushing_discount_at_zero_cp() -> Bool:
+    let board = orks17p2_fixture(make_orks_hunta_rig())
+    board.command_points[0] = 0
+    board.begin_phase(BattlePhase::charge)
+    let affordable = board.can_target_strat(false, Stratagem::crushing_impact, board[0])
+    board.commit_stratagem(false, Stratagem::crushing_impact, board[0])
+    return affordable and board.command_points[0] == 0 and !board.can_target_strat(false, Stratagem::crushing_impact, board[0])
+
+# Gut Hatch chooses assault only AFTER an actual Normal move, not ingress.
+# https://wahapedia.ru/wh40k11ed/factions/orks/{Gorkanaut,Morkanaut}
+fun test_orks17p3_gut_hatch_assault_after_normal_only() -> Bool:
+    let board = orks17p3_cargo(make_orks_gorkanaut(), make_orks_runtherd())
+    let location = find_passenger_carrier(board, board[0][0].identity)
+    board[0].history.selected_move_phase = board.phase_serial.value + 1
+    board[0].history.move_kind = MovementKind::normal
+    let normal = required_disembark_mode(board, board.embarked_units[0], location)
+    board[0].history.move_kind = MovementKind::ingress
+    let ingress = required_disembark_mode(board, board.embarked_units[0], location)
+    return normal == DisembarkMode::assault and ingress == DisembarkMode::rapid
+
+# New windows are filtered through the existing pending-source ordering.
+# Sources: Blitza/Burna bombs, Snikrot/Koptas opponent-end reserve rules.
+fun test_orks17p3_bomb_window_mandatory_and_no_target_gate() -> Bool:
+    let board = orks17p2_fixture(make_orks_blitza_bommer())
+    board.current_player = true
+    board.begin_phase(BattlePhase::fight)
+    let source = orks17p2_source(board, 140)
+    let event = source_event(SourceEventKind::timing_window, invalid_entity_identity(), invalid_entity_identity(), invalid_entity_identity())
+    event.window = TimingWindow::fight_end
+    let valid = source_event_available(board, source, event) and !source.optional
+    board[1][0].abilities.append(AbilityKind::lone_operative)
+    return valid and !source_event_available(board, source, event)
+
+# Printed bombs use explicit D6 plus D3 branches and ordinary mortal damage.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Blitza-bommer
+fun orks17p3_bomb_damage(Int face, Int d3, Int expected) -> Bool:
+    let board = orks17p2_fixture(make_orks_blitza_bommer())
+    # Keep a single recipient alive across every mortal allocation branch.
+    board[1][0].profile = Profile::orks_ghazghkull_thraka
+    board.current_player = true
+    board.begin_phase(BattlePhase::fight)
+    let source = orks17p2_source(board, 140)
+    let sequence = orks_remaining_window(board, source)
+    sequence.choose_aircraft_bomb_target(board, unit_id(1))
+    sequence.roll(board, attack_test_die(face))
+    if face <= 3 or face == 6:
+        sequence.quantity(board, attack_test_die(d3))
+    for wound in range(expected):
+        sequence.select_mortal_model(board, damage_test_model(0))
+    return sequence.is_done() and board[1][0].suffered_wounds == expected
+
+fun test_orks17p3_boom_bomb_low_branch() -> Bool:
+    return orks17p3_bomb_damage(1, 2, 2)
+
+fun test_orks17p3_boom_bomb_middle_branch() -> Bool:
+    return orks17p3_bomb_damage(4, 1, 3)
+
+fun test_orks17p3_boom_bomb_high_branch() -> Bool:
+    return orks17p3_bomb_damage(6, 1, 4)
+
+# A Burna1 fails without D3/status;2+ installs both consumers to next-turn end.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Burna-bommer
+fun test_orks17p3_burna_bomb_failed_roll() -> Bool:
+    let board = orks17p2_fixture(make_orks_burna_bommer(false))
+    board.current_player = true
+    board.begin_phase(BattlePhase::fight)
+    let sequence = orks_remaining_window(board, orks17p2_source(board, 141))
+    sequence.choose_aircraft_bomb_target(board, unit_id(1))
+    sequence.roll(board, attack_test_die(1))
+    return sequence.is_done() and board[1][0].suffered_wounds == 0 and unit_orks_effect(board, board[1], OrksEffectKind::burna_mark) == 0
+
+fun test_orks17p3_burna_hidden_ignore_cover_duration() -> Bool:
+    let board = orks17p2_fixture(make_orks_burna_bommer(false))
+    board.current_player = true
+    board.begin_phase(BattlePhase::fight)
+    let sequence = orks_remaining_window(board, orks17p2_source(board, 141))
+    sequence.choose_aircraft_bomb_target(board, unit_id(1))
+    sequence.roll(board, attack_test_die(2))
+    sequence.quantity(board, attack_test_die(1))
+    sequence.select_mortal_model(board, damage_test_model(0))
+    let area : TerrainArea
+    area.lower = geometry_point(7 * MICROMETRES_PER_INCH, 3 * MICROMETRES_PER_INCH, 0)
+    area.upper = geometry_point(11 * MICROMETRES_PER_INCH, 7 * MICROMETRES_PER_INCH, 0)
+    area.dense = true
+    board.terrain_areas.append(area)
+    let marked = !model_is_hidden(board, board[1], board[1][0]) and unit_orks_effect(board, board[1], OrksEffectKind::burna_mark) == 1
+    let info = orks17p2_info(board, 0)
+    board.turn_serial = board.turn_serial + 1
+    board.current_player = false
+    refresh_source_effects(board, TimingWindow::turn_start)
+    let persists = unit_orks_effect(board, board[1], OrksEffectKind::burna_mark) == 1
+    refresh_source_effects(board, TimingWindow::turn_end)
+    return sequence.is_done() and marked and attack_ignores_cover(board, info) and persists and unit_orks_effect(board, board[1], OrksEffectKind::burna_mark) == 0 and model_is_hidden(board, board[1], board[1][0])
+
+# Aerial Manoover cannot withdraw an engaged unit and preserves identity.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deffkoptas
+fun test_orks17p3_kopta_reserve_window_and_identity() -> Bool:
+    let board = orks17p2_fixture(orks17p3_koptas(3, 0))
+    board[1][0].position = board_position(35, 20)
+    board.current_player = true
+    board.begin_phase(BattlePhase::fight)
+    let identity = board[0].identity
+    let source = orks17p2_source(board, 143)
+    let event = source_event(SourceEventKind::timing_window, invalid_entity_identity(), invalid_entity_identity(), invalid_entity_identity())
+    event.window = TimingWindow::fight_end
+    let valid = source_event_available(board, source, event)
+    let sequence = orks_remaining_window(board, source)
+    return valid and sequence.is_done() and board[0].retired and board.reserve_units[0].identity == identity and board.reserve_units[0].history.repositioned
+
+# Snikrot requires every living model Hidden, not merely one; attached allies
+# use their real terrain/history. Opponent first-round ingress is explicit.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Boss-Snikrot
+fun test_orks17p3_snikrot_hidden_and_first_round_shadows() -> Bool:
+    let board = orks17p2_fixture(orks17p2_attached(orks17p3_kommandos(), make_orks_boss_snikrot()))
+    board[1][0].position = board_position(35, 20)
+    board.current_player = true
+    board.begin_phase(BattlePhase::fight)
+    let source = orks17p2_source(board, 142)
+    let event = source_event(SourceEventKind::timing_window, invalid_entity_identity(), invalid_entity_identity(), invalid_entity_identity())
+    event.window = TimingWindow::fight_end
+    let exposed = !source_event_available(board, source, event)
+    let area : TerrainArea
+    area.lower = geometry_point(3 * MICROMETRES_PER_INCH, 3 * MICROMETRES_PER_INCH, 0)
+    area.upper = geometry_point(13 * MICROMETRES_PER_INCH, 13 * MICROMETRES_PER_INCH, 0)
+    area.dense = true
+    board.terrain_areas.append(area)
+    let hidden = source_event_available(board, source, event)
+    let sequence = orks_remaining_window(board, source)
+    board.begin_phase(BattlePhase::movement)
+    let ingress = orks17p2_source(board, 144)
+    event.window = TimingWindow::movement_end
+    let shadows = source_event_available(board, ingress, event) and orks_ingress_round_allowed(board, board.reserve_units[0])
+    let bearer = board.reserve_units[0].models.size() - 1
+    board.reserve_units[0][bearer].suffered_wounds = board.reserve_units[0][bearer].profile.wounds()
+    return exposed and hidden and sequence.is_done() and board.reserve_units.size() == 1 and shadows and has_live_model(board.reserve_units[0]) and !source_event_available(board, ingress, event)
+
+# Get Back in da Race includes passenger units and shares its army/round limit.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deffkilla-Wartrike
+fun test_orks17p3_race_clears_cargo_shock_and_shared_limit() -> Bool:
+    let board = orks17p3_cargo(make_orks_trukk(0, false, OrksTrukkExtra::none), make_orks_runtherd())
+    board.units.append(make_orks_deffkilla_wartrike())
+    board[2][0].position = board_position(8, 5)
+    board.identify_units()
+    register_orks_unit_rules(board)
+    let instance = orks17p2_source(board, 147)
+    board[0].battle_socked = true
+    board.embarked_units[0].battle_socked = true
+    commit_orks_race(board, instance, unit_id(0))
+    let cargo = !board[0].battle_socked and !board.embarked_units[0].battle_socked and unit_is_riled_up(board[0]) and unit_is_riled_up(board.embarked_units[0]) and !source_usage_available(board, instance)
+    # A registered source must stop when its actual attached conferrer dies,
+    # even though the bodyguard still has live Speed Freeks models (core p67).
+    let attached = orks17p2_fixture(orks17p2_attached(make_orks_warbikers(2), make_orks_deffkilla_wartrike()))
+    attached.begin_phase(BattlePhase::movement)
+    let registered = orks17p2_source(attached, 147)
+    let event = source_event(SourceEventKind::move_end, attached[0].identity, invalid_entity_identity(), invalid_entity_identity())
+    let living = source_event_available(attached, registered, event)
+    let bearer = attached[0].models.size() - 1
+    attached[0][bearer].suffered_wounds = attached[0][bearer].profile.wounds()
+    return cargo and living and has_live_model(attached[0]) and !source_event_available(attached, registered, event)
+
+# Makari selects at most the current round number; offboard army units are
+# legal, duplicates are not, and the one army/battle token cannot refresh.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka
+fun test_orks17p3_makari_count_banks_and_once_battle() -> Bool:
+    let board = orks17p2_fixture(make_orks_ghazghkull_thraka())
+    board.reserve_units.append(make_orks_runtherd())
+    board.identify_units()
+    board.reserve_units[0].history.strategic_reserve = true
+    board.begin_phase(BattlePhase::movement)
+    board.current_round = 1
+    let sequence = orks_datasheet_movement(board, unit_id(0))
+    sequence.choose_datasheet_move_ability(board, OrksDatasheetMoveAbility::makari)
+    sequence.choose_makari_bank(board, SourceBank::reserves)
+    sequence.choose_makari_unit(board, unit_id(0))
+    sequence.choose_makari_bank(board, SourceBank::battlefield)
+    sequence.choose_makari_unit(board, unit_id(0))
+    return sequence.is_done() and unit_is_riled_up(board[0]) and unit_is_riled_up(board.reserve_units[0]) and !orks_datasheet_move_available(board, unit_id(0), OrksDatasheetMoveAbility::makari)
+
+# Source-defined temporary detection and psychic defaults expire at turn/phase
+# boundaries, rather than mutating the unit's printed characteristics.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos
+fun test_orks17p3_found_em_turn_grant_and_no_visibility_requirement() -> Bool:
+    let board = orks17p2_fixture(orks17p3_kommandos())
+    board.begin_phase(BattlePhase::movement)
+    let sequence = orks_datasheet_movement(board, unit_id(0))
+    sequence.choose_datasheet_move_ability(board, OrksDatasheetMoveAbility::found_em)
+    sequence.choose_datasheet_move_target(board, unit_id(1))
+    let active = unit_orks_effect(board, board[1], OrksEffectKind::found_detection) == 1
+    refresh_source_effects(board, TimingWindow::turn_end)
+    return sequence.is_done() and active and unit_orks_effect(board, board[1], OrksEffectKind::found_detection) == 0
+
+# Scorch blocks targeting the affected enemy with Fire Overwatch, while no
+# CP is spent and unrelated stratagems remain available.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warbuggies
+fun test_orks17p3_drive_by_blocks_overwatch_only() -> Bool:
+    let board = orks17p2_fixture(orks17p3_buggies(1, 0))
+    board.begin_phase(BattlePhase::movement)
+    board.command_points[1] = 3
+    let sequence = orks_datasheet_movement(board, unit_id(0))
+    sequence.choose_datasheet_move_ability(board, OrksDatasheetMoveAbility::drive_by_skorchin)
+    sequence.choose_datasheet_move_target(board, unit_id(1))
+    return sequence.is_done() and !board.can_target_strat(true, Stratagem::overwatch, board[1]) and board.can_target_strat(true, Stratagem::reroll, board[1]) and board.command_points[1] == 3
+
+# Warpath's psychic1 shocks but does not cancel either rule, and spends the
+# shared psyker-level budget before the effect; no damage-roll reroll is added.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Weirdboy
+fun test_orks17p3_weirdboy_warpath_one_still_grants() -> Bool:
+    let board = orks17p2_fixture(make_orks_weirdboy())
+    board.begin_phase(BattlePhase::fight)
+    let sequence = orks_datasheet_fight_selection(board, unit_id(0))
+    sequence.use_datasheet_warpath(board, true)
+    sequence.roll(board, attack_test_die(1))
+    let info = orks17p2_info(board, 1)
+    return sequence.is_done() and board[0].battle_socked and info.reroll1_wounds and info.has_weapon_rule(board, WeaponRuleKind::psychic) and board[0].orks_psychic_usage.spent == 1
+
+# Kill Rig has the other Warpath: Lethal+Psychic, no Weirdboy wound reroll.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Kill-Rig
+fun test_orks17p3_killrig_warpath_distinct_effect() -> Bool:
+    let board = orks17p2_fixture(make_orks_kill_rig())
+    board.begin_phase(BattlePhase::fight)
+    let sequence = orks_datasheet_fight_selection(board, unit_id(0))
+    sequence.use_datasheet_warpath(board, true)
+    sequence.roll(board, attack_test_die(6))
+    let info = orks17p2_info(board, 3)
+    return sequence.is_done() and !info.reroll1_wounds and info.has_weapon_rule(board, WeaponRuleKind::psychic) and info.has_weapon_rule(board, WeaponRuleKind::letal_hits)
+
+# Da Jump grants phase-only unit Deep Strike, including attached bodyguards,
+# and moves even on a psychic1. The shared army/round token survives the bank.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Weirdboy
+fun test_orks17p3_da_jump_one_and_same_phase_deep_strike() -> Bool:
+    let source = orks17p2_attached(make_orks_beast_snagga_boyz(1, 9, 0), make_orks_weirdboy())
+    let board = orks17p2_fixture(source)
+    board.begin_phase(BattlePhase::movement)
+    let sequence = orks_datasheet_movement(board, unit_id(0))
+    sequence.choose_datasheet_move_ability(board, OrksDatasheetMoveAbility::da_jump)
+    sequence.roll(board, attack_test_die(1))
+    let current = board.reserve_units[0].all_have_ability(AbilityKind::deep_strike)
+    refresh_source_effects(board, TimingWindow::movement_end)
+    return sequence.is_done() and board[0].retired and board.reserve_units[0].battle_socked and current and !board.reserve_units[0].all_have_ability(AbilityKind::deep_strike)
+
+# Existing Wurrband spells and datasheet spells consume the SAME level pool.
+# Orks Unstable Energies; appendix22.03.01.
+fun test_orks17p3_shared_psychic_budget_and_phase_restriction() -> Bool:
+    let board = orks17p2_fixture(make_orks_weirdboy())
+    board.begin_phase(BattlePhase::movement)
+    board[0].orks_psychic_usage.round_stamp = board.current_round.value + 1
+    board[0].orks_psychic_usage.spent = 1
+    let spent = !orks_datasheet_psychic_available(board, unit_id(0), 151)
+    board.current_round = board.current_round + 1
+    let replenished = orks_datasheet_psychic_available(board, unit_id(0), 151)
+    board[0].battle_socked = true
+    return spent and replenished and !orks_datasheet_psychic_available(board, unit_id(0), 151)
+
+# Beastscent affects the selected passenger's attacks, not the carrier, and
+# only against Monster/Vehicle; a1 still grants the disembarking unit's effect.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Kill-Rig
+fun test_orks17p3_beastscent_selected_cargo_and_one() -> Bool:
+    let board = orks17p3_cargo(make_orks_kill_rig(), make_orks_beast_snagga_boyz(1, 9, 0))
+    let carrier = find_passenger_carrier(board, board[0][0].identity)
+    let sequence = orks_disembark_selection(board, unit_id(0), carrier)
+    sequence.use_beastscent(board, true)
+    sequence.roll(board, attack_test_die(1))
+    return sequence.is_done() and board[0].battle_socked and unit_orks_effect(board, board.embarked_units[0], OrksEffectKind::beastscent) == 1 and unit_orks_effect(board, board[0], OrksEffectKind::beastscent) == 0
+
+# Idol is mandatory and independent of permanent Waaagh! Effigy.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Stompa
+fun test_orks17p3_stompa_effigy_and_idol_cargo() -> Bool:
+    let board = orks17p3_cargo(make_orks_stompa(0), make_orks_runtherd())
+    register_orks_passive_rules(board)
+    refresh_source_effects(board, TimingWindow::none)
+    let carrier = find_passenger_carrier(board, board[0][0].identity)
+    let selection = orks_disembark_selection(board, unit_id(0), carrier)
+    return selection.is_done() and unit_is_riled_up(board[0]) and unit_is_riled_up(board.embarked_units[0]) and stat_dice_count(board[0][0].deadly_demise) == 2
+
+# Post-shot status requires actual hit provenance; choosing declarations alone
+# cannot activate Madcap Artillery, Bust 'Em or Squig Barrage.
+# Sources: Orks/{Mek-Gunz,Wartrakks,Rukkatrukk-Squigbuggies}.
+fun orks17p3_post_status(OrksMekGun gun) -> Board:
+    let board = orks17p2_fixture(orks17p3_guns(2, gun))
+    begin_orks_attack(board)
+    record_orks_hits(board, unit_id(1), 1)
+    let sequence = orks_remaining_post_shoot(board, unit_id(0))
+    sequence.choose_datasheet_hit_target(board, unit_id(1))
+    assert(sequence.is_done(), "post-shoot must complete after one target")
+    return board
+
+# Bubblechukka status is on the attacker, so all its targets gain cover.
+fun test_orks17p3_madcap_bubblechukka_wobbled() -> Bool:
+    let board = orks17p3_post_status(OrksMekGun::bubblechukka)
+    return unit_orks_effect(board, board[1], OrksEffectKind::wobbled) == 1 and unit_has_benefit_of_cover(board, board[1][0], board[0])
+
+# Numeric effects use the ordered characteristic pipeline and correct Ld sign.
+fun test_orks17p3_madcap_zapped_leadership() -> Bool:
+    let board = orks17p3_post_status(OrksMekGun::kustom_mega_kannon)
+    return board[1][0].effective_leadership() == min(8, board[1][0].profile.leadership() + 1)
+
+fun test_orks17p3_madcap_smashed_movement() -> Bool:
+    let board = orks17p3_post_status(OrksMekGun::smasha_gun)
+    return board[1][0].effective_movement(board[1][0].profile.movement()) == max(1, board[1][0].profile.movement() - 2)
+
+fun test_orks17p3_madcap_grounded_persists_to_next_own_turn() -> Bool:
+    let board = orks17p3_post_status(OrksMekGun::traktor_kannon)
+    board.turn_serial = board.turn_serial + 1
+    board.current_player = true
+    refresh_source_effects(board, TimingWindow::turn_start)
+    let persists = unit_orks_effect(board, board[1], OrksEffectKind::grounded) == 1
+    board.turn_serial = board.turn_serial + 1
+    board.current_player = false
+    refresh_source_effects(board, TimingWindow::turn_start)
+    return persists and unit_orks_effect(board, board[1], OrksEffectKind::grounded) == 0
+
+# Mixed gun NAMES do not activate the common-weapon effect, even after a hit.
+fun test_orks17p3_madcap_mixed_names_or_no_hits_do_nothing() -> Bool:
+    let equipment : OrksMekGuns
+    equipment.append(OrksMekGun::smasha_gun)
+    equipment.append(OrksMekGun::bubblechukka)
+    let board = orks17p2_fixture(make_orks_mek_gunz(equipment, 0))
+    begin_orks_attack(board)
+    record_orks_hits(board, unit_id(1), 1)
+    let mixed = orks_remaining_post_shoot(board, unit_id(0))
+    board[0] = orks17p3_guns(1, OrksMekGun::smasha_gun)
+    board.identify_units()
+    begin_orks_attack(board)
+    let no_hits = orks_remaining_post_shoot(board, unit_id(0))
+    return mixed.is_done() and no_hits.is_done() and board.source_effects.empty()
+
+# Hits from Sawn-off Shotgun cannot count as hits from Squig Launchas, even
+# when another ranged profile generated an equal final attack result.
+fun test_orks17p3_squig_barrage_named_hit_provenance() -> Bool:
+    let board = orks17p2_fixture(make_orks_rukkatrukk_squigbuggies(1))
+    begin_orks_attack(board)
+    board.attack_info.squig_launcha_weapon = false
+    record_orks_hits(board, unit_id(1), 2)
+    let shotgun = !orks_remaining_post_target(board, unit_id(0), unit_id(1))
+    board.attack_info.squig_launcha_weapon = true
+    record_orks_hits(board, unit_id(1), 1)
+    let launchas = orks_remaining_post_target(board, unit_id(0), unit_id(1))
+    let sequence = orks_remaining_post_shoot(board, unit_id(0))
+    sequence.choose_datasheet_hit_target(board, unit_id(1))
+    let effects = unit_orks_effect(board, board[1], OrksEffectKind::covered_squigs) == 1
+    board[1][0].keywords.append(Keyword::monster)
+    return shotgun and launchas and effects and !orks_remaining_post_target(board, unit_id(0), unit_id(1))
+
+# Busted grants Lethal only to friendly Speed Freeks attacks at that target.
+fun test_orks17p3_wartrakk_busted_target_and_attacker_keywords() -> Bool:
+    let board = orks17p2_fixture(make_orks_wartrakks(1))
+    begin_orks_attack(board)
+    record_orks_hits(board, unit_id(1), 1)
+    let sequence = orks_remaining_post_shoot(board, unit_id(0))
+    sequence.choose_datasheet_hit_target(board, unit_id(1))
+    let speed = orks17p2_info(board, 1)
+    board[0][0].keywords.clear()
+    let ordinary = orks17p2_info(board, 1)
+    return sequence.is_done() and speed.has_weapon_rule(board, WeaponRuleKind::letal_hits) and !ordinary.has_weapon_rule(board, WeaponRuleKind::letal_hits)
+
+# Full Throttle has a mandatory selection and persists through reserves until
+# next own Command. Turbo waives Advance/Fall Back charge restrictions only.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wazdakka-Gutsmek
+fun test_orks17p3_full_throttle_turbo_duration() -> Bool:
+    let board = orks17p2_fixture(make_orks_wazdakka_gutsmek())
+    board.begin_phase(BattlePhase::command)
+    let sequence = orks_remaining_window(board, orks17p2_source(board, 145))
+    sequence.choose_shokka_engine(board, OrksEngine::turbo)
+    let turbo = orks_move_charge_permission(board, board[0], MovementKind::advance) and orks_move_charge_permission(board, board[0], MovementKind::ordered_retreat)
+    board.begin_phase(BattlePhase::movement)
+    board.turn_serial = board.turn_serial + 2
+    refresh_source_effects(board, TimingWindow::turn_start)
+    let before_command = unit_orks_effect(board, board[0], OrksEffectKind::turbo_engine) == 1
+    refresh_source_effects(board, TimingWindow::command_start)
+    return sequence.is_done() and turbo and before_command and unit_orks_effect(board, board[0], OrksEffectKind::turbo_engine) == 0
+
+# Shokk Attack Engine preserves both unit/model identities on withdrawal.
+fun test_orks17p3_full_throttle_shokk_reserves() -> Bool:
+    let board = orks17p2_fixture(make_orks_wazdakka_gutsmek())
+    board[1][0].position = board_position(35, 20)
+    board.begin_phase(BattlePhase::command)
+    let identity = board[0].identity
+    let sequence = orks_remaining_window(board, orks17p2_source(board, 145))
+    sequence.choose_shokka_engine(board, OrksEngine::shokk)
+    sequence.use_shokk_attack_engine(board, true)
+    return sequence.is_done() and board[0].retired and board.reserve_units[0].identity == identity and unit_orks_effect(board, board.reserve_units[0], OrksEffectKind::shokk_engine) == 1
+
+# Pulse Jet is D6+18, traverse-all with horizontal costs and mandatory
+# unengaged finish; it forbids charges/actions and grants incoming-1hit.
+# Source: Orks index Special Move Types/PULSE JET MOVE; Wazdakka Pulse Jet.
+fun test_orks17p3_pulse_jet_actual_move_restrictions_and_defence() -> Bool:
+    let board = orks17p2_fixture(make_orks_wazdakka_gutsmek())
+    board[1][0].position = board_position(35, 20)
+    board.begin_phase(BattlePhase::command)
+    let engine = orks_remaining_window(board, orks17p2_source(board, 145))
+    engine.choose_shokka_engine(board, OrksEngine::pulse)
+    board.begin_phase(BattlePhase::movement)
+    let sequence = movement(board, unit_id(0), false)
+    sequence.pulse_jet_move(board)
+    sequence.roll(board, attack_test_die(6))
+    let legal = can sequence.move_to(board, board_position(28, 5))
+    sequence.move_to(board, board_position(28, 5))
+    let policy = movement_policy(board[0], board[0][0], MovementKind::pulse_jet, false)
+    return sequence.is_done() and legal and board[0][0].position.x == 28 and !board[0].can_charge and !action_start_valid(board, unit_id(0), false) and policy.traverse_enemies and policy.traverse_terrain and policy.free_vertical_movement and unit_orks_effect(board, board[0], OrksEffectKind::pulse_defence) == 1
+
+# Nazdreg's free reaction does not pay CP or consume a Gretchin/Kopta card,
+# uses the fixed5 option only while riled, and shares a per-army phase token.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg
+fun test_orks17p3_supreme_kunnin_free_fixed_five_shared_limit() -> Bool:
+    let board = orks17p2_fixture(make_orks_nazdreg())
+    board[1][0].position = board_position(12, 5)
+    board.current_player = true
+    board.begin_phase(BattlePhase::movement)
+    grant_orks_payload(board, unit_id(0), unit_id(0), 165, riled_up_grant(), SourceDuration::turn)
+    let eligible = orks_supreme_kunnin_valid(board, unit_id(1), unit_id(0))
+    let sequence = select_orks_enemy_move_reaction(board, unit_id(1))
+    sequence.choose_supreme_kunnin_unit(board, unit_id(0))
+    sequence.choose_supreme_fixed_five(board, true)
+    return eligible and sequence.is_done() and sequence.available and sequence.distance == 5 and !orks_supreme_kunnin_valid(board, unit_id(1), unit_id(0)) and board.command_points[0] == 0
+
+# Reactive Trukk exit uses RAPID even when its carrier has not moved this
+# phase, preserves links/owner and cannot be claimed by the current player.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Trukk
+fun test_orks17p3_pilin_out_actual_rapid_exit_and_owner() -> Bool:
+    let board = orks17p3_cargo(make_orks_trukk(0, false, OrksTrukkExtra::none), make_orks_runtherd())
+    board[1][0].position = board_position(14, 5)
+    board.current_player = true
+    board.current_decision_maker = true
+    let sequence = orks_trukk_reactions(board, unit_id(1))
+    sequence.choose_pilin_out_passenger(board, unit_id(0))
+    let rapid = can sequence.confirm_disembark_mode(board, DisembarkMode::rapid)
+    sequence.confirm_disembark_mode(board, DisembarkMode::rapid)
+    sequence.disembark_at(board, board_position(9, 5))
+    return sequence.is_done() and rapid and board.embarked_units.empty() and board.current_decision_maker and board.units.size() == 3 and board[2].history.disembarked_this_turn and !board[2].can_charge
+
+# Same-phase embarkation cannot be evaded with reactive exits.
+fun test_orks17p3_pilin_out_same_phase_embark_and_owner_gates() -> Bool:
+    let board = orks17p3_cargo(make_orks_trukk(0, false, OrksTrukkExtra::none), make_orks_runtherd())
+    board[1][0].position = board_position(14, 5)
+    let handled : EntityIdentity[32]
+    let own_turn = !orks_trukk_passenger_valid(board, unit_id(1), unit_id(0), handled)
+    board.current_player = true
+    board.embarked_units[0].history.embarked_phase = board.phase_serial.value + 1
+    return own_turn and !orks_trukk_passenger_valid(board, unit_id(1), unit_id(0), handled)
+
+# Split keeps every original model once and separates its two tokens; starting
+# strength is5 for both, and only the original ten-model unit may split.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos
+fun test_orks17p3_kommando_split_models_tokens_and_starting_strength() -> Bool:
+    let board : Board
+    board.reserve_units.append(orks17p3_kommandos())
+    board.identify_units()
+    let first : Bool[10]
+    for index in range(5):
+        first[index] = true
+    split_orks_kommandos(board, unit_id(0), first, true)
+    let valid = board.reserve_units.size() == 2 and board.reserve_units[0].starting_strenght == 5 and board.reserve_units[1].starting_strenght == 5 and board.reserve_units[0].has_ability(AbilityKind::bomb_squig) and !board.reserve_units[0].has_ability(AbilityKind::found_em) and !board.reserve_units[1].has_ability(AbilityKind::bomb_squig) and board.reserve_units[1].has_ability(AbilityKind::found_em)
+    return valid and !board.reserve_units[0].has_ability(AbilityKind::taktikal_know_wotz) and !board.reserve_units[1].has_ability(AbilityKind::taktikal_know_wotz) and valid_state_foundations(board)
+
+# Actual formation decisions select5 distinct models and which half gets the
+# bomb; the choice precedes attachments and never creates a third unit.
+fun test_orks17p3_kommando_split_action_decisions() -> Bool:
+    let board : Board
+    board.reserve_units.append(orks17p3_kommandos())
+    board.identify_units()
+    let sequence = orks_kommando_formations(board)
+    sequence.split_kommando_unit(board, true)
+    for index in range(5):
+        sequence.choose_split_kommando(board, damage_test_model(index))
+    sequence.choose_split_bomb_squig(board, false)
+    return sequence.is_done() and board.reserve_units.size() == 2 and board.reserve_units[1].has_ability(AbilityKind::bomb_squig) and board.reserve_units[0].has_ability(AbilityKind::found_em)
+
 # Verify actual keyword matching, not just that Lethal Hits exists.
 # Current weapon rows' non-Monster/Vehicle clauses; appendix02.05.01.
 fun orks17p3_lethal_excludes(Weapon weapon) -> Bool:
@@ -13820,3 +14473,15 @@ fun orks17p3_lethal_excludes(Weapon weapon) -> Bool:
 # All27 printed conditional Lethal rules, including duplicated weapon families.
 fun test_orks17p3_all_printed_lethal_exclusions() -> Bool:
     return orks17p3_lethal_excludes(Weapon::orks_battlewagon_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_big_ed_bossbunka_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_blitza_bommer_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_blitza_bommer_dual_supa_shoota) and orks17p3_lethal_excludes(Weapon::orks_boss_snikrot_slugga) and orks17p3_lethal_excludes(Weapon::orks_burna_bommer_dual_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_burna_bommer_dual_supa_shoota) and orks17p3_lethal_excludes(Weapon::orks_dakkajet_dual_supa_shoota) and orks17p3_lethal_excludes(Weapon::orks_deffkilla_wartrike_boomstikks) and orks17p3_lethal_excludes(Weapon::orks_deffkoptas_slugga) and orks17p3_lethal_excludes(Weapon::orks_ghazghkull_thraka_mork_s_roar_aimed) and orks17p3_lethal_excludes(Weapon::orks_gorkanaut_deffstorm_mega_shoota_aimed) and orks17p3_lethal_excludes(Weapon::orks_gorkanaut_dual_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_gunwagon_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_kommandos_kustom_shoota) and orks17p3_lethal_excludes(Weapon::orks_kommandos_slugga) and orks17p3_lethal_excludes(Weapon::orks_morkanaut_dual_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_nazdreg_kustom_blasta_x_shoota) and orks17p3_lethal_excludes(Weapon::orks_rukkatrukk_squigbuggies_sawn_off_shotgun) and orks17p3_lethal_excludes(Weapon::orks_stompa_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_stompa_supa_gatler_aimed) and orks17p3_lethal_excludes(Weapon::orks_trukk_dual_big_shoota) and orks17p3_lethal_excludes(Weapon::orks_warbuggies_extra_dakka) and orks17p3_lethal_excludes(Weapon::orks_warbuggies_mek_speshul_aimed) and orks17p3_lethal_excludes(Weapon::orks_wartrakks_kustom_shoota) and orks17p3_lethal_excludes(Weapon::orks_wazbom_blastajet_dual_supa_shoota) and orks17p3_lethal_excludes(Weapon::orks_wazdakka_gutsmek_psyko_gatler)
+
+# Core p10/P10-06: M- means setup only. Other move types/rotations must not
+# accidentally move a fortification using a charge/surge replacement budget.
+fun test_orks17p3_immobile_cannot_charge_surge_or_pile_in() -> Bool:
+    let board = orks17p2_fixture(make_orks_big_ed_bossbunka(0, 0))
+    board.begin_phase(BattlePhase::charge)
+    let policy : MovementGeometryPolicy
+    policy.traverse_enemies = true
+    policy.traverse_terrain = true
+    let start = board[0][0].geometry_position()
+    let finish = geometry_point(6 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0)
+    return !charge_source_valid(board, unit_id(0), false) and !model_segment_valid(board, board[0], board[0][0], start, finish, policy) and melee_model_locked(board, board[0][0], board[0], MeleeMoveKind::pile_in)

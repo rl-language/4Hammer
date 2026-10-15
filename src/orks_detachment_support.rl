@@ -667,6 +667,18 @@ act select_orks_enemy_move_reaction(ctx Board board, frm UnitID mover) -> OrksEn
         board.current_decision_maker = !board[mover].owned_by_player1
         actions:
             act decline_orks_move_reaction()
+            act choose_supreme_kunnin_unit(frm UnitID nazdreg) {orks_supreme_kunnin_valid(board, mover, nazdreg)}
+                commit_source_usage(board, orks_remaining_usage(board[nazdreg], 154, true, false))
+                target = nazdreg
+                available = true
+                frm fixed_five = false
+                if unit_is_riled_up(board[nazdreg]):
+                    act choose_supreme_fixed_five(Bool five)
+                    fixed_five = five
+                distance = 5
+                if !fixed_five:
+                    act roll(Dice kunnin_distance)
+                    distance = kunnin_distance.value
             act choose_orks_move_reaction_unit(frm UnitID reaction) {orks_enemy_move_card_valid(board, mover, reaction, Stratagem::orks_scarper) or orks_enemy_move_card_valid(board, mover, reaction, Stratagem::orks_whirligig_evasion)}
                 frm card : Stratagem
                 card = Stratagem::orks_scarper
@@ -686,7 +698,7 @@ fun orks_enemy_move_available(Board board, UnitID mover) -> Bool:
     let target : UnitID
     for slot in range(board.units.size()):
         target = slot
-        if orks_enemy_move_card_valid(board, mover, target, Stratagem::orks_scarper) or orks_enemy_move_card_valid(board, mover, target, Stratagem::orks_whirligig_evasion):
+        if orks_supreme_kunnin_valid(board, mover, target) or orks_enemy_move_card_valid(board, mover, target, Stratagem::orks_scarper) or orks_enemy_move_card_valid(board, mover, target, Stratagem::orks_whirligig_evasion):
             return true
     return false
 
@@ -742,7 +754,7 @@ fun orks_flyboss_ingress(Board board, UnitID source):
 # Impulsive Recon allows the first own Movement phase (round1), subject to
 # ordinary ingress placement; the zero-based round alone does not waive it.
 fun orks_ingress_round_allowed(Board board, Unit unit) -> Bool:
-    return board.current_round >= 1 or (unit.owned_by_player1 == board.current_player and board.timing.phase == BattlePhase::movement and unit.has_keyword(Keyword::aircraft) and unit_has_orks_enhancement(unit, OrksEnhancement::impulsive_recon) and !unit.history.has_ingressed)
+    return board.current_round >= 1 or (unit.has_ability(AbilityKind::deff_from_shadows) and unit.owned_by_player1 != board.current_player and board.timing.phase == BattlePhase::movement) or (unit.owned_by_player1 == board.current_player and board.timing.phase == BattlePhase::movement and unit.has_keyword(Keyword::aircraft) and unit_has_orks_enhancement(unit, OrksEnhancement::impulsive_recon) and !unit.history.has_ingressed)
 
 # Unpredictable Genius triggers only when all declared ranged attacks share
 # one target. Multiple-target declarations remain legal and do NOT trigger it.

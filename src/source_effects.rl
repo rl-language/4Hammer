@@ -219,7 +219,7 @@ fun source_event_available(Board board, SourceInstance instance, SourceEvent eve
         return false
     if instance.restrict_movement and (event.kind.value == SourceEventKind::move_start.value or event.kind.value == SourceEventKind::move_end.value) and instance.movement.value != event.movement.value:
         return false
-    if !orks_elite_event_available(board, instance, event):
+    if !orks_elite_event_available(board, instance, event) or !orks_remaining_event_available(board, instance, event):
         return false
     let location = source_event_location(board, instance, event)
     # Explicit death permission does not waive a while-leading condition.
@@ -396,6 +396,7 @@ fun refresh_source_effects(Board board, TimingWindow ended):
         # the activation turn (Orks Army Rules / War Cry).
         expired = expired or (effect.duration.value == SourceDuration::end_next_turn.value and (board.turn_serial.value > effect.turn_stamp.value + 1 or (ended == TimingWindow::turn_end and board.turn_serial.value > effect.turn_stamp.value)))
         # Mek/Clever Know-wotz ends at next Movement, not next turn start.
+        expired = expired or (effect.duration.value == SourceDuration::next_own_command.value and effect.owner == board.current_player and (ended == TimingWindow::command_start or board.timing.phase == BattlePhase::command) and effect.turn_stamp.value != board.turn_serial.value)
         expired = expired or (effect.duration.value == SourceDuration::next_own_movement.value and effect.owner == board.current_player and (ended == TimingWindow::movement_start or board.timing.phase == BattlePhase::movement) and effect.turn_stamp.value != board.turn_serial.value)
         expired = expired or (effect.requires_live_source and !source_confers_rules(board, board.source_instances[effect.source.value]))
         if board.source_instances[effect.source.value].aura or board.source_instances[effect.source.value].own_unit_passive:
@@ -519,7 +520,7 @@ fun valid_source_foundations(Board board) -> Bool:
             return false
         if instance.rule.value <= 0 or instance.rule.value >= 513 or instance.source_unit.value <= 0 or instance.source_unit.value > board.next_identity.value or instance.source_model.value < 0 or instance.source_model.value > board.next_identity.value:
             return false
-        if instance.trigger.value < 0 or instance.trigger.value > SourceEventKind::unit_destroyed.value or instance.window.value < 0 or instance.window.value > TimingWindow::fight_end.value or instance.phase.value < 0 or instance.phase.value > BattlePhase::fight.value or instance.subject.value < 0 or instance.subject.value > SourceSubject::target_unit.value or instance.use_scope.value < 0 or instance.use_scope.value > SourceUseScope::model.value or instance.recipient.value < 0 or instance.recipient.value > SourceTarget::source_model.value or instance.duration.value < 0 or instance.duration.value > SourceDuration::next_own_movement.value:
+        if instance.trigger.value < 0 or instance.trigger.value > SourceEventKind::unit_destroyed.value or instance.window.value < 0 or instance.window.value > TimingWindow::fight_end.value or instance.phase.value < 0 or instance.phase.value > BattlePhase::fight.value or instance.subject.value < 0 or instance.subject.value > SourceSubject::target_unit.value or instance.use_scope.value < 0 or instance.use_scope.value > SourceUseScope::model.value or instance.recipient.value < 0 or instance.recipient.value > SourceTarget::source_model.value or instance.duration.value < 0 or instance.duration.value > SourceDuration::next_own_command.value:
             return false
         let keyword : Keyword
         if !instance.recipient_condition.valid(max(keyword)):
@@ -533,13 +534,13 @@ fun valid_source_foundations(Board board) -> Bool:
         let location = locate_source(board, instance.source_unit, instance.source_model)
         if location.found and source_bank_unit(board, location.bank, location.unit.value).owned_by_player1 != instance.owner:
             return false
-        if instance.trigger_range.value < 0 or instance.trigger_range.value >= MAX_CHARACTERISTIC or instance.movement.value < 0 or instance.movement.value > MovementKind::emergency_disembark.value:
+        if instance.trigger_range.value < 0 or instance.trigger_range.value >= MAX_CHARACTERISTIC or instance.movement.value < 0 or instance.movement.value > MovementKind::pulse_jet.value:
             return false
         if instance.limits.phase.value < 0 or instance.limits.phase.value >= MAX_CHARACTERISTIC or instance.limits.turn.value < 0 or instance.limits.turn.value >= MAX_CHARACTERISTIC or instance.limits.round.value < 0 or instance.limits.round.value >= MAX_CHARACTERISTIC or instance.limits.battle.value < 0 or instance.limits.battle.value >= MAX_CHARACTERISTIC:
             return false
     for effect_index in range(board.source_effects.size()):
         ref effect = board.source_effects[effect_index]
-        if effect.identity.value <= 0 or effect.identity.value > board.next_source_effect.value or effect.source.value < 0 or effect.source.value >= board.source_instances.size() or effect.duration.value < 0 or effect.duration.value > SourceDuration::next_own_movement.value or effect.owner != board.source_instances[effect.source.value].owner:
+        if effect.identity.value <= 0 or effect.identity.value > board.next_source_effect.value or effect.source.value < 0 or effect.source.value >= board.source_instances.size() or effect.duration.value < 0 or effect.duration.value > SourceDuration::next_own_command.value or effect.owner != board.source_instances[effect.source.value].owner:
             return false
         if effect.phase_stamp.value < 0 or effect.phase_stamp.value > board.phase_serial.value or effect.turn_stamp.value < 0 or effect.turn_stamp.value > board.turn_serial.value or effect.round_stamp.value < 0 or effect.round_stamp.value > board.current_round.value:
             return false

@@ -166,11 +166,26 @@ fun vertical_segment_near_terrain(Board board, Model model, GeometryPoint start,
         i = i + 1
     return false
 
+# M- permits setup but no other movement (core p10/P10-06). This also
+# freezes the model in charge/surge/pile-in paths, not just its normal M budget.
+fun model_can_move(Model model) -> Bool:
+    return model.profile.movement() > 0 or model.has_random_movement
+
+# Whole-unit selection requires an actual movable member; mixed units retain
+# their immobile models in place. Core p10, not an invented Fortification rule.
+fun unit_has_movable_model(Unit unit) -> Bool:
+    for member_index in range(unit.models.size()):
+        if unit[member_index].is_alive() and model_can_move(unit[member_index]):
+            return true
+    return false
+
 # Friendly traversal is permitted, enemy traversal is not unless a move's
 # sourced exception supplies it. AIRCRAFT may be traversed in every move
 # (p.74); final base overlaps remain forbidden. All other segments check full
 # base clearance (p.12).
 fun model_segment_valid(Board board, Unit unit, Model model, GeometryPoint start, GeometryPoint end, MovementGeometryPolicy policy) -> Bool:
+    if !model_can_move(model) and (start.x != end.x or start.y != end.y or start.z != end.z):
+        return false
     if !geometry_point_on_grid(start) or !geometry_point_on_grid(end) or !model_inside_battlefield(model, start) or !model_inside_battlefield(model, end):
         return false
     if start.z != end.z and !policy.free_vertical_movement and !vertical_segment_near_terrain(board, model, start, end):

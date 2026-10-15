@@ -95,6 +95,7 @@ fun register_orks_unit_rules(Board board):
                         let source = register_source_instance(board, instance)
 
     register_orks_elite_rules(board)
+    register_orks_remaining_rules(board)
 
 # Measured targets must be live battlefield units; no external range or LOS
 # exists to reserves/passengers (appendix01.02.04). Self-targeting is allowed
@@ -108,6 +109,8 @@ fun orks_move_target_valid(Board board, SourceInstance instance, UnitID target) 
     ref source = source_bank_unit(board, location.bank, location.unit.value)
     if source.off_battlefield or !has_live_damage_recipient(source):
         return false
+    if instance.rule.value == 147:
+        return orks_race_target(board, source, target)
     if instance.rule.value == ORKS_KEEP_HUNTIN_RULE or instance.rule.value == ORKS_INTIMIDATING_RULE:
         return board[target].owned_by_player1 == instance.owner and (board[target].has_keyword(Keyword::beast_snagga) and instance.rule.value == ORKS_KEEP_HUNTIN_RULE or board[target].has_keyword(Keyword::orks) and instance.rule.value == ORKS_INTIMIDATING_RULE) and source.distance(board[target]) <= 6.0
     if instance.rule.value == ORKS_BOMB_SQUIG_RULE:
@@ -130,7 +133,7 @@ fun orks_move_source_valid(Board board, PendingSourceEvents pending, SourceEvent
     if !pending_source_valid(board, pending, event, player):
         return false
     ref instance = board.source_instances[pending[event.value].source.value]
-    if instance.rule.value == ORKS_KEEP_HUNTIN_RULE or instance.rule.value == ORKS_INTIMIDATING_RULE or instance.rule.value == ORKS_BOMB_SQUIG_RULE:
+    if instance.rule.value == ORKS_KEEP_HUNTIN_RULE or instance.rule.value == ORKS_INTIMIDATING_RULE or instance.rule.value == ORKS_BOMB_SQUIG_RULE or instance.rule.value == 147:
         return orks_move_source_has_target(board, instance)
     return true
 

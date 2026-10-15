@@ -23,7 +23,7 @@ fun charge_source_valid(Board board, UnitID source, Bool player) -> Bool:
     ref unit = board[source]
     # Orks Waaagh! waives only this selected Advance; the saved permission
     # preserves all other restrictions (Orks faction Army Rules / Waaagh!).
-    if unit.off_battlefield or unit.owned_by_player1 != player or unit.has_keyword(Keyword::aircraft) or !has_live_model(unit) or !unit.can_charge or board.is_in_melee(unit) or ((unit.has_run or unit.history.advanced_this_turn) and !unit.history.advance_allows_charge) or (unit.history.fell_back_this_turn and !unit.history.fallback_allows_charge) or unit.history.action_started or unit.history.ingress_locked or unit.history.declared_charge_phase == board.phase_serial.value + 1:
+    if !unit_has_movable_model(unit) or unit.off_battlefield or unit.owned_by_player1 != player or unit.has_keyword(Keyword::aircraft) or !has_live_model(unit) or !unit.can_charge or board.is_in_melee(unit) or ((unit.has_run or unit.history.advanced_this_turn) and !unit.history.advance_allows_charge) or (unit.history.fell_back_this_turn and !unit.history.fallback_allows_charge) or unit.history.action_started or unit.history.ingress_locked or unit.history.declared_charge_phase == board.phase_serial.value + 1:
         return false
     for i in range(board.units.size()):
         if board[i].owned_by_player1 != player and has_live_model(board[i]) and live_unit_distance(unit, board[i]) <= 12.0:
@@ -102,7 +102,7 @@ fun charge_waypoint_valid(Board board, Unit original, ModelPath path, BoardPosit
     if original.has_ability(AbilityKind::get_out_da_way) and !policy.traverse_enemies:
         policy.traverse_enemies = true
         policy.exclude_monster_vehicle = true
-    return path_distance(model, path, skies) + distance <= float(maximum * MICROMETRES_PER_INCH) and model_segment_valid(board, original, model, start, finish, policy)
+    return path_distance(model, path, skies and model.has_keyword(Keyword::fly)) + distance <= float(maximum * MICROMETRES_PER_INCH) and model_segment_valid(board, original, model, start, finish, policy)
 
 # All targets must be engaged and every unselected enemy must be unengaged
 # after moving; intermediate engagement is permitted (p.37). Validate the

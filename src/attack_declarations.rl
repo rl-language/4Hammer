@@ -207,6 +207,8 @@ fun attacks_are_identical(Board board, AttackSequenceInfo left, AttackSequenceIn
         return false
     if left.may_ignore_hit_modifiers and !same_attack_modifier_choices(attack_hit_choices(board, left), attack_hit_choices(board, right)):
         return false
+    if left.squig_launcha_weapon != right.squig_launcha_weapon:
+        return false
     if effective_attack_skill(board, left) != effective_attack_skill(board, right) or left.attack_strength() != right.attack_strength() or left.attack_penetration() != right.attack_penetration() or !same_effective_damage(left, right):
         return false
     # Equal rounded outgoing values can diverge when recipient operations are
