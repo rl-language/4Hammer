@@ -815,40 +815,6 @@ act on_model_destroyed(ctx Board board,
 
     board.current_decision_maker = previous_owner
 
-# resolve all attacks from one source model to a target model,
-# given a particular weapon used. the weapon is provided by
-# configuring board.attack_info.source
-act resolve_weapon(ctx Board board, 
-                   frm UnitID source, 
-                   frm ModelID current_model, 
-                   frm UnitID target) -> ResolveWeapon:
-    # Cover is assessed for every target model from this firing model, and
-    # changes BS rather than a save or clamped hit modifier (p.50).
-    board.attack_info.plunging_fire = plunging_fire_applies(board, source, current_model.get(), target, board.attack_info.source.range() > 0)
-    board.attack_info.target_has_cover = board.attack_info.source.range() > 0 and unit_has_benefit_of_cover(board, board[source][current_model], board[target])
-    let distance = board[target].distance(board[source][current_model])
-    let rapid_fire_attacks = 0
-    if distance <= float(board.attack_info.source.range()) / 2.0:
-        rapid_fire_attacks = board.attack_info.source.get_rule_parameter(WeaponRuleKind::rapid_fire)
-
-    board.current_state = CurrentStateDescription::quantity_roll
-    board.shared_actions.evaluate_random_stat = evaluate_random_stat(board.attack_info.source.attacks(),  rapid_fire_attacks)
-    subaction* board.shared_actions.evaluate_random_stat
-    frm attacks_roll_result_snapshot_1 = board.shared_actions.evaluate_random_stat.result
-
-    if board.attack_info.has_weapon_rule(board, WeaponRuleKind::blast):
-       attacks_roll_result_snapshot_1 = attacks_roll_result_snapshot_1 + board[target].models.size() / 5
-
-
-    frm current_attack : RandomStatResult
-    while current_attack != attacks_roll_result_snapshot_1:
-        ref target_unit = board[target]
-        subaction* (board, board[target], board[source]) attack = single_attack(board, board[target], board[source])
-
-        current_attack = current_attack + 1
-        if board[target].models.size() == 0:
-            break
-
 # Configure the selected target before its declared groups and timing effects
 # (pp.16–18). Faction consumers remain explicit legacy fixtures for task 17.
 fun configure_attack_info(Board board, Int source, Int target, Bool overwatch, Bool melee):
@@ -881,51 +847,6 @@ fun configure_attack_info(Board board, Int source, Int target, Bool overwatch, B
         if board[source].has_ability(AbilityKind::fury_of_the_first):
             attack.hit_roll_bonus = true
     board.attack_info = attack
-
-# this is the game sequence where a player selects one or more
-# weapons, depending how many the model can use, to fight with 
-# the target unit, and resolves those weapons one at the time
-# Retain per-model weapon/Hazardous counts through attack decisions
-# (weapon declarations p.17; Hazardous p.81). Resolution rewrite is task 9.
-act resolve_model_attack(ctx Board board, 
-                         frm UnitID source, 
-                         frm UnitID target, 
-                         frm ModelID current_model, 
-                         frm Bool melee) -> ModelAttack:
-    board.current_state = CurrentStateDescription::select_weapon
-
-    ref model = board[source][current_model]
-    frm hazardous_uses : HazardousUses
-
-    board.attack_info.source_profile = model.profile
-    frm used_weapons : Bool[MAX_WEAPONS] 
-    while true:
-        actions:
-            act select_weapon(BInt<0, MAX_WEAPONS> weapon_id) {
-                weapon_id < board[source][current_model].weapons.size(),
-                !melee or board[source][current_model].weapons[weapon_id.value].range() == 0,
-                board[target].distance(board[source][current_model]) <= float(board[source][current_model].weapons[weapon_id.value].range()),
-                !board[source].has_run or board[source][current_model].weapons[weapon_id.value].has_rule(WeaponRuleKind::assault),
-                !used_weapons[weapon_id.value],
-                melee or model_can_see_unit(board, board[source][current_model], board[target])
-            }
-                board.attack_info.source = board[source][current_model].weapons[weapon_id.value]            
-                used_weapons[weapon_id.value] = true
-            act skip()
-                return
-        if board.attack_info.source.has_rule(WeaponRuleKind::hazardous):
-            hazardous_uses = hazardous_uses + 1
-        subaction*(board) resolve_weapon = resolve_weapon(board, source, current_model, target)
-        # in melee you can only attack with one weapon unless it has extra attacks
-        if melee and !board.attack_info.has_weapon_rule(board, WeaponRuleKind::extra_attacks):
-            return
-        
-        # pistols can be used instead of other weapons
-        if board.attack_info.has_weapon_rule(board, WeaponRuleKind::pistol):
-            return
-        # early out if we killed everyone
-        if board[target].models.size() == 0:
-            return
 
 # rappresents all the various stratagems that can 
 # be triggered after a target has been elected to attack,
@@ -1408,28 +1329,6 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     board.current_state = CurrentStateDescription::none
 
 
-enum ProfileToUse:
-    captain_octavius:
-        Unit unit = make_octavius()
-    librarian_tantus:
-        Unit unit = make_tantus()
-    terminator_squad:
-        Unit unit = make_terminator_squad()
-    infernus_squad:
-        Unit unit = make_infernus_squad()
-    death_shadow:
-        Unit unit = make_death_shadow()
-    make_lictor:
-        Unit unit = make_lictor()
-    make_von_ryan_leaper:
-        Unit unit = make_von_ryan_leaper()
-
-    fun equal(ProfileToUse other) -> Bool:
-        return self.value == other.value
-
-
-
-
 # End-turn coherency applies to both armies, including the opposing army
 # (p.14). Empty/retired slots have no models to remove.
 fun has_incoherent_units(Board board, Bool player) -> Bool:
@@ -1832,27 +1731,6 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
         board.score()
     board.active_source_events = previous_candidates
     board.close_timing_window()
-
-enum Player:
-    player_1
-    player_2
-
-# Editor fixture helper: initialize entity identity/starting strength on creation
-# to support later lifecycle rules (starting strength p.86; destruction p.19).
-act spawn_unit(ctx Board board) -> PickUnit:
-    act spawn(frm ProfileToUse profile)
-    act set_owner(frm Player player)
-    frm unit = profile.unit()
-    unit.owned_by_player1 = player.value == 0
-    board.identify_unit(unit)
-    unit.capture_starting_strength()
-    actions:
-        act place_in_reserve()
-            board.reserve_units.append(unit)
-        act place_at(frm BoardPosition position) {setup_candidate_valid(board, unit, position)}
-            # Fixture setup must obey full-base placement too (pp.12/14).
-            unit.try_arrange_at(position)
-            board.units.append(unit)
 
 # Roll against any Leadership characteristic (p.9). Only a successful roll
 # in the Command Battle-shock step clears shock present at that step's start
@@ -2544,27 +2422,6 @@ act charge_phase(ctx Board board) -> ChargePhase:
                 board.shared_actions.charge = charge(board, source, ChargeKind::ordinary)
                 subaction*(board) board.shared_actions.charge
                 board.current_decision_maker = board.current_player
-
-# Ingress setup validates every base before transfer; failed setup remains
-# selectable for another attempt or stationary choice (pp.14/69).
-act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeployment:
-    frm done_deploying = false
-    board.current_decision_maker = current_player
-    actions:
-        act nothing_to_deploy() {movement_selection_complete(board, current_player)}
-            done_deploying = true
-        act select_reserve_unit(frm UnitID id) {id.get() < board.reserve_units.size(), has_live_model(board.reserve_units[id.get()]), board.reserve_units[id.get()].owned_by_player1 == current_player, board.reserve_units[id.get()].history.selected_move_phase != board.phase_serial.value + 1}
-            actions:
-                act skip()
-                # p.74 prohibits Stationary for Aircraft. Deferring arrival is
-                # a selection decision, not a new move type (pp.32/69).
-                act defer_aircraft_ingress() {board.reserve_units[id.get()].has_keyword(Keyword::aircraft)}
-                    board.reserve_units[id.get()].history.selected_move_phase = board.phase_serial.value + 1
-                act reserve_remain_stationary() {!board.reserve_units[id.get()].has_keyword(Keyword::aircraft)}
-                    board.reserve_units[id.get()].history.selected_move_phase = board.phase_serial.value + 1
-                    board.reserve_units[id.get()].history.move_kind = MovementKind::stationary
-                act place_at(BoardPosition position) {orks_ingress_round_allowed(board, board.reserve_units[id.get()]), battlefield_entry_available(board, board.reserve_units[id.get()]), setup_at_valid(board, board.reserve_units[id.get()], position, MovementKind::ingress, false)}
-                    enter_from_reserves(board, id, position, MovementKind::ingress)
 
 # Desperate Escape rolls one complete hazard batch per model, then applies
 # ordinary mortal allocation/FNP/destruction instead of deleting models (pp.24/33).

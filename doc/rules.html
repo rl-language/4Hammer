@@ -122,32 +122,6 @@
 <ul>
   <li><strong>Action Statement</strong>: <code>roll(frm Dice damage)</code></li>
 </ul>
-<div><strong>Action</strong>: <code>resolve_weapon(ctx Board, frm UnitID, frm ModelID, frm UnitID) -> ResolveWeapon</code></div>
-<pre><code>
- resolve all attacks from one source model to a target model,
- given a particular weapon used. the weapon is provided by 
- configuring board.attack_info.source
-
-</code></pre>
-<div><strong>Action</strong>: <code>resolve_model_attack(ctx Board, frm UnitID, frm UnitID, frm ModelID, frm Bool) -> ModelAttack</code></div>
-<pre><code>
- this is the game sequence where a player selects one or more
- weapons, depending how many the model can use, to fight with 
- the target unit, and resolves those weapons one at the time
-
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_weapon(BInt<0, MAX_WEAPONS> weapon_id)</code></li>
-<pre><code>
- cache the distance for performance, mark it hidden so it does
- not get delivered to the gpu, since it is implied
- by the positions of units anyway
-
-</code></pre>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>skip()</code></li>
-</ul>
 <div><strong>Action</strong>: <code>use_attack_stratagems(ctx Board, frm UnitID, frm UnitID, frm Bool) -> UseAttackStratagems</code></div>
 <pre><code>
  rappresents all the various stratagems that can 
@@ -223,19 +197,6 @@
  2+ fight on death dice roll
 
 </code></pre>
-</ul>
-<div><strong>Action</strong>: <code>spawn_unit(ctx Board) -> PickUnit</code></div>
-<ul>
-  <li><strong>Action Statement</strong>: <code>spawn(frm ProfileToUse profile)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>set_owner(frm Player player)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>place_in_reserve()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>place_at(frm BoardPosition position)</code></li>
 </ul>
 <div><strong>Action</strong>: <code>battle_shock_test(ctx Board, ctx Unit) -> BattleShockTest</code></div>
 <pre><code>
@@ -372,23 +333,6 @@
 <ul>
   <li><strong>Action Statement</strong>: <code>use_heroic_intervention(frm UnitID interceptor)</code></li>
 </ul>
-<div><strong>Action</strong>: <code>reserve_deployment(ctx Board, frm Bool) -> ReserveDeployment</code></div>
-<pre><code>
- core rules reserve deployment 
-
-</code></pre>
-<ul>
-  <li><strong>Action Statement</strong>: <code>nothing_to_deploy()</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>select_reserve_unit(frm UnitID id)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>place_at(BoardPosition position)</code></li>
-</ul>
-<ul>
-  <li><strong>Action Statement</strong>: <code>nothing_to_deploy()</code></li>
-</ul>
 <div><strong>Action</strong>: <code>desperate_escape(ctx Board, frm UnitID) -> DesperateEscapeTest</code></div>
 <pre><code>
  core rules desperate escape 
@@ -517,29 +461,6 @@
 <li><strong>Function</strong>: <code>set_state&lt;T&gt;(T g, String s)  -> Bool</code></li>
 <li><strong>Function</strong>: <code>main()  -> Int</code></li>
 <li><strong>Function</strong>: <code>pretty_string&lt;T&gt;(Board b, T obj)  -> String</code></li>
-</ul>
-<h2>Enums</h2>
-<h2>Enum ProfileToUse</h2>
-<ul>
-  <li><code>Unit unit</code></li>
-</ul>
-<br/>
-<ul>
-  <li><code>captain_octavius</code></li>
-  <li><code>librarian_tantus</code></li>
-  <li><code>terminator_squad</code></li>
-  <li><code>infernus_squad</code></li>
-  <li><code>death_shadow</code></li>
-  <li><code>make_lictor</code></li>
-  <li><code>make_von_ryan_leaper</code></li>
-</ul>
-<h2>Enum Player</h2>
-<ul>
-</ul>
-<br/>
-<ul>
-  <li><code>player_1</code></li>
-  <li><code>player_2</code></li>
 </ul>
 </body>
 </html>
