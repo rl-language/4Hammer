@@ -1,67 +1,129 @@
-# CTest fixtures compile each suite once, including when running a filtered test.
-# Prefer the activated toolchain over a newer system Python without rlc.
-# Respect an explicitly supplied strategy/interpreter.
-if(NOT DEFINED Python3_FIND_STRATEGY)
-  set(Python3_FIND_STRATEGY LOCATION)
+# Pure native Rulebook tests: CMake discovers declarations and CTest launches
+# one C runner process per assertion. No Python wrapper or interpreter is used.
+if(CMAKE_VERSION VERSION_LESS 3.19)
+  message(FATAL_ERROR "Native rule tests require CMake 3.19+ for discrepancy manifest validation")
 endif()
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
-execute_process(COMMAND "${Python3_EXECUTABLE}" -c "from rlc.program import Program"
-  RESULT_VARIABLE rule_python_status ERROR_VARIABLE rule_python_error)
-if(NOT rule_python_status EQUAL 0)
-  message(FATAL_ERROR
-    "Rule tests require rlc in ${Python3_EXECUTABLE}. Activate the repository Python environment or set Python3_EXECUTABLE. ${rule_python_error}")
+find_program(RLC_TEST_COMPILER NAMES rlc REQUIRED)
+set(RULE_TEST_COMPILER_JOBS 4 CACHE STRING "Workers per RLC test compilation")
+if(NOT RULE_TEST_COMPILER_JOBS MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR "RULE_TEST_COMPILER_JOBS must be positive")
 endif()
-find_program(RLC_TEST_COMPILER NAMES rlc)
-if(NOT RLC_TEST_COMPILER)
-  message(FATAL_ERROR "Rule tests require rlc; activate the repository Python environment")
-endif()
-set(rule_test_runner "${PROJECT_SOURCE_DIR}/tools/ctest_rules.py")
-set(RULE_TEST_COMPILER_JOBS 4 CACHE STRING "Workers per RLC test compilation (0.4.17+)")
+set(RULE_TEST_CLANG "" CACHE FILEPATH "Optional clang linker used by RLC")
 set(RULE_TEST_COMPILE_TIMEOUT 1200 CACHE STRING "Seconds allowed for a rule-suite compilation")
 option(RULE_TEST_OPTIMIZE "Optimize rule tests with -O2 (off for debugging)" OFF)
+set(rule_test_flags --emit-precondition-checks --emit-bound-checks -j "${RULE_TEST_COMPILER_JOBS}")
 if(RULE_TEST_OPTIMIZE)
-  set(rule_test_optimization --optimize)
+  list(APPEND rule_test_flags -O2)
 endif()
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-  "${PROJECT_SOURCE_DIR}/tests/baseline.rl"
-  "${PROJECT_SOURCE_DIR}/tests/known_discrepancies.rl"
-  "${PROJECT_SOURCE_DIR}/tests/known_discrepancies.json"
-  "${rule_test_runner}")
-execute_process(COMMAND "${Python3_EXECUTABLE}" "${rule_test_runner}" list
-  RESULT_VARIABLE discovery_status OUTPUT_VARIABLE discovered_tests
-  ERROR_VARIABLE discovery_error OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(NOT discovery_status EQUAL 0)
-  message(FATAL_ERROR "Rule test discovery failed: ${discovery_error}")
+if(RULE_TEST_CLANG)
+  list(APPEND rule_test_flags "--clang=${RULE_TEST_CLANG}")
 endif()
+file(GLOB_RECURSE rule_test_sources CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/*.rl")
+set(rule_manifest "${PROJECT_SOURCE_DIR}/tests/known_discrepancies.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${rule_manifest}")
+file(READ "${rule_manifest}" rule_manifest_json)
+string(JSON manifest_type TYPE "${rule_manifest_json}")
+if(NOT manifest_type STREQUAL "OBJECT")
+  message(FATAL_ERROR "The known-discrepancy manifest must be an object")
+endif()
+string(JSON manifest_count LENGTH "${rule_manifest_json}")
+set(manifest_names)
+if(manifest_count GREATER 0)
+  math(EXPR manifest_last "${manifest_count} - 1")
+  foreach(index RANGE 0 ${manifest_last})
+    string(JSON name MEMBER "${rule_manifest_json}" ${index})
+    list(APPEND manifest_names "${name}")
+  endforeach()
+endif()
+
 foreach(suite baseline discrepancies)
-  # An empty discrepancy manifest has no assertions to execute. Avoid another
-  # full-engine compilation solely to establish an unused fixture.
-  string(FIND "${discovered_tests}" "${suite}|" suite_test_position)
-  if(suite_test_position EQUAL -1)
+  if(suite STREQUAL "baseline")
+    set(source "${PROJECT_SOURCE_DIR}/tests/baseline.rl")
+  else()
+    set(source "${PROJECT_SOURCE_DIR}/tests/known_discrepancies.rl")
+  endif()
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${source}")
+  file(STRINGS "${source}" declarations REGEX "^fun[ \t]+test_")
+  set(names)
+  set(prototypes "")
+  set(cases "")
+  foreach(declaration IN LISTS declarations)
+    if(NOT declaration MATCHES "^fun[ \t]+(test_[A-Za-z0-9_]+)\\(\\)[ \t]+->[ \t]+Bool:[ \t]*$")
+      message(FATAL_ERROR "Expected a zero-argument Bool test: ${declaration}")
+    endif()
+    set(name "${CMAKE_MATCH_1}")
+    if(name IN_LIST names)
+      message(FATAL_ERROR "Duplicate ${suite} test: ${name}")
+    endif()
+    list(APPEND names "${name}")
+    string(APPEND prototypes "extern void rl_${name}__r_bool(bool *result);\n")
+    set(expected_failure false)
+    set(reason "")
+    if(suite STREQUAL "discrepancies")
+      if(NOT name IN_LIST manifest_names)
+        message(FATAL_ERROR "Missing discrepancy manifest entry: ${name}")
+      endif()
+      string(JSON reason GET "${rule_manifest_json}" "${name}" source)
+      string(REPLACE "\\" "\\\\" reason "${reason}")
+      string(REPLACE "\"" "\\\"" reason "${reason}")
+      string(REPLACE "\n" "\\n" reason "${reason}")
+      string(REPLACE "\r" "\\r" reason "${reason}")
+      set(expected_failure true)
+    endif()
+    string(APPEND cases "  {\"${name}\", rl_${name}__r_bool, ${expected_failure}, \"${reason}\"},\n")
+  endforeach()
+  if(suite STREQUAL "discrepancies")
+    list(SORT names)
+    list(SORT manifest_names)
+    if(NOT "${names}" STREQUAL "${manifest_names}")
+      message(FATAL_ERROR "Known-discrepancy manifest does not match declarations")
+    endif()
+  elseif(NOT names)
+    message(FATAL_ERROR "No baseline tests declared")
+  endif()
+  if(NOT names)
     continue()
   endif()
+
+  set(directory "${PROJECT_BINARY_DIR}/rule-tests/${suite}")
+  file(MAKE_DIRECTORY "${directory}")
+  # configure_file preserves timestamps when declarations have not changed.
+  set(RULE_TEST_PROTOTYPES "${prototypes}")
+  set(RULE_TEST_CASES "${cases}")
+  configure_file("${PROJECT_SOURCE_DIR}/cmake/RuleTestCases.h.in" "${directory}/rule_test_cases.h" @ONLY)
+  set(library "${directory}/${CMAKE_SHARED_LIBRARY_PREFIX}rule-tests-${suite}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  add_custom_command(OUTPUT "${library}"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f "${library}"
+    COMMAND "${RLC_TEST_COMPILER}" "${source}" -i "${PROJECT_SOURCE_DIR}/src"
+      ${rule_test_flags} --shared -o "${library}"
+    DEPENDS "${source}" ${rule_test_sources} "${RLC_TEST_COMPILER}"
+    VERBATIM COMMENT "Compiling native ${suite} Rulebook assertions")
+  add_custom_target(rule-library-${suite} DEPENDS "${library}")
+  add_library(rule-native-${suite} SHARED IMPORTED)
+  # RLC libraries do not carry a SONAME. Link by name so the runner's RPATH
+  # resolves the library independently of the caller's working directory.
+  set_target_properties(rule-native-${suite} PROPERTIES
+    IMPORTED_LOCATION "${library}" IMPORTED_NO_SONAME TRUE)
+  add_executable(rule-tests-${suite} EXCLUDE_FROM_ALL "${PROJECT_SOURCE_DIR}/tests/rule_test_runner.c")
+  target_include_directories(rule-tests-${suite} PRIVATE "${directory}")
+  target_link_libraries(rule-tests-${suite} PRIVATE rule-native-${suite})
+  add_dependencies(rule-tests-${suite} rule-library-${suite})
+  # Standard CMake dependencies rebuild changed sources; no separate build cache.
   add_test(NAME rules.compile.${suite}
-    COMMAND "${Python3_EXECUTABLE}" "${rule_test_runner}" build
-      --suite ${suite} --directory "${PROJECT_BINARY_DIR}/rule-tests/${suite}"
-      --compiler "${RLC_TEST_COMPILER}" --jobs "${RULE_TEST_COMPILER_JOBS}"
-      ${rule_test_optimization})
+    COMMAND "${CMAKE_COMMAND}" --build "${PROJECT_BINARY_DIR}" --target rule-tests-${suite} --config $<CONFIG>)
   set_tests_properties(rules.compile.${suite} PROPERTIES
-    FIXTURES_SETUP rules_${suite} LABELS "rules;setup" TIMEOUT ${RULE_TEST_COMPILE_TIMEOUT})
-endforeach()
-string(REPLACE "\n" ";" discovered_tests "${discovered_tests}")
-foreach(entry IN LISTS discovered_tests)
-  string(REPLACE "|" ";" fields "${entry}")
-  list(GET fields 0 suite)
-  list(GET fields 1 test_name)
-  set(ctest_name "rules.${suite}.${test_name}")
-  add_test(NAME "${ctest_name}"
-    COMMAND "${Python3_EXECUTABLE}" "${rule_test_runner}" run
-      --suite ${suite} --directory "${PROJECT_BINARY_DIR}/rule-tests/${suite}"
-      --test "${test_name}")
-  set_tests_properties("${ctest_name}" PROPERTIES
-    FIXTURES_REQUIRED rules_${suite} LABELS "rules;${suite}" TIMEOUT 30)
-  if(suite STREQUAL "discrepancies")
+    FIXTURES_SETUP rules_${suite} LABELS "rules;setup" TIMEOUT ${RULE_TEST_COMPILE_TIMEOUT}
+    RESOURCE_LOCK rule_compiler)
+  foreach(name IN LISTS names)
+    set(ctest_name "rules.${suite}.${name}")
+    add_test(NAME "${ctest_name}" COMMAND rule-tests-${suite} "${name}")
     set_tests_properties("${ctest_name}" PROPERTIES
-      SKIP_RETURN_CODE 77 LABELS "rules;discrepancies;expected-failure")
-  endif()
+      FIXTURES_REQUIRED rules_${suite} LABELS "rules;${suite}" TIMEOUT 30)
+    if(suite STREQUAL "discrepancies")
+      set_tests_properties("${ctest_name}" PROPERTIES
+        SKIP_RETURN_CODE 77 LABELS "rules;discrepancies;expected-failure")
+    endif()
+  endforeach()
+  list(LENGTH names count)
+  message(STATUS "Registered ${count} native ${suite} Rulebook tests")
 endforeach()

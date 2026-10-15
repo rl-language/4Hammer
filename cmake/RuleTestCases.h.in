@@ -1,0 +1,4 @@
+/* Generated from the suite declarations and discrepancy manifest by CMake. */
+@RULE_TEST_PROTOTYPES@
+static const struct RuleTest cases[] = {
+@RULE_TEST_CASES@};
