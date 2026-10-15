@@ -42,18 +42,22 @@ static godot::Variant rlc_string_to_godot_string(godot::Variant s) {
   auto casted =
       godot::Object::cast_to<RLCString>(*((godot::Ref<RLCString>)(s)));
   int64_t index = 0;
-  return godot::String((char *)casted->content->get(index));
+  // Rulebook buffers contain UTF-8; the char-pointer constructor decodes
+  // Latin-1 and corrupted non-ASCII names such as Big’ed Bossbunka.
+  return godot::String::utf8((char *)casted->content->get(index));
 }
 
 static godot::Variant godot_string_to_rlc_string(godot::String inputS) {
   CharString char_str = inputS.utf8();
   char *data = const_cast<char *>(char_str.get_data());
 
-  ::String *mallocated = (::String *)malloc(sizeof(::String));
-  godot::Ref<RLCString> to_return;
-  to_return.instantiate();
-  godot::Object::cast_to<RLCString>(*to_return)->setNonOwning(mallocated);
-  rl_s__strlit_r_String(mallocated, &data);
+  // Generated wrappers own and destroy their native value. A non-owning
+  // wrapper around malloc leaked both the String allocation and its buffer.
+  auto to_return = RLCString::make();
+  auto *native = godot::Object::cast_to<RLCString>(*to_return)->content;
+  ::String converted;
+  rl_s__strlit_r_String(&converted, &data);
+  *native = converted;
   return to_return;
 }
 
