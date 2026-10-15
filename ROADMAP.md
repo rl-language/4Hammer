@@ -1458,3 +1458,59 @@ generated layouts and action ordering; this batch confirms schema40/26/41.
 the separate documentation/validation commit refreshes architecture and the
 frame inventory. Public gameplay, state layout, coordinates and discovery are
 unchanged. Active generic-grant/source work remains a future task.
+
+## Planned reader documentation —40K and Godot audience
+
+User request: plan a guide explaining implemented scope, architecture and the
+properties of important structs for readers who know Warhammer40,000 and Godot
+but need not know Rulebook. This section is a writing plan, not documentation
+completion or authorization to change rules.
+
+Proposed deliverables: `doc/engine-guide.md` for the reading path and worked
+examples, and `doc/game-state-reference.md` for navigable struct/property tables.
+Keep `doc/rulebook-architecture.md` as the deeper implementation reference;
+cross-link it instead of repeating its language/toolchain internals.
+
+- [ ] **A. Scope and mental model.** Explain the included54 standard Orks cards,
+  detachments/enhancements/CP, legacy faction fixtures and mission limitations.
+  List intentional quads/circular proxies/visibility abstractions and excluded
+  prices, Forge World/Legends and continuous geometry. Separate printed rules,
+  user rulings and implementation limits. Map army/unit/model/weapon/profile
+  to engine concepts, and distinguish native values from Godot Nodes/resources.
+- [ ] **B. Ownership and state reference.** Draw Game→Board→battlefield/reserve/
+  embarked units→models, with archives and persistent identities. Document
+  `Game`, `Board`, `ArmyConfiguration`, `Unit`, `Model`, `AttachmentComponent`,
+  `BoardPosition`, `ModelGeometry`, `UnitID`, `ModelID` and `EntityIdentity`.
+  Explain real storage banks, compacting model indices, retired unit slots,
+  attached-unit provenance and identity-preserving returns.
+- [ ] **C. Rules in progress.** Document Profile/Weapon/Stat and physical-copy
+  versus profile identity, printed versus effective characteristics,
+  `TimingState`, `UnitHistory`/`ModelHistory`, `DeclaredWeapon`,
+  `AttackSequenceInfo`, `DamageJob`/`PendingDestruction`, `SourceInstance`,
+  `SourceEffect`/`SourceUseRecord` and the shared procedure frames. Trace one
+  shooting attack and one Leader casualty/model return, including declarations,
+  dice, allocation, delayed removal, persistent effects and expiry. Explain
+  turn owner, active role, decision owner, chance and terminal states.
+- [ ] **D. Godot usage and review.** Show how GlobalRules/RLCLib/native Game
+  relate, how a legal action advances state, and why a gameplay mutation goes
+  through actions. Give short GDScript examples for reading units/wounds,
+  checking/applying a choice and inspecting a pending decision. Explain generated
+  getters/reference lifetimes, action payload shapes and matching build/schema
+  requirements. Link the guide from README and the technical architecture page.
+
+Use the same property-table contract throughout: exact code name/type;40K
+meaning; owning struct; stored versus computed; units/range/sentinel/default;
+when it changes or resets; authoritative writer/query; and a concrete example.
+Group faction-specific and transient UI/continuation fields visibly. Cover every
+field of the selected important structs in the reference, while the main guide
+focuses on the fields needed to understand the examples. Explain unfamiliar
+storage concepts in gameplay terms before introducing Rulebook terminology.
+
+Write A/B/C/D as separate reviewable documentation commits. Check property
+names, bounds, defaults and lifecycle against current declarations and their
+actual consumers; connect examples to existing named regressions. Distinguish
+current behavior from future generalization. Validate links/diagrams and run
+only new executable GDScript examples against matching bindings; prose-only
+changes do not require recompiling/rerunning the entire rule suite. Do not add
+a second generated API dump or repeat historical test/schema ledgers in this
+reader guide. No guide has been written by this planning task yet.
