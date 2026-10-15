@@ -441,7 +441,7 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
   - [x] **17.I2:** War Horde enhancements/upgrades and all six CP cards, validated in the combined ordinary-detachment batch below.
 - [ ] **17.O–P:** Remaining ordinary detachments and every remaining datasheet by dependency family. Include the additional Runt Swarm replacement/hit-interception systems. Preserve oval metadata and use the user-authorized long-axis circle approximation for now; hull/multipart dimensions remain explicit dependencies. Keep grid coordinates.
   - [x] **17.O:** All15 ordinary detachment passives,38 enhancements/upgrades and40 CP cards, including Runt Swarm replacements/interception; see combined completion evidence below.
-  - [ ] **17.P:** The remaining51 standard datasheet adapters, actual carrier seating/permissions and source-specific unit rules; shared package mechanics do not complete their data.
+  - [x] **17.P:** All51 additional standard datasheet adapters, actual carrier seating/permissions and source-specific unit rules are implemented and validated in17.P1–P3; all54 included cards have adapters. Arbitrary public roster selection remains17.Q.
 - [ ] **17.Q:** Complete rendered/headless Godot journeys, combination tests, saves/replays/ML, representative full games and sanitized fuzzing. Fix the measured wrapper retrieval bottleneck and every identified new mistake.
 
 **Confirmed work that must be fixed:**17.D resolves the eight-slot Stompa capacity defect with a reviewed13-profile envelope; actual unit loadout quotas/data remain pending; 17.C1 resolves the former positive-OR-only weapon/Hunter predicate defect; other scoped condition consumers remain pending; transport permission OR-lists and universal integer seat costs cannot implement all nine included carrier requirements or grouped Gretchin rounding. Static attack-characteristic getters and boolean bonuses lack several modifier consumers. 17.E resolves generic source-instance event/use/effect tracking alongside legacy timing groups; source-specific reactive movement/shooting handlers remain17.L/M. Healing/revival, psychic budgets, post-shoot hit ledgers, Kommandos formation splitting and Runt Swarm replacement/hit interception need implementation. Thirty datasheets require oval/hull/multipart footprint work or additional dimensions. Batch17.B resolves the point-dependent reserve gate through explicit point-free public configuration. These are requirements from source/code inspection, not newly passing tests.
@@ -1124,3 +1124,104 @@ not certify public full games containing every new card. No prices, Forge World,
 Legends, non-quad migration or custom lifecycle hooks were added. The reusable
 cloud install/start draft now pins0.4.18 and captures the validated runtime
 links; draft saving is separate from publication.
+
+
+###17.P3 — All25 remaining standard cards (complete,2026-10-15)
+
+The current user request authorizes finishing all remaining included cards in
+one implementation/validation batch. Profile/loadout adapters and source
+consumers are implemented for Battlewagon, Big'ed Bossbunka, Blitza-bommer, Boss
+Snikrot, Burna-bommer, Dakkajet, Deffkilla Wartrike, Deffkoptas, Ghazghkull Thraka,
+Gorkanaut, Gunwagon, Hunta Rig, Kill Rig, Kommandos, Mek Gunz, Morkanaut, Nazdreg,
+Rukkatrukk Squigbuggies, Stompa, Trukk, Warbuggies, Wartrakks, Wazbom Blastajet,
+Wazdakka Gutsmek and Weirdboy. Forge World/Legends remain excluded.
+
+The user now explicitly authorizes large temporary circular bases for the six
+Use-model hull families. They are deliberate imprecision, never claimed source
+dimensions; immutable source base metadata remains0. Factories also accept
+explicit replacement millimetre diameters. Other source ovals continue to use
+long-axis circles with their short axes retained. No points/detachment prices,
+continuous model positions or custom lifecycle hooks are introduced.
+
+Implementation, native regressions and the combined checks below are complete.
+All54 included standard cards now have source adapters. Public arbitrary roster
+selection and the previously recorded performance/rendered integration fixes
+remain mandatory17.Q work.
+
+
+**Executed17.P3 validation** (artifacts under
+`/workspace/4hammer-validation/orks-p3`, compiler/core0.4.18):
+
+- **1,105/1,105 native assertions pass** as individual CTest cases, including
+  **111 new regressions**. The initial compile fixture passed; after the final
+  corrections the native library was rebuilt and all cases rerun.1,106
+  registered CTest entries include that fixture. Final full case run:181.00s,
+  `ctest-final.log`.
+  The baseline's994 existing cases also passed the initial combined run.
+- All111 new cases pass optimized ASAN/UBSAN/LeakSanitizer in the source-derived
+  scenario fuzzer:111 one-byte seeds plus empty initialization,112 runs/37s,
+  `semantic-corrected.log`. A separate small-seed, one-byte campaign performs
+  **112 runs/61s** (`semantic-mutation-active.log`). The earlier large-corpus
+  60s run only initialized its corpus and is NOT counted as mutation evidence.
+- Actual game-action mutation performs **42 runs/62s** using the retained
+  corpus originating with the73-byte seed, with maximum length8192
+  (`action-mutation.log`). Cases with <=8 bytes do not
+  advance the original game's action loop; semantic and action campaigns are
+  distinct evidence. These bounded campaigns establish no exhaustive coverage.
+- Both preserved lifetime/leak regressions and the prior completed-game input
+  pass on the fresh sanitized executable with leak detection enabled
+  (`replays/sanitized.log`). The697-action replay also completes on the fresh
+  debug native engine, terminal owner−4,31,185 candidates
+  (`replays/native-full-game.log`). This replays a preserved completed game;
+  it is not a newly generated Python-host game or a54-card roster journey.
+- Independent HTML check passes **54 cards/63 profiles/253 weapon rows**,
+  including literal non-Monster/Vehicle Lethal predicates (`html-check.log`).
+  Permissions remain **67 identities/41 edges**,10 Leader/7 Support cards;
+  excluded identities are checked, not made playable (`attachments-check.log`).
+- Frame audit passes **128 action routines/70 shared slots**, no duplicates
+  or nested re-entry; Game40,096 / Board34,864 inline bytes (`frame-audit.log`,
+  `doc/action-frame-lifetimes.json`). No custom init/drop was introduced.
+- Matching fresh Godot headers/C++/debug engine pass the new control script:
+  all25 source identities,21 directly bound constructors, source/save round
+  trip, approximate hulls, actual engine choice and11 named/bank controls.
+  Prior elites, infantry, data, unit rules, modifier ignoring, detachments,
+  attachments, weapons/sources and public roster controls also pass (ten
+  scripts including the new one). `godot/control-results.json` records the
+  initial nine-script run: the public-roster journey hit180s under concurrent
+  load, then passed alone with600s timeout (`godot/orks_roster-retry.log`).
+  This is the known slow host journey, not evidence of a performance fix.
+- Fresh20-step Gym check passes with **31,185 candidates/16,368,602 finite
+  observations** (`gym.log`). State/action/observation schemas are **35/23/35**,
+  next-state36. Whole-quad position domains remain44×30.
+
+The final native correction builds use four workers, debug unoptimized and a
+separate `-O2 -g` sanitized fuzzer. Measured native debug build261.935s,
+1,849,240KiB peak RSS; sanitized build244.353s,2,289,664KiB peak RSS
+(`native-tests-final.json`, `native-fuzzer-corrected.json`). These concurrent
+workloads are not a controlled speed comparison. Godot reuses the matching
+CTest debug engine with explicit installed libpython linkage; sanitizer/leak
+execution remains separate because Godot rejects ASAN RTLD_DEEPBIND loading.
+
+**Corrections made during validation:** Burna Bomb's persisting grant now uses
+rule176, separate from its already consumed rule141 trigger; it no longer
+spends a once-phase allowance twice. Registered windows recheck their live
+conferring ability, so surviving bodyguards cannot keep Snikrot/Wartrike
+windows after their attached character dies; both cases have regressions.
+Printed27 non-Monster/Vehicle Lethal rows
+retain their exclusion predicates. M- now prevents charge/surge/pile-in paths
+and rotation as well as ordinary movement (core p10/P10-06). Fixtures were
+corrected to identify manually staged passengers, keep a bomb recipient alive,
+use actual weapon slots, avoid an invalid Ghaz-as-carrier link, distinguish an
+intrinsic Lethal weapon from Busted's grant, and simulate next Command with the
+correct phase. The Godot success marker and ctypes pointer reads were fixed
+without weakening assertions. All initial failures are superseded by the
+passing final runs; old logs/artifacts are retained outside the checkout.
+
+**Next:17.Q.** Implement the arbitrary current-card roster picker, repair the
+measured wrapper retrieval/slow-unit execution and complete the outstanding
+rendered/full-army journeys. Home-objective ownership requires explicit mission
+metadata; source ovals and the user-approved large hull circles remain deliberate
+geometry approximations and may constrain placement in the legacy mission.
+Exact hull/oval geometry, points and Forge World/Legends remain excluded by the
+user. Preserve all identified remaining issues as mandatory fixes;54 adapters
+alone do not certify complete edition/mission/host integration.

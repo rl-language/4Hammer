@@ -1,6 +1,6 @@
 # Rulebook design and architecture
 
-This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the implementation through the ordinary detachment/frame-sharing work the twelve-unit17.P1 sweep and fourteen-unit17.P2 work, using Rulebook compiler0.4.18. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
+This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes the ordinary detachment/frame-sharing work and all54 standard Orks adapters through17.P3, using Rulebook compiler0.4.18. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
 Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and [supplied appendix](11th-edition-supplied-appendix.md) for game rules. The architecture supports those rules, but its storage bounds, schemas and UI protocols are project decisions. [AGENTS.md](../AGENTS.md) records development constraints and the language conventions used here.
 
@@ -521,3 +521,33 @@ grants plus four unit contributions and thirty other modifier choices. Schema
 34/22/34 requires matching state/action/observation clients. The implementation
 adds no continuous positions, custom lifecycle hooks or public roster picker.
 ROADMAP.md owns the executed checks and remaining17.P/17.Q obligations.
+
+
+### Final standard-card integration (17.P3)
+
+[The remaining-card guide](orks-remaining-units.md) describes the final25
+adapters. `orks_remaining_data.rl` owns their source tables/equipment;
+`orks_remaining_rules.rl` adapts them to existing kernels. The new
+`ModelGeometry.proxy_diameter_mm` is a bounded, explicitly approximate hull
+input; every distance uses the shared model radius. Printed M-/OC- stay locked.
+Pulse Jet is a finite movement kind using normal path/placement validation,
+with its own horizontal D6+18 budget and source-owned post-move restrictions.
+
+Ordinary/reactive disembarkation now has one context-owned frame. Tactical
+follow-up Movement happens in MovementPhase after copying small exit results;
+Disembark never owns Movement. This prevents nested shared-frame re-entry when
+a Movement triggers Trukk Pilin' Out. The new psychic roll frame is also
+context-owned and shared across the three datasheet callers. Other added
+frames have one owner. Run the action-storage audit against fresh metadata.
+
+Source events retain the current-player-then-opponent sequence for bombs,
+withdrawals, Shadows ingress, engines and Race. `next_own_command` is a distinct
+expiry boundary. Makari and psychic grants reach explicit banks through stable
+unit identities. Hit records separately track Squig Launchas provenance; attack
+grouping cannot merge it with otherwise identical attacks from another weapon.
+Home-objective ownership is explicit mission metadata, not inferred geometry.
+
+All54 included standard cards now have adapters; ROADMAP.md owns their final
+validation status. The arbitrary public roster picker, measured host/runtime
+performance defects and full rendered journeys remain17.Q. No point system,
+Forge World/Legends data or exact oval/hull geometry is added.

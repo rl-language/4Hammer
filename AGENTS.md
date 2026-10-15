@@ -589,3 +589,45 @@ zero after a linker failure, so require an actual runnable executable. The
 saved cloud install/start draft pins0.4.18 and includes the runtime links;
 saving the draft does not publish it. Follow the final ROADMAP evidence for
 mutation/replay scope and the remaining17.P/17.Q fixes.
+
+
+## Final25 standard Orks adapters —17.P3
+
+Read [the final-card guide](doc/orks-remaining-units.md) and ROADMAP.md. All54
+included standard cards now have profile/loadout/source adapters. The final25
+use `orks_remaining_data.rl` and `orks_remaining_rules.rl`; their111 new native
+regressions bring the suite to1,105 passing assertions. Source metadata still
+includes excluded identities for stable catalogs/permission audits, not playable
+Forge World/Legends factories. Arbitrary public roster selection and the known
+performance/rendered fixes remain mandatory17.Q work.
+
+User policy2026-10-15 authorizes deliberately imprecise large circles for
+Use-model hulls. Zero constructor input selects160mm Battlewagon/Gunwagon/Bunka,
+100mm Mek Gunz,240mm Stompa,140mm Trukk; a positive bounded diameter overrides
+it. These are arbitrary temporary proxies, not source dimensions. Keep source
+base metadata0 and use the shared model-radius adapter. Retain oval short axes
+and intentional long-axis circles. Preserve quads, bounded numeric state,
+generated lifecycle, CP accounting and excluded points/detachment prices.
+
+Keep source-event sequencing for bombs/withdrawals/Shadows/engines/Race; engine
+expiry is next own Command. Use separate trigger/effect codes (Burna141/176),
+original usage identities and one shared psychic-level pool. Registered sources
+must recheck the live conferring ability: surviving bodyguards do not keep
+Snikrot/Wartrike windows after their character dies. Preserve Squig Launchas hit
+provenance through grouping. Disembark never owns Movement:
+MovementPhase copies its completed/mode/slot results before tactical follow-up.
+Ordinary/reactive exits and datasheet psychic rolls each share one context slot.
+Makari/passenger/split-model editor choices use their real banks; keep Rules.gd
+and TraceManager.gd unchanged. Every new function/action still needs source
+rationale and actual regression coverage in its focused commit.
+
+Executed evidence is in ROADMAP:54-card/253-row HTML audit,41 permission edges,
+128 action routines/70 shared slots, Game40,096 / Board34,864 bytes; new111-case
+sanitizer sweep, separate actual semantic/action mutations, preserved memory
+replays/completed697-action game, ten Godot scripts and20-step finite Gym.
+Schemas35/23/35 (next36) and31,185 candidates/16,368,602 observations require
+matching clients. The public-roster Godot script exceeded180s concurrently and
+passed alone with600s timeout; retain the performance fix in17.Q rather than
+claiming a speedup. Native tests remain Rulebook/CTest, with no Python migration
+or build-cache infrastructure. RLC0.4.18 uses-j4 (written `-j 4`); keep debug
+unoptimized and optimized sanitizer builds separate.
