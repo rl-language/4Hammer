@@ -12,6 +12,7 @@ Use the [procedural rules reference](11th-edition-core-rules-procedural.txt) and
 - [State, identity and ownership](#state-identity-and-ownership)
 - [Bounded storage and observations](#bounded-storage-and-observations)
 - [Turn sequence and decision ownership](#turn-sequence-and-decision-ownership)
+- [Shared ability procedures](#shared-ability-procedures)
 - [Movement and placement](#movement-and-placement)
 - [Combat resolution](#combat-resolution)
 - [Effective characteristics and predicates](#effective-characteristics-and-predicates)
@@ -489,7 +490,7 @@ ctest --test-dir /workspace/4hammer-validation/current-tests \
   --output-on-failure -j 4
 ```
 
-The compiler worker count and CTest process count are independent. Debug compilation remains unoptimized; enable `RULE_TEST_OPTIMIZE` or `-O2` only for separate optimized validation. Direct builds use matching `rl_language`/`rl_language_core` 0.4.17 and `-j 4`. Sanitized fuzzer builds additionally require the matching Clang/LLVM runtime documented in tests/README.md.
+The compiler worker count and CTest process count are independent. Debug compilation remains unoptimized; enable `RULE_TEST_OPTIMIZE` or `-O2` only for separate optimized validation. Direct builds use matching `rl_language`/`rl_language_core` 0.4.18 and `-j 4`. Sanitized fuzzer builds additionally require the matching Clang/LLVM runtime documented in tests/README.md.
 
 Freeze test declarations before compiling/registering the final suite. Reconfigure CMake after discovery changes. Use explicit fixture metadata to prove a consumer works; a game using legacy armies may never exercise a new source ability. A sanitizer pass proves different properties from a semantic assertion, and a short mutation campaign cannot certify the entire rules edition. Documentation-only changes need link/source checks rather than repeating expensive engine builds.
 
@@ -518,30 +519,30 @@ The resumable-frame model gives the rules, UI, replay and learning clients a sha
 
 The generic action catalog makes host integration simple and exhaustive. Hosts currently scan it to find legal candidates, and generated wrapper fetching has a measured cost. Small coordinate domains reduce candidates; they do not remove wrapper overhead. The user assigns valid-action discovery optimization to the compiler and excludes rendered integration from17.Q; preserve the existing host discovery paths. Non-rendering integration evidence remains in ROADMAP.md.
 
-`rules.rl` remains a large orchestration module, with older combat/attachment and faction-specific paths beside the new helpers. A new implementation should follow its callers and the roadmap rather than infer completion from a type, enum entry or factory name. The attachment entrypoint now uses explicit reserve-bank Leader/Support roles and permission metadata; full current datasheet factories remain17.H–P.
+`rules.rl` remains a large orchestration module with active faction hooks beside the shared helpers. Follow actual callers and the roadmap rather than infer support from a type, enum entry or factory name. Attachments use explicit reserve-bank Leader/Support roles and permission metadata for the included Orks cards. The unused per-model `ModelAttack`/`ResolveWeapon` chain, `ReserveDeployment` wrapper and `PickUnit` spawn wizard have been removed. Public attacks use declared groups; reserve arrival belongs to `MovementPhase`; roster selection owns unit creation. The tested `single_attack` entrypoint and documented external `deployment_position_valid` helper remain available.
 
-Current gaps include ignore-modifier consumers beyond WS/BS and hit rolls, full current Orks profile/loadout/ability migration, other factions' attachment permissions, specialized source reactions, healing/revival/psychic consumers, and oval/hull/multipart geometry. All Forge World and Legends units are excluded by user direction; current Orks implementation targets the54 standard cards. The67-card source catalog retains historical identities. Points/DP accounting, continuous positions and exact body visibility are also excluded. See [the Orks audit](orks-codebase-audit.md), [coverage map](11th-edition-rule-coverage.md) and [ROADMAP.md](../ROADMAP.md) for precise ownership and source dependencies.
+The scoped54-card standard Orks implementation and shared healing/return/resource procedures are complete; broader faction catalogs, generic grant metadata and source dispatch remain separate refactor work. Other factions' current datasheets and attachment permissions, new mission data and exact oval/hull/multipart geometry still need supplied definitions or later work. Forge World/Legends, points/DP accounting, continuous positions and exact body visibility remain excluded. The67-card source catalog retains historical identities. See [ROADMAP.md](../ROADMAP.md) for current completion evidence; the original [coverage map](11th-edition-rule-coverage.md) and [Orks audit](orks-codebase-audit.md) describe earlier source inventories.
 
 For subsystem detail, use [attack declarations/dice](attack-declarations-dice.md), [damage/destruction](saves-damage-destruction.md), [movement/deployment](movement-deployment.md), [modifiers](model-characteristics.md), [physical weapons/compound dice](physical-weapons-compound-dice.md), [source effects](source-instances-effects.md) and [transports/Aircraft](transports-aircraft.md). Earlier reports contain historical schemas/test counts; current source and the latest roadmap completion section take precedence.
 
 For language syntax beyond this project's conventions, consult the official [language tour](https://rl-language.github.io/language_tour.html), [language reference](https://rl-language.github.io/language-reference.html) and [action library](https://rl-language.github.io/stdlib/action.html). Confirm version-sensitive behavior against the pinned compiler and its installed standard library.
 
-Current public Orks selection uses the current three-family starter, with real
-Warlord and attachment choices. War Horde Get Stuck In enters normal weapon
-declaration snapshots and duplicate-ability selection; it is not a timed aura.
-See [the roster/passive guide](orks-roster-war-horde.md). Other package effects
-remain independently tracked in ROADMAP.md.
+Public Orks selection supports all54 standard cards, with current Warlord,
+attachment and equipment choices; the three-family starter remains a fixture.
+War Horde Get Stuck In enters normal weapon declaration snapshots and
+duplicate-ability selection. See [the public roster guide](orks-custom-roster.md)
+and ROADMAP.md for current integration status.
 
 ## Ordinary Orks package integration
 
-Read [the detachment design](orks-detachments.md) for the four package modules, staged option choices, source generations, explicit cargo dependencies, offboard processing, healing/replacement identity and flat reaction wrappers. These modules connect to the existing core pipelines; they do not replace combat, source expiry or transport storage with independent implementations. State/observation32, action20 and next-state33 require matching regenerated artifacts. ROADMAP.md supplies completion evidence.
+Read [the detachment design](orks-detachments.md) for the four package modules, staged option choices, source generations, explicit cargo dependencies, offboard processing, healing/replacement identity and flat reaction wrappers. These modules connect to the existing core pipelines; they do not replace combat, source expiry or transport storage with independent implementations. Its schema32/20/33 figures describe the historical17.O batch; current versions are listed above and in ROADMAP.md.
 
 ## Elite, Mek and Gretchin adapters
 
 [The fourteen-card guide](orks-elites-meks-gretchin.md) describes17.P2. Its
 Command-healing sources dispatch through the ordinary controller-ordered timing
-window. A single shared `OrksComponentHealing` frame serves battlefield and
-offboard healing, including the older detachment wrapper. Battlefield returns
+window. Shared `UnitHealing` and `ModelReturn` frames in `healing_rules.rl` serve
+battlefield and offboard abilities without a detachment wrapper. Battlefield returns
 use original casualty identities and legal whole-quad placement; offboard
 returns check carrier capacity without external range measurements. Returning
 models retain physical weapon use and persisting effects and clear death-only

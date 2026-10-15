@@ -706,3 +706,11 @@ schema40/26 (state and observation40, action26, next-state41), validation and
 remaining scope. The6 new faction-free assertions bring native CTest to1,190
 assertions plus its compilation fixture. The generated Godot procedure test
 also covers faction-free resource/reroll, movement, healing and model return.
+
+The subsequent cleanup removes four unused legacy actions and five unused
+helpers; see ROADMAP.md for names and evidence. Public attacks use declarations,
+reserve arrivals use MovementPhase, and roster selection owns creation. Preserve
+the still-tested `single_attack`, documented external `deployment_position_valid`
+and compiler-invoked `gen_methods`/`fuzz`. Do not infer dead code from textual
+reference counts alone, or remove active Orks hooks before replacing their
+grant/source consumers. Original coverage inventories remain historical records.

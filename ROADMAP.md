@@ -1404,3 +1404,57 @@ architecture. Earlier17.Q broad-walkthrough/source-audit results remain their
 historical evidence; this batch reruns the21 focused host scripts, native suite,
 frame/ML checks, fresh game and sanitizer checks above. Future generic catalog,
 grant and source-dispatch work remains outside this completed procedure batch.
+
+## Cleanup after shared ability procedures
+
+- [x] Remove the unreachable `resolve_model_attack`/`resolve_weapon` chain.
+  Public combat already uses declarations and grouped resolution. Preserve
+  `single_attack`, which is still exercised by native regression fixtures.
+- [x] Remove unused `reserve_deployment` and `spawn_unit` actions and the
+  spawn-only `ProfileToUse`/`Player` enums. Actual arrivals stay in
+  `movement_phase`; actual creation stays in roster selection/data factories.
+- [x] Remove five unused helpers/wrappers: `model_weapon_range`,
+  `unit_has_ranged_rule`, `orks_post_attack_available`, `no_weapon_rules` and
+  the old `make_morgrim_butchas` roster wrapper. Their live effective-weapon,
+  targeted-card, weapon-rule and current roster paths remain in use.
+- [x] Check references across sources, tests, examples, host scripts and tools;
+  remove the deleted entries from the checked-in HTML overviews. Original
+  migration inventory references remain historical source evidence.
+- [x] Correct stale architecture text about the three-family-only roster,
+  pending Orks migration/consumers, old healing frames and compiler version.
+  Preserve the documented external `deployment_position_valid` helper and
+  implicit compiler entrypoints `gen_methods`/`fuzz`; a single textual occurrence
+  alone does not prove a public or reflected entrypoint is unused.
+- [x] Native CTest: all1,190 assertions and the compilation fixture pass
+  (296.85s including286.45s compilation, unoptimized-j4). Existing regressions
+  exercise the retained single-attack, arrival, roster, weapon and card paths;
+  no new mirrored tests were added for deleting unused code.
+- [x] Four fresh Godot smoke checks pass: shared procedures, custom roster,
+  weapons/sources and shared-bank controls, using regenerated header/extension
+  and the fresh native library. The full broad walkthrough was not repeated.
+- [x] Frame audit:121 routines, down from125;66 shared slots, no duplicates or
+  nested re-entry. Game34,160 / Board31,936 bytes remain unchanged.
+- [x] Exact generated layout comparison passes for Game (401 reachable types),
+  Board (375) and AnyGameAction (351), including fields, offsets, bounds encoded
+  in types and payload ordering. Schema40/26/41 is retained.
+- [x] All34 focused semantic sanitizer inputs plus empty input and both
+  preserved memory inputs pass. Separate semantic112-run/63s and action28-run/61s
+  mutation campaigns and the previous985-action completed-game replay pass ASAN/UBSAN/leak
+  checks; the replay takes81.33s. Fixed replay and mutation remain distinct.
+
+The two source commits remove185 runtime lines (143 from unreachable actions
+and their private enums,42 from unused helpers); no rule, field or supported
+action is added. Active Orks grant/registration hooks remain necessary until
+the separate generic-grant/source refactor replaces their consumers. Removing
+those hooks here would remove implemented abilities rather than clean up dead
+code. Artifacts are under `/workspace/4hammer-validation/cleanup`.
+
+Removing unused native exports still requires regenerating the Godot header
+and rebuilding its extension together with the native library. No supported
+Game field or payload is intentionally changed; compare their complete
+generated layouts and action ordering; this batch confirms schema40/26/41.
+
+**Cleanup complete:** two focused source commits remove185 runtime lines;
+the separate documentation/validation commit refreshes architecture and the
+frame inventory. Public gameplay, state layout, coordinates and discovery are
+unchanged. Active generic-grant/source work remains a future task.
