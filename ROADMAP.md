@@ -30,7 +30,7 @@ Use [the procedural reference](doc/11th-edition-core-rules-procedural.txt) as th
 | 14 | Complete within preserved-grid scope | Replace the Fight phase workflow | Implement phase-wide Pile In, alternating fights with the correct starting player, changing eligibility/Fights First, and phase-wide consolidation (pp. 38–43, 87). Test Overrun, newly engaged units and legal passing. |
 | 15 | Complete within deferred-data/visibility scope | Implement the revised core stratagems and actions | Implement each core stratagem's exact cost, timing, targets and effects (pp. 54–58). Include end-of-opponent-Movement Overwatch and end-of-Charge Heroic Intervention. Implement generic action eligibility without inventing unavailable mission actions. |
 | 16 | Complete within documented grid/data scope | Add transport and aircraft systems | Capacity, embarkation, disembarkation modes, emergency procedures, passenger/reserve interactions and Aircraft exceptions implemented and validated (pp. 64–65, 74). Actual datasheet permissions remain task 17. |
-| 17 | 54-card Orks implementation and public roster complete; final integration review running | Integrate army data, Godot and full-game validation | Update supplied new-edition datasheets, faction rules and mission configuration. Orks use up to three distinct detachments, no point/DP accounting, and full CP costs. Regenerate bindings and exercise every changed action through Godot, Python and replay. Run deterministic scenarios, completed games and the sanitized fuzzer; turn every discovered failure into a regression case. |
+| 17 | Complete within supplied Orks, grid and non-rendering scope | Integrate army data, Godot and full-game validation | Update supplied new-edition datasheets, faction rules and mission configuration. Orks use up to three distinct detachments, no point/DP accounting, and full CP costs. Regenerate bindings and exercise every changed action through Godot, Python and replay. Run deterministic scenarios, completed games and the sanitized fuzzer; turn every discovered failure into a regression case. |
 
 ## Dependencies and execution order
 
@@ -404,7 +404,7 @@ The corrected seed **40000** full-game check completes **920 actions**, terminal
 
 At task16 completion, task17 was next and task6 still awaited full datasheets. The following Orks audit now supplies its Orks permission lists; implementation remains pending.
 
-## Task 17 — Orks audit and configuration complete; faction mechanics in progress
+## Task 17 — Orks implementation and scoped integration complete
 
 The user now supplies the readable [Orks faction page](https://wahapedia.ru/wh40k11ed/factions/orks/) and directs this scope: **no army/unit/enhancement points, no detachment costs, up to three distinct selected detachments per player, and full CP costs**. This replaces the previously proposed point/DP-accounting batch. Do not make War Horde use three selection slots. Preserve non-price equipment/ability/attachment conditions and the user-directed quad/visibility/numeric-storage scope.
 
@@ -442,7 +442,7 @@ Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [t
 - [x] **17.O–P:** Remaining ordinary detachments and every remaining datasheet by dependency family. Include the additional Runt Swarm replacement/hit-interception systems. Preserve oval metadata and use the user-authorized long-axis circle approximation for now; hull/multipart dimensions remain explicit dependencies. Keep grid coordinates.
   - [x] **17.O:** All15 ordinary detachment passives,38 enhancements/upgrades and40 CP cards, including Runt Swarm replacements/interception; see combined completion evidence below.
   - [x] **17.P:** All51 additional standard datasheet adapters, actual carrier seating/permissions and source-specific unit rules are implemented and validated in17.P1–P3; all54 included cards have adapters. Arbitrary public roster selection remains17.Q.
-- [ ] **17.Q:** Complete the arbitrary current-card roster picker, non-rendering combination/integration checks, saves/replays/ML, representative full games and sanitized fuzzing; review errors and simplify shared code. User update2026-10-15 excludes rendered integration and assigns valid-action discovery/wrapper-filtering optimization to the compiler; earlier performance/rendered requirements below are historical and superseded. Fix all other identified mistakes.
+- [x] **17.Q:** Complete the arbitrary current-card roster picker, non-rendering combination/integration checks, saves/replays/ML, representative full games and sanitized fuzzing; review errors and simplify shared code. User update2026-10-15 excludes rendered integration and assigns valid-action discovery/wrapper-filtering optimization to the compiler; earlier performance/rendered requirements below are historical and superseded. Fix all other identified mistakes.
 
 **Confirmed work that must be fixed:**17.D resolves the eight-slot Stompa capacity defect with a reviewed13-profile envelope; actual unit loadout quotas/data remain pending; 17.C1 resolves the former positive-OR-only weapon/Hunter predicate defect; other scoped condition consumers remain pending; transport permission OR-lists and universal integer seat costs cannot implement all nine included carrier requirements or grouped Gretchin rounding. Static attack-characteristic getters and boolean bonuses lack several modifier consumers. 17.E resolves generic source-instance event/use/effect tracking alongside legacy timing groups; source-specific reactive movement/shooting handlers remain17.L/M. Healing/revival, psychic budgets, post-shoot hit ledgers, Kommandos formation splitting and Runt Swarm replacement/hit interception need implementation. Thirty datasheets require oval/hull/multipart footprint work or additional dimensions. Batch17.B resolves the point-dependent reserve gate through explicit point-free public configuration. These are requirements from source/code inspection, not newly passing tests.
 
@@ -1226,7 +1226,7 @@ Exact hull/oval geometry, points and Forge World/Legends remain excluded by the
 user. Preserve all identified remaining issues as mandatory fixes;54 adapters
 alone do not certify complete edition/mission/host integration.
 
-###17.Q — Public roster and shared-bank integration (2026-10-15)
+###17.Q — Public roster and shared-bank integration (complete,2026-10-15)
 
 Read [the public roster and integration guide](doc/orks-custom-roster.md).
 User scope excludes rendering and valid-action-discovery optimization; the latter
@@ -1277,8 +1277,12 @@ full-game checks use the explicitly labelled legacy four-marker fixture.
   Python on PATH. Repeating a filtered run takes0.16s with no recompilation.
 - [x] All four schema37 completed-game binaries replay with ASAN/UBSAN/leak
   checks enabled (77.7/138.8/136.4/92.4s), without diagnostics.
-- [ ] Complete the broad Godot host walkthrough; the1,184-case native CTest
-  result,20 focused headless scripts and four sanitized game replays are done.
+- [x] Complete the broad Godot host walkthrough: deployment/Command recovery,
+  terrain/objective saves, Explosives, keyword labels, Firing Deck offboard
+  context, shooting/save/allocation snapshots, multi-target charge/path restore,
+  Epic Challenge, Counteroffensive, Pile In, alternating fights and Fight on Death.
+  This passes in addition to all1,184 native assertions,20 focused Godot scripts
+  and four sanitized game replays.
 
 Artifacts are under `/workspace/4hammer-validation/orks-q`. The unoptimized
 CTest compilation fixture succeeds with-j4 (693.873s, peak1,866,536KiB under
@@ -1319,3 +1323,15 @@ fixtures confirm false results, crashes and XPASS fail; XFAIL returns77; unknown
 names and malformed signatures/manifests are rejected. The old Python runners
 were removed rather than retained as alternate test entrypoints. Historical
 state36 build timings above are not speed comparisons with the new test path.
+
+
+**17.Q completion:** all scoped rule, public-roster, non-rendering host, save,
+ML and sanitizer checks above pass on the final schema37 source. The broad
+Godot script completes with its final PASS and no reported errors/leaked
+instances; it takes approximately35 minutes through the unchanged production
+action-discovery path. The user owns discovery optimization in the compiler;
+no optimization or cache was introduced here. Rendered journeys remain excluded.
+The legacy four-marker mission, whole-inch quads, intentional circular footprint
+proxies and unavailable mission-specific new-edition data retain their explicit
+limits; this is scoped integration completion, not certification of unspecified
+missions or every possible army/ability combination.

@@ -667,3 +667,13 @@ for all units at STEP start (core p30; appendix01.02.04). A reserve/passenger un
 gaining shock during an earlier unit's test must not clear that new shock on a
 later passed test. The final Command-scan follow-up uses state/observation37,
 action24 and next-state38; earlier36/24 completion evidence is historical.
+
+
+17.Q is complete within the user's supplied Orks/non-rendering/grid scope.
+Final state/observation37, action24 and next-state38 pass1,184 native CTest
+assertions,20 focused Godot scripts plus the full broad walkthrough,54-card
+source audits, frame/finite-ML checks, four completed games and their sanitized
+replays,79 new semantic sanitizer cases and separate semantic/action mutation
+campaigns. See ROADMAP.md for exact evidence and remaining mission/geometry
+limits. The broad Godot run is slow through unchanged discovery; the user owns
+that compiler optimization. Pure Rulebook tests must remain entirely native.
