@@ -21,6 +21,16 @@ func on_state_change():
 	var added = 0
 	for action in GlobalRules.valid_actions:
 		var unwrapped = action.unwrap()
+		# Final current Orks decisions preserve single-enum/ID/bool action shapes.
+		# Makari and Pilin' Out choose banks; split models are not on the board.
+		if unwrapped is RLCGameChooseMakariUnit:
+			var bank = GlobalRules.state.get_board().get_orks_support_bank()
+			var units = GlobalRules.library.source_bank_unit(GlobalRules.state.get_board(), bank, unwrapped.get_member(0).get_id().get_value())
+			make_choise("Makari banner: " + RLCLib.convert_string(units.get_name().get_value()), action)
+			added += 1
+		if unwrapped is RLCGameChooseSplitKommando:
+			make_choise("Split Kommando model " + str(unwrapped.get_member(0).get_id().get_value() + 1), action)
+			added += 1
 		if unwrapped.members_count() == 0:
 			if unwrapped is RLCGameDoneDeploying:
 				# This finishes the current decision owner's deployment, not
@@ -84,6 +94,18 @@ func on_state_change():
 				label = "Roll two D6 and one extra Hazardous test" if unwrapped.get_member(0) else "Roll one D6"
 			if unwrapped is RLCGameUseUnstoppableAdvance:
 				label = "Use Advance result 6" if unwrapped.get_member(0) else "Keep rolled Advance result"
+			if unwrapped is RLCGameUseDatasheetWarpath:
+				label = "Use Warpath (psychic level 1)" if unwrapped.get_member(0) else "Fight without Warpath"
+			if unwrapped is RLCGameUseBeastscent:
+				label = "Use Beastscent (psychic level 1)" if unwrapped.get_member(0) else "Disembark without Beastscent"
+			if unwrapped is RLCGameUseShokkAttackEngine:
+				label = "Shokk Attack Engine: enter reserves" if unwrapped.get_member(0) else "Stay on battlefield"
+			if unwrapped is RLCGameChooseSupremeFixedFive:
+				label = "Supreme Kunnin: move up to 5 inches" if unwrapped.get_member(0) else "Roll D6 for Supreme Kunnin"
+			if unwrapped is RLCGameSplitKommandoUnit:
+				label = "Split Kommandos into two units of five" if unwrapped.get_member(0) else "Keep ten Kommandos together"
+			if unwrapped is RLCGameChooseSplitBombSquig:
+				label = "Bomb Squig in selected five" if unwrapped.get_member(0) else "Bomb Squig in remaining five"
 			if unwrapped is RLCGameChooseAssaultDisembark:
 				label = "Assault Disembark: may charge" if unwrapped.get_member(0) else "Rapid Disembark: cannot charge"
 			make_choise(label, action)
@@ -162,7 +184,7 @@ func on_state_change():
 			added += 1
 		# Parallel same-shape faction choices get explicit source buttons, so
 		# the click autodetector cannot hide a support/reaction selector.
-		if unwrapped is RLCGameUseDreadherderSupport or unwrapped is RLCGameUseOrksMovementSupport or unwrapped is RLCGameChooseOrksPackageSource or unwrapped is RLCGameChooseOrksAttackReactionUnit or unwrapped is RLCGameChooseOrksMoveReactionUnit or unwrapped is RLCGameChooseMobMentalitySource:
+		if unwrapped is RLCGameUseDreadherderSupport or unwrapped is RLCGameUseOrksMovementSupport or unwrapped is RLCGameChooseOrksPackageSource or unwrapped is RLCGameChooseOrksAttackReactionUnit or unwrapped is RLCGameChooseOrksMoveReactionUnit or unwrapped is RLCGameChooseMobMentalitySource or unwrapped is RLCGameUseOrksDatasheetMovement or unwrapped is RLCGameChooseSupremeKunninUnit:
 			var source_id = unwrapped.get_member(0).get_id().get_value()
 			var source_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_units(), source_id)
 			var label = "Movement abilities" if unwrapped is RLCGameUseOrksMovementSupport else "Resolve detachment rule"
@@ -170,6 +192,10 @@ func on_state_change():
 				label = "Reaction unit"
 			if unwrapped is RLCGameUseDreadherderSupport:
 				label = "Dreadherder"
+			if unwrapped is RLCGameUseOrksDatasheetMovement:
+				label = "Datasheet movement ability"
+			if unwrapped is RLCGameChooseSupremeKunninUnit:
+				label = "Supreme Kunnin"
 			if unwrapped is RLCGameChooseMobMentalitySource:
 				label = "Mob Mentality (1 CP)"
 			make_choise(label + ": " + RLCLib.convert_string(source_unit.get_name().get_value()), action)
@@ -186,11 +212,13 @@ func on_state_change():
 			make_choise("Offboard mortal wound: model " + str(model_id + 1), action)
 			added += 1
 		# Embarked selectors address the passenger bank, never battlefield IDs.
-		if unwrapped is RLCGameSelectDisembarkingUnit or unwrapped is RLCGameChooseEmergencyPassenger or unwrapped is RLCGameSelectFiringDeckPassenger:
+		if unwrapped is RLCGameSelectDisembarkingUnit or unwrapped is RLCGameChooseEmergencyPassenger or unwrapped is RLCGameSelectFiringDeckPassenger or unwrapped is RLCGameChoosePilinOutPassenger:
 			var passenger_id = unwrapped.get_member(0).get_id().get_value()
 			var passenger = GlobalRules.library.get(GlobalRules.state.get_board().get_embarked_units(), passenger_id)
 			var passenger_name = RLCLib.convert_string(passenger.get_name().get_value())
 			var prefix = "Disembark" if unwrapped is RLCGameSelectDisembarkingUnit else "Emergency disembark"
+			if unwrapped is RLCGameChoosePilinOutPassenger:
+				prefix = "Pilin Out: rapid disembark"
 			if unwrapped is RLCGameSelectFiringDeckPassenger:
 				prefix = "Firing Deck passenger"
 			make_choise(prefix + ": " + passenger_name, action)
@@ -267,7 +295,7 @@ func on_state_change():
 			added += 1
 		# Targeted current Orks effects retain one-UnitID click discovery and also
 		# offer named buttons, so the selected effect is explicit to the player.
-		if unwrapped is RLCGameChooseKeepHuntinTarget or unwrapped is RLCGameChooseBombSquigTarget or unwrapped is RLCGameChooseMobbedTarget or unwrapped is RLCGameChooseMekRepairUnit or unwrapped is RLCGameChoosePainbossHealingUnit or unwrapped is RLCGameChoosePulsaTarget or unwrapped is RLCGameChooseImpetusTarget or unwrapped is RLCGameChooseRokkitBarrageTarget:
+		if unwrapped is RLCGameChooseKeepHuntinTarget or unwrapped is RLCGameChooseBombSquigTarget or unwrapped is RLCGameChooseMobbedTarget or unwrapped is RLCGameChooseMekRepairUnit or unwrapped is RLCGameChoosePainbossHealingUnit or unwrapped is RLCGameChoosePulsaTarget or unwrapped is RLCGameChooseImpetusTarget or unwrapped is RLCGameChooseRokkitBarrageTarget or unwrapped is RLCGameChooseAircraftBombTarget or unwrapped is RLCGameChooseRaceTarget or unwrapped is RLCGameChooseDatasheetMoveTarget or unwrapped is RLCGameChooseDatasheetHitTarget:
 			var target_id = unwrapped.get_member(0).get_id().get_value()
 			var target_unit = GlobalRules.library.get(GlobalRules.state.get_board().get_units(), target_id)
 			var effect = "Keep Huntin'" if unwrapped is RLCGameChooseKeepHuntinTarget else "Bomb Squig"
@@ -281,6 +309,14 @@ func on_state_change():
 				effect = "Pulsa Rokkit"
 			if unwrapped is RLCGameChooseImpetusTarget:
 				effect = "Krushin' Impetus"
+			if unwrapped is RLCGameChooseAircraftBombTarget:
+				effect = "Aircraft bomb"
+			if unwrapped is RLCGameChooseRaceTarget:
+				effect = "Get Back in da Race"
+			if unwrapped is RLCGameChooseDatasheetMoveTarget:
+				effect = "Movement ability target"
+			if unwrapped is RLCGameChooseDatasheetHitTarget:
+				effect = "Hit effect target"
 			if unwrapped is RLCGameChooseRokkitBarrageTarget:
 				effect = "Rokkit Barrage"
 			make_choise(effect + ": " + RLCLib.convert_string(target_unit.get_name().get_value()), action)
