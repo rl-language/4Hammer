@@ -1090,12 +1090,6 @@ fun model_weapon_modifiers(Model model, Int slot, ModifiedCharacteristic kind, B
             result.append(entry.modifier)
     return result
 
-# Range modifiers cannot turn the 'Melee' sentinel into a ranged profile
-# (p.16; appendix02.02.01). Range legality uses the actual effective value.
-fun model_weapon_range(Model model, Weapon weapon, Int slot, Bool borrowed) -> Int:
-    let modifiers = model_weapon_modifiers(model, slot, ModifiedCharacteristic::range, borrowed)
-    return modified_characteristic(weapon.range(), ModifiedCharacteristic::range, modifiers, weapon.range() == 0)
-
 fun make_tantus() -> Unit:
     let profile : Unit 
     let model : Model
@@ -1618,19 +1612,6 @@ fun make_zarkan_deamonkin(UnitVector out, Bool owner) -> Faction:
     out.append(make_legionaries())
     out.back().owned_by_player1 = owner
     return Faction::zarkan_daemonkin
-
-# Historical core-test scaffold only. Public pick_army now uses the source-
-# backed make_orks_starter_roster; this old data grants no current Orks rules.
-fun make_morgrim_butchas(UnitVector out, Bool owner) -> Faction:
-    out.append(make_beastboss_morgrim())
-    out.back().owned_by_player1 = owner
-    out.append(make_squighog_boyz())
-    out.back().owned_by_player1 = owner
-    out.append(make_beast_snagga_boyz())
-    out.back().owned_by_player1 = owner
-    out.append(make_beast_snagga_boyz())
-    out.back().owned_by_player1 = owner
-    return Faction::morgrim_butchas
 
 fun make_tristrean_gilded_blade(UnitVector out, Bool owner) -> Faction:
     # 1) Tristraen

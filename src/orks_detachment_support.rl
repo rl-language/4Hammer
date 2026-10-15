@@ -473,16 +473,6 @@ fun orks_original_type(Unit unit, OrksDatasheet kind) -> Bool:
             return true
     return false
 
-# Any optional absent card exits automatically. Infested's2CP cost and Grot
-# Shield damage can create a relevant death even outside declared targets.
-fun orks_post_attack_available(Board board, UnitID attacker, Bool melee) -> Bool:
-    let target : UnitID
-    for slot in range(board.units.size()):
-        target = slot
-        if orks_post_attack_card_valid(board, attacker, target, Stratagem::orks_infested_war_zone, melee) or orks_post_attack_card_valid(board, attacker, target, Stratagem::orks_grab_it, melee) or orks_post_attack_card_valid(board, attacker, target, Stratagem::orks_gun_crazy_show_offs, melee) or orks_post_attack_card_valid(board, attacker, target, Stratagem::orks_goaded_into_action, melee):
-            return true
-    return false
-
 # A selected beneficiary must offer an actual source card, not just have a
 # ledger entry. Separate UnitID and Stratagem choices avoid a large product.
 fun orks_post_attack_target_valid(Board board, UnitID attacker, UnitID target, Bool melee) -> Bool:

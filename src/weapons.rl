@@ -142,10 +142,6 @@ fun weapon_rule(WeaponRuleKind kind) -> WeaponRule:
 
 using WeaponRules = Vector<WeaponRule>
 
-fun no_weapon_rules() -> WeaponRules:
-    let to_return : WeaponRules
-    return to_return
-
 fun weapon_rules() -> WeaponRules:
     let to_return : WeaponRules
     return to_return

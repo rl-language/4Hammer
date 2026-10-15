@@ -5,15 +5,6 @@ import movement_rules
 fun close_quarters_weapon(Weapon weapon) -> Bool:
     return weapon.has_rule(WeaponRuleKind::pistol) or weapon.has_rule(WeaponRuleKind::close_quarters)
 
-# Unit eligibility is based on live bearers, not retained casualties (pp.34–35/87).
-fun unit_has_ranged_rule(Unit unit, WeaponRuleKind kind) -> Bool:
-    for i in range(unit.models.size()):
-        if unit[i].is_alive():
-            for j in range(unit[i].weapons.size()):
-                if unit[i].weapons[j].range() > 0 and (model_weapon_has_rule(unit[i], j, kind) or unit.has_temporary_wepon_rule(kind)):
-                    return true
-    return false
-
 # A mixed unit's Monster/Vehicle qualification is unit-wide; per-model weapon
 # permission and penalties are assessed separately (pp.35/62–63).
 fun monster_vehicle_model(Model model) -> Bool:
