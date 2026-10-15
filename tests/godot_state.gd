@@ -36,7 +36,7 @@ func check_bindings():
 	assert(rules.library.get_state_schema_version() == 36)
 	assert(rules.library.get_action_schema_version() == 24)
 	assert(rules.library.get_observation_schema_version() == 36)
-	assert(rules.valid_actions.size() == 6)
+	assert(rules.valid_actions.size() == 7)
 	# User-directed configuration: actual enum buttons, unique picks, saved
 	# pending selection and automatic handoff after the third package.
 	rules.apply_action(RLCGamePickMorgrimButcha.make())
@@ -75,7 +75,7 @@ func check_bindings():
 	rules.reset()
 	var choose = RLCGamePickInsidiousInfiltrators.make()
 	rules.apply_action(choose)
-	assert(rules.valid_actions.size() == 6)
+	assert(rules.valid_actions.size() == 7)
 	rules.apply_action(RLCGamePickStrikeForceOctavious.make())
 	# Source-backed attachment fixture: legacy Space Marine profiles do not
 	# supply current permissions. Configure one explicit pair for the pending

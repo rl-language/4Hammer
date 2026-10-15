@@ -561,6 +561,16 @@ fun register_orks_option_passives(Board board):
                 if !orks_unit_source_registered(board, instance):
                     let handle = register_source_instance(board, instance)
 
+# One source-backed Battleline predicate serves both draft acceptance and the
+# committed roster: Runt Swarm/Gretchin, Kult/Warbikers, Brigade/Stormboyz.
+fun orks_force_battleline(Board board, Unit unit) -> Bool:
+    return (orks_package(board, unit, OrksDetachment::runt_swarm) and orks_type(unit, OrksDatasheet::gretchin)) or (orks_package(board, unit, OrksDetachment::kult_of_speed) and orks_type(unit, OrksDatasheet::warbikers)) or (orks_package(board, unit, OrksDetachment::taktikal_brigade) and orks_type(unit, OrksDatasheet::stormboyz))
+
+# User-supplied copy limits apply to effective Battleline membership at muster.
+# Reuse this for draft choices and the final pre-attachment roster validation.
+fun orks_muster_copy_limit(Board board, Unit unit) -> Int:
+    return 3 + 3 * int(unit.has_keyword(Keyword::battleline) or orks_force_battleline(board, unit))
+
 # Force dispositions change Battleline membership at muster without changing
 # unit prices or adding new datasheets (Sneaky Little Gitz/Adrenaline Junkies/
 # Suspiciously Well Organised). Replacement units retain the original trait.
@@ -570,10 +580,7 @@ fun register_orks_force_dispositions(Board board):
         bank.value = bank_index
         for unit_index in range(source_bank_size(board, bank)):
             ref unit = source_bank_unit(board, bank, unit_index)
-            let battleline = orks_package(board, unit, OrksDetachment::runt_swarm) and orks_type(unit, OrksDatasheet::gretchin)
-            battleline = battleline or (orks_package(board, unit, OrksDetachment::kult_of_speed) and orks_type(unit, OrksDatasheet::warbikers))
-            battleline = battleline or (orks_package(board, unit, OrksDetachment::taktikal_brigade) and orks_type(unit, OrksDatasheet::stormboyz))
-            if battleline:
+            if orks_force_battleline(board, unit):
                 for bearer in range(unit.models.size()):
                     if !unit[bearer].has_keyword(Keyword::battleline):
                         unit[bearer].keywords.append(Keyword::battleline)
@@ -1092,7 +1099,7 @@ fun orks_muster_copies_valid(Board board) -> Bool:
             ref candidate = board.reserve_units[other]
             if !candidate.models.empty() and candidate.owned_by_player1 == unit.owned_by_player1 and candidate[0].datasheet.value == code:
                 copies = copies + 1
-        if copies > 3 + 3 * int(unit.has_keyword(Keyword::battleline)):
+        if copies > orks_muster_copy_limit(board, unit):
             return false
     return true
 

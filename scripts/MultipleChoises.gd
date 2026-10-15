@@ -21,6 +21,29 @@ func on_state_change():
 	var added = 0
 	for action in GlobalRules.valid_actions:
 		var unwrapped = action.unwrap()
+		# Custom muster choices operate on the draft/reserve bank, before the
+		# battlefield exists. Names use the same native source-backed adapters.
+		if unwrapped is RLCGameChooseOrksMusterUnit:
+			make_choise("Add Orks unit: " + str(GlobalRules.library.label(unwrapped.get_member(0))), action)
+			added += 1
+			continue
+		if unwrapped is RLCGameSelectOrksMusterModel:
+			make_choise("Equipment for model " + str(unwrapped.get_member(0).get_id().get_value() + 1), action)
+			added += 1
+			continue
+		if unwrapped is RLCGameChooseOrksMusterField:
+			make_choise(RLCLib.convert_string(GlobalRules.library.orks_active_muster_field_label(GlobalRules.state.get_board(), unwrapped.get_member(0))), action)
+			added += 1
+			continue
+		if unwrapped is RLCGameChooseOrksMusterValue:
+			make_choise(RLCLib.convert_string(GlobalRules.library.orks_active_muster_value_label(GlobalRules.state.get_board(), unwrapped.get_member(0).get_value())), action)
+			added += 1
+			continue
+		if unwrapped is RLCGameRemoveOrksMusterUnit:
+			var unit = GlobalRules.library.get(GlobalRules.state.get_board().get_reserve_units(), unwrapped.get_member(0).get_id().get_value())
+			make_choise("Remove from roster: " + RLCLib.convert_string(unit.get_name().get_value()), action)
+			added += 1
+			continue
 		# Final current Orks decisions preserve single-enum/ID/bool action shapes.
 		# Makari and Pilin' Out choose banks; split models are not on the board.
 		if unwrapped is RLCGameChooseMakariUnit:
@@ -39,6 +62,14 @@ func on_state_change():
 				make_choise("Done deploying army " + str(army), action)
 			elif unwrapped is RLCGameDestroyUnplaceableUnit:
 				make_choise("Destroy unplaceable unit", action)
+			elif unwrapped is RLCGamePickCustomOrks:
+				make_choise("Orks (custom roster)", action)
+			elif unwrapped is RLCGameFinishOrksRoster:
+				make_choise("Finish Orks roster", action)
+			elif unwrapped is RLCGameAddOrksMusterUnit:
+				make_choise("Add unit to roster", action)
+			elif unwrapped is RLCGameCancelOrksMusterUnit:
+				make_choise("Cancel unit", action)
 			elif unwrapped is RLCGamePickMorgrimButcha:
 				make_choise("Orks (current units)", action)
 			elif unwrapped is RLCGameFinishDetachmentSelection:

@@ -25,6 +25,7 @@ import attachment_rules
 import orks_unit_data
 import orks_unit_rules
 import orks_datasheet_rules
+import orks_roster
 import orks_remaining_rules
 import orks_remaining_data
 import orks_elite_data
@@ -3255,7 +3256,11 @@ act select_orks_detachments(ctx Board board, frm Bool detachment_player) -> Sele
 # casualty bookkeeping (attachments pp.66–67; destruction/returns pp.19/88).
 act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
     board.current_decision_maker = current_player
+    frm custom_orks = false
     actions:
+        act pick_custom_orks()
+        board.players_faction[int(current_player)] = Faction::morgrim_butchas
+        custom_orks = true
         act pick_strike_force_octavious()
         board.players_faction[int(current_player)] = make_octavious_strike_force(board.reserve_units, current_player)
         act pick_insidious_infiltrators()
@@ -3277,7 +3282,20 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
     board.identify_units()
     board.shared_actions.select_orks_detachments = select_orks_detachments(board, current_player)
     subaction*(board) board.shared_actions.select_orks_detachments
+    if custom_orks:
+        subaction*(board) roster = build_orks_roster(board, current_player)
     board.shared_actions.select_orks_options = select_orks_options(board, current_player)
     subaction*(board) board.shared_actions.select_orks_options
     board.shared_actions.select_orks_warlord = select_orks_warlord(board, current_player)
     subaction*(board) board.shared_actions.select_orks_warlord
+
+# UI infrastructure reads the one active draft frame; no second Board/Unit
+# copy or alternative roster validator is installed in the host.
+fun orks_active_muster_field_label(Board board, OrksMusterField field) -> String:
+    ref entry = board.shared_actions.pick_army.roster.entry
+    return orks_muster_field_label(entry.draft, entry.member_index.get(), field)
+
+# Label a numeric input with its real source weapon/equipment choice.
+fun orks_active_muster_value_label(Board board, Int value) -> String:
+    ref entry = board.shared_actions.pick_army.roster.entry
+    return orks_muster_value_label(entry.draft, entry.member_index.get(), entry.field, value)

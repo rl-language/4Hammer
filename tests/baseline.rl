@@ -10875,9 +10875,12 @@ fun test_orks17all_roster_three_and_six_copy_limits() -> Bool:
     let board = orks17all_option_board(4, OrksDetachment::runt_swarm, false)
     for slot in range(board.reserve_units.size()):
         orks17all_tag(board.reserve_units[slot], OrksDatasheet::gretchin)
+    let effective = orks_muster_copies_valid(board)
+    board.armies[0].detachments.clear()
     let limited = !orks_muster_copies_valid(board)
+    let selected = board.armies[0].record_detachment(OrksDetachment::runt_swarm)
     register_orks_force_dispositions(board)
-    return limited and orks_muster_copies_valid(board) and board.reserve_units[0].has_keyword(Keyword::battleline)
+    return effective and limited and selected and orks_muster_copies_valid(board) and board.reserve_units[0].has_keyword(Keyword::battleline)
 
 # Literal card actor fixtures keep applicability separate from expected effect.
 # They use controlled stats and tags, not fabricated production datasheets.
@@ -14486,6 +14489,352 @@ fun test_orks17p3_immobile_cannot_charge_surge_or_pile_in() -> Bool:
     let finish = geometry_point(6 * MICROMETRES_PER_INCH, 5 * MICROMETRES_PER_INCH, 0)
     return !charge_source_valid(board, unit_id(0), false) and !model_segment_valid(board, board[0], board[0][0], start, finish, policy) and melee_model_locked(board, board[0][0], board[0], MeleeMoveKind::pile_in)
 
+# Each current card is actually accepted through the public muster child;
+# this is stronger than a factory allowlist or a source-enum membership test.
+fun orks17q_muster_card(OrksDatasheet sheet) -> Bool:
+    let board : Board
+    board.armies[0].faction = ArmyFaction::orks
+    let sequence = muster_orks_unit(board, false, sheet)
+    if !(can sequence.add_orks_muster_unit(board)):
+        return false
+    sequence.add_orks_muster_unit(board)
+    return sequence.is_done() and board.reserve_units.size() == 1 and board.reserve_units[0][0].datasheet.value == sheet.value and board.reserve_units[0].models.size() == orks_muster_min(sheet) and valid_state_foundations(board)
+
+# Source: Orks/bannernob; public source-backed roster adapter.
+fun test_orks17q_muster_bannernob() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::bannernob)
+
+# Source: Orks/beastboss; public source-backed roster adapter.
+fun test_orks17q_muster_beastboss() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::beastboss)
+
+# Source: Orks/big_mek_dakkarig; public source-backed roster adapter.
+fun test_orks17q_muster_big_mek_dakkarig() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::big_mek_dakkarig)
+
+# Source: Orks/big_mek_with_shokk_attack_gun; public source-backed roster adapter.
+fun test_orks17q_muster_big_mek_with_shokk_attack_gun() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::big_mek_with_shokk_attack_gun)
+
+# Source: Orks/bigboss; public source-backed roster adapter.
+fun test_orks17q_muster_bigboss() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::bigboss)
+
+# Source: Orks/blitza_bommer; public source-backed roster adapter.
+fun test_orks17q_muster_blitza_bommer() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::blitza_bommer)
+
+# Source: Orks/boss_snikrot; public source-backed roster adapter.
+fun test_orks17q_muster_boss_snikrot() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::boss_snikrot)
+
+# Source: Orks/deffkilla_wartrike; public source-backed roster adapter.
+fun test_orks17q_muster_deffkilla_wartrike() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::deffkilla_wartrike)
+
+# Source: Orks/ghazghkull_thraka; public source-backed roster adapter.
+fun test_orks17q_muster_ghazghkull_thraka() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::ghazghkull_thraka)
+
+# Source: Orks/gorkanaut; public source-backed roster adapter.
+fun test_orks17q_muster_gorkanaut() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::gorkanaut)
+
+# Source: Orks/hunta_rig; public source-backed roster adapter.
+fun test_orks17q_muster_hunta_rig() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::hunta_rig)
+
+# Source: Orks/kill_rig; public source-backed roster adapter.
+fun test_orks17q_muster_kill_rig() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::kill_rig)
+
+# Source: Orks/mek; public source-backed roster adapter.
+fun test_orks17q_muster_mek() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::mek)
+
+# Source: Orks/morkanaut; public source-backed roster adapter.
+fun test_orks17q_muster_morkanaut() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::morkanaut)
+
+# Source: Orks/mozrog_skragbad; public source-backed roster adapter.
+fun test_orks17q_muster_mozrog_skragbad() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::mozrog_skragbad)
+
+# Source: Orks/nazdreg; public source-backed roster adapter.
+fun test_orks17q_muster_nazdreg() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::nazdreg)
+
+# Source: Orks/painboss; public source-backed roster adapter.
+fun test_orks17q_muster_painboss() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::painboss)
+
+# Source: Orks/painboy; public source-backed roster adapter.
+fun test_orks17q_muster_painboy() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::painboy)
+
+# Source: Orks/runtherd; public source-backed roster adapter.
+fun test_orks17q_muster_runtherd() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::runtherd)
+
+# Source: Orks/warboss_in_mega_armour; public source-backed roster adapter.
+fun test_orks17q_muster_warboss_in_mega_armour() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::warboss_in_mega_armour)
+
+# Source: Orks/wazdakka_gutsmek; public source-backed roster adapter.
+fun test_orks17q_muster_wazdakka_gutsmek() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::wazdakka_gutsmek)
+
+# Source: Orks/weirdboy; public source-backed roster adapter.
+fun test_orks17q_muster_weirdboy() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::weirdboy)
+
+# Source: Orks/zodgrod_wortsnagga; public source-backed roster adapter.
+fun test_orks17q_muster_zodgrod_wortsnagga() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::zodgrod_wortsnagga)
+
+# Source: Orks/battlewagon; public source-backed roster adapter.
+fun test_orks17q_muster_battlewagon() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::battlewagon)
+
+# Source: Orks/big_ed_bossbunka; public source-backed roster adapter.
+fun test_orks17q_muster_big_ed_bossbunka() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::big_ed_bossbunka)
+
+# Source: Orks/gunwagon; public source-backed roster adapter.
+fun test_orks17q_muster_gunwagon() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::gunwagon)
+
+# Source: Orks/big_mek; public source-backed roster adapter.
+fun test_orks17q_muster_big_mek() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::big_mek)
+
+# Source: Orks/big_mek_in_mega_armour; public source-backed roster adapter.
+fun test_orks17q_muster_big_mek_in_mega_armour() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::big_mek_in_mega_armour)
+
+# Source: Orks/beastboss_on_squigosaur; public source-backed roster adapter.
+fun test_orks17q_muster_beastboss_on_squigosaur() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::beastboss_on_squigosaur)
+
+# Source: Orks/burna_bommer; public source-backed roster adapter.
+fun test_orks17q_muster_burna_bommer() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::burna_bommer)
+
+# Source: Orks/dakkajet; public source-backed roster adapter.
+fun test_orks17q_muster_dakkajet() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::dakkajet)
+
+# Source: Orks/deff_dread; public source-backed roster adapter.
+fun test_orks17q_muster_deff_dread() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::deff_dread)
+
+# Source: Orks/stompa; public source-backed roster adapter.
+fun test_orks17q_muster_stompa() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::stompa)
+
+# Source: Orks/trukk; public source-backed roster adapter.
+fun test_orks17q_muster_trukk() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::trukk)
+
+# Source: Orks/warboss; public source-backed roster adapter.
+fun test_orks17q_muster_warboss() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::warboss)
+
+# Source: Orks/wazbom_blastajet; public source-backed roster adapter.
+fun test_orks17q_muster_wazbom_blastajet() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::wazbom_blastajet)
+
+# Source: Orks/beast_snagga_boyz; public source-backed roster adapter.
+fun test_orks17q_muster_beast_snagga_boyz() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::beast_snagga_boyz)
+
+# Source: Orks/squighog_boyz; public source-backed roster adapter.
+fun test_orks17q_muster_squighog_boyz() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::squighog_boyz)
+
+# Source: Orks/stormboyz; public source-backed roster adapter.
+fun test_orks17q_muster_stormboyz() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::stormboyz)
+
+# Source: Orks/warbikers; public source-backed roster adapter.
+fun test_orks17q_muster_warbikers() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::warbikers)
+
+# Source: Orks/killa_kans; public source-backed roster adapter.
+fun test_orks17q_muster_killa_kans() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::killa_kans)
+
+# Source: Orks/flash_gitz; public source-backed roster adapter.
+fun test_orks17q_muster_flash_gitz() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::flash_gitz)
+
+# Source: Orks/gretchin; public source-backed roster adapter.
+fun test_orks17q_muster_gretchin() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::gretchin)
+
+# Source: Orks/wartrakks; public source-backed roster adapter.
+fun test_orks17q_muster_wartrakks() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::wartrakks)
+
+# Source: Orks/rukkatrukk_squigbuggies; public source-backed roster adapter.
+fun test_orks17q_muster_rukkatrukk_squigbuggies() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::rukkatrukk_squigbuggies)
+
+# Source: Orks/breaka_boyz; public source-backed roster adapter.
+fun test_orks17q_muster_breaka_boyz() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::breaka_boyz)
+
+# Source: Orks/tankbustas; public source-backed roster adapter.
+fun test_orks17q_muster_tankbustas() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::tankbustas)
+
+# Source: Orks/boyz; public source-backed roster adapter.
+fun test_orks17q_muster_boyz() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::boyz)
+
+# Source: Orks/nobz; public source-backed roster adapter.
+fun test_orks17q_muster_nobz() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::nobz)
+
+# Source: Orks/meganobz; public source-backed roster adapter.
+fun test_orks17q_muster_meganobz() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::meganobz)
+
+# Source: Orks/deffkoptas; public source-backed roster adapter.
+fun test_orks17q_muster_deffkoptas() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::deffkoptas)
+
+# Source: Orks/warbuggies; public source-backed roster adapter.
+fun test_orks17q_muster_warbuggies() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::warbuggies)
+
+# Source: Orks/mek_gunz; public source-backed roster adapter.
+fun test_orks17q_muster_mek_gunz() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::mek_gunz)
+
+# Source: Orks/kommandos; public source-backed roster adapter.
+fun test_orks17q_muster_kommandos() -> Bool:
+    return orks17q_muster_card(OrksDatasheet::kommandos)
+
+# Every declared model count, including intermediate unpriced sizes, is
+# reachable through the editor field path and accepted by the source factory.
+fun test_orks17q_all_composition_counts_reachable() -> Bool:
+    let valid = true
+    let sheet : OrksDatasheet
+    for code in range(68):
+        sheet.value = code
+        if !orks_muster_included(sheet):
+            continue
+        let initial = orks_muster_draft(sheet)
+        if orks_muster_min(sheet) == orks_muster_max(sheet):
+            continue
+        let count = orks_muster_min(sheet)
+        while count <= orks_muster_max(sheet):
+            valid = valid and orks_muster_value_valid(initial, 0, OrksMusterField::models, count)
+            let draft = initial
+            assign_orks_muster_value(draft, 0, OrksMusterField::models, count)
+            let unit = make_orks_muster_unit(draft)
+            valid = valid and unit.models.size() == count
+            count = count + 1
+    return valid
+
+# Two Nobz remain legal with mixed guns; paired replacement is one atomic
+# choice, so it cannot leave a forbidden ranged weapon (Orks/Boyz).
+fun test_orks17q_muster_boyz_roles_paired_and_quotas() -> Bool:
+    let draft = orks_muster_draft(OrksDatasheet::boyz)
+    assign_orks_muster_value(draft, 0, OrksMusterField::models, 20)
+    let both_nobs = draft.nobs.value == 2 and orks_muster_valid(draft)
+    assign_orks_muster_value(draft, 0, OrksMusterField::primary, 2)
+    let paired = draft.equipment[0].secondary.value == 3 and orks_muster_valid(draft)
+    assign_orks_muster_value(draft, 2, OrksMusterField::primary, 1)
+    assign_orks_muster_value(draft, 3, OrksMusterField::primary, 1)
+    let quota = !orks_muster_value_valid(draft, 4, OrksMusterField::primary, 1)
+    let unit = make_orks_muster_unit(draft)
+    return both_nobs and paired and quota and unit.models.size() == 20 and unit[0].profile.value == Profile::orks_boyz_nob.value
+
+# Distinct restricted Nob weapons each retain their own per-five quota.
+fun test_orks17q_muster_nobz_quota_is_atomic() -> Bool:
+    let draft = orks_muster_draft(OrksDatasheet::nobz)
+    assign_orks_muster_value(draft, 0, OrksMusterField::primary, 2)
+    return orks_muster_valid(draft) and !orks_muster_value_valid(draft, 1, OrksMusterField::primary, 2) and draft.equipment[1].primary.value == 0 and orks_muster_value_valid(draft, 1, OrksMusterField::primary, 3)
+
+# Kommandos' independent extra slots may share a Boy, but cannot exceed the
+# source's one/one/one/two quotas. Nob replacements remain independent.
+fun test_orks17q_muster_kommando_independent_slots() -> Bool:
+    let draft = orks_muster_draft(OrksDatasheet::kommandos)
+    assign_orks_muster_value(draft, 1, OrksMusterField::extra_one, 1)
+    assign_orks_muster_value(draft, 1, OrksMusterField::extra_two, 1)
+    assign_orks_muster_value(draft, 1, OrksMusterField::extra_three, 1)
+    assign_orks_muster_value(draft, 1, OrksMusterField::extra_four, 1)
+    let unit = make_orks_muster_unit(draft)
+    return unit[1].weapons.size() == 6 and !orks_muster_value_valid(draft, 2, OrksMusterField::extra_one, 1) and orks_muster_value_valid(draft, 2, OrksMusterField::extra_four, 1)
+
+# Draft editing checks individual Koptas and each gun's independent type;
+# these choices affect real weapon identities, not display-only metadata.
+fun test_orks17q_muster_vehicle_individual_options() -> Bool:
+    let koptas = orks_muster_draft(OrksDatasheet::deffkoptas)
+    assign_orks_muster_value(koptas, 1, OrksMusterField::extra_one, 1)
+    let kopta_quota = !orks_muster_value_valid(koptas, 2, OrksMusterField::extra_one, 1)
+    let guns = orks_muster_draft(OrksDatasheet::mek_gunz)
+    assign_orks_muster_value(guns, 0, OrksMusterField::models, 3)
+    assign_orks_muster_value(guns, 1, OrksMusterField::primary, 1)
+    assign_orks_muster_value(guns, 2, OrksMusterField::primary, 3)
+    let unit = make_orks_muster_unit(guns)
+    return kopta_quota and unit.models.size() == 3 and unit[1].weapon_profile_names[0].value == NamedWeaponProfile::bubblechukka.value and unit[2].weapon_profile_names[0].value == NamedWeaponProfile::traktor_kannon.value
+
+# Cancelled drafts consume neither roster capacity nor persistent identities.
+fun test_orks17q_muster_cancel_and_invalid_value() -> Bool:
+    let board : Board
+    let sequence = muster_orks_unit(board, false, OrksDatasheet::deff_dread)
+    let field : OrksMusterField
+    field = OrksMusterField::primary
+    sequence.choose_orks_muster_field(board, field)
+    let value : OrksMusterValue
+    value = 1
+    let no_skorcha_first = !(can sequence.choose_orks_muster_value(board, value))
+    value = 2
+    sequence.choose_orks_muster_value(board, value)
+    sequence.cancel_orks_muster_unit(board)
+    let untouched = board.next_identity.value == 0
+    board.next_identity = MAX_ENTITY_IDENTITIES
+    let full_identity_domain = !orks_muster_add_valid(board, false, orks_muster_draft(OrksDatasheet::warboss))
+    return no_skorcha_first and sequence.is_done() and board.reserve_units.empty() and untouched and full_identity_domain
+
+# Public finish requires a Character for Warlord selection; later opposite
+# army decisions cannot be skipped or addressed through the wrong bank.
+fun test_orks17q_muster_finish_requires_character_and_owns_roster() -> Bool:
+    let board : Board
+    board.armies[0].faction = ArmyFaction::orks
+    let roster = build_orks_roster(board, false)
+    let empty = !(can roster.finish_orks_roster(board))
+    roster.choose_orks_muster_unit(board, OrksDatasheet::beastboss)
+    roster.add_orks_muster_unit(board)
+    let ready = can roster.finish_orks_roster(board)
+    roster.finish_orks_roster(board)
+    return empty and ready and roster.is_done() and !board.current_decision_maker and board.reserve_units.size() == 1
+
+# Explicit user3/6 limits apply before committing a fourth unit; selected
+# force dispositions participate without repeatedly registering all sources.
+fun test_orks17q_muster_copy_limits_and_battleline_disposition() -> Bool:
+    let board : Board
+    board.armies[0].faction = ArmyFaction::orks
+    let draft = orks_muster_draft(OrksDatasheet::gretchin)
+    for index in range(3):
+        board.reserve_units.append(make_orks_muster_unit(draft))
+    let ordinary = !orks_muster_add_valid(board, false, draft)
+    let recorded = board.armies[0].record_detachment(OrksDetachment::runt_swarm)
+    let more = orks_muster_add_valid(board, false, draft)
+    for extra_index in range(3):
+        board.reserve_units.append(make_orks_muster_unit(draft))
+    return ordinary and recorded and more and !orks_muster_add_valid(board, false, draft) and orks_muster_copies_valid(board)
+
+# All excluded identities stay unavailable through the actual public selector.
+fun test_orks17q_muster_excludes_legends_and_forge_world() -> Bool:
+    let board : Board
+    board.armies[0].faction = ArmyFaction::orks
+    let roster = build_orks_roster(board, false)
+    return !(can roster.choose_orks_muster_unit(board, OrksDatasheet::gargantuan_squiggoth)) and !(can roster.choose_orks_muster_unit(board, OrksDatasheet::boss_zagstruk)) and !(can roster.choose_orks_muster_unit(board, OrksDatasheet::unknown))
+
 # User ruling2026-10-15 and core Coherency FAQ: multiple nearby groups cannot replace one contiguous
 # unit, even when every model has a neighbour and all pairs are within9in.
 fun test_orks17q_coherency_rejects_disconnected_pairs() -> Bool:
@@ -14512,21 +14861,56 @@ fun test_orks17q_coherency_dead_bridge_does_not_connect() -> Bool:
     unit[2].state = ModelState::fight_on_death
     return before and !unit.is_coherent()
 
-# An unplaceable carrier is destroyed with its passengers, just like a carrier
-# that misses reserve arrival. Otherwise saved games retain dangling links
-# (user setup-failure ruling; core pp64/69).
-fun test_orks17q_unplaceable_carrier_removes_passenger_links() -> Bool:
-    let board = transport16_fixture()
-    let carrier = board[0]
-    let passenger = board[1]
-    board.units.clear()
-    board.reserve_units.append(carrier)
-    board.reserve_units.append(passenger)
-    mark_unit_offboard(board.reserve_units[0], true)
-    mark_unit_offboard(board.reserve_units[1], true)
-    embark_formation_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
-    destroy_unplaceable_reserve(board, unit_id(0))
-    return board.reserve_units.empty() and board.embarked_units.empty() and board.expired_reserves.value.size() == 2 and valid_passenger_links(board)
+# Source-specific hit provenance must remain a subset of the attack's actual
+# hits across saves (Orks/Rukkatrukk-Squigbuggies, Squig Barrage).
+fun test_orks17q_saved_squig_hits_cannot_exceed_total() -> Bool:
+    let board = orks17p2_fixture(make_orks_rukkatrukk_squigbuggies(1))
+    begin_orks_attack(board)
+    ref record = orks_attack_record(board, board[1].identity)
+    record.successful_hits = 1
+    record.squig_launcha_hits = 2
+    let invalid = !valid_orks_detachment_foundations(board)
+    record.squig_launcha_hits = 1
+    return invalid and valid_orks_detachment_foundations(board)
+
+# Both public custom rosters, pending equipment save/restore, actual Warlord
+# handoff and attachment-source identities share the production root.
+fun test_orks17q_public_rosters_pending_save_and_handoff() -> Bool:
+    let game = play()
+    game.pick_custom_orks()
+    game.choose_orks_detachment(OrksDetachment::war_horde)
+    game.finish_detachment_selection()
+    let cannot_finish_empty = !can game.finish_orks_roster()
+    game.choose_orks_muster_unit(OrksDatasheet::warboss)
+    game.choose_orks_muster_field(OrksMusterField::primary)
+    let restored = play()
+    let saved = set_state(restored, to_string(game))
+    let gun : OrksMusterValue
+    gun = 2
+    restored.choose_orks_muster_value(gun)
+    restored.add_orks_muster_unit()
+    restored.choose_orks_muster_unit(OrksDatasheet::boyz)
+    restored.add_orks_muster_unit()
+    restored.choose_orks_muster_unit(OrksDatasheet::trukk)
+    restored.add_orks_muster_unit()
+    restored.finish_orks_roster()
+    if can restored.finish_orks_options():
+        restored.finish_orks_options()
+    restored.choose_warlord_unit(unit_id(0))
+    restored.choose_warlord_model(damage_test_model(0))
+    let handed_off = get_current_player(restored) == 1
+    restored.pick_custom_orks()
+    restored.finish_detachment_selection()
+    restored.choose_orks_muster_unit(OrksDatasheet::boss_snikrot)
+    restored.add_orks_muster_unit()
+    restored.choose_orks_muster_unit(OrksDatasheet::kommandos)
+    restored.add_orks_muster_unit()
+    restored.finish_orks_roster()
+    if can restored.finish_orks_options():
+        restored.finish_orks_options()
+    restored.choose_warlord_unit(unit_id(3))
+    restored.choose_warlord_model(damage_test_model(0))
+    return cannot_finish_empty and saved and handed_off and restored.board.reserve_units.size() == 5 and !restored.board.reserve_units[0].owned_by_player1 and restored.board.reserve_units[3].owned_by_player1 and valid_state_foundations(restored.board) and can restored.split_kommando_unit(false)
 
 # Shared-rule fixtures vary storage only; real unit identity, owners and
 # explicit passenger permissions remain intact (appendix01.02.04).
@@ -14660,6 +15044,22 @@ fun test_orks17q_shared_surly_all_banks() -> Bool:
         valid = valid and revival.is_done() and !unit.retired and unit[0].identity == identity and unit[0].wounds_left() == 3 and !unit[0].destruction_pending and !unit[0].destroying_unit_known and unit[0].off_battlefield == (index != 0)
     return valid
 
+# An unplaceable carrier is destroyed with its passengers, just like a carrier
+# that misses reserve arrival. Otherwise saved games retain dangling links
+# (user setup-failure ruling; core pp64/69).
+fun test_orks17q_unplaceable_carrier_removes_passenger_links() -> Bool:
+    let board = transport16_fixture()
+    let carrier = board[0]
+    let passenger = board[1]
+    board.units.clear()
+    board.reserve_units.append(carrier)
+    board.reserve_units.append(passenger)
+    mark_unit_offboard(board.reserve_units[0], true)
+    mark_unit_offboard(board.reserve_units[1], true)
+    embark_formation_unit(board, unit_id(1), unit_id(0), damage_test_model(0))
+    destroy_unplaceable_reserve(board, unit_id(0))
+    return board.reserve_units.empty() and board.embarked_units.empty() and board.expired_reserves.value.size() == 2 and valid_passenger_links(board)
+
 # Breakin' Heads has one action sequence and one CP/D3/shock-removal rule in
 # every bank. Source: War Horde card; appendix01.02.04; mortals core p24.
 fun test_orks17q_shared_breakin_heads_all_banks() -> Bool:
@@ -14759,15 +15159,3 @@ fun test_orks17q_shared_destruction_bank_order() -> Bool:
     death.choose_destruction_unit(board, unit_id(1))
     death.resolve_destruction_model(board, damage_test_model(0))
     return offered and first and death.is_done() and board[1].models.empty() and board.reserve_units[0].models.empty() and board.reserve_units[0].destroyed_models.value[0].identity == identity and board.damage_bank.value == SourceBank::battlefield.value
-
-# Source-specific hit provenance must remain a subset of the attack's actual
-# hits across saves (Orks/Rukkatrukk-Squigbuggies, Squig Barrage).
-fun test_orks17q_saved_squig_hits_cannot_exceed_total() -> Bool:
-    let board = orks17p2_fixture(make_orks_rukkatrukk_squigbuggies(1))
-    begin_orks_attack(board)
-    ref record = orks_attack_record(board, board[1].identity)
-    record.successful_hits = 1
-    record.squig_launcha_hits = 2
-    let invalid = !valid_orks_detachment_foundations(board)
-    record.squig_launcha_hits = 1
-    return invalid and valid_orks_detachment_foundations(board)
