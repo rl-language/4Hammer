@@ -250,8 +250,8 @@ cls Board:
     # Actual hit/loss provenance for detachment post-attack reactions.
     OrksAttackRecords orks_attack_records
     LinearlyDistributedInt<0, 1025> orks_attack_serial
-    Bool orks_objective_move
-    UnitID orks_objective_mover
+    Bool move_requires_objective
+    UnitID constrained_mover
     EntityIdentity orks_reaction_target
     Bool orks_attack_active
     SourceBank orks_support_bank

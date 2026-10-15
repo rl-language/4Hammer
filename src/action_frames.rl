@@ -37,7 +37,7 @@ cls SharedActionFrames:
     OrksPackageWindow orks_package_window
     OrksPostAttack resolve_orks_post_attack
     OrksPsychic use_orks_psychic
-    OrksReactiveMove orks_reactive_move
+    GrantedMove granted_move
     OrksSupportCard use_orks_support_card
     OrksSurlyReturn return_orks_surly
     OrksSurly resolve_orks_surly
@@ -59,7 +59,6 @@ cls SharedActionFrames:
     SelectedShooting selected_shooting
     ShadowInTheWarp shadow_in_the_warp
     SourceEventResolution resolve_source_event
-    Surge surge
     TimingHeroicIntervention timing_heroic_intervention
     TimingOathOfMoment timing_oath_of_moment
     TimingObjectiveStratagem timing_objective_stratagem

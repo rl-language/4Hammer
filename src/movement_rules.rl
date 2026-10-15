@@ -394,7 +394,7 @@ fun waypoint_valid(Board board, Unit original, ModelPath path, BoardPosition pos
 fun movement_finish_valid(Board board, Unit candidate, UnitID slot, MovementKind kind) -> Bool:
     if !unit_placement_valid(board, candidate, slot.get(), true):
         return false
-    if board.orks_objective_move and slot.get() == board.orks_objective_mover.get() and !orks_near_any_objective(board, candidate):
+    if board.move_requires_objective and slot.get() == board.constrained_mover.get() and !unit_in_any_objective_range(board, candidate):
         return false
     if kind == MovementKind::scout:
         return separated_from_enemies(board, candidate, slot.get(), 8)

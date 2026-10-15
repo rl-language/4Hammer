@@ -1317,7 +1317,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             act roll(Dice grant_face)
             board[source][grant_model.value].destruction_attack_suppressed = grant_face.value < board[source][grant_model.value].destruction_fight_roll.value
         grant_model = grant_model + 1
-    board[source].history.wrecka_objective_selection = orks_near_any_objective(board, board[source])
+    board[source].history.wrecka_objective_selection = unit_in_any_objective_range(board, board[source])
     # Source-specific free choices enter the same declaration snapshots as
     # paid rules: Ammo Runts (Boyz/Nobz/Warboss).
     if !melee:
@@ -2730,8 +2730,8 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
             frm reply_target_snapshot_11 = board.shared_actions.select_orks_enemy_move_reaction.target
             if !reply_available_snapshot_11:
                 break
-            board.shared_actions.orks_reactive_move = orks_reactive_move(board, reply_target_snapshot_11, reply_distance_snapshot_11, false)
-            subaction*(board) board.shared_actions.orks_reactive_move
+            board.shared_actions.granted_move = reactive_move(board, reply_target_snapshot_11, reply_distance_snapshot_11, false)
+            subaction*(board) board.shared_actions.granted_move
     board.shared_actions.post_move_embark = post_move_embark(board, id)
     subaction*(board) board.shared_actions.post_move_embark
     if !has_live_model(board[id]):
@@ -3098,23 +3098,9 @@ act deploy(ctx Board board) -> Deployment:
 # A granting rule must explicitly trigger this move and provide its distance;
 # no illustrative faction trigger is manufactured (pp.70/74). Closest target,
 # per-model obligations and once-per-phase movement are enforced by helpers.
-act surge(ctx Board board, frm UnitID source, frm StatModifier distance, frm Bool triggered) -> Surge:
-    if !triggered or source.get() >= board.units.size() or !has_live_model(board[source]) or board[source].battle_socked or board.is_in_melee(board[source]) or board[source].history.last_move_phase == board.phase_serial.value + 1 or board[source].history.ingress_locked or !has_surge_target(board, source):
-        return
-    frm previous_owner = board.current_decision_maker
-    frm previous_target = board.surge_target
-    board.current_decision_maker = board[source].owned_by_player1
-    act select_surge_target(frm UnitID target) {surge_target_valid(board, source, target)}
-    board.surge_target = target
-    board[source].pending_move_kind = MovementKind::surge
-    board.shared_actions.move = move(board, source, distance)
-    subaction*(board, source) board.shared_actions.move
-    frm moved_completed_snapshot_1 = board.shared_actions.move.completed
-    if moved_completed_snapshot_1:
-        record_move(board, source, MovementKind::surge)
-    board[source].pending_move_kind = MovementKind::normal
-    board.surge_target = previous_target
-    board.current_decision_maker = previous_owner
+fun surge(Board board, UnitID source, StatModifier distance, Bool triggered) -> GrantedMove:
+    let permitted = triggered and source.get() < board.units.size() and has_live_model(board[source]) and !board[source].battle_socked and !board.is_in_melee(board[source]) and board[source].history.last_move_phase != board.phase_serial.value + 1 and !board[source].history.ingress_locked and has_surge_target(board, source)
+    return granted_move(board, source, distance, MovementKind::surge, false, permitted)
 
 # Resolve optional Scouts before the first battle round, current player's
 # choices before opponent's. Dedicated-transport passengers await task 16

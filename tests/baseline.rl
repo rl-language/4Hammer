@@ -11189,7 +11189,7 @@ fun test_orks17all_reactive_distance_not_m_characteristic() -> Bool:
     register_orks_option_passives(board)
     let six : StatModifier
     six = 6
-    let sequence = orks_reactive_move(board, unit_id(0), six, false)
+    let sequence = reactive_move(board, unit_id(0), six, false)
     let exact = can sequence.move_to(board, board_position(11, 5)) and !can sequence.move_to(board, board_position(12, 5))
     sequence.skip(board)
     return exact and sequence.is_done() and board[0].movement_distance_limit == 0 and board.current_decision_maker == false
@@ -15216,3 +15216,36 @@ fun test_procedures_round_resource_limits_and_reset() -> Bool:
     let full = !budget.available(1, 2) and budget.available(2, 2)
     budget.consume(2)
     return starts and once and full and budget.spent == 1 and budget.round_stamp == 2
+
+# Granted moves work without faction abilities and restore all caller policy.
+# Core pp33/70: declining records no completed move and never changes its M.
+fun test_procedures_reactive_move_restores_context() -> Bool:
+    let board = movement11_fixture()
+    board.current_decision_maker = true
+    board.timing.active_player = true
+    board.move_requires_objective = true
+    board[0].pending_move_kind = MovementKind::advance
+    board[0].movement_distance_limit = 8
+    board[0].move_takes_to_skies = true
+    let distance : StatModifier
+    distance = 3
+    let sequence = reactive_move(board, unit_id(0), distance, false)
+    let exact = can sequence.move_to(board, board_position(8, 5)) and !can sequence.move_to(board, board_position(9, 5))
+    sequence.skip(board)
+    return exact and sequence.is_done() and !sequence.completed and board[0].history.last_move_phase == 0 and board[0].pending_move_kind == MovementKind::advance and board[0].movement_distance_limit == 8 and board[0].move_takes_to_skies and board.move_requires_objective and board.current_decision_maker and board.timing.active_player
+
+# A source's destination restriction constrains the same core path and is
+# removed afterwards; marker control/OC is irrelevant (core pp33/52).
+fun test_procedures_reactive_move_objective_and_history() -> Bool:
+    let board = movement11_fixture()
+    for objective in range(4):
+        board.set_objective_position(objective, board_position(30, 20))
+    board.set_objective_position(0, board_position(8, 5))
+    let distance : StatModifier
+    distance = 3
+    let sequence = reactive_move(board, unit_id(0), distance, true)
+    # Both destinations are three inches away; only the east endpoint is
+    # within the marker range, measured between circular base edges.
+    let constrained = !can sequence.move_to(board, board_position(2, 5)) and can sequence.move_to(board, board_position(8, 5))
+    sequence.move_to(board, board_position(8, 5))
+    return constrained and sequence.is_done() and sequence.completed and !board.move_requires_objective and board[0].history.last_move_phase == board.phase_serial.value + 1 and board[0].history.move_kind == MovementKind::normal and board[0].movement_distance_limit == 0

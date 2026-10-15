@@ -331,35 +331,6 @@ act use_orks_support_card(ctx Board board, frm UnitID source, frm Stratagem card
                     board.shared_actions.heal_orks_unit = heal_orks_unit(board, healing, heal_three)
                     subaction*(board) board.shared_actions.heal_orks_unit
 
-# Reactive Normal moves use an explicit maximum, preserving the caller's
-# selected M and owner. They are not a second ordinary move selection (cards).
-act orks_reactive_move(ctx Board board, frm UnitID source, frm StatModifier distance, frm Bool objective_required) -> OrksReactiveMove:
-    frm previous_limit = board[source].movement_distance_limit
-    frm previous_skies = board[source].move_takes_to_skies
-    frm previous_kind = board[source].pending_move_kind
-    frm previous_owner = board.current_decision_maker
-    frm previous_active = board.timing.active_player
-    board[source].movement_distance_limit = distance.value + 1
-    board[source].move_takes_to_skies = false
-    if board[source].has_keyword(Keyword::fly):
-        act choose_reactive_skies(Bool take_to_skies)
-        board[source].move_takes_to_skies = take_to_skies
-    board[source].pending_move_kind = MovementKind::normal
-    board.orks_objective_move = objective_required
-    board.orks_objective_mover = source
-    frm zero : StatModifier
-    board.shared_actions.move = move(board, source, zero)
-    subaction*(board, source) board.shared_actions.move
-    frm reaction_completed_snapshot_1 = board.shared_actions.move.completed
-    if reaction_completed_snapshot_1:
-        record_move(board, source, MovementKind::normal)
-    board.orks_objective_move = false
-    board[source].movement_distance_limit = previous_limit
-    board[source].move_takes_to_skies = previous_skies
-    board[source].pending_move_kind = previous_kind
-    board.current_decision_maker = previous_owner
-    board.timing.active_player = previous_active
-
 # Edge withdrawal is measured to any part of any live circular base, while
 # no Enemy Engagement is waived (Instinctive Hunters; supplied Within).
 fun orks_near_edge(Unit unit) -> Bool:
@@ -534,8 +505,8 @@ act orks_package_window(ctx Board board, frm UnitID source, frm Bool owner, frm 
             frm distance_result_snapshot_2 = board.current_roll.result
             frm morgog_distance : StatModifier
             morgog_distance = distance_result_snapshot_2.value
-            board.shared_actions.orks_reactive_move = orks_reactive_move(board, source, morgog_distance, false)
-            subaction*(board) board.shared_actions.orks_reactive_move
+            board.shared_actions.granted_move = reactive_move(board, source, morgog_distance, false)
+            subaction*(board) board.shared_actions.granted_move
         act use_surly_as_a_squiggoth() {orks_surly_available(board, source, owner, window)}
             board.shared_actions.resolve_orks_surly = resolve_orks_surly(board, source, owner)
             subaction*(board) board.shared_actions.resolve_orks_surly
@@ -548,8 +519,8 @@ act orks_package_window(ctx Board board, frm UnitID source, frm Bool owner, frm 
                 if card == Stratagem::orks_while_their_backs_are_turned:
                     frm six : StatModifier
                     six = 6
-                    board.shared_actions.orks_reactive_move = orks_reactive_move(board, source, six, false)
-                    subaction*(board) board.shared_actions.orks_reactive_move
+                    board.shared_actions.granted_move = reactive_move(board, source, six, false)
+                    subaction*(board) board.shared_actions.granted_move
                 if card == Stratagem::orks_instinctive_hunters:
                     let relocated = reposition_unit(board, source)
                     assert(relocated, "accepted withdrawal could not move to reserves")
@@ -653,8 +624,8 @@ act resolve_orks_post_attack(ctx Board board, frm UnitID attacker, frm Bool mele
                         grant_orks_effect(board, recipient, recipient, 300 + card.value, OrksEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
                         frm six : StatModifier
                         six = 6
-                        board.shared_actions.orks_reactive_move = orks_reactive_move(board, recipient, six, true)
-                        subaction*(board) board.shared_actions.orks_reactive_move
+                        board.shared_actions.granted_move = reactive_move(board, recipient, six, true)
+                        subaction*(board) board.shared_actions.granted_move
                     if card == Stratagem::orks_gun_crazy_show_offs:
                         reaction_available = true
                         reaction_source = recipient
@@ -664,8 +635,8 @@ act resolve_orks_post_attack(ctx Board board, frm UnitID attacker, frm Bool mele
                         frm distance_result_snapshot_2 = board.current_roll.result
                         frm goad_distance : StatModifier
                         goad_distance = distance_result_snapshot_2.value
-                        board.shared_actions.surge = surge(board, recipient, goad_distance, true)
-                        subaction*(board) board.shared_actions.surge
+                        board.shared_actions.granted_move = surge(board, recipient, goad_distance, true)
+                        subaction*(board) board.shared_actions.granted_move
                     board.current_decision_maker = owner
         owner = !owner
         controllers = controllers + 1

@@ -155,3 +155,13 @@ fun model_is_offboard(Board board, Model model) -> Bool:
         for embarked_unit in range(board.embarked_units.size()):
             offboard = offboard or board.embarked_units[embarked_unit].find_model(model.identity) >= 0
     return offboard
+
+# Range to an objective is a base-range test regardless of current control/OC;
+# Wreckas does not require the marker to be owned (Wreckin' and Lootin').
+fun unit_in_any_objective_range(Board board, Unit unit) -> Bool:
+    for objective in range(4):
+        let definition = board.objective_range_definition(objective)
+        for member in range(unit.models.size()):
+            if unit[member].is_alive() and board.model_in_objective_range(unit[member], definition):
+                return true
+    return false

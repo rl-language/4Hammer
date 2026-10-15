@@ -451,16 +451,6 @@ fun orks_option_available(Board board, OrksEnhancement option, Bool owner) -> Bo
             return true
     return false
 
-# Range to an objective is a base-range test regardless of current control/OC;
-# Wreckas does not require the marker to be owned (Wreckin' and Lootin').
-fun orks_near_any_objective(Board board, Unit unit) -> Bool:
-    for objective in range(4):
-        let definition = board.objective_range_definition(objective)
-        for member in range(unit.models.size()):
-            if unit[member].is_alive() and board.model_in_objective_range(unit[member], definition):
-                return true
-    return false
-
 # Gather all source-dependent effects before modifier caps and hit/wound
 # classification; each hit contribution remains individually ignorable.
 # Sources: Da Hunt is On, Skyborne Loons and the40 Orks source cards.
@@ -482,7 +472,7 @@ fun append_orks_attack_effects(Board board, UnitID source, UnitID target, Declar
     if unit_orks_effect(board, unit, OrksEffectKind::armed_to_da_teef) > 0:
         info.reroll1_hits = true
         info.reroll_hits = info.reroll_hits or unit_is_riled_up(unit)
-    if ranged and orks_package(board, unit, OrksDetachment::wreckas) and orks_wrecka_unit(unit) and board.timing.phase == BattlePhase::shooting and unit.owned_by_player1 == board.current_player and (unit.history.wrecka_objective_selection or orks_near_any_objective(board, victim)):
+    if ranged and orks_package(board, unit, OrksDetachment::wreckas) and orks_wrecka_unit(unit) and board.timing.phase == BattlePhase::shooting and unit.owned_by_player1 == board.current_player and (unit.history.wrecka_objective_selection or unit_in_any_objective_range(board, victim)):
         info.reroll1_hits = true
     if ranged:
         if unit_orks_effect(board, unit, OrksEffectKind::reroll_hits_fly) > 0 and victim.has_keyword(Keyword::fly):

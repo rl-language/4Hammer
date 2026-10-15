@@ -69,7 +69,7 @@ fun append_orks_elite_attack_effects(Board board, UnitID source, UnitID target, 
     ref unit = board[source]
     ref victim = board[target]
     let bearer = declared_model_index(board, source, declaration)
-    if declaration.weapon.range() > 0 and unit.has_ability(AbilityKind::finderz_keeperz) and board.timing.phase == BattlePhase::shooting and unit.owned_by_player1 == board.current_player and (orks_near_any_objective(board, unit) or orks_near_any_objective(board, victim)):
+    if declaration.weapon.range() > 0 and unit.has_ability(AbilityKind::finderz_keeperz) and board.timing.phase == BattlePhase::shooting and unit.owned_by_player1 == board.current_player and (unit_in_any_objective_range(board, unit) or unit_in_any_objective_range(board, victim)):
         info.ap_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
     if victim.has_ability(AbilityKind::arrogant_invulnerability):
         info.ap_modifiers.append(rule_modifier(ModifierOperation::add, 1))
