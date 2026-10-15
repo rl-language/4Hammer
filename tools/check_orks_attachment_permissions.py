@@ -17,7 +17,7 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     module = Program(str(args.wrapper.resolve())).module
-    with (root / 'doc/orks-unit-requirements.tsv').open() as source:
+    with (root / 'doc/factions/orks/orks-unit-requirements.tsv').open() as source:
         rows = list(csv.DictReader(source, delimiter='\t'))
     identities = {}
     for code in range(1, 68):

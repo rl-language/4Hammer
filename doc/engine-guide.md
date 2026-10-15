@@ -458,7 +458,7 @@ Use [ROADMAP.md](../ROADMAP.md) and source version helpers for later revisions.
   sentinels, meanings and lifetimes for the important engine structs.
 - [Technical architecture](rulebook-architecture.md): module boundaries, action
   frames, ownership and extension points for implementation work.
-- [Public Orks roster](orks-custom-roster.md): supported army construction and
+- [Public Orks roster](factions/orks/orks-custom-roster.md): supported army construction and
   shared rules across banks.
 - [Rules reference](11th-edition-core-rules-procedural.txt) and
   [supplied appendix](11th-edition-supplied-appendix.md): rule authority.

@@ -1,6 +1,6 @@
 # Named selectors — batch17.C2c
 
-Authority: the [67-datasheet Orks audit](orks-codebase-audit.md), [source identity crosswalk](orks-named-identities.tsv), supplied keyword scope appendix02.05.01, multiple profiles appendix04.01.03, core selection/grouping pp.16–17, weapon abilities p.78 and Firing Deck p.81. Hunta Rig's Fully Loaded Butchery specifically names Butcha Boyz; Big Mek With Shokk Attack Gun's Support Shokka excludes that named datasheet. These sources require identities beyond broad INFANTRY/ORKS keywords or display strings.
+Authority: the [67-datasheet Orks audit](factions/orks/orks-codebase-audit.md), [source identity crosswalk](factions/orks/orks-named-identities.tsv), supplied keyword scope appendix02.05.01, multiple profiles appendix04.01.03, core selection/grouping pp.16–17, weapon abilities p.78 and Firing Deck p.81. Hunta Rig's Fully Loaded Butchery specifically names Butcha Boyz; Big Mek With Shokk Attack Gun's Support Shokka excludes that named datasheet. These sources require identities beyond broad INFANTRY/ORKS keywords or display strings.
 
 ## Identities and scope
 

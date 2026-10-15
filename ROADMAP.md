@@ -408,7 +408,7 @@ At task16 completion, task17 was next and task6 still awaited full datasheets. T
 
 The user now supplies the readable [Orks faction page](https://wahapedia.ru/wh40k11ed/factions/orks/) and directs this scope: **no army/unit/enhancement points, no detachment costs, up to three distinct selected detachments per player, and full CP costs**. This replaces the previously proposed point/DP-accounting batch. Do not make War Horde use three selection slots. Preserve non-price equipment/ability/attachment conditions and the user-directed quad/visibility/numeric-storage scope.
 
-Use [the complete codebase audit and batch plan](doc/orks-codebase-audit.md), [the 67-unit requirements matrix](doc/orks-unit-requirements.tsv) and [the 40-stratagem CP inventory](doc/orks-stratagem-costs.tsv). Every linked datasheet was retrieved and examined on 2026-10-12, including 12 Legends entries and one Forge World entry. Fourteen Leader lists and seven Support lists now provide Orks attachment permissions. The appendix is also readable and supplies healing/revival definitions; availability is not implementation.
+Use [the complete codebase audit and batch plan](doc/factions/orks/orks-codebase-audit.md), [the 67-unit requirements matrix](doc/factions/orks/orks-unit-requirements.tsv) and [the 40-stratagem CP inventory](doc/factions/orks/orks-stratagem-costs.tsv). Every linked datasheet was retrieved and examined on 2026-10-12, including 12 Legends entries and one Forge World entry. Fourteen Leader lists and seven Support lists now provide Orks attachment permissions. The appendix is also readable and supplies healing/revival definitions; availability is not implementation.
 
 **Supported unit scope (user update):** implement the54 standard Orks datasheets. All12 Legends cards and the Forge World Gargantuan Squiggoth are excluded. The67-card audit/catalog remains historical source coverage; `implementation_scope` in the requirements matrix distinguishes the54 included rows from13 excluded rows. Later unit/geometry/transport/attachment batches must derive their requirements from included sources.17.C4b remains generic appendix02.02.02 support, with explicit fixtures rather than an excluded unit implementation.
 
@@ -452,7 +452,7 @@ Task6's Orks source deferral and shared mechanics are resolved in17.G; other fac
 
 ### Batch17.B — implemented and validated
 
-Read [the configuration report](doc/orks-configuration.md). Army identity is separate from the preserved legacy roster enum; each player can select zero to three distinct packages from all 15 ordinary Orks detachments. Third selection automatically hands off. Public games explicitly use point-free reserves, including carriers/passengers, while existing point-aware fixtures retain their configured cap checks. Forty Orks cards now have source-backed CP costs and selected-package gates; shared eligibility supports printed shocked/destroyed target exceptions, free use and +1CP surcharges with unchanged expenditure/use limits. Card effects/full timing and keyword conditions remain later batches.
+Read [the configuration report](doc/factions/orks/orks-configuration.md). Army identity is separate from the preserved legacy roster enum; each player can select zero to three distinct packages from all 15 ordinary Orks detachments. Third selection automatically hands off. Public games explicitly use point-free reserves, including carriers/passengers, while existing point-aware fixtures retain their configured cap checks. Forty Orks cards now have source-backed CP costs and selected-package gates; shared eligibility supports printed shocked/destroyed target exceptions, free use and +1CP surcharges with unchanged expenditure/use limits. Card effects/full timing and keyword conditions remain later batches.
 
 **Issues found and fixed:** the Chaos and Morgrim roster factories returned the Tyranid identifier; both now return their own legacy IDs. Explicit final-cost inputs previously bypassed the +1CP increase cap; common eligibility now rejects that bypass atomically. The initial schema17 build accidentally retained upper bound17; the corrected half-open `[17,18)` storage restores every save test. No point/DP system, alternate reserve percentage, grid migration or custom lifecycle hook was introduced.
 
@@ -468,7 +468,7 @@ Seed40000 selects Morgrim with Wreckas/Runt Swarm, uses point-free reserves and 
 - [x] Remove obsolete Tough as Squig Hide and Bestial Bellow runtime cards under the user's instruction; retain uncertified profile factories only as temporary17.H scaffolding.
 - [x] Pass465 supported assertions /467 CTest entries,24 native sanitized cases, full compact headless Godot and focused final-body Godot coverage.
 
-Read [the predicate report](doc/orks-keyword-predicates.md) for source semantics, save-validation limits and precise artifact provenance. State/observation schemas are18, action14 and next-state19. The initial per-term categorical tags doubled ML observations; compact grouped storage fixes that mistake and produces14,493,920 finite observations (+3.9% over17.B), without tensor warnings. Action candidates are22,379 after card removal; coordinate domains are unchanged. Seed40000 completes878 actions, terminal owner-4, and gym passes20 steps. The full compact Godot interaction harness predates the final body-only temporary-ANTI filter fix; fresh final bindings and a focused regression cover that fix, as do the final CTest and sanitizer suites.
+Read [the predicate report](doc/factions/orks/orks-keyword-predicates.md) for source semantics, save-validation limits and precise artifact provenance. State/observation schemas are18, action14 and next-state19. The initial per-term categorical tags doubled ML observations; compact grouped storage fixes that mistake and produces14,493,920 finite observations (+3.9% over17.B), without tensor warnings. Action candidates are22,379 after card removal; coordinate domains are unchanged. Seed40000 completes878 actions, terminal owner-4, and gym passes20 steps. The full compact Godot interaction harness predates the final body-only temporary-ANTI filter fix; fresh final bindings and a focused regression cover that fix, as do the final CTest and sanitizer suites.
 
 The final-source sanitized fuzzer (`task17c1-verified-fuzzer`) replays both preserved lifetime inputs, the fixed zero input and the878-action completed game with leak detection (`task17c1-replay-verified.log`); the game replay takes27.717s. Fresh mutation fuzzing completes **54 runs in67s**, coverage11,391 /features16,623, without sanitizer failures or crash artifacts (`task17c1-fuzz-verified.log`). **Next:17.C2**, effective characteristic consumers and named selectors;17.C3 Damaged and17.C4 incoming reductions/ignoring modifiers remain pending. No datasheet, Waaagh!, attachment, detachment effect or CP-card effect is certified by this predicate batch. Every remaining issue retains its assigned owner, including the wrapper-fetch performance fix in17.Q.
 
@@ -514,7 +514,7 @@ Current-schema seed40000 completes **878 actions**, terminal owner-4 (`task17c2b
 
 ## Batch17.C2c completion
 
-[Named-selector report](doc/named-selectors.md) and [source crosswalk](doc/orks-named-identities.tsv):67 datasheets,139 physical weapon families,176 named profiles and330 source rows, including separately marked referenced enhancement/ability profiles. All standard datasheet row counts match the audit. Correct identical printed names with distinct ranged/melee identities for Stikka, Grabba Dragga and Snagga Klaw; validate actual attack-kind consistency. This catalog imports identities, not stats/loadouts or active faction grants.
+[Named-selector report](doc/named-selectors.md) and [source crosswalk](doc/factions/orks/orks-named-identities.tsv):67 datasheets,139 physical weapon families,176 named profiles and330 source rows, including separately marked referenced enhancement/ability profiles. All standard datasheet row counts match the audit. Correct identical printed names with distinct ranged/melee identities for Stikka, Grabba Dragga and Snagga Klaw; validate actual attack-kind consistency. This catalog imports identities, not stats/loadouts or active faction grants.
 
 Conjunctive slot/physical/family/profile modifiers now feed actual Range/skill/S/AP/A/D consumers. Named/physical rule grants feed selected per-slot declarations. Unit/model named scope remains distinct; archives and saves preserve compact tags. Firing Deck snapshots passenger identity while using carrier numerical grants and excluding carrier equipped-instance grants. Generated lifecycle, quads and production Rules.gd/TraceManager.gd remain intact.
 
@@ -593,7 +593,7 @@ Fresh schema26 seed40000 completes **878 actions**, terminal owner **-4**, with 
 
 ## Batch17.F completion
 
-[Orks army rules](doc/orks-army-rules.md) implements current Waaagh! Advance re-rolls; source-owned riled5+ InSv/ranged Assault/Advance charge permission; optional once-per-army-battle War Cry at either Command start through the end of the next turn; mandatory selected-Warlord Da Boss1CP at round start; and the user-supplied unit/model Warlord definition. It does not add old-edition melee A/S boosts. Live explicit metadata, faction/Character keywords, required unit/model rules and prohibitions govern Warlord selection. The selected model gains WARLORD and the army stores its stable identity. Other players, dead/different models and spare indices cannot substitute.
+[Orks army rules](doc/factions/orks/orks-army-rules.md) implements current Waaagh! Advance re-rolls; source-owned riled5+ InSv/ranged Assault/Advance charge permission; optional once-per-army-battle War Cry at either Command start through the end of the next turn; mandatory selected-Warlord Da Boss1CP at round start; and the user-supplied unit/model Warlord definition. It does not add old-edition melee A/S boosts. Live explicit metadata, faction/Character keywords, required unit/model rules and prohibitions govern Warlord selection. The selected model gains WARLORD and the army stores its stable identity. Other players, dead/different models and spare indices cannot substitute.
 
 Riled status is one typed source grant with exact-key overlap/expiry/returned-member/archive handling. A new own-unit passive mode follows its source model's current unit across battlefield/reserve/passenger banks without external measurement, and ends on source death/disablement. War Cry's accepted effects survive the source unit's death and expire after next-turn end effects. Actual equipped and Firing Deck Assault snapshots keep the source key. Advance charge permission is captured at selection and reset at turn boundaries; later buff changes cannot alter that Advance, and other restrictions remain. Da Boss grants the literal1CP separately from Core CP, without imposing the inherited extra-CP flag as an unsupplied ceiling.
 
@@ -640,7 +640,7 @@ Final optimized sanitized fuzzer (`task17g-fuzzer-final`) passes both preserved 
 
 ## Batch17.H1 completion — current profiles and checked loadouts
 
-[The data report](doc/orks-current-unit-data.md) documents current Beastboss, Beast Snagga Boyz and Squighog Boyz constructors, five model profiles and12 unique weapon profiles. The source is the retrieved2026-10-12 version1.2 HTML cards, including separate InSv boxes and Hunter keyword headers omitted by the text extracts. The independent `tools/check_orks_unit_tables.py` compares compiled numerical statistics with those HTML tables: **3 cards,5 profiles,13 printed weapon rows PASS** (`task17h1-source-tables-final.log`). FNP, bases, keywords, composition and conditional rules receive separate source/semantic coverage; the table check does not certify the whole card.
+[The data report](doc/factions/orks/orks-current-unit-data.md) documents current Beastboss, Beast Snagga Boyz and Squighog Boyz constructors, five model profiles and12 unique weapon profiles. The source is the retrieved2026-10-12 version1.2 HTML cards, including separate InSv boxes and Hunter keyword headers omitted by the text extracts. The independent `tools/check_orks_unit_tables.py` compares compiled numerical statistics with those HTML tables: **3 cards,5 profiles,13 printed weapon rows PASS** (`task17h1-source-tables-final.log`). FNP, bases, keywords, composition and conditional rules receive separate source/semantic coverage; the table check does not certify the whole card.
 
 The25 new `test_orks17h1_*` assertions cover all current profiles/equipment, literal composition ranges, illegal quotas, additional Thump Guns, physical profile selection/Hunter restrictions, conditional Lethal/Sustained Hits, the actual Anti4+ consumer, fixed Thump A, shared Stikka identity, copy independence, current attachment Toughness, saved data and unsupported oval rejection. Final **707 assertions /709 CTests all pass** (`task17h1-tests`, `task17h1-ctest-fixed.log`,324.85s). The unoptimized native ASAN/UBSAN/leak driver **task17h1-sanitized/driver-final** passes all25 with leak detection enabled (`task17h1-sanitized-final.log`). Intermediate table-only commit sources/tests separately typecheck (`task17h1-tables-stage/type.log`).
 
@@ -662,7 +662,7 @@ Use circles temporarily for oval models, retaining source axes and explicit oval
 
 ## Combined17.H2/H3 completion — unit abilities and temporary oval proxies
 
-[The ability/geometry report](doc/orks-current-unit-rules.md) implements Beastboss Dodge Dis!/Keep Huntin', Snagga Mobbed and Squighog Bomb Squig/Brutal Impact from the three retrieved11th-edition version1.2 source cards. Dodge Dis! has a separate pre-cap hit contribution/ignoring origin; Brutal Impact enters outgoing damage addition for every ranged/melee/Jaws attack after a completed charge. Keep Huntin' offers actual start/end movement targets with a shared army-round key and next-own-turn riled lifetime/shock removal. Bomb Squig spends the original unit's battle token at acceptance, then uses explicit D6/D3 and ordinary opponent-owned mortal/FNP/spill/destruction handling. Mobbed resolves every engaged enemy Monster/Vehicle shock roll after completed charge movement, with-1/-2 at13 live combined models and actual controller restoration. Source handles follow attachment/bank/save provenance. No custom init/drop or unbounded numeric state is added.
+[The ability/geometry report](doc/factions/orks/orks-current-unit-rules.md) implements Beastboss Dodge Dis!/Keep Huntin', Snagga Mobbed and Squighog Bomb Squig/Brutal Impact from the three retrieved11th-edition version1.2 source cards. Dodge Dis! has a separate pre-cap hit contribution/ignoring origin; Brutal Impact enters outgoing damage addition for every ranged/melee/Jaws attack after a completed charge. Keep Huntin' offers actual start/end movement targets with a shared army-round key and next-own-turn riled lifetime/shock removal. Bomb Squig spends the original unit's battle token at acceptance, then uses explicit D6/D3 and ordinary opponent-owned mortal/FNP/spill/destruction handling. Mobbed resolves every engaged enemy Monster/Vehicle shock roll after completed charge movement, with-1/-2 at13 live combined models and actual controller restoration. Source handles follow attachment/bank/save provenance. No custom init/drop or unbounded numeric state is added.
 
 **User geometry override applied:** original75x42/90x52 oval axes and `profile_has_oval_base` remain metadata;75/90mm long-axis circles now drive existing distance, overlap, full-base setup, paths, rotation and Godot rendering. This is an explicit approximation, not exact oval certification. Exact ovals are deferred; unknown hull/multipart dimensions remain unsupported. Whole-quad positions/action domains and Rules.gd/TraceManager.gd remain unchanged.
 
@@ -689,7 +689,7 @@ The stable Morgrim action/enum remains compatible; the editor labels it current
 Orks. Actual mandatory Warlord selection precedes opponent handoff, and formation
 attachments preserve Warlord/component identities after reserve-slot compaction.
 Historical Orks factories remain explicit core-test scaffolds, outside this
-public choice. Read `doc/orks-roster-war-horde.md`.
+public choice. Read `doc/factions/orks/orks-roster-war-horde.md`.
 
 War Horde Get Stuck In uses the cached faction definition: friendly ORKS units'
 melee attacks have Sustained Hits1. Source owner configuration, selected package,
@@ -1034,7 +1034,7 @@ Fixed issues: source-effect/provenance validators now admit the new enum entries
 Flash Gitz, Meganobz, Mek, Big Mek, Big Mek in Mega Armour, Big Mek with Shokk
 Attack Gun, Painboy, Painboss, Breaka Boyz, Tankbustas, Warboss in Mega Armour,
 Gretchin, Runtherd and Zodgrod Wortsnagga use the same retrieved2026-10-12
-version1.2 cards. See [the adapter guide](doc/orks-elites-meks-gretchin.md).
+version1.2 cards. See [the adapter guide](doc/factions/orks/orks-elites-meks-gretchin.md).
 All source/tests were batched before expensive validation.25 data assertions
 and38 behavior assertions accompany17 model profiles,53 weapon rows, checked
 loadouts, attachment metadata and the complete printed abilities of these cards.
@@ -1228,7 +1228,7 @@ alone do not certify complete edition/mission/host integration.
 
 ###17.Q — Public roster and shared-bank integration (complete,2026-10-15)
 
-Read [the public roster and integration guide](doc/orks-custom-roster.md).
+Read [the public roster and integration guide](doc/factions/orks/orks-custom-roster.md).
 User scope excludes rendering and valid-action-discovery optimization; the latter
 belongs to the compiler. Earlier performance/rendered obligations are superseded.
 Points, detachment prices, Forge World/Legends and exact oval/hull geometry stay
@@ -1534,3 +1534,62 @@ Markdown guide, with no new tracked scripts, generated API dump or non-Markdown
 documentation artifacts. Runtime sources and schemas remain unchanged; native
 suite/fuzzer rebuilds were not repeated for prose. Artifacts are under
 `/workspace/4hammer-validation/reader-docs`.
+
+## Faction directory organization —2026-10-15
+
+The user approved grouping faction code and documentation, then requested a
+review of additional function moves and renames. This batch changes file
+ownership/import paths only; follow-up responsibility changes remain proposals.
+
+- [x] Move all14 current Orks Rulebook modules from the flat `src/` directory to
+  `src/factions/orks/`, retaining basenames, declarations and existing hooks.
+  Use full dotted imports from the existing `src` include root; keep the34
+  common modules and public `src/full_game.rl` entrypoint in place.
+- [x] Make frame-storage and detachment source scans recursive. Native CMake
+  dependencies already recurse. Update the attachment audit's inventory path.
+- [x] Move the12 Orks reports and four TSV source inventories to
+  `doc/factions/orks/`; update relative links/citations, add module/documentation
+  indexes and update README, architecture and agent navigation.
+- [x] Record concrete function ownership and naming recommendations in
+  [the organization review](doc/file-organization-review.md). The first
+  recommendations separate legacy roster factories, move Orks-only unit
+  queries/actions into faction modules, and extract cohesive dice/damage/timing
+  procedures. These function moves/renames are **not implemented** in this batch.
+- [x] Complete native CTest, fresh binding/layout/frame audits, relocated source
+  audits, focused Godot checks and sanitized fuzzer validation; evidence below.
+
+Source comparison verifies all48 Rulebook modules are text-identical to the
+pre-move version after normalizing import paths and source-citation paths.
+No rule behavior, public action name, numeric bound, state field or schema is
+intentionally changed. Keep public API renames and faction/catalog decoupling
+in separate reviewed changes; a directory move is not an independent-library
+boundary. Validation artifacts are under
+`/workspace/4hammer-validation/faction-layout`.
+
+**Relocation validated:** all1,190 assertions plus the native compilation fixture
+pass (1,191/1,191 CTest entries,301.58s). All48 Rulebook modules retain identical
+code after normalizing only imports and citation paths. The complete121-action
+frame inventory is identical after source-path normalization; the recursive
+audit finds all48 declarations in faction files,66 shared slots and no duplicate
+frames or nested re-entry. Fresh generated metadata preserves all reachable
+field layouts: Game401 types/34,160 bytes, Board375 types/31,936 bytes,
+AnyGameAction351 types/24 bytes. State/observation40 and action26 remain unchanged.
+
+All relocated source audits pass:54 cards/63 profiles/253 weapon rows;
+67 catalog cards/41 attachment permission edges with13 excluded cards;
+15 detachments/38 enhancements (13 Upgrades)/40 CP cards. The four TSV source
+inventories are byte-identical to their original files. Markdown targets,
+heading anchors and fences are checked across the changed documents and new
+indexes/review; all848 local targets resolve.
+
+Fresh Godot headers and an unoptimized C++ extension, linked to the newly built
+native rules, pass `godot_shared_procedures.gd`, `godot_orks_custom_roster.gd`,
+`godot_weapons_sources.gd` and `godot_shared_bank_rules.gd` (all about10s).
+The unchanged runtime object and Godot C++ dependency are reused. The separately
+rebuilt optimized ASAN/UBSAN fuzzer passes34 semantic cases plus empty input
+(35 runs/10.96s), both preserved memory inputs (6.28s), a completed-game input
+(68.57s), and a fresh short action-mutation campaign (39 runs/31.38s), with leak
+detection enabled and no crash artifacts. These are structural regression
+checks, not new tabletop coverage. The canonical source comparison, complete
+layout/frame comparisons, source-audit results, Godot logs and sanitizer logs
+are recorded under `/workspace/4hammer-validation/faction-layout`.

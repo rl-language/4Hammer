@@ -3,7 +3,7 @@
 Sources are the 11th-edition version1.2 cards retrieved2026-10-12, under
 `https://wahapedia.ru/wh40k11ed/factions/orks/<slug>`; the cached original HTML
 supplies invulnerable saves omitted from the text extracts. See
-[ROADMAP.md](../ROADMAP.md) for validation and completion status.
+[ROADMAP.md](../../../ROADMAP.md) for validation and completion status.
 
 | Cards | New mechanics |
 | --- | --- |

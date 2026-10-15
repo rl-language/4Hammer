@@ -68,6 +68,14 @@ The module map below describes responsibility boundaries. Imports expose shared 
 
 ## Module map
 
+Shared mechanics remain at the root of `src/`. Current Orks adapters live in
+[`src/factions/orks/`](../src/factions/orks/README.md), with their reports and
+source inventories under [`doc/factions/orks/`](factions/orks/README.md).
+Compile the existing roots with `-i src`; faction imports use dotted paths such
+as `factions.orks.orks_army_rules`. The move preserves public declaration names
+and existing core/faction hooks. See the [organization review](file-organization-review.md)
+for proposed responsibility and naming changes beyond this relocation.
+
 | Responsibility | Modules | Principal contents |
 | --- | --- | --- |
 | Public environment | [full_game.rl](../src/full_game.rl), [game_utils.rl](../src/game_utils.rl) | `Game`, `play`, scoring, player classification, action instantiation and `fuzz` |
@@ -89,9 +97,9 @@ The module map below describes responsibility boundaries. Imports expose shared 
 | Terrain and objectives | [terrain_rules.rl](../src/terrain_rules.rl) | Visibility abstraction, area membership, cover, target conditions and objective/action eligibility |
 | Core stratagems and actions | [core_stratagem_rules.rl](../src/core_stratagem_rules.rl) | Core effect eligibility and phase-local action permissions; shared CP payment is on `Board` |
 | Transport and borrowed weapons | [transport_rules.rl](../src/transport_rules.rl), [firing_deck_rules.rl](../src/firing_deck_rules.rl) | Carrier/passenger links, embark/disembark setup, capacity, emergency setup and Firing Deck selections |
-| Current Orks data | [orks_unit_data.rl](../src/orks_unit_data.rl), [orks_infantry_data.rl](../src/orks_infantry_data.rl), [orks_elite_data.rl](../src/orks_elite_data.rl) | Source profiles/equipment/count validators, named physical alternatives, ability metadata and user-authorized oval proxies |
-| Current Orks unit abilities | [orks_unit_rules.rl](../src/orks_unit_rules.rl), [orks_datasheet_rules.rl](../src/orks_datasheet_rules.rl), [orks_elite_rules.rl](../src/orks_elite_rules.rl) | Identity-backed source registration and usage, ammo/Rokkit selections, declaration/gathering modifiers and live aura queries; rules.rl owns dispatch |
-| Orks army mechanics | [orks_army_rules.rl](../src/orks_army_rules.rl) | Explicit Waaagh!/Da Boss metadata, riled grants, War Cry start-window choices and pre-formation Warlord selection |
+| Current Orks data | [orks_unit_data.rl](../src/factions/orks/orks_unit_data.rl), [orks_infantry_data.rl](../src/factions/orks/orks_infantry_data.rl), [orks_elite_data.rl](../src/factions/orks/orks_elite_data.rl) | Source profiles/equipment/count validators, named physical alternatives, ability metadata and user-authorized oval proxies |
+| Current Orks unit abilities | [orks_unit_rules.rl](../src/factions/orks/orks_unit_rules.rl), [orks_datasheet_rules.rl](../src/factions/orks/orks_datasheet_rules.rl), [orks_elite_rules.rl](../src/factions/orks/orks_elite_rules.rl) | Identity-backed source registration and usage, ammo/Rokkit selections, declaration/gathering modifiers and live aura queries; rules.rl owns dispatch |
+| Orks army mechanics | [orks_army_rules.rl](../src/factions/orks/orks_army_rules.rl) | Explicit Waaagh!/Da Boss metadata, riled grants, War Cry start-window choices and pre-formation Warlord selection |
 | Source lifecycle | [source_effect_types.rl](../src/source_effect_types.rl), [source_effects.rl](../src/source_effects.rl) | Source/event/use/effect records, eligibility, typed grants, expiry, aura refresh and restore validation |
 
 Most interactive sequences live in `rules.rl`. The smaller modules expose calculations, predicates and explicit mutation helpers. Some domain modules also own a small interactive frame, such as `choose_weapon_abilities` or `select_firing_deck`. Keep reusable mechanics in those modules and let the orchestration frame decide when to invoke them.
@@ -369,11 +377,11 @@ Source-installed numerical records use the same effective M/T/Sv/InSv/Ld/OC and 
 
 ## Current Orks data adapters
 
-The twelve-card17.P1 adapter batch is described in [the infantry, walker and monster guide](orks-infantry-walkers.md). Its separate data module builds checked loadouts; `orks_datasheet_rules.rl` feeds selection decisions, declarations, gathered characteristics, individual hit contributions and live auras into the existing kernels. ROADMAP.md records validation status.
+The twelve-card17.P1 adapter batch is described in [the infantry, walker and monster guide](factions/orks/orks-infantry-walkers.md). Its separate data module builds checked loadouts; `orks_datasheet_rules.rl` feeds selection decisions, declarations, gathered characteristics, individual hit contributions and live auras into the existing kernels. ROADMAP.md records validation status.
 
-[Current Orks profiles/loadouts](orks-current-unit-data.md) describes17.H1's five model profiles and12 unique weapon profiles, literal composition ranges, optional Thump Guns and named physical profile alternatives. Constructors configure actual keyword/datasheet/Army Rules/attachment metadata. Raw HTML supplies separate InSv boxes and the Hunter keyword header omitted by the text extracts. An independent tool checks the compiled values against those tables.
+[Current Orks profiles/loadouts](factions/orks/orks-current-unit-data.md) describes17.H1's five model profiles and12 unique weapon profiles, literal composition ranges, optional Thump Guns and named physical profile alternatives. Constructors configure actual keyword/datasheet/Army Rules/attachment metadata. Raw HTML supplies separate InSv boxes and the Hunter keyword header omitted by the text extracts. An independent tool checks the compiled values against those tables.
 
-These constructors now carry current ability metadata. [The ability report](orks-current-unit-rules.md) describes17.H2's actual consumers. `orks_unit_rules.rl` registers identity-backed Keep Huntin' and Bomb Squig sources after identity assignment; movement-start/end dispatch combines them with ordinary grants in controller groups. Keep Huntin' has two source windows but one army-round use key. Bomb Squig has one original-unit token and resolves through ordinary mortal allocation/destruction. Movement source dispatch is separate from generic destruction dispatch, avoiding recursive action-frame ownership. Distinct `choose_movement_source` and targeted one-UnitID actions preserve Godot discovery; actual dice retain the `roll`/`quantity` chance contract.
+These constructors now carry current ability metadata. [The ability report](factions/orks/orks-current-unit-rules.md) describes17.H2's actual consumers. `orks_unit_rules.rl` registers identity-backed Keep Huntin' and Bomb Squig sources after identity assignment; movement-start/end dispatch combines them with ordinary grants in controller groups. Keep Huntin' has two source windows but one army-round use key. Bomb Squig has one original-unit token and resolves through ordinary mortal allocation/destruction. Movement source dispatch is separate from generic destruction dispatch, avoiding recursive action-frame ownership. Distinct `choose_movement_source` and targeted one-UnitID actions preserve Godot discovery; actual dice retain the `roll`/`quantity` chance contract.
 
 Dodge Dis! is a separate hit contribution in each attack snapshot, preserving pre-cap arithmetic and optional ignoring provenance. Brutal Impact adds a damage operation to every declared profile when the actual source unit has charged this turn. Mobbed runs all engaged enemy Monster/Vehicle shock tests after completed charge movement, with source-controller ordering and target-owned shock choices. Unit/component conferral reuses the existing attachment lifecycle.
 
@@ -525,7 +533,7 @@ The generic action catalog makes host integration simple and exhaustive. Hosts c
 
 `rules.rl` remains a large orchestration module with active faction hooks beside the shared helpers. Follow actual callers and the roadmap rather than infer support from a type, enum entry or factory name. Attachments use explicit reserve-bank Leader/Support roles and permission metadata for the included Orks cards. The unused per-model `ModelAttack`/`ResolveWeapon` chain, `ReserveDeployment` wrapper and `PickUnit` spawn wizard have been removed. Public attacks use declared groups; reserve arrival belongs to `MovementPhase`; roster selection owns unit creation. The tested `single_attack` entrypoint and documented external `deployment_position_valid` helper remain available.
 
-The scoped54-card standard Orks implementation and shared healing/return/resource procedures are complete; broader faction catalogs, generic grant metadata and source dispatch remain separate refactor work. Other factions' current datasheets and attachment permissions, new mission data and exact oval/hull/multipart geometry still need supplied definitions or later work. Forge World/Legends, points/DP accounting, continuous positions and exact body visibility remain excluded. The67-card source catalog retains historical identities. See [ROADMAP.md](../ROADMAP.md) for current completion evidence; the original [coverage map](11th-edition-rule-coverage.md) and [Orks audit](orks-codebase-audit.md) describe earlier source inventories.
+The scoped54-card standard Orks implementation and shared healing/return/resource procedures are complete; broader faction catalogs, generic grant metadata and source dispatch remain separate refactor work. Other factions' current datasheets and attachment permissions, new mission data and exact oval/hull/multipart geometry still need supplied definitions or later work. Forge World/Legends, points/DP accounting, continuous positions and exact body visibility remain excluded. The67-card source catalog retains historical identities. See [ROADMAP.md](../ROADMAP.md) for current completion evidence; the original [coverage map](11th-edition-rule-coverage.md) and [Orks audit](factions/orks/orks-codebase-audit.md) describe earlier source inventories.
 
 For subsystem detail, use [attack declarations/dice](attack-declarations-dice.md), [damage/destruction](saves-damage-destruction.md), [movement/deployment](movement-deployment.md), [modifiers](model-characteristics.md), [physical weapons/compound dice](physical-weapons-compound-dice.md), [source effects](source-instances-effects.md) and [transports/Aircraft](transports-aircraft.md). Earlier reports contain historical schemas/test counts; current source and the latest roadmap completion section take precedence.
 
@@ -534,16 +542,16 @@ For language syntax beyond this project's conventions, consult the official [lan
 Public Orks selection supports all54 standard cards, with current Warlord,
 attachment and equipment choices; the three-family starter remains a fixture.
 War Horde Get Stuck In enters normal weapon declaration snapshots and
-duplicate-ability selection. See [the public roster guide](orks-custom-roster.md)
+duplicate-ability selection. See [the public roster guide](factions/orks/orks-custom-roster.md)
 and ROADMAP.md for current integration status.
 
 ## Ordinary Orks package integration
 
-Read [the detachment design](orks-detachments.md) for the four package modules, staged option choices, source generations, explicit cargo dependencies, offboard processing, healing/replacement identity and flat reaction wrappers. These modules connect to the existing core pipelines; they do not replace combat, source expiry or transport storage with independent implementations. Its schema32/20/33 figures describe the historical17.O batch; current versions are listed above and in ROADMAP.md.
+Read [the detachment design](factions/orks/orks-detachments.md) for the four package modules, staged option choices, source generations, explicit cargo dependencies, offboard processing, healing/replacement identity and flat reaction wrappers. These modules connect to the existing core pipelines; they do not replace combat, source expiry or transport storage with independent implementations. Its schema32/20/33 figures describe the historical17.O batch; current versions are listed above and in ROADMAP.md.
 
 ## Elite, Mek and Gretchin adapters
 
-[The fourteen-card guide](orks-elites-meks-gretchin.md) describes17.P2. Its
+[The fourteen-card guide](factions/orks/orks-elites-meks-gretchin.md) describes17.P2. Its
 Command-healing sources dispatch through the ordinary controller-ordered timing
 window. Shared `UnitHealing` and `ModelReturn` frames in `healing_rules.rl` serve
 battlefield and offboard abilities without a detachment wrapper. Battlefield returns
@@ -572,7 +580,7 @@ ROADMAP.md owns the executed checks and remaining17.P/17.Q obligations.
 
 ### Final standard-card integration (17.P3)
 
-[The remaining-card guide](orks-remaining-units.md) describes the final25
+[The remaining-card guide](factions/orks/orks-remaining-units.md) describes the final25
 adapters. `orks_remaining_data.rl` owns their source tables/equipment;
 `orks_remaining_rules.rl` adapts them to existing kernels. The new
 `ModelGeometry.proxy_diameter_mm` is a bounded, explicitly approximate hull
@@ -604,7 +612,7 @@ point system, Forge World/Legends data or exact oval/hull geometry is added.
 Own-unit rule logic must not be duplicated for battlefield/reserve/passenger
 storage. Stable unit identities resolve the active bank; selectors and actual
 geometry/capacity checks adapt the shared rule. See
-[the roster and integration guide](orks-custom-roster.md) for the shared shock,
+[the roster and integration guide](factions/orks/orks-custom-roster.md) for the shared shock,
 psychic, Watchin', Dread Power, Surly, healing, damage and source-grant paths.
 `DamageJob.bank` and `PendingDestruction.bank` let the normal damage engine visit
 all real banks. `Board.damage_bank` is temporary editor selector context, restored

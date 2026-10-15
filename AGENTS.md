@@ -2,6 +2,16 @@
 
 Your task is to modify the game rules requested by the user and validate their behavior with regression tests and the buildable rules fuzzer. Implement the requested mechanics in the Rulebook Language sources; preserve compatibility with the Godot editor's action discovery and generated bindings. Do not silently change unrelated mechanics.
 
+Current Orks adapters live in `src/factions/orks/`; import them with full dotted
+paths such as `factions.orks.orks_army_rules`, using the existing `src` include
+root. Keep reusable mechanics in common modules. Faction reports and source
+inventories live in `doc/factions/orks/`; start with its
+[index](doc/factions/orks/README.md) and the
+[module map](src/factions/orks/README.md). Source audits must recurse through
+`src/`, not assume every module is at its root. The
+[organization review](doc/file-organization-review.md) lists proposed function
+moves and naming improvements; those proposals are not completed refactors.
+
 Use the existing isolated checkout; do not create a Git worktree unless requested. Inspect existing changes before editing. Unlike environment onboarding, a rule-change task permits the necessary source and test changes.
 
 Read [the Rulebook design and architecture guide](doc/rulebook-architecture.md) for module responsibilities, frame/context ownership, identity, combat/movement/source pipelines and host integration. Keep it aligned when those structures change. ROADMAP.md remains the source of implementation status and validation evidence; the architecture guide does not certify pending mechanics.
@@ -281,7 +291,7 @@ Godot wrappers borrowing vector elements must be fetched again after vector muta
 
 ## User-directed Orks integration scope
 
-Use [the complete Orks audit](doc/orks-codebase-audit.md), [all 67 unit requirements](doc/orks-unit-requirements.tsv) and [the CP-card inventory](doc/orks-stratagem-costs.tsv) alongside ROADMAP.md. The faction page and every linked datasheet were readable on 2026-10-12; the scan includes Legends and Forge World. Audit completion is not implementation completion.
+Use [the complete Orks audit](doc/factions/orks/orks-codebase-audit.md), [all 67 unit requirements](doc/factions/orks/orks-unit-requirements.tsv) and [the CP-card inventory](doc/factions/orks/orks-stratagem-costs.tsv) alongside ROADMAP.md. The faction page and every linked datasheet were readable on 2026-10-12; the scan includes Legends and Forge World. Audit completion is not implementation completion.
 
 The user excludes unit/army/enhancement point accounting and detachment-point accounting. Support up to **three distinct detachments per player**, using bounded enum storage; do not count War Horde as three slots or enforce its printed DP cost. Continue tracking **CP costs**, discounts, surcharges, affordability, targets and use limits. Preserve all non-price eligibility and equipment rules. Explicitly accommodate point-free reserves rather than rejecting every Orks unit for missing points or inventing a unit-count reserve percentage; leave existing explicitly configured point-aware fixtures supported without developing a pricing system.
 
@@ -289,7 +299,7 @@ Implement one logically distinct batch/rule at a time, following the audit's dep
 
 ## Army configuration and shared CP — batch 17.B
 
-Read [the configuration report](doc/orks-configuration.md) and ROADMAP.md. `Faction` remains a legacy roster ID; `Board.armies[player]` / `army_for_player` holds actual `ArmyFaction`, a checked vector of at most three distinct `OrksDetachment` values and explicit reserve budget mode. Public roster selection uses point-free reserves, while standalone point-aware fixtures retain their default. Preserve every non-price reserve permission; never introduce an alternative percentage or DP budget.
+Read [the configuration report](doc/factions/orks/orks-configuration.md) and ROADMAP.md. `Faction` remains a legacy roster ID; `Board.armies[player]` / `army_for_player` holds actual `ArmyFaction`, a checked vector of at most three distinct `OrksDetachment` values and explicit reserve budget mode. Public roster selection uses point-free reserves, while standalone point-aware fixtures retain their default. Preserve every non-price reserve permission; never introduce an alternative percentage or DP budget.
 
 Orks detachment selection uses a single enum and finish action, permits zero to three choices and automatically hands off after the third. All 15 packages are configuration options; their effects/cards/enhancements are later batches. The 40-card registry supplies base CP, package gates and common shocked/destroyed target policies, not their full printed action legality. Future consumers must still check source keywords, timing and triggers before committing expenditure. Free use consumes limits, and explicit final costs may increase by at most 1CP.
 
@@ -307,7 +317,7 @@ The user authorises stripping the previous Orks implementation: it is no longer 
 
 ## Keyword predicates — batch17.C1
 
-Read [the predicate report](doc/orks-keyword-predicates.md) and ROADMAP.md. Weapon/Hunter conditions use `KeywordPredicate`: the conjunction of ALL, ANY and NONE groups. Unit queries use the union of constituent models; model queries use only that model's keywords. Retained models still in a unit remain constituents, while target/ability live-state checks are separate. Never flatten negations or adjacent source keywords into positive OR. Preserve each selected instance's condition, including temporary ANTI grants.
+Read [the predicate report](doc/factions/orks/orks-keyword-predicates.md) and ROADMAP.md. Weapon/Hunter conditions use `KeywordPredicate`: the conjunction of ALL, ANY and NONE groups. Unit queries use the union of constituent models; model queries use only that model's keywords. Retained models still in a unit remain constituents, while target/ability live-state checks are separate. Never flatten negations or adjacent source keywords into positive OR. Preserve each selected instance's condition, including temporary ANTI grants.
 
 Store nine total keyword terms in contiguous groups with three bounded counts; compute the term count and semantic clause enum. Per-term categorical tags unnecessarily doubled the ML layout. The compact layout is14,493,920 observations with22,379 action candidates. Validate counts, total and keyword IDs before lookup; expand the documented bound explicitly for larger source conditions. Use typed count/keyword/clause bridges for Godot labels and refresh borrowed vector wrappers after mutations. Do not add custom lifecycle hooks or tensor encoding.
 
@@ -345,7 +355,7 @@ Batch17.C2b2/17.C2b is complete:509 assertions /511 CTest entries,12 final sanit
 
 ## Named selectors — batch17.C2c
 
-Read [the named-selector report](doc/named-selectors.md), [source crosswalk](doc/orks-named-identities.tsv) and ROADMAP.md. `named_identities.rl` catalogs67 datasheets,139 physical families and176 named profiles, including referenced enhancement/ability weapons without installing them. Stikka, Grabba Dragga and Snagga Klaw need distinct ranged/melee identities despite identical printed names. Known tags must match the actual profile's ranged/Melee classification. Standard source-row counts match all67 audit rows; referenced profiles are marked separately.
+Read [the named-selector report](doc/named-selectors.md), [source crosswalk](doc/factions/orks/orks-named-identities.tsv) and ROADMAP.md. `named_identities.rl` catalogs67 datasheets,139 physical families and176 named profiles, including referenced enhancement/ability weapons without installing them. Stikka, Grabba Dragga and Snagga Klaw need distinct ranged/melee identities despite identical printed names. Known tags must match the actual profile's ranged/Melee classification. Standard source-row counts match all67 audit rows; referenced profiles are marked separately.
 
 Store catalog identities as standard LinearlyDistributedInt codes, use enums only for typed queries/labels and keep unknown0 explicit. Never infer current datasheet identity from uncertified legacy factories or display strings. IDs are append-only within a schema; changing their order requires migration. New numeric fields and snapshots use generated lifecycle methods.
 
@@ -401,7 +411,7 @@ No actual unit grant is installed by these fixtures. Continue only54 standard Or
 
 ## Orks army rules and Warlord selection —17.F
 
-Read [Orks army rules](doc/orks-army-rules.md), the updated architecture and supplied Warlord definition.17.F is complete as shared engine integration; next17.G resumes source-backed Orks Leader/Support mechanics. Current54 profiles/loadouts/specialized riled sources remain their datasheet owners. No Forge World/Legends adapter is authorized.
+Read [Orks army rules](doc/factions/orks/orks-army-rules.md), the updated architecture and supplied Warlord definition.17.F is complete as shared engine integration; next17.G resumes source-backed Orks Leader/Support mechanics. Current54 profiles/loadouts/specialized riled sources remain their datasheet owners. No Forge World/Legends adapter is authorized.
 
 Current Waaagh! grants Advance re-rolls; riled grants5+ InSv, ranged Assault and charge permission when selected to Advance. Do not add old-edition melee A/S boosts. Keep sparse riled keys source-owned and separate overlapping permanent/timed copies. Own-unit passives follow the live source model's current unit across banks without external measurement; external auras keep battlefield/range/keyword gates. Snapshots of equipped/borrowed Assault keep the originating effect key. Preserve the selected Advance's stored charge waiver through buff changes and same-turn repositioning, then clear it at turn reset; unrelated restrictions remain.
 
@@ -427,7 +437,7 @@ Final682 assertions /684 CTests,34 unoptimized native sanitizer/leak cases, inde
 
 ## Current Orks profile/loadout data —17.H1
 
-Read [the current data report](doc/orks-current-unit-data.md) and updated architecture.17.H1 adds source-backed data constructors for Beastboss, Beast Snagga Boyz and Squighog Boyz; next17.H2 implements Dodge Dis!, Keep Huntin', Mobbed, Bomb Squig and Brutal Impact. Proper oval geometry17.H3 and production roster promotion17.H4 remain mandatory before marking17.H/cards complete. All54 standard Orks units are planned. Exclude Forge World/Legends and points/detachment prices, while retaining CP rules.
+Read [the current data report](doc/factions/orks/orks-current-unit-data.md) and updated architecture.17.H1 adds source-backed data constructors for Beastboss, Beast Snagga Boyz and Squighog Boyz; next17.H2 implements Dodge Dis!, Keep Huntin', Mobbed, Bomb Squig and Brutal Impact. Proper oval geometry17.H3 and production roster promotion17.H4 remain mandatory before marking17.H/cards complete. All54 standard Orks units are planned. Exclude Forge World/Legends and points/detachment prices, while retaining CP rules.
 
 Use the current raw HTML, not just the audit text: separate InSv boxes supply Beastboss5+, Snagga/Squighog6+, and the Hunter keyword header supplies MONSTER/VEHICLE. The constructors carry exact profile/weapon/keyword/Army Rules/attachment data, literal composition ranges and optional loadout checks. Thump Guns augment Boys' Choppa/Slugga. Choppa Standard/Hunter and Stikka ranged/melee share physical weapon identity. Current Big Choppa has Cleave2/S7; melee Stikka has no inherited Lance. New current data never inherits Morgrim/Beast Snagga/FNP grants from old factories.
 
@@ -445,7 +455,7 @@ Work on two related roadmap tasks in one implementation/validation batch when pr
 
 ## Current Orks unit abilities and circular proxies —17.H2/H3
 
-Read [the current ability report](doc/orks-current-unit-rules.md) and ROADMAP.md.17.H2/H3 are complete within the user's temporary long-axis circle policy. Next17.H4 promotes the three current constructors into the production roster; parent17.H/full current-card gameplay remains incomplete. All54 standard cards stay planned; Forge World/Legends and price accounting remain excluded, CP retained.
+Read [the current ability report](doc/factions/orks/orks-current-unit-rules.md) and ROADMAP.md.17.H2/H3 are complete within the user's temporary long-axis circle policy. Next17.H4 promotes the three current constructors into the production roster; parent17.H/full current-card gameplay remains incomplete. All54 standard cards stay planned; Forge World/Legends and price accounting remain excluded, CP retained.
 
 Keep explicit source/component metadata: Keep Huntin' rule110 has two windows sharing one army-round counter; future Squigosaur adapters must reuse110. Bomb Squig rule111 is one original-unit battle token, spent when a target is accepted, including failed rolls. Idempotent registration must preserve these counters across formation, transfers/return and saves. Accepted riled grants survive source death and expire at next own turn through the common source framework. External target ranges/LOS require live battlefield units. Preserve Waaagh's selected-Advance permission snapshot; later Keep Huntin' cannot retroactively change an Advance selection.
 
@@ -458,7 +468,7 @@ Current738 assertions /740 CTest entries have passing results across the initial
 ## Current Orks roster and War Horde passive —17.H4/17.I1
 
 Implement and validate these two batches together before the expensive shared
-checks. Read [the roster/passive guide](doc/orks-roster-war-horde.md). Public Orks
+checks. Read [the roster/passive guide](doc/factions/orks/orks-roster-war-horde.md). Public Orks
 selection now uses `make_orks_starter_roster`: Beastboss, four Squighogs and two
 ten-model Snagga mobs with one Thump Gun each. Preserve the stable roster/action
 identifier, label it current Orks, and exercise both players' actual mandatory
@@ -508,7 +518,7 @@ Never fabricate an unknown hull size. The all-detachment batch remains in
 progress until ROADMAP.md records actual effect and integration checks; enum
 entries, eligibility tables and source extraction alone are not implementation.
 
-Use [the ordinary detachment design](doc/orks-detachments.md) for the four package modules, source generations, cargo/offboard effects and flat reaction wrappers. Distinct enhancement recipients are original muster units; attaching two already enhanced units does not select another enhancement. The supplied Epic Hero exclusion still applies to the resulting attached unit. Turn/round timing windows run sequentially; reuse their completed child frame rather than retaining one inactive copy per boundary. Validate save/replay fixtures on the normal host stack. Record actual Game/layout growth and remaining performance work under17.Q.
+Use [the ordinary detachment design](doc/factions/orks/orks-detachments.md) for the four package modules, source generations, cargo/offboard effects and flat reaction wrappers. Distinct enhancement recipients are original muster units; attaching two already enhanced units does not select another enhancement. The supplied Epic Hero exclusion still applies to the resulting attached unit. Turn/round timing windows run sequentially; reuse their completed child frame rather than retaining one inactive copy per boundary. Validate save/replay fixtures on the normal host stack. Record actual Game/layout growth and remaining performance work under17.Q.
 
 Audit every new action frame's active lifetime before adding owning call-site storage. Frames that cannot have two simultaneous instances share one context slot in `Board.shared_actions` (or an existing direct Board slot); types with one existing owner can stay there. Check the entire descendant path for re-entry, including ordinary frame-producing helpers. Fully delegated siblings are sequential, but recursive descendants would invalidate sharing. Preserve required completed results in small caller-owned `frm` snapshots before another call overwrites the slot; do not copy whole frames. Run `python tools/check_action_frame_storage.py --wrapper <matching-wrapper.py> --output doc/action-frame-lifetimes.json` after regenerating bindings. Read the architecture guide's frame-sharing section; the static audit complements semantic, save/replay and sanitizer tests. Keep generated init/drop, bounded persisted fields and existing Godot action argument contracts.
 
@@ -527,7 +537,7 @@ serial frames or custom lifecycle hooks while adding the remaining units.
 
 ## Twelve current Orks adapters —17.P1
 
-Read [the adapter guide](doc/orks-infantry-walkers.md) and the latest ROADMAP
+Read [the adapter guide](doc/factions/orks/orks-infantry-walkers.md) and the latest ROADMAP
 section. Boyz, Nobz, Warboss, Bigboss, Bannernob, Stormboyz, Warbikers, Deff Dread,
 Killa Kans, Big Mek Dakkarig, Beastboss on Squigosaur and Mozrog now have checked
 profiles/loadouts and source consumers.15/54 standard cards are implemented;
@@ -558,7 +568,7 @@ getters; normalize expected UI labels with GlobalRules.strip_symbols.
 
 ## Fourteen elite, Mek and Gretchin adapters —17.P2
 
-Read [the adapter guide](doc/orks-elites-meks-gretchin.md) and the latest
+Read [the adapter guide](doc/factions/orks/orks-elites-meks-gretchin.md) and the latest
 ROADMAP section. Implement all fourteen related cards as one broad batch,
 then validate the final combined state. The three Python migration commits
 have been reverted at the user's request; keep native Rulebook assertions and
@@ -601,7 +611,7 @@ mutation/replay scope and the remaining17.P/17.Q fixes.
 
 ## Final25 standard Orks adapters —17.P3
 
-Read [the final-card guide](doc/orks-remaining-units.md) and ROADMAP.md. All54
+Read [the final-card guide](doc/factions/orks/orks-remaining-units.md) and ROADMAP.md. All54
 included standard cards now have profile/loadout/source adapters. The final25
 use `orks_remaining_data.rl` and `orks_remaining_rules.rl`; their111 new native
 regressions bring the suite to1,105 passing assertions. Source metadata still
@@ -661,7 +671,7 @@ User instruction2026-10-15: avoid separate rule implementations for offboard
 units. Own-unit eligibility, CP/usage, psychic spending, rolls, grants, healing,
 revival, mortality and death handling must share implementations across all
 banks. Keep only bank selection and genuine range/visibility/placement/capacity
-adapters. Read [the public roster/integration guide](doc/orks-custom-roster.md).
+adapters. Read [the public roster/integration guide](doc/factions/orks/orks-custom-roster.md).
 `orks_became_shocked` and `use_orks_psychic` store stable unit identities;
 `DamageJob.bank` feeds the common damage engine. Do not restore an Orks-specific
 offboard mortal/death engine or duplicate Breakin' Heads/Visions/Surly frames.

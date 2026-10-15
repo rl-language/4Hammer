@@ -13,7 +13,7 @@ This batch implements the current shared Orks army-rule consumers and pre-format
 
 There is no old-edition melee A/S boost in this wording. These are web sources, not core-PDF quotations.
 
-The user supplied the full Warlord selection definition on2026-10-13; it is retained in [the supplied reference](11th-edition-supplied-appendix.md#select-your-warlord--user-supplied-during17f). Select an army-faction CHARACTER unit, then an eligible CHARACTER model; it gains WARLORD. Required units/model rules restrict the choice; cannot-be-Warlord overrides required status. [Ghazghkull](https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka) specifically requires its model, represented separately from a unit-level requirement.
+The user supplied the full Warlord selection definition on2026-10-13; it is retained in [the supplied reference](../../11th-edition-supplied-appendix.md#select-your-warlord--user-supplied-during17f). Select an army-faction CHARACTER unit, then an eligible CHARACTER model; it gains WARLORD. Required units/model rules restrict the choice; cannot-be-Warlord overrides required status. [Ghazghkull](https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka) specifically requires its model, represented separately from a unit-level requirement.
 
 Permanent unit-riled wording is supported by [Stompa: Waaagh! Effigy](https://wahapedia.ru/wh40k11ed/factions/orks/Stompa) and [Zodgrod: Super Runts](https://wahapedia.ru/wh40k11ed/factions/orks/Zodgrod-Wortsnagga). Their actual factories, profiles and other abilities remain their datasheet batches.
 

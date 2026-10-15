@@ -14,6 +14,10 @@ and extension points. [ROADMAP.md](ROADMAP.md) tracks the edition migration and
 validated scope; historical project descriptions below are not a current-edition
 datasheet/mission coverage claim.
 
+Faction adapters live under `src/factions/`; see the
+[Orks module map](src/factions/orks/README.md) and
+[Orks documentation index](doc/factions/orks/README.md).
+
 ### Rationale
 
 **Warhammer 40,000 (10th edition)** is a non-deterministic, zero-sum board game requiring several hours to play. Successfully playing it necessitates:

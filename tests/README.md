@@ -251,7 +251,7 @@ Use `task15-final-fuzzer` for matching instrumented replay/mutation checks. Both
 
 Schemas are state/observation **17**, action **13**. The suite has **442 supported assertions / 444 CTest entries**, with an empty discrepancy manifest. Prepared builds are `/workspace/4hammer-validation/task17b-tests`, `task17b-godot`, `task17b-sanitized-tests` and `task17b-fuzzer`. Sixteen focused native assertions include malformed configuration saves, point-free carriers/passengers and shocked/destroyed CP targets; require leak detection as well as address/undefined-behavior checks.
 
-The full headless Godot harness passes, beginning with both players selecting independent packages through actual enum buttons, duplicate rejection and pending selection restoration. Use an explicit extended timeout for the existing large binding suite (`--timeout 1200` for this batch). Matching full-game seed40000 now selects Orks detachments and point-free reserves; regenerate old legal-choice replays after the action/schema change. See ROADMAP.md and [the configuration report](../doc/orks-configuration.md) for final validation and the remaining faction-rule batches.
+The full headless Godot harness passes, beginning with both players selecting independent packages through actual enum buttons, duplicate rejection and pending selection restoration. Use an explicit extended timeout for the existing large binding suite (`--timeout 1200` for this batch). Matching full-game seed40000 now selects Orks detachments and point-free reserves; regenerate old legal-choice replays after the action/schema change. See ROADMAP.md and [the configuration report](../doc/factions/orks/orks-configuration.md) for final validation and the remaining faction-rule batches.
 
 ## Orks keyword predicates (batch17.C1)
 
@@ -263,7 +263,7 @@ The complete headless interaction harness passes for the compact layout; a later
 python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17c1-final-godot --script tests/godot_keyword_predicates.gd --timeout 120
 ```
 
-Omitting `--script` runs the full existing interaction harness; use an explicit extended timeout. Replays must match the removed old action payloads and schema14. See [the predicate report](../doc/orks-keyword-predicates.md) and ROADMAP.md for final fuzzer evidence, layout measurements and pending17.C2–C4 mechanics. Predicate completion does not certify any Orks datasheet.
+Omitting `--script` runs the full existing interaction harness; use an explicit extended timeout. Replays must match the removed old action payloads and schema14. See [the predicate report](../doc/factions/orks/orks-keyword-predicates.md) and ROADMAP.md for final fuzzer evidence, layout measurements and pending17.C2–C4 mechanics. Predicate completion does not certify any Orks datasheet.
 
 ## Model characteristics (batch17.C2a)
 
@@ -335,7 +335,7 @@ The optimized sanitized `task17c4b-fuzzer` passes preserved lifetime inputs, zer
 
 ## Orks army-rule consumers (batch17.F)
 
-Current CTest is `/workspace/4hammer-validation/task17f-tests`:650/650 pass,648 supported assertions and two fixtures. The29 `test_orks17f_*` cases cover current Waaagh/riled/War Cry/Da Boss and the supplied Warlord definition; [the report](../doc/orks-army-rules.md) records source/provenance and current-data boundaries. The final unoptimized ASAN/UBSAN/leak driver is `task17f-sanitized/driver-final`; all29 pass with leak detection.
+Current CTest is `/workspace/4hammer-validation/task17f-tests`:650/650 pass,648 supported assertions and two fixtures. The29 `test_orks17f_*` cases cover current Waaagh/riled/War Cry/Da Boss and the supplied Warlord definition; [the report](../doc/factions/orks/orks-army-rules.md) records source/provenance and current-data boundaries. The final unoptimized ASAN/UBSAN/leak driver is `task17f-sanitized/driver-final`; all29 pass with leak detection.
 
 Matching artifacts are `task17f-godot`; run `python tools/check_godot_state.py --build-path /workspace/4hammer-validation/task17f-godot --script tests/godot_orks_army.gd --timeout 30`. It checks real child methods, production Warlord/timing buttons, offboard click suppression and status/CP. Previous modifier/source checks also pass. The harness frees its owned RLCLib Object and defers quit; a leak warning remains a failure.
 
@@ -360,7 +360,7 @@ The optimized sanitized `task17g-fuzzer-final` passes preserved lifetime/zero/fr
 
 ## Current Orks data and loadouts (batch17.H1)
 
-Current CTest is `/workspace/4hammer-validation/task17h1-tests`:709/709 pass,707 assertions plus two fixtures. The25 `test_orks17h1_*` cases cover current profiles, composition/equipment checks, Hunter/conditional combat consumers, shared physical weapons, attachment/saves and explicit oval guards. The unoptimized ASAN/UBSAN/leak driver `task17h1-sanitized/driver-final` passes all25. [The data report](../doc/orks-current-unit-data.md) distinguishes current data from pending special abilities, oval support and roster promotion.
+Current CTest is `/workspace/4hammer-validation/task17h1-tests`:709/709 pass,707 assertions plus two fixtures. The25 `test_orks17h1_*` cases cover current profiles, composition/equipment checks, Hunter/conditional combat consumers, shared physical weapons, attachment/saves and explicit oval guards. The unoptimized ASAN/UBSAN/leak driver `task17h1-sanitized/driver-final` passes all25. [The data report](../doc/factions/orks/orks-current-unit-data.md) distinguishes current data from pending special abilities, oval support and roster promotion.
 
 Cross-check compiled statistics against the cached original HTML, without recompilation:
 
@@ -376,7 +376,7 @@ The optimized sanitized `task17h1-fuzzer` passes preserved lifetime, zero and co
 
 ## Combined current Orks abilities and circle proxies (17.H2/H3)
 
-Current discovery has738 assertions/740 entries in `/workspace/4hammer-validation/task17h23-tests`. Initial full execution passes739/740; the updated circle-placement fixture incorrectly used an opposing deployment zone. After correcting its anchor, all58 affected entries pass (57 assertions plus compilation). These results cover every registered assertion across the two runs; no full740/740 rerun is claimed. The31 new `test_orks17h23_*` cases cover source windows/limits/targets, actual move/charge hooks, hit/damage/shock consumers, FNP/spill, owner restoration, saves and proxy edges/overlap/rotation/movement. [The report](../doc/orks-current-unit-rules.md) records printed rules and user-approved approximation limits.
+Current discovery has738 assertions/740 entries in `/workspace/4hammer-validation/task17h23-tests`. Initial full execution passes739/740; the updated circle-placement fixture incorrectly used an opposing deployment zone. After correcting its anchor, all58 affected entries pass (57 assertions plus compilation). These results cover every registered assertion across the two runs; no full740/740 rerun is claimed. The31 new `test_orks17h23_*` cases cover source windows/limits/targets, actual move/charge hooks, hit/damage/shock consumers, FNP/spill, owner restoration, saves and proxy edges/overlap/rotation/movement. [The report](../doc/factions/orks/orks-current-unit-rules.md) records printed rules and user-approved approximation limits.
 
 The unoptimized ASAN/UBSAN/leak driver `task17h23-sanitized/driver-final` passes all56 current-data/ability cases with leak detection. If sandbox process inspection blocks LeakSanitizer, run the same binary through the permitted outside-sandbox execution flow; do not disable leak detection. Matching pure native/header/C++ bindings are `task17h23-godot`:
 
@@ -393,7 +393,7 @@ Schemas30/19/30, next31, require matching bindings/policies.20-step Gym passes22
 
 ### Current Orks roster and War Horde passive (17.H4/17.I1)
 
-See [the roster/passive guide](../doc/orks-roster-war-horde.md) and ROADMAP.md.
+See [the roster/passive guide](../doc/factions/orks/orks-roster-war-horde.md) and ROADMAP.md.
 The new17 assertions cover public current-roster/Warlord/formation/save flow and
 Get Stuck In ownership, keyword/profile/package gates, duplicate choices, actual
 weapon declaration and critical-hit resolution. The new Godot control check is:

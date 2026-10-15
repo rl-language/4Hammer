@@ -2,7 +2,7 @@
 
 Batch17.G implements formation and component lifetimes for the included Orks Leader/Support lists. It resumes the generic task6 mechanics. It does not install current model profiles, loadouts or all datasheet abilities; those remain17.H–P. Other factions still need their permission lists. Forge World and Legends are excluded.
 
-The specification is core pp.66–67 (19.01–19.04), starting strength p.86, destruction p.87 and returning models p.88, with supplied/retrieved appendix19.01.01,19.04.01 and05.02.01. [The procedural reference](11th-edition-core-rules-procedural.txt) retains the printed wording; [the unit inventory](orks-unit-requirements.tsv) records each card URL and retrieval date2026-10-12.
+The specification is core pp.66–67 (19.01–19.04), starting strength p.86, destruction p.87 and returning models p.88, with supplied/retrieved appendix19.01.01,19.04.01 and05.02.01. [The procedural reference](11th-edition-core-rules-procedural.txt) retains the printed wording; [the unit inventory](factions/orks/orks-unit-requirements.tsv) records each card URL and retrieval date2026-10-12.
 
 ## Formation and state
 
