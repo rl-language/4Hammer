@@ -556,3 +556,22 @@ action26 and next-state44 require matching bindings. Ten focused Godot scripts,
 266 selected sanitized assertions, preserved memory/game replays, mutation and
 source/roster/layout/finite-ML checks pass; see ROADMAP.md for exact scope and
 artifact paths. No Python wrapper is used by the pure rule-test runner.
+
+
+## Faction-neutral behavior dispatch —2026-10-16
+
+The final native build at `/workspace/4hammer-validation/faction-dispatch/tests`
+passes1,207 assertions plus compilation (1,208 individual CTest entries).
+Nine new regressions cover neutral/source routing and atomic core/faction
+choices. The test runner still uses no Python wrapper. Use matching
+state/observation45, action27, next-state46 clients: input names/fields remain
+unchanged, while170 reordered tags invalidate older rank/tag catalogs.
+
+Matching `faction-dispatch/godot` bindings pass16 focused host scripts. Separate
+source, HTML,238-roster, layout/frame and finite-Gym audits pass. The optimized
+sanitized engine passes381 selected assertions, preserved memory/game inputs
+and mutation. A fresh985-action native game reaches terminal and restores its
+final save. ROADMAP.md records exact timings, counts and limits. Run
+`python tools/check_faction_boundary.py` as a separate source audit to reject
+concrete faction calls/policies in core functions/actions; it is not part of
+the native pure-rule test runner.

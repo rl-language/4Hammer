@@ -13,6 +13,7 @@ and [faction documentation index](../../../doc/factions/orks/README.md).
 | `detachments.rl` | Selected-package and named unit-group predicates |
 | `enhancements.rl` | Enhancement/Upgrade metadata, selection, recipients and attachment restrictions |
 | `stratagems.rl` | Support-card eligibility, timing choices and CP-cost adapters; combat/movement effects live in their own domains |
+| `queries.rl` | Extracted bearer/army/permission properties and finite catalog exceptions; core accesses these through neutral composition |
 | `types.rl` | Orks enums, records and stable source rule codes |
 | `effects.rl` | Typed grant builders, active-effect queries and scoped cleanup |
 | `sources.rl` | One datasheet registration path, source lifecycle/availability adapters and timing-source dispatch |
@@ -41,8 +42,9 @@ specifications; identities, scope and interval limits are explicit. Only
 `commit_source_usage` spends a use. Shared movement, damage, source effects,
 healing and model return remain in common modules. No custom init/drop is used.
 
-The engine is jointly compiled: core phases call these adapters and shared
-state still contains faction catalog/storage types. This folder is not a
-standalone library. State/observation43 protects renamed internal frame fields;
+The engine is jointly compiled: core phases call the
+[neutral composition layer](../README.md), which selects these adapters. Shared
+state still contains explicit faction catalog/storage types. This folder is not a
+standalone library. State/observation45 protects renamed internal frame fields;
 public action payload compatibility is checked separately. Source display names
 are hidden enum values; the UI derives text only when presenting a choice.

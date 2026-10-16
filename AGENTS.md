@@ -805,5 +805,27 @@ hooks; the composition layer dispatches to Orks domain adapters. Move whole
 faction choice bodies, not just call names, while core retains controller order,
 mandatory gates and common procedures. Extract already-generic source lifetime/
 pool helpers into core. Keep all banks, original source provenance, CP/use rules,
-Godot payloads and shared-frame non-re-entry. The assessment is documentation;
-no dispatch implementation is included in this completed weapon change.
+Godot payloads and shared-frame non-re-entry. The subsequent approved refactor is implemented and validated; read ROADMAP.md
+for completed evidence rather than assuming the old proposal is still pending. Core uses [neutral faction contracts](src/factions/README.md)
+and must not call concrete Orks behavior or inspect its private rule codes.
+Shared enums/types and typed context storage may retain Orks entries. Run
+`tools/check_faction_boundary.py` as the independent source audit; pure rule
+CTest remains entirely native.
+
+For peer core/faction choices, initialize both children, forward one step with
+`subaction ... core_choice, faction_choice`, then finish the selected child with
+`subaction*`. Each child sets Bool `started` immediately after its first accepted
+input. Never construct a child inside an `actions:` alternative expecting its
+initial inputs to be offered. The five deliberate single-step menus are checked
+by the frame audit. Preserve atomic ability rolls/targets, controller interleaving,
+mandatory finish gates and the real parent-owned queue/progress contexts.
+
+
+Latest completed dispatch schemas are state/observation45, action27 and
+next-state46. Public input names/fields are preserved, but moved action bodies
+reorder170 tags: use matching clients and regenerate legal-rank game inputs.
+The final1,207 assertions plus native compilation,16 focused Godot scripts,
+source/roster/layout/frame/finite-ML audits and sanitized checks pass. A fresh
+985-action native game reaches terminal and restores its final save. These
+results supersede earlier historical counts above. Read the final ROADMAP entry
+for scope, measured code growth and remaining second-faction identity limits.

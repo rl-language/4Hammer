@@ -1775,21 +1775,75 @@ unoptimized. Full rendered integration and discovery optimization remain exclude
 All runtime bodies match the sanitized build inputs; later edits were comments
 and blank lines only. Markdown links/anchors/fences also pass.
 
-## Faction-neutral behavior dispatch —proposal
+## Faction-neutral behavior dispatch —completed 2026-10-16
 
-User direction2026-10-16: separate core functions/actions from Orks behavior
-through a neutral intermediate layer that dispatches to Orks. Shared enums may
-continue to contain Orks entries. Assessment is complete in
-[the dispatch review](doc/faction-dispatch-review.md); implementation is pending.
+User direction: separate core functions/actions from Orks behavior through a
+neutral intermediate layer. Shared enums and explicit typed faction storage may
+retain Orks entries. The [dispatch review](doc/faction-dispatch-review.md) records
+the original assessment; the [composition map](src/factions/README.md) describes
+the implemented contracts and action forwarding.
 
-- [x] Inspect core mechanical queries, embedded faction branches, timing/action
-  bodies, source lifecycle and existing generic helpers in Orks modules.
-- [x] Propose neutral hooks, complete faction-action delegation and a focused
-  implementation/validation sequence, preserving core sequencing and Godot inputs.
-- [ ] Extract generic source-pool/cargo-lifetime/retained-source helpers.
-- [ ] Route pure mechanics/property/permission queries through neutral hooks.
-- [ ] Route lifecycle/source handlers and complete faction action bodies.
-- [ ] Route setup and remove direct Orks behavioral dependencies from core.
+- [x] Inspect embedded faction queries, action bodies, source lifecycle and
+  already-generic helpers.
+- [x] Extract generic source-pool/cargo-lifetime/retained-source helpers, scoped
+  effect cleanup and the single-declared-target calculation into core.
+- [x] Route properties, modifiers, permissions, lifecycle and source policies
+  through neutral hooks; keep concrete policies in Orks domain modules.
+- [x] Move complete faction timing, movement, attack, charge and destruction
+  choices behind the dispatch layer; route prebattle construction.
+- [x] Preserve core controller order, mandatory gates, common procedures,
+  CP/use provenance, all storage banks and one-copy shared frame lifetimes.
+- [x] Complete native/Godot/layout/source/finite-ML and sanitized validation;
+  document schemas, contracts, limits and measured code size.
 
-This proposal does not authorize replacing catalogs or redesigning faction state.
-Do not count the proposed dispatch layer as implemented or validated.
+Five core/faction menus initialize both child frames, forward one input from
+either with `subaction`, then finish the selected child with `subaction*`.
+A child sets `started` after its first accepted input. Constructors must not
+mutate Board before selection. Typed progress records keep contexts shared
+without raw-array Godot ABI ambiguity. No custom lifecycle hooks, runtime
+name registration, discovery optimization or rendering integration were added.
+
+State/observation **45**, action **27**, next-state bound **46** require matching
+clients. All **319 public input names/field shapes** and350 payload storage
+declarations are preserved;170 tag indices change because action bodies moved.
+The action union remains24 bytes. This is deliberately versioned, not compatible
+with schema26 rank/tag replays. Game grows33,344→33,800 bytes;
+Board31,136→31,528; Model stays2,696. The frame audit passes139 actions/66 shared
+slots, with no duplicate frames or nested shared-frame re-entry.
+
+The final unoptimized native build passes **1,207 assertions plus compilation
+(1,208 CTest entries)** in306.84s, including300.04s compilation with `-j4`.
+Nine new assertions cover neutral defaults, recipient/source ownership,
+overlapping keys, transport gates, both core/faction timing orders, mandatory
+choices and ordinary/special move atomicity. Pure rule tests remain native;
+separate host/source audits do not enter that execution path.
+
+Fresh matching unoptimized Godot C++ bindings pass16 scripts: army, detachments,
+unit rules, recovery, shared banks/procedures, weapons/sources, custom roster,
+datasheets, named identities, model/weapon characteristics, modifier ignoring,
+incoming modifiers, attachments and keyword predicates (10.06–119.00s each).
+Rules.gd and TraceManager.gd are unchanged. The independent HTML check passes
+54 cards/63 model profiles/253 weapon rows; all54 default and184 variant rosters
+match the previous semantic snapshots. Twenty Gym steps pass with30,072
+candidates and16,255,282 finite observation values. The source boundary audit
+passes881 core functions/actions and442 concrete symbols with no findings;
+its negative control rejects the previous source with249 findings.
+
+The rebuilt optimized ASAN/UBSAN/leak fuzzer passes381 selected semantic
+assertions plus empty input (382 runs/134.47s), both preserved memory inputs
+(8.20s), the preserved game-input replay (86.01s) and fresh action mutation
+(24 runs/31.28s), with no sanitizer failure or crash artifact. Because old rank
+inputs can take different paths after the tag permutation, a fresh native game
+also reaches terminal owner−4 after985 actions and successfully restores its
+final save; its newly generated input passes the sanitized replay in65.379s
+with leak detection. Working artifacts and logs are under
+`/workspace/4hammer-validation/faction-dispatch`.
+
+Runtime Rulebook sources grow26,164→27,193 lines (+1,029): core shrinks160 lines,
+Orks domain modules grow526, and explicit composition/context modules add663.
+This is an architecture/reuse change, not a total code reduction. Core no longer
+owns concrete Orks behavior. Existing legacy non-Orks rosters retain their prior
+scope; this does not certify current adapters for them or an independently
+compiled core. Before enabling another sourced faction with colliding local
+rule IDs, qualify source/use identities as described in the composition map.
+Full rendered integration remains outside the requested scope.

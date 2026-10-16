@@ -1,10 +1,11 @@
 # Separating faction behavior from core rules
 
-This is a proposed refactor, inspected on 2026-10-16 while validating the single
-weapon catalog. No dispatch refactor is implemented here. The user's scope is
-functions and actions: shared enums may contain Orks weapons, keywords,
-datasheets and other values. Splitting catalogs or redesigning all faction
-storage is unnecessary for this goal.
+This refactor was approved, implemented and validated on2026-10-16.
+ROADMAP.md records executed evidence. The original assessment below
+explains why each boundary exists; its coupling inventory describes the pre-change
+code. Shared enums retain Orks weapons, keywords, datasheets and typed state.
+See the [implemented composition map](../src/factions/README.md) for current
+module ownership and the action forwarding pattern.
 
 ## The boundary
 
@@ -30,10 +31,10 @@ a universal interpreter. Shared enums and existing typed faction state can stay
 where they are initially. Decoupling behavior does not require claiming the
 core is already an independently compiled library.
 
-## Where the coupling actually is
+## Original coupling inventory
 
 These are representative runtime dependencies, excluding mere catalog rows and
-labels. Paths refer to the current implementation.
+labels. Paths identify the original core sites; their policies now live behind neutral hooks.
 
 | Core location | Present behavioral dependency | Proposed neutral responsibility |
 | --- | --- | --- |
@@ -134,24 +135,24 @@ return: a dispatcher must not create Damage→Faction→Damage nesting on the sa
 frame. Keep completed results alive until copied. Generate the action dependency
 graph with `rlc ... -dot -o -` and repeat the existing frame-storage audit.
 
-## Focused implementation sequence
+## Implemented sequence
 
-1. **Extract genuinely generic helpers.** Move the three source-lifetime/pool
+1. **Completed: extract genuinely generic helpers.** Move the three source-lifetime/pool
    helpers above to core, rename predicate builders and preserve all callers.
    This removes the existing reverse dependencies without inventing hooks.
-2. **Route pure mechanics queries.** Add the neutral dispatch boundary for
+2. **Completed: route pure mechanics queries.** Add the neutral dispatch boundary for
    modifiers, weapon rules, effective properties, permissions and transport
    seats. Move embedded enhancement/effect branches into Orks adapters. Keep
    the core arithmetic, caps and source provenance unchanged.
-3. **Route lifecycle and sources.** Delegate faction registration, availability,
+3. **Completed: route lifecycle and sources.** Delegate faction registration, availability,
    typed-grant handling, hit/damage/destruction notifications and validation.
    Generic bank/lifetime/usage machinery remains core. Cover reserves and
    passengers through the same calls as battlefield units.
-4. **Move faction action bodies.** Extract timing/movement source branches,
+4. **Completed: move faction action bodies.** Extract timing/movement source branches,
    attack reactions, shock, charge and movement selections into domain adapters,
    called through neutral actions. Keep controller ordering and mandatory-choice
    gates generic. Split this step by window/domain for reviewable commits.
-5. **Route prebattle construction.** Dispatch roster/options/Warlord/formation
+5. **Completed: route prebattle construction.** Dispatch roster/options/Warlord/formation
    setup, preserving their common order. Remove direct imports of Orks behavior
    from core. Shared enums and typed faction fields can remain.
 
@@ -170,3 +171,43 @@ attack/defense dispatch, source-origin routing, all three banks, simultaneous
 core/faction choices, CP/use accounting, pending save restoration and generic
 grant expiry. Existing native assertions, Godot controls, exact action/frame
 audits and sanitized semantic/full-game replays remain required evidence.
+
+
+## Implementation details and limits
+
+The forwarding contracts are ordinary typed functions grouped by domain; action
+constructors return the actual faction frames without another wrapper frame.
+Core keeps phase progression, player sequencing, mandatory gates and common
+procedures. Five menus initialize both child frames, forward one step from
+either, then fully delegate the selected child before offering another choice.
+The child `started` Bool identifies the chosen continuation. Initializing a
+constructor inside an `actions:` alternative does not expose its initial inputs;
+that pattern was rejected by the standalone execution check.
+
+The shared pool/cargo/retained-source helpers, scoped effect removal and
+single-declared-target calculation are in core. Existing sourced ability
+algorithms remain in their Orks domain modules. Private progress/state stays
+explicitly typed for save/ML inference. No custom init/drop, runtime name lookup,
+opaque buffer or action-discovery optimization was added.
+
+This separates the requested Orks behavior; existing legacy non-Orks roster
+hooks retain their prior scope. It does not claim every legacy faction has a
+current adapter. Source identities still use the current single-faction rule
+catalog. A second sourced faction with colliding local rule numbers needs the
+qualified use/source identity described above before enabling those rules.
+
+
+## Validation and cost
+
+Final validation passes1,207 native assertions plus compilation,16 focused
+Godot scripts,381 selected sanitized assertions, preserved memory/game inputs,
+mutation and independent source/roster/frame/finite-observation audits. A fresh
+985-action native game reaches terminal and restores its final save. See the
+latest ROADMAP entry for artifact paths and exact scope.
+
+The319 public input names/field shapes are unchanged, but170 action tags move.
+Use matching state/observation45, action27 and next-state bound46. Code size
+grows1,029 Rulebook lines overall: core−160, Orks adapters+526 and explicit
+composition/context modules+663. The result buys a reusable behavioral boundary;
+it does not claim a total code reduction, independent core compilation or
+complete current-edition adapters for legacy non-Orks rosters.

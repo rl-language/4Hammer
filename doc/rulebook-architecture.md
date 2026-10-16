@@ -98,6 +98,7 @@ for completed faction cleanup and the remaining shared-engine proposals.
 | Core stratagems and actions | [core_stratagem_rules.rl](../src/core_stratagem_rules.rl) | Core effect eligibility and phase-local action permissions; shared CP payment is on `Board` |
 | Transport and borrowed weapons | [transport_rules.rl](../src/transport_rules.rl), [firing_deck_rules.rl](../src/firing_deck_rules.rl) | Carrier/passenger links, embark/disembark setup, capacity, emergency setup and Firing Deck selections |
 | Orks datasheets | [datasheets.rl](../src/factions/orks/datasheets.rl) | All54 current factories, checked composition/equipment, printed metadata and attachment permissions |
+| Neutral faction contracts | [composition map](../src/factions/README.md) | Purpose-named properties, permissions, source lifecycle and complete faction actions; static dispatch to Orks adapters |
 | Orks runtime domains | [module map](../src/factions/orks/README.md) | Army/roster, detachments/enhancements, source/effect lifecycle, combat, movement, recovery, transports, psychic and morale adapters |
 | Source lifecycle | [source_effect_types.rl](../src/source_effect_types.rl), [source_effects.rl](../src/source_effects.rl) | Source/event/use/effect records, eligibility, typed grants, expiry, aura refresh and restore validation |
 
@@ -212,7 +213,7 @@ The project requires authored persistent numeric game/frame values to use `BInt`
 
 There is no z-coordinate action. Model elevation and terrain/path metadata retain their bounded domains. Physical calculations can reconstruct micrometre coordinates and use local floats while actual saved positions remain quads. `ModelHistory` stores bounded squared horizontal segment lengths plus vertical distance, then computes square roots on demand; it does not persist a float distance cache.
 
-The current full-game layout is state/observation schema **40**, action schema **26**, with next-state bound **41**. The validated catalog has **30,072** candidates and **16,390,831** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Observations pass the finite-value check; the user owns valid-action discovery optimization in the compiler.
+The current full-game layout is state/observation schema **45**, action schema **27**, with next-state bound **46**. The validated catalog has **30,072** candidates and **16,255,282** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Observations pass the finite-value check; the user owns valid-action discovery optimization in the compiler.
 
 ## Turn sequence and decision ownership
 
@@ -392,12 +393,14 @@ shared with the ordinary engine. `make_source_usage` and `source_use_limits`
 construct explicit specifications; `commit_source_usage` alone spends uses.
 
 Orks army queries and faction actions live with their domains instead of in
-`units.rl`/`rules.rl`. Core phases still call them and own phase orchestration.
+`units.rl`/`rules.rl`. Core phases call neutral contracts in
+[faction composition](../src/factions/README.md), which dispatches to those
+adapters. Core owns phase orchestration, controller order and mandatory gates.
 The generic whole-unit Hidden query lives with `model_is_hidden` in terrain
 rules; the riled-up grant constructor lives in the faction effects module.
 Shared healing/model return, granted moves, damage and source counters remain
 in common modules. Persisted internal frame fields use responsibility names;
-state/observation43 protects saves, while the public action catalog is checked
+state/observation45 protects saves, while the public action catalog is checked
 separately. ROADMAP.md records actual validation and compatibility evidence.
 
 ## Attached units
@@ -606,8 +609,9 @@ Home-objective ownership is explicit mission metadata, not inferred geometry.
 All54 included standard cards use [one datasheet guide](factions/orks/orks-datasheets.md)
 and public roster selection. ROADMAP.md owns validation and scope limits.
 Internal frame names describe Command healing, datasheet windows and hit
-effects; state/observation43 requires matching clients. Public action payloads
-remain at schema26. No custom lifecycle hook is introduced.
+effects; state/observation45 requires matching clients. Public action payloads
+retain their names/fields, but reordered tags require action schema27. No custom
+lifecycle hook is introduced.
 
 ### Shared rules across storage banks
 
@@ -640,6 +644,31 @@ labels/family IDs are computed static metadata. Nazdreg's printed simultaneous
 exception remains explicit on its profiles. See the
 [state reference](game-state-reference.md#equippedweapon-and-the-single-weapon-catalog).
 
-The proposed [faction dispatch boundary](faction-dispatch-review.md) concerns
-behavioral functions/actions. Shared catalogs may continue to contain Orks data.
-That proposal is separate future work, not implemented by this equipment change.
+The implemented [faction behavior boundary](../src/factions/README.md) concerns
+functions/actions; shared catalogs continue to contain Orks data. The
+[dispatch review](faction-dispatch-review.md) records the design and scope.
+
+
+## Core/faction action alternatives
+
+The common engine no longer selects Orks rule-code ranges or implements Bomb
+Squig, War Cry, Mobbed, Headbutt, Pulse Jet or Shokk-boosta decision bodies.
+Neutral hook constructors return their existing typed faction frames; their
+implementations invoke shared damage/move/healing/source primitives. Generic
+source-pool reuse, cargo dependency, retained-source presence, scoped cleanup
+and single-declared-target queries remain in common modules.
+
+Timing, charge-end, phase and move-kind controllers initialize a core child and
+a faction child, forward one input from either using `subaction`, then fully
+delegate the selected child using `subaction*`. Its `started` flag selects the
+continuation before any later target/roll input. This is deliberate single-step
+composition, not parallel rule resolution: an ability completes atomically
+before another simultaneous effect can be chosen. Core/faction options remain
+peers in the current-player-then-opponent ordering. Mandatory source effects
+continue to block finishing.
+
+See the [faction map](../src/factions/README.md) for context signatures and why
+constructors must run before forwarding. The frame audit checks these five
+specific alternatives in addition to constructor dependencies, nested re-entry
+and exact stored copies. The source boundary audit permits shared catalogs,
+labels and typed state while rejecting concrete Orks behavior in core.

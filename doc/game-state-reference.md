@@ -164,7 +164,7 @@ selects the legacy four-marker fixture.
 | `orks_attack_serial` | `LinearlyDistributedInt<0, 1025>` | Bounded attack-selection sequence stamp used to associate those records with an activation. |
 | `move_requires_objective` | `Bool` | Temporary granted-move destination restriction; not a condition on all ordinary moves. |
 | `constrained_mover` | `UnitID` | Unit whose endpoint is constrained by move_requires_objective; restored after the grant. |
-| `orks_reaction_target` | `EntityIdentity` | Stable subject identity for a current Orks reaction; nested reaction runners restore it. |
+| `forced_attack_target` | `EntityIdentity` | Optional stable target constraint for a reaction attack; zero is unrestricted. Nested reaction runners restore it. |
 | `orks_attack_active` | `Bool` | Marks the active attack context for Orks attack-dependent source checks. |
 | `orks_support_bank` | `SourceBank` | Actual storage bank for current Orks own-unit support choices. |
 | `orks_selected_unit` | `UnitID` | Selected unit index within the current Orks support/bank context; not a persistent identity. |
@@ -602,12 +602,12 @@ not be confused with a printed Weapon or with a target's current live state.
 | `melta_damage_bonus` | `LinearlyDistributedInt<0, MAX_STAT_MODIFIER>` | Applicable additional damage for this group, a characteristic contribution rather than a second damage event. |
 | `precision_visibility_known` | `Bool` | Whether the per-target-model Precision visibility snapshot has been established. |
 | `precision_visible_targets` | `Bool[32]` | Which target model slots satisfy the current Precision visibility selection condition. |
-| `dodge_dis_hit_bonus` | `Bool` | Beastboss unit-rule hit contribution, distinct from a BS/WS characteristic modifier. |
+| `faction_innate_hit_bonus` | `Bool` | Source-supplied intrinsic hit contribution, distinct from a BS/WS characteristic modifier; currently populated by Orks Dodge Dis. |
 | `hit_roll_bonus` | `Bool` | Retained generic/legacy positive hit contribution; combine it with other terms before the +/-1 cap. |
-| `orks_hit_modifiers` | `RuleModifiers` | Source-owned Orks hit arithmetic for this attack group. |
-| `orks_unit_hit_modifiers` | `CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS>` | Separately retained unit/repair hit contributions so optional ignoring can distinguish sources. |
-| `orks_wound_modifiers` | `RuleModifiers` | Source-owned Orks wound arithmetic for the group. |
-| `orks_fail_hits_three` | `Bool` | Rule-specific unmodified low-hit failure gate; not just a -1 arithmetic modifier. |
+| `faction_hit_modifiers` | `RuleModifiers` | Source-owned faction hit arithmetic for this attack group; core applies the common modifier rules. |
+| `faction_unit_hit_modifiers` | `CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS>` | Separately retained unit/repair hit contributions so optional ignoring can distinguish sources. |
+| `faction_wound_modifiers` | `RuleModifiers` | Source-owned faction wound arithmetic for the group. |
+| `fail_hits_up_to_three` | `Bool` | Rule-specific unmodified low-hit failure gate; not just a -1 arithmetic modifier. |
 | `target_has_cover` | `Bool` | Cover snapshot used by the current edition's BS handling, not a copied armour-save bonus. |
 | `plunging_fire` | `Bool` | Printed Plunging Fire condition; current handling affects BS and excludes Aircraft as required. |
 | `hit_roll_malus` | `Bool` | Retained negative hit contribution; does not bypass the cumulative modifier cap. |
@@ -1113,3 +1113,30 @@ writer/query before changing a rule. A display-only field, an archived identity,
 a current selector and an effective characteristic serve different purposes even
 when they all ultimately contain small integers.
 
+## Neutral faction hooks and choice progress
+
+Core consumes the neutral [faction contracts](../src/factions/README.md),
+including model-property contributions, permissions, source lifecycle and whole
+ability actions. Typed Orks data remains explicit; core does not interpret its
+private effects, rule numbers or ability-specific decisions. The Orks
+`is_riled_up(Model)` library query now lives with the faction adapter; it reads
+source-owned status without changing its lifetime.
+
+| Record/property | Lifetime and meaning |
+| --- | --- |
+| `CoreTimingProgress.resolved` | Nine bounded Bool flags for core timing-rule kinds, owned by the parent window and borrowed by both alternatives through a typed record. |
+| `FactionTimingProgress.orks_rules` | Two bounded Bool flags for one controller's Orks army timing choices. Reset by the adapter between controller groups; core sees a typed progress value. |
+| `FactionChargeProgress.mobbed`, `.impetus` | Pending source effects captured after an actual charge. Their adapter resolves them in the player's chosen order alongside core effects. |
+| `CoreTimingChoice`, `CoreMovementPhaseChoice`, `CoreShootingPhaseChoice` | One core menu choice; parent-owned Board/progress/queues are ctx arguments, not copied fields. |
+| `CoreChargeChoice`, `CoreMoveKindChoice` | One core charge-end effect or ordinary move-kind selection, alongside a faction child. |
+| Choice-child `started` | Bool initially false, set immediately after the first accepted input. The parent forwards one step from either child, then completes the selected child's rolls/targets before offering siblings again. |
+| Core menu-child `finished` | The actual end-window/end-phase input was accepted; the parent still owns controller handoff/phase completion. |
+| Move-kind child's `kind`, `extra` | Bounded selected move mode/allowance copied to Movement before another child can overwrite results. |
+
+The five controllers initialize both children before forwarding a single step
+with `subaction core_choice, faction_choice`. They then use `subaction*` for the
+chosen child only. Saving retains the selected continuation and progress;
+restoring a save requires matching native/Godot state schemas. The shared-frame
+non-re-entry and single-copy rules remain unchanged. Source/recipient dispatch
+uses actual rule context and works across battlefield, reserve and passenger
+banks; another army's ownership alone does not suppress an installed effect.
