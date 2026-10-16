@@ -639,3 +639,7 @@ ordinals; paired choices are two Weapon values, not a bundle enum. Catalog
 labels/family IDs are computed static metadata. Nazdreg's printed simultaneous
 exception remains explicit on its profiles. See the
 [state reference](game-state-reference.md#equippedweapon-and-the-single-weapon-catalog).
+
+The proposed [faction dispatch boundary](faction-dispatch-review.md) concerns
+behavioral functions/actions. Shared catalogs may continue to contain Orks data.
+That proposal is separate future work, not implemented by this equipment change.

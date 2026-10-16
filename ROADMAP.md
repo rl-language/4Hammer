@@ -1774,3 +1774,22 @@ previously completed-game replay (70.69s), and fresh action mutation (34runs/
 unoptimized. Full rendered integration and discovery optimization remain excluded.
 All runtime bodies match the sanitized build inputs; later edits were comments
 and blank lines only. Markdown links/anchors/fences also pass.
+
+## Faction-neutral behavior dispatch —proposal
+
+User direction2026-10-16: separate core functions/actions from Orks behavior
+through a neutral intermediate layer that dispatches to Orks. Shared enums may
+continue to contain Orks entries. Assessment is complete in
+[the dispatch review](doc/faction-dispatch-review.md); implementation is pending.
+
+- [x] Inspect core mechanical queries, embedded faction branches, timing/action
+  bodies, source lifecycle and existing generic helpers in Orks modules.
+- [x] Propose neutral hooks, complete faction-action delegation and a focused
+  implementation/validation sequence, preserving core sequencing and Godot inputs.
+- [ ] Extract generic source-pool/cargo-lifetime/retained-source helpers.
+- [ ] Route pure mechanics/property/permission queries through neutral hooks.
+- [ ] Route lifecycle/source handlers and complete faction action bodies.
+- [ ] Route setup and remove direct Orks behavioral dependencies from core.
+
+This proposal does not authorize replacing catalogs or redesigning faction state.
+Do not count the proposed dispatch layer as implemented or validated.

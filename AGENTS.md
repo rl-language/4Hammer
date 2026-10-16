@@ -796,3 +796,14 @@ The final ROADMAP evidence records1,198 native assertions plus compilation,
 ten Godot scripts,54-card/source and238-roster comparisons, frame/finite-ML
 checks and sanitized semantic/memory/game/mutation checks. Runtime sources
 shrink568 lines; pure rule tests remain native with no Python runner/cache.
+
+The user's next architecture goal concerns **functions and actions**, and
+shared enums may retain Orks entries. Read the
+[faction dispatch proposal](doc/faction-dispatch-review.md) and ROADMAP before
+implementation. Core should call neutral mechanics/lifecycle queries and action
+hooks; the composition layer dispatches to Orks domain adapters. Move whole
+faction choice bodies, not just call names, while core retains controller order,
+mandatory gates and common procedures. Extract already-generic source lifetime/
+pool helpers into core. Keep all banks, original source provenance, CP/use rules,
+Godot payloads and shared-frame non-re-entry. The assessment is documentation;
+no dispatch implementation is included in this completed weapon change.
