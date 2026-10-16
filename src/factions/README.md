@@ -7,6 +7,15 @@ Weapon, Keyword, datasheet and other enums may contain Orks entries. This
 boundary separates behavioral ownership, not catalog storage or independent
 binary libraries.
 
+The comments above dispatch hooks specify the **core-facing contract for any
+implementation**: call boundary, supplied context, required result/mutation,
+neutral result and sequencing obligations. They must stand without knowledge of
+the current faction's datasheets. Named rule eligibility, effects and tabletop
+citations belong above the implementing adapter functions. A forwarding body
+selects an implementation; its current behavior is not the definition of the
+interface. The [contract review](../../doc/faction-contract-review.md) records
+remaining interfaces that still restrict what another faction can express.
+
 | Module | Contract responsibility |
 | --- | --- |
 | [dispatch_properties.rl](dispatch_properties.rl) | Model keywords/abilities, characteristic contributions, intrinsic weapon rules and component army-rule metadata |
@@ -24,8 +33,8 @@ Godot enumerates a legal input. Modifier appenders contribute to the provided
 result without erasing other sources; weapon-rule appenders can also increment
 existing numeric instances while preserving their provenance. These are
 cumulative operations: applying them twice to the same result can duplicate a
-contribution. Commands and action constructors are
-called at the actual gameplay boundary, with stable source/model identities and
+contribution. Commands and action constructors are called at the actual gameplay
+boundary, with stable source/model identities and
 the original Board/bank contexts. Faction code may invoke the existing common
 movement, damage, healing and source primitives; it must not copy those engines.
 
@@ -38,17 +47,19 @@ immediately read a pending event require the caller to validate it first.
 
 Read result fields after completion and before reusing their frame. The `started`
 routing flag is deliberately read earlier, after forwarding one input, to choose
-which peer to finish. Check each result's guard: `reaction.available` before its actor/target fields,
+which peer to finish. Check each result's guard: `reaction.available` before its
+actor/target fields,
 `crash_mortals > 0` before using the death-reaction recipient, and a selected,
 completed special-move peer before using `kind`/`extra`. A zero source-effect key
-means no scoped effect to remove; a Grot Shield unit index of zero is valid and
+means no scoped effect to remove; an interceptor unit index of zero is valid and
 its absence sentinel is `-1`. Never infer these meanings from integer truthiness.
 
 Routing follows the actual rule context, not just the target owner's selected
-army. The current static composition calls the Orks adapter whose existing
-metadata/permissions establish applicability. It also supports direct datasheet
-fixtures whose Board army has not been selected. An Orks rule can therefore
-apply to a recipient in another army without guessing that recipient's faction.
+army. Each implementation must check the source metadata/permissions that
+establish applicability, including direct datasheet fixtures whose Board army
+has not been selected. A rule can affect a recipient in another army without
+guessing that recipient's faction. The current static composition selects one
+installed adapter; that implementation choice is not a portable interface type.
 There is no dynamic name lookup, callback pointer or universal rule interpreter.
 Before adding another faction with overlapping local source rule numbers,
 qualify the source/use identity and implement its composition policy explicitly.
@@ -86,7 +97,7 @@ the player chooses only one of them.
 
 Each child sets its bounded Bool `started` immediately after accepting its
 first input. The selected child then completes before siblings are offered
-again. This keeps a Bomb Squig roll or selected Advance atomic while allowing
+again. This keeps an ability's roll/target sequence or selected Advance atomic while allowing
 the player to order complete core/faction effects freely. Construct children
 before the single-step alternative; a constructor placed inside an `actions:`
 branch does not expose that child's initial inputs.
@@ -114,6 +125,7 @@ adding another hook. Generic source reuse/cleanup, status grants and common
 permission consumers, attack-result bookkeeping, flat reaction execution,
 replacement construction, Warlord/roster restrictions and passenger metadata
 belong in common modules. Keep actual faction triggers, catalog conditions,
-CP/use decisions and named rule tables here. The concrete Orks action returns a
-`ReactionAttackRequest`; core executes it. Shared typed statuses retain source
-keys across every bank and archive. Riled-up itself remains Orks policy.
+CP/use decisions and named rule tables in adapters. The post-attack hook returns
+a `ReactionAttackRequest`; core executes it. Shared typed statuses retain source
+keys across every bank and archive. Only shared mechanical meanings may be
+interpreted by core; named faction meanings remain adapter policy.

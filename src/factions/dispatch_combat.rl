@@ -2,286 +2,318 @@ import factions.orks.combat
 import factions.orks.morale
 import factions.orks.queries
 
-# Combat/morale extension contracts. UnitID indexes battlefield units; bearer
-# and slot index the source's models/equipment. Stable EntityIdentity overloads
-# can support all banks. Read queries leave state unchanged; appenders modify
-# caller-owned output without rolling or paying. Appenders are cumulative:
-# do not reapply to the same result as if they were idempotent queries.
-# Returned frames borrow contexts and can mutate Board during initialization
-# or resumption, except peer menus, which must wait for an accepted input.
-# Core owns shared attack, damage, casualty removal and flat reaction execution.
-# Concrete rules/citations: orks/{combat,morale,queries}.rl and named Orks cards at
-# https://wahapedia.ru/wh40k11ed/factions/orks/; core attack/destruction pp16-24/87.
 
-# Tell core to retain this battlefield casualty for faction destruction
-# processing (Surly or Flyboyz Aircraft). Pure trigger-presence query: does not
-# resolve the effect or establish a whole-unit destruction event (core p87).
+# Combat/morale extension contract. UnitID indexes battlefield units; bearer
+# and slot index source models/equipment. Stable-identity responses can locate
+# other banks explicitly. Queries are pure. Appenders contribute to initialized
+# caller-owned snapshots without rolling/paying or erasing unrelated sources.
+# Action hooks own their choices/CP/use; core owns attack/damage execution and
+# casualty removal. Frames borrow original contexts. Read results after completion;
+# peer started flags are read after one input. See README.md for shared lifetimes.
+
+# Report that this battlefield casualty requires extension destruction
+# processing before removal. Core combines this with common destruction,
+# transport and retention needs. This is trigger presence, not execution or
+# proof that an optional effect can currently be selected; default false.
 fun faction_has_destruction_trigger(Board board, Model model) -> Bool:
     return orks_has_destruction_trigger(board, model)
 
-# Tell core that losing the last living model requires a unit-destruction
-# event for this faction source (Flyboyz Aircraft). Core detects last-model loss
-# and issues that event once; this query neither removes models nor pays CP.
+# Report that this unit/model requires a whole-unit destruction event.
+# Core calls after wound loss and issues the event only on actual last-model
+# destruction, once per unit. Return false when no such extension event is
+# needed; do not emit events, pay or remove the casualty here.
 fun faction_unit_destruction_trigger(Board board, Unit unit, Model model) -> Bool:
     return orks_unit_destruction_trigger(board, unit, model)
 
-# Retain an offboard casualty for an unmeasured own-unit destruction effect,
-# currently Surly. Excludes battlefield-only Aircraft reactions; does not grant
-# range/visibility to reserves or passengers (appendix01.02.04).
+# Report additional destruction processing required for this offboard model.
+# Core retains the casualty and runs the common bank-aware destruction pipeline.
+# Return false for none; do not grant external visibility/range or assume a
+# battlefield location merely because an own-unit death effect is permitted.
 fun faction_offboard_destruction_trigger(Model model) -> Bool:
     return orks_offboard_destruction_trigger(model)
 
-# Contribute package/effect weapon rules for the actual equipped slot on
-# source[bearer] (both indices zero-based). Appends instances and can increment
-# existing numeric instances in result; core later selects duplicate abilities
-# (Orks detachment rules; core p78). Does not mutate equipment.
+# Contribute configuration/source-granted weapon-rule instances for the actual
+# equipped slot of battlefield source[bearer], with zero-based valid indices.
+# result already contains intrinsic/earlier contributions; preserve their
+# conditions/keys. May append or apply specified numeric-instance increments;
+# core owns later duplicate selection. No applicable contribution is a no-op.
 fun append_faction_package_weapon_rules(Board board, UnitID source, Int bearer, Int slot, WeaponAbilitySet result):
     append_orks_package_weapon_rules(board, source, bearer, slot, result)
 
-# Explicit-profile variant for borrowed Firing Deck weapons: source/bearer
-# are the carrier, selected/name identify the borrowed profile/weapon family.
-# Apply carrier package/effect rules without indexing its equipment; may append
-# or increment result instances as above (core Firing Deck p81).
+# Explicit-profile variant: source/bearer are the model making the attack,
+# selected is its used profile and name the physical weapon family. The profile
+# can be borrowed and absent from the source's slots. Apply the same contextual
+# contributions without substituting a coincidentally matching equipped slot;
+# preserve prior result instances and source provenance.
 fun append_faction_package_weapon_rules(Board board, UnitID source, Int bearer, Weapon selected, WeaponCode name, WeaponAbilitySet result):
     append_orks_package_weapon_rules(board, source, bearer, selected, name, result)
 
-# Append faction numerical contributions for kind on this declared weapon
-# before grouping/resolution. Resolve its actual bearer/provenance; do not
-# change the stored weapon or apply final rounding/caps here (Orks options).
+# Append source/bearer/weapon-dependent arithmetic for kind on declaration.
+# Core has resolved the bearer and seeded common model/weapon modifiers;
+# it calls this before datasheet contributions and final evaluation/grouping.
+# Preserve prior modifiers and their operation/source metadata; default no-op.
 fun append_faction_declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration, ModifiedCharacteristic kind, RuleModifiers result):
     append_orks_declaration_modifiers(board, source, declaration, kind, result)
 
-# Gather source/target-dependent grants into info for this declared weapon:
-# modifier lists, reroll flags, hit provenance and cover exceptions. Core then
-# classifies rolls/applies caps; this hook neither rolls dice nor spends CP.
-# Caller supplies initialized common attack facts and a resolved bearer; this
-# augments that attack group rather than clearing/rebuilding the whole record.
+# Augment initialized info for the actual source/target/declaration group
+# with applicable modifiers, reroll permissions and conditional attack facts.
+# Preserve common facts except where an explicit rule overrides one; keep
+# individually ignorable modifier provenance. Core compares group snapshots
+# and resolves dice later, so this hook must not roll, spend or mutate Board.
 fun append_faction_attack_effects(Board board, UnitID source, UnitID target, DeclaredWeapon weapon, AttackSequenceInfo info):
     append_orks_attack_effects(board, source, target, weapon, info)
 
-# Add a conditional bearer-only ability using attachment context, unlike the
-# unit-wide grant hook. Kill Kommanda supplies Infiltrators/Stealth to its
-# attached bearer while the required original component remains active.
+# Read a model-local grant requiring its containing unit/attachment context.
+# Core ORs this with Model.has_ability for eligible models during unit any/all
+# aggregation. Return false when absent; do not promote a bearer-only grant to
+# every member. Core supplies the live/retained-source aggregation boundary.
 fun faction_model_grants_ability(Unit unit, Model model, AbilityKind kind) -> Bool:
     return orks_model_grants_ability(unit, model, kind)
 
-# Return whether the unit currently has Lone Operative: its own ability or
-# conditional grants (Dreadherder/datasheet support). Adapter checks each grant's
-# attachment/proximity clauses; core applies range/detection/target checks.
+# Return the unit's complete effective Lone Operative permission, including
+# its ordinary ability and conditional grants. Core uses this directly for
+# detection/target range gating; false means no such protection. Evaluate grant
+# source/attachment/proximity conditions here without changing stored abilities.
 fun faction_lone_operative(Board board, Unit unit) -> Bool:
     return orks_lone_operative(board, unit)
 
-# Return the minimum D6 result for this casualty's Fight on Death, or 0 for
-# no permission. Chooses applicable datasheet/package/effect threshold; no die
-# is rolled. A unit already selected to fight cannot gain another attack
-# (One Last Kill/Brute Bosses and cards; supplied Fight on Death definition).
+# Return a minimum D6 result permitting this model to Fight on Death, or 0
+# for no grant. Core queries before committing wound loss, rolls only on actual
+# destruction, and retains a successful model without rerolling on selection.
+# Check source, phase and already-fought restrictions here; do not roll or
+# remove the model. Unit/model can be supplied from any damage bank.
 fun faction_fight_death_threshold(Board board, Unit unit, Model model) -> Int:
     return orks_fight_death_threshold(board, unit, model)
 
-# Return the battlefield unit index of a live Grot Shield recipient, or -1
-# if none. This is a lookup, not a hit count; the interception action below
-# rechecks the shield between wounds (Runt Swarm/Grot Shields).
-# Index 0 is valid; test >= 0 rather than treating the result as a Boolean.
+# Return a live battlefield recipient unit index for rolled-hit interception,
+# or -1 for none; index 0 is valid. Core also uses presence to defer Lethal Hits
+# conversion until interception. Keep this lookup consistent with the interceptor
+# action; a query must not cancel hits or apply damage.
 fun faction_hit_interceptor(Board board, Unit unit) -> Int:
     return orks_grot_shield(board, unit)
 
-# Before ranged weapon/target declarations, resolve Shokk Attack Gun table
-# choices/results and install their bearer grants. Runs inside the selected
-# attack; it does not itself declare weapons or gather attack dice.
+# Resolve additional own-Shooting attack choices after attack-selection effects
+# and before weapon/target declarations. Finish required rolls/grants before
+# declarations snapshot their effects. Return completed if inapplicable; do not
+# declare weapons or resolve their attacks inside this child.
 fun faction_pre_declaration_options(Board board, UnitID source) -> OrksShokkaSelection:
     return orks_shokka_selection(board, source)
 
-# At this shooting activation's end, resolve Rokkit Barrage, Enhanced
-# Runt-maw's actually-hit target choice and pending Shokka bearer destruction.
-# Uses the activation's hit ledger; common damage/destruction handles deaths.
+# Resolve additional own-Shooting completion effects after all declared groups
+# and hit-results hooks, before selected-weapon Hazardous checks. The current
+# activation ledger is still available. Complete required choices/damage using
+# shared procedures; do not close the ledger or start a nested shared Attack.
 fun faction_shooting_finished(Board board, UnitID source) -> OrksShootingOptionEnd:
     return orks_shooting_option_end(board, source)
 
-# Offer optional Dreadherder support at Shooting selection: choose a nearby
-# Walker and grant turn-long rerolls of hit rolls of 1, consuming a phase use.
-# Does not consume the bearer's shooting; also usable via the phase peer menu.
+# Resolve optional support at unit Shooting selection before core marks source
+# as having shot. Accepted support owns its target/use/grants but does not consume
+# ordinary shooting by itself. Complete nested choices and restore decision
+# ownership; return completed if no support applies.
 fun faction_shooting_support(Board board, UnitID source) -> OrksDreadherderShooting:
     return orks_dreadherder_shooting(board, source)
 
-# Test that engagement is exclusively with enemy Fortifications. Core uses
-# this specific exception for shooting and unshocked escape handling; it does
-# not waive restrictions for ordinary engaged enemies (Fortification rules).
+# Compatibility gate for engagement treated exceptionally by two consumers:
+# true relaxes core's engaged-target shooting restriction and lets an unshocked
+# unit skip Desperate Escape hazards. Grant only when both meanings apply;
+# false preserves ordinary checks. This Boolean cannot express them separately.
 fun faction_engagement_exception(Board board, Unit unit) -> Bool:
     return orks_engaged_only_fortifications(board, unit)
 
-# Test partial cover contributed by an intervening Ramshackle model between
-# observer and target. Intentional circular-base proxy for model obscuration;
-# true adds cover, never blocks physical visibility (Orks Ramshackle rule).
+# Return an additional partial-obscuration condition between observer/target
+# when ordinary terrain-area checks have not supplied one. False adds nothing;
+# true feeds common cover eligibility, not complete physical invisibility.
+# Use the project's circular geometry approximation and leave Board unchanged.
 fun faction_intervening_cover(Board board, Model observer, Model target) -> Bool:
     return orks_ramshackle_obscures(board, observer, target)
 
-# Test whether the observer's Wobbled effect gives its targets cover,
-# independent of terrain or a particular target. False removes no cover from
-# other sources (Mek Gunz/Madcap Artillery).
+# Report that observer's attacks confer cover on the target unit independently
+# of individual target-model terrain conditions. Core uses true as a unit-cover
+# short circuit, so check the full observer-side condition. False leaves normal
+# per-model cover checks intact; do not alter visibility or target state.
 fun faction_observer_grants_cover(Board board, Model observer) -> Bool:
     return orks_wobbled_observer(board, observer)
 
-# After attack hits and before weapon Hazardous, choose an actually-hit
-# enemy and apply Madcap Artillery/Bust Em/Squig Barrage effects. Uses current
-# ledger weapon provenance; declaring or missing a target is insufficient.
+# After declared attacks and destruction cleanup, before shooting-finished and
+# Hazardous, resolve effects requiring actual successful hits. Read the current
+# activation ledger and weapon tags, not merely declared targets. Finish chosen
+# targets/grants before returning; leave ledger closure and damage engines to core.
 fun faction_hit_results(Board board, UnitID source) -> OrksHitEffects:
     return orks_resolve_hit_effects(board, source)
 
-# Offer Warpath when selected to fight, before Pile In/Overrun and weapon
-# selection. Resolves the shared psychic budget/test and phase grant; this
-# does not execute melee attacks (Weirdboy/Kill Rig cards).
+# Resolve extra datasheet choices when source is selected to fight, before
+# Pile In/Overrun and melee weapon declarations. Finish resource tests/grants
+# needed by those later steps. Return completed if inapplicable; do not perform
+# the ordinary pile-in or attack sequence here.
 fun faction_datasheet_fight_selection(Board board, UnitID source) -> OrksDatasheetFightSelection:
     return orks_datasheet_fight_selection(board, source)
 
-# Resolve optional Rokkit-driven melee selection effects before choosing
-# weapons, within the selected Fight. Installs the source's attack grants;
-# ordinary weapon declaration and attack resolution remain core.
+# Resolve remaining selected-to-fight weapon-related choices before Pile In/
+# Overrun and weapon declarations, after datasheet_fight_selection. Accepted
+# effects must be ready for later weapon/Hazardous snapshots. Do not declare
+# weapons or run attacks; return completed when no extra choice applies.
 fun faction_melee_weapon_selection(Board board, UnitID source) -> OrksRokkitSelection:
     return orks_rokkit_selection(board, source)
 
-# Append datasheet-granted instances for this selected profile to result.
-# No equipment changes or duplicate selection occur here; core combines the
-# result with intrinsic/package grants and preserves distinct sources (p78).
+# Append unit/datasheet-granted instances for selected to result after earlier
+# weapon-rule contributions. Preserve parameters, conditions and source keys;
+# core chooses duplicate instances later. The explicit profile may be borrowed:
+# do not assume it occupies a source equipment slot. Default no-op.
 fun append_faction_datasheet_weapon_rules(Board board, UnitID source, Weapon selected, WeaponAbilitySet result):
     append_orks_datasheet_weapon_rules(board, source, selected, result)
 
-# Append datasheet arithmetic for kind on this declaration, using the real
-# bearer/weapon context. Mutates only result; common characteristic processing
-# owns modifier ordering, rounding and bounds (appendix Modifiers).
+# Append datasheet arithmetic for kind using declaration's actual bearer and
+# weapon provenance. result already contains common, intrinsic and package
+# contributions; preserve them. Core evaluates modifier ordering, bounds and
+# identical-attack grouping. This is a pure contribution, not an activation.
 fun append_faction_datasheet_modifiers(Board board, UnitID source, DeclaredWeapon declaration, ModifiedCharacteristic kind, RuleModifiers result):
     append_orks_datasheet_modifiers(board, source, declaration, kind, result)
 
-# After source/target and attack mode are known, resolve applicable paid
-# attacker/defender choices before the attacks. Can spend CP/install effects;
-# normal targeting/payment/usage checks still govern each selected card.
+# Resolve additional attacker/defender choices once a target is configured
+# for declared attacks, before refreshing target attack info and gathering dice.
+# Check target/mode eligibility and commit accepted costs/effects. Core can
+# revisit targets while resolving declarations; apply actual usage limits and
+# restore decision ownership without starting a nested ordinary Attack.
 fun faction_attack_targeted(Board board, UnitID source, UnitID target, Bool melee) -> OrksAttackTargeted:
     return orks_attack_targeted(board, source, target, melee)
 
-# Cancel up to count original rolled hits against target, one at a time.
-# Each cancellation inflicts one mortal on the current live Grot Shield unit;
-# return intercepted for core subtraction. Generated Sustained Hits are not
-# included in count; common damage/FNP/destruction handles shield casualties.
+# Resolve cancellation of up to count original rolled hits against target.
+# Recheck recipient availability as each cancellation/effect resolves; generated
+# Sustained Hits are excluded by core. Return intercepted in [0,count] after
+# completion for core subtraction, including any mandatory shared damage/death
+# processing. No eligible interception completes with intercepted == 0.
 fun intercept_faction_hits(Board board, UnitID target, CombatCounter count) -> OrksHitInterception:
     return intercept_orks_hits(board, target, count)
 
-# Return the absolute InSv target for allocating this attack to model,
-# starting from its effective save (above 6 means none). Unit KFF improves it
-# to 4+ only for ranged attacks; this is not an additive save modifier.
+# Return the absolute allocation-specific InSv target for model against info,
+# starting from model.effective_invulnerable_save() if no extra permission applies.
+# Lower is better; above 6 means none. Core uses this to group eligible recipients
+# and select saves. This is not an arithmetic modifier, a roll or model mutation.
 fun faction_allocation_invulnerable(Unit unit, Model model, AttackSequenceInfo info) -> Int:
     return orks_allocation_invulnerable(unit, model, info)
 
-# Resolve own-unit responses after subject becomes Battle-shocked, using a
-# stable identity across battlefield/reserve/passenger banks. Breakin Heads
-# can spend CP/inflict damage; resolve the identity again after nested changes
-# (Orks morale cards; appendix01.02.04).
+# Resolve responses immediately after subject becomes Battle-shocked. subject
+# is a stable unit identity; locate its actual bank and re-resolve after nested
+# damage/transfers. Apply accepted costs/effects through shared procedures,
+# restore decision ownership and return completed if subject/rules are absent.
+# Core owns the original test and any frozen recovery eligibility.
 fun faction_became_shocked(Board board, EntityIdentity subject) -> OrksBecameShocked:
     return orks_became_shocked(board, subject)
 
-# Battlefield-slot convenience overload of the same shocked-unit response.
-# Converts target to stable identity for the shared all-bank implementation;
-# does not introduce a separate offboard rule or roll Battle-shock itself.
+# Battlefield-slot entrypoint for the same became-shocked response contract.
+# Translate target to a stable unit identity before any suspension/bank change;
+# do not maintain a second offboard rules path. An absent slot may return
+# completed; this does not roll a new test or automatically recover shock.
 fun faction_became_shocked(Board board, UnitID target) -> OrksBecameShocked:
     return orks_became_shocked(board, target)
 
-# Offer Mob Mentality before the Command Battle-shock step establishes its
-# test/recovery eligibility snapshot. This is the pre-step boundary, not the
-# Command-phase start; the child owns its selections/usage (Orks cards).
+# Resolve additional effects at the Command Battle-shock STEP boundary, after
+# core CP gain and before core freezes test/recovery eligibility for all banks.
+# Complete accepted choices before returning; do not run ordinary unit tests or
+# move this boundary to Command-phase start. Inapplicable rules complete silently.
 fun faction_before_battle_shock(Board board) -> OrksMobMentalityStep:
     return orks_mob_mentality_step(board)
 
-# Before removing a retained casualty, offer Flyin Headbutt and resolve its
-# payment/target/dice. Outputs suppress_demise, headbutt_recipient and
-# crash_mortals; core applies the resulting mortal jobs/removal in order.
-# event supplies the real bank/unit; casualty is the caller's retained model.
-# Read outputs after completion. headbutt_recipient identifies a mortal-job
-# target only when crash_mortals > 0; suppress_demise can be true with no mortals.
+# Resolve extension choices before a retained casualty is removed. event gives
+# its actual bank/unit; casualty is the caller-owned retained model. After child
+# completion, core reads suppress_demise and crash_mortals, using the legacy-named
+# headbutt_recipient only if crash_mortals > 0. Return zero mortals/false suppression
+# for no replacement effect. Core queues that damage and performs removal/order;
+# do not remove the casualty or re-enter the active damage resolver here.
 fun faction_before_destruction(Board board, Model casualty, PendingDestruction event) -> OrksBeforeDestruction:
     return orks_before_destruction(board, casualty, event)
 
-# Return additional Hazardous uses, not wounds, beyond selected physical
-# weapons. Da Button contributes one while active; common Hazardous rolling,
-# allocation and destruction resolve it (Dread Mob; core p81).
+# Return a nonnegative number of additional Hazardous uses beyond the selected
+# physical-weapon uses, or zero. Core checks/resolves this after the ordinary
+# Hazardous batch. This is a roll count, not damage; do not roll, spend or mutate
+# source usage inside a query that core may evaluate twice.
 fun faction_extra_attack_hazards(Board board, Unit unit) -> Int:
     return orks_extra_attack_hazards(board, unit)
 
-# Read a source-owned automatic Battle-shock success permission.
-# Does not perform recovery or clear existing shock by itself; core decides
-# test/recovery timing using its frozen eligibility (Orks cards; core p30).
+# Return permission for the current Battle-shock test to succeed without a
+# roll. Core determines whether a test is needed and whether success can recover
+# shock from its frozen step eligibility. Return false for ordinary resolution;
+# do not clear shock or consume source use merely by checking permission.
 fun faction_automatic_shock_success(Board board, Unit unit) -> Bool:
     return orks_automatic_shock_success(board, unit)
 
-# Return the nonnegative penalty subtracted from the Leadership roll total,
-# not a change to Ld characteristic. Enhanced Runt-maw contributes its active
-# Snotling penalty before core's comparison (Orks enhancement).
+# Return a nonnegative penalty subtracted from the Leadership roll TOTAL,
+# or zero. Core combines this with other penalties and applies the roll minimum
+# before comparison with effective Ld. Do not change Ld, roll dice or apply shock
+# here; this query may operate on an offboard unit.
 fun faction_leadership_roll_penalty(Board board, Unit unit) -> Int:
     return orks_leadership_roll_penalty(board, unit)
 
-# Peer menu offering Dreadherder support beside ordinary Shooting choices.
-# started is set on the first accepted input; core completes this child before
-# reopening the menu. It does not select/consume ordinary shooting by itself.
-# Construction must leave Board unchanged; an unavailable menu simply offers
-# no enabled input, allowing the core peer to remain selectable.
+# Peer menu for additional Shooting-phase activations beside core choices.
+# Construction changes no shared state, including when it offers no enabled
+# input. Set started on acceptance, complete that atomic activation and return
+# to the core phase menu; only core can finish the phase/ordinary shooting.
 fun faction_shooting_phase_choice(Board board) -> OrksShootingPhaseChoice:
     return orks_shooting_phase_choice(board)
 
-# After all declarations, resolve Unpredictable Genius only when ranged
-# attacks share one target. Returns effect, the scoped source key core must
-# expire after this activation; does not prohibit multi-target declarations.
-# effect == 0 means no scoped grant to remove. Read it after completion and
-# preserve it until the attack's remove_scoped_source_effect cleanup boundary.
+# After all weapons/targets are declared but before any attack group resolves,
+# complete declaration-dependent choices/effects. declarations is the original
+# context, not a new declaration menu. Return effect, a scoped grant key for core
+# cleanup after all groups (0 means none). Do not resolve attacks or erase
+# unrelated grants; one key is the current result interface's supported scope.
 fun faction_declarations_complete(Board board, DeclaredWeapons declarations, UnitID source, Bool melee) -> OrksDeclarationsComplete:
     return orks_declarations_complete(board, declarations, source, melee)
 
-# Peer choice for one pending Mobbed/Impetus charge-end effect, interleaved
-# with core Crushing Impact. Mutates the original progress flags and sets
-# started on acceptance; crushing_pending is borrowed common-menu context,
-# not this adapter's flag to clear (user Rules Sequencing; Orks cards).
-# Construction must leave Board/progress unchanged. Accepted resolution or
-# decline clears its own pending flag before the child resolves nested effects.
+# Peer menu for one pending extension charge-end effect, interleaved with core
+# charge effects. Construct without shared-state mutation, set started on first
+# input and update the original progress before completing that effect. Core
+# owns crushing_pending; do not clear it or reset sibling progress. The selected
+# child completes before core offers another ordering choice.
 fun faction_charge_choice(Board board, FactionChargeProgress progress, Bool crushing_pending, UnitID source) -> OrksChargeChoice:
     return orks_charge_choice(board, progress, crushing_pending, source)
 
-# Snapshot Mobbed/Impetus eligibility for source after its completed charge.
-# Returns pending flags without resolving effects/rolling dice; the common
-# ordered menu consumes this snapshot one effect at a time (Orks cards).
+# Snapshot extension charge-end triggers after source completes its charge,
+# before the ordered charge-effect menu opens. Return only pending progress;
+# do not resolve effects, consume use or roll. The choice and remaining-work
+# hooks must interpret this same snapshot and clear only completed choices.
 fun faction_charge_progress(Board board, UnitID source) -> FactionChargeProgress:
     return orks_charge_progress(board, source)
 
-# Return whether any faction charge-end flag in progress is still pending.
-# Does not inspect core Crushing Impact or other charge legality; callers
-# combine their own pending work before allowing the sequence to finish.
+# Report unresolved extension work in progress. Core ORs this with common
+# charge-effect work before offering/finishing the menu. Return false when
+# exhausted; do not include core-owned work, clear flags or recompute eligibility
+# from a later battlefield state in place of the captured progress.
 fun faction_charge_effects_remaining(FactionChargeProgress progress) -> Bool:
     return orks_charge_effects_remaining(progress)
 
-# Read whether Dodge Dis contributes a separately selectable +1 hit term.
-# This is neither final modifier arithmetic nor WS/BS improvement; core keeps
-# the term individually ignorable and applies hit caps (Squighog Boyz).
+# Return whether this source contributes one additional, individually
+# ignorable +1 HIT-ROLL term. Core snapshots the Boolean and applies its ordinary
+# modifier selection/cap, independently of WS/BS and other +1 sources. Return
+# false for none; this interface cannot express a magnitude other than +1.
 fun faction_innate_hit_bonus(Unit unit) -> Bool:
     return orks_innate_hit_bonus(unit)
 
-# At attack selection, snapshot Wrecka objective presence and resolve free
-# Ammo Runt/paid attack choices before declarations. melee selects the actual
-# mode; accepted choices consume their own tokens/CP and install source grants.
+# Resolve extra choices at attack activation start, before common attack-
+# selection events and declarations. melee identifies the mode. Snapshot any
+# selection-time facts and commit accepted tokens/CP/grants; later grouping reads
+# them. Complete nested effects and leave the ordinary attack/declarations to core.
 fun faction_attack_selection_options(Board board, UnitID source, Bool melee) -> OrksAttackSelectionOptions:
     return orks_attack_selection_options(board, source, melee)
 
-# Append inherent unit contributions before the remaining faction arithmetic.
-# Brutal Impact adds Damage to all attacks after charging. Mutates only result;
-# kind filters the requested characteristic and core owns final ordering/caps.
+# Append unit-local characteristic arithmetic for kind before the declaration
+# and datasheet modifier hooks. This signature has no weapon/target context;
+# contribute only terms valid at that scope, preserving earlier result entries.
+# Core performs operation ordering/caps. No contribution is a no-op.
 fun append_faction_intrinsic_modifiers(Board board, UnitID source, ModifiedCharacteristic kind, RuleModifiers result):
     append_orks_intrinsic_modifiers(board, source, kind, result)
 
-# Augment record's optional tagged-hit counts for the current weapon group,
-# currently Squig Launcha provenance. Core already recorded count ordinary
-# hits; never add them again to totals or infer actual damage from these tags.
+# Augment only the optional tagged-hit slots of record for count hits in the
+# current attack group. Core already added those successful hits to its total;
+# do not add them again or report wounds/destruction. Use Board's group context
+# for provenance and keep each tag count within recorded successful_hits.
 fun record_faction_hit_tags(Board board, AttackResultRecord record, Int count):
     record_orks_hit_tags(board, record, count)
 
-# Resolve eligible after-attack cards in current-player/opponent order,
-# including payment and nonattack effects. Returns reaction, a typed request
-# for core's flat attack runner; never nests the shared Attack frame. Uses the
-# completed activation ledger and restores decision ownership (Orks cards).
-# After completion, inspect reaction.available before reading its actor/target
-# fields; copy the request before reusing the shared reaction frame.
+# Resolve after-attack choices using the completed activation ledger and core
+# controller order, owning accepted costs/nonattack effects. Return reaction;
+# if available is true, its valid source/target/mode must be ready for core's
+# flat runner, which executes it after this child completes. Otherwise other
+# request fields are unused. Restore decision ownership and never nest Attack;
+# core copies the result before reusing the shared reaction frame.
 fun faction_post_attack(Board board, UnitID attacker, Bool melee) -> OrksPostAttack:
     return resolve_orks_post_attack(board, attacker, melee)

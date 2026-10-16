@@ -4,273 +4,302 @@ import factions.orks.queries
 import factions.orks.recovery
 import factions.orks.transports
 
-# Movement, setup and transport extension contracts. Unless explicitly stated,
-# UnitID indexes battlefield units; disembark's passenger is an embarked-bank
-# slot and source-event IDs index their supplied queue. Queries are read-only;
-# policy/registration hooks mutate their named output or Board. Returned frames
-# borrow shared contexts and may mutate Board during construction/resumption.
-# Permissions waive only the named restriction; core retains endpoint legality,
-# coherency, bank transfers and controller sequencing (core pp32-37/62-65).
-# Concrete effects/citations: orks/{movement,queries,transports,recovery}.rl and
-# https://wahapedia.ru/wh40k11ed/factions/orks/ (named cards/detachments).
 
-# Grant the carrier's passengers a specific post-move charge exception
-# (Assault Disembark/Gut Hatch). True is not general disembark permission;
-# core still checks carrier movement, exit placement and other charge gates.
+# Movement/transport extension contract. UnitID indexes battlefield units
+# unless the individual hook says otherwise; source event IDs index pending.
+# Queries are pure. Policy/output arguments are caller-owned mutable references.
+# Core owns staged placement, final geometry/coherency, bank transfers and phase
+# order. Permissions alter only the stated gate. Frames borrow the live Board;
+# peer-menu construction must not mutate it before an accepted input.
+# See README.md for ownership, source identity and result lifetime conventions.
+
+# Return permission for required_disembark_mode to offer Assault rather than
+# Rapid after the carrier's qualifying Normal/Ingress move. The passenger may
+# decline Assault; core applies that mode's exit/charge rules. False grants no
+# mode exception and does not prohibit ordinary disembarkation.
 fun faction_assault_disembark(Board board, Unit carrier_unit) -> Bool:
     return orks_assault_disembark(board, carrier_unit)
 
-# Return an absolute Scouts distance in inches, or -1 to use printed Scouts.
-# The caller accepts any nonnegative override (0 permits no Scouts movement).
-# Minefield Detail supplies 6in when eligible and asserts that existing printed
-# values equal 6, enforcing the user's uniform-value requirement.
+# Return an absolute Scouts allowance in inches, or a negative value to use
+# core's printed-distance calculation. Nonnegative values replace that result;
+# zero gives no Scouts movement. Check conditions/duplicate-value compatibility
+# of the override here; core still validates placement and prebattle timing.
 fun faction_scouts_override(Unit unit) -> Int:
     return orks_scouts_override(unit)
 
-# After a completed move, install mode-specific consequences on id.
-# Pulse Jet records charge/action prohibitions and its defensive grant with
-# their own durations; do not call for a merely staged/cancelled placement.
+# Called by record_move after a movement kind is committed, never merely for
+# staging/legality discovery. Record mode-specific restrictions/grants on this
+# battlefield source with their required lifetimes. Preserve common history
+# already recorded by core; unsupported kinds are a no-op.
 fun faction_record_move_effects(Board board, UnitID id, MovementKind kind):
     orks_record_move_effects(board, id, kind)
 
-# Test whether a faction rule supplies the selected special movement kind.
-# Currently Pulse Engine permits Pulse Jet; ordinary unit/movement legality
-# is still checked separately before offering/accepting the choice.
+# Report additional permission to select this special movement kind for unit.
+# Return false for unsupported/inapplicable kinds. Core still checks ordinary
+# battlefield eligibility and geometry; returning true must not roll distance,
+# consume use or commit any movement effects.
 fun faction_special_move_available(Board board, Unit unit, MovementKind kind) -> Bool:
     return orks_special_move_available(board, unit, kind)
 
-# Adjust policy after core initializes the move kind's traversal defaults,
-# before Super-heavy Walker/Take to the Skies processing in movement_policy.
-# A selected Shokk-boosta Advance crosses enemy models without exclusions;
-# it does not grant FLY, terrain traversal or legalize final overlap.
+# Adjust traversal policy after core initializes the movement-kind defaults
+# and before common Walker/flight processing. Mutate policy only, for the given
+# unit/kind; later core processing may override it. Do not grant a keyword,
+# change positions or waive endpoint validation as a side effect.
 fun faction_prepare_movement_policy(Unit unit, MovementKind kind, MovementGeometryPolicy policy):
     orks_prepare_movement_policy(unit, kind, policy)
 
-# Apply final mode overrides after ordinary movement policy is assembled.
-# Pulse Jet crosses enemies/terrain with free vertical movement; common
-# endpoint overlap, engagement and board constraints still apply.
-# Runs last in movement_policy, after the prepare hook and Walker/FLY changes.
+# Apply final kind-specific traversal overrides after common movement policy
+# and the prepare hook. Mutate only policy; no applicable override is a no-op.
+# This changes path traversal/cost, not final overlap, board boundaries,
+# engagement or coherency checks enforced by placement.
 fun faction_finish_movement_policy(MovementKind kind, MovementGeometryPolicy policy):
     orks_finish_movement_policy(kind, policy)
 
-# Read an additional charge-after-Advance/Fall-Back permission for kind
-# (Turbo Engine, Kult of Speed and applicable fallback options). False supplies
-# no exception; core combines other permissions and captures selection history.
+# Read additional permission to charge after the selected movement kind.
+# Core captures it in Advance/Fall-Back history and combines other permission
+# sources; false grants no exception. Resolve applicability now, without changing
+# history or treating this as complete later charge eligibility.
 fun faction_move_charge_permission(Board board, Unit unit, MovementKind kind) -> Bool:
     return orks_move_charge_permission(board, unit, kind)
 
-# Read a charge-roll reroll permission from Blitz Brigade Wagons or
-# Competitive Streak. Does not roll, consume use or bypass charge eligibility;
-# core handles the whole-roll reroll and one-reroll limit (appendix01.05.02).
+# Return an additional permission to reroll the common charge roll. Core ORs
+# this with ordinary permissions, rerolls the complete pair before modifiers
+# and enforces the one-reroll limit. Default false; no roll, payment, movement
+# or source-use mutation may occur in this query.
 fun faction_charge_reroll(Board board, Unit unit) -> Bool:
     return orks_charge_reroll(board, unit)
 
-# Snapshot faction fallback charge/shooting and selected-move action waivers
-# on the battlefield unit's history, and install selection-triggered grants.
-# Call at mode selection, before effects can change; not after final placement.
+# Record extension consequences of selecting kind on the battlefield source:
+# capture action/shooting/charge waivers in selection history and install any
+# selection-triggered grants. Called before placement, including fallback
+# reaction handling; it must not record a completed move or change positions.
 fun capture_faction_selected_move(Board board, UnitID source, MovementKind kind):
     capture_orks_selected_move(board, source, kind)
 
-# Test whether an actually engaged enemy forces this unit to take Desperate
-# Escape when falling back (Wimp-kickaz/Hunt). No rolls or damage occur here;
-# core combines this with ordinary fallback/escape conditions.
+# Return whether additional live engagement conditions force unit's selected
+# Fall Back to use Desperate Escape. Core queries this both for ordinary-retreat
+# eligibility and after fallback reactions; it rechecks at that later boundary.
+# Default false; core rolls hazards and applies resulting damage separately.
 fun faction_forces_escape(Board board, Unit unit) -> Bool:
     return orks_forces_escape(board, unit)
 
-# Return a nonnegative amount subtracted from each Desperate Escape die.
-# Each engaged riled Wimp-kickaz source contributes 1; zero adds no penalty.
-# Hunt's extra shocked penalty is applied separately by the core hazard batch.
+# Return the nonnegative penalty subtracted from each ordinary Desperate
+# Escape die, or zero. Core counts results <= 2 after this penalty as failures;
+# it also applies this penalty to the extra batch. Do not return a roll count,
+# change the unit's characteristics or resolve wounds here.
 fun faction_escape_penalty(Board board, Unit unit) -> Int:
     return orks_escape_penalty(board, unit)
 
-# Return the number of extra Desperate Escape D6 rolls, not mortal wounds.
-# An active Hunt trigger against Monster/Vehicle adds three per engaged Beast
-# Snagga unit; core rolls and resolves failed-roll mortals (core p33).
+# Return the nonnegative number of additional Desperate Escape D6 rolls,
+# or zero. Core rolls this separate batch, applies the escape penalty and its
+# extra Battle-shock penalty, then resolves failed-roll mortal wounds normally.
+# This query returns neither automatic failures nor a damage amount.
 fun faction_extra_escape_hazards(Board board, Unit unit) -> Int:
     return orks_extra_escape_hazards(board, unit)
 
-# Offer optional unit-source abilities before its move selection, sharing
-# their usage gates with the phase-wide menu. Resolves Watchin'/psychic Roar
-# fully; finishing this menu neither moves the unit nor completes its activation.
+# Resolve optional source abilities when this battlefield unit is selected
+# for Movement, before paid move-selection choices and mode selection. Check
+# their own usage/targets and finish each nested effect. Return completed if
+# none apply; finishing the menu must not consume ordinary movement by itself.
 fun faction_movement_abilities(Board board, UnitID source) -> OrksMovementAbilities:
     return orks_movement_abilities(board, source)
 
-# Resolve remaining Wagon-specific charge-end effects after the shared
-# ordered charge-effect menu. Impending Krunch selects engaged enemy units
-# for Battle-shock tests; the charger is the source, not the test recipient.
-# The child finishes those tests; Mobbed/Impetus use separate combat hooks.
+# Resolve remaining extension effects after core has completed a successful
+# charge and drained the ordered core/faction charge-effect menu. source is the
+# charger, not necessarily any effect's recipient. Complete all nested choices/
+# tests before returning; simultaneous menu effects belong in charge_choice.
 fun faction_charge_finished(Board board, UnitID source) -> OrksWagonChargeEnd:
     return orks_wagon_charge_end(board, source)
 
-# After source is placed on the battlefield, apply its Flyboss ingress
-# grants to eligible nearby allies using the actual new position. Mutates
-# source grants; does not place the arriving unit or waive reserve restrictions.
+# Called after source has been placed in its battlefield slot by reserve
+# arrival. Record immediate arrival-triggered grants using its actual location,
+# not stale reserve coordinates. Do not perform placement again or waive arrival
+# eligibility; no applicable trigger is a no-op.
 fun faction_after_reserve_arrival(Board board, UnitID source):
     orks_flyboss_ingress(board, source)
 
-# Return whether the reserve unit passes arrival-round policy, including
-# ordinary later rounds and Deff from Shadows/Impulsive Recon exceptions.
-# Does not authorize placement, eligibility or a second arrival (core pp62-63).
+# Return whether this reserve unit passes the arrival-round gate at the
+# current timing, including ordinary permitted rounds and any exceptions.
+# This is the whole round-policy result, not just an extra permission; core
+# separately validates entry capacity, eligibility and placement.
 fun faction_ingress_round_allowed(Board board, Unit unit) -> Bool:
     return orks_ingress_round_allowed(board, unit)
 
-# After both armies deploy, resolve Kaptin's Hat redeploy choices, including
-# its permitted Strategic Reserves transfer. Owns the source's selection/use
-# and restores decision ownership; core still owns ordinary deployment order.
+# After both armies deploy, resolve permitted prebattle redeploy/withdrawal
+# choices with their source limits and bank permissions. Core owns normal
+# deployment order. Preserve model identity/history through moves, allocate
+# only required new identities, and restore incoming decision ownership.
 fun faction_prebattle_redeploy(Board board) -> OrksKaptinRedeploy:
     return orks_kaptin_redeploy(board)
 
-# Resolve Kommando prebattle split choices before ordinary attachments.
-# Changes unit/component membership with stable model/equipment provenance;
-# does not perform battlefield movement or general Leader selection.
+# Resolve extension battle-formation choices before shared attachments and
+# deployment. Splits/transfers must preserve model/equipment/use provenance and
+# assign valid identities/component metadata to resulting units. Finish without
+# inputs if unavailable; leave ordinary Leader selection to the next core step.
 fun faction_prebattle_formations(Board board) -> OrksKommandoFormations:
     return orks_kommando_formations(board)
 
-# Return additive charge-roll inches from a nearby Thundering Stampede
-# source: 1 if present, otherwise 0. Multiple qualifying sources do not stack
-# this aura; core combines distinct bonuses and applies the charge-roll cap.
+# Return the signed additive charge-roll contribution requiring Board context,
+# in inches, or zero. Determine applicable sources and their stacking policy;
+# exclude offboard measurements. Core combines the unit bonus and ordered roll
+# modifiers, then applies charge and flight limits.
 fun faction_charge_aura_bonus(Board board, Unit unit) -> Int:
     return orks_stampede_charge_bonus(board, unit)
 
-# Offer paid/source choices once actor is selected, before move-mode/charge
-# resolution. charging selects the appropriate menu; accepted choices can
-# spend CP and install movement effects before any placement is attempted.
+# Resolve permitted choices after actor is selected, before charge resolution
+# or movement-mode selection. charging distinguishes those two call boundaries.
+# Accepted choices own their CP/use and grants; they do not themselves commit
+# movement. Complete nested effects and restore the caller's decision ownership.
 fun faction_move_selection(Board board, UnitID actor, Bool charging) -> OrksMoveSelection:
     return orks_move_selection(board, actor, charging)
 
-# Offer choices tied to the already chosen movement kind, before placement.
-# Mind Mostly overrides the selected Advance/Fall-Back action restriction;
-# it does not waive all action gates or perform the move.
+# Resolve extension choices after actor's Advance/Fall-Back kind is selected,
+# before placement and selection-history capture. Record accepted permissions
+# with their source lifetime; they waive only their specified gates. No applicable
+# choice returns completed. This does not execute or complete the selected move.
 fun faction_move_mode(Board board, UnitID actor, MovementKind kind) -> OrksMoveMode:
     return orks_move_mode(board, actor, kind)
 
-# Offer the opponent's Hunt reaction to mover selecting Fall Back.
-# The qualifying enemy pays/receives the effect, not mover; the child completes
-# that choice and restores decision owner before ordinary escape rolls.
+# Resolve reactions to mover selecting Fall Back before the final forced-
+# escape check and hazard rolls. mover is the falling-back battlefield unit;
+# reaction payer/recipient can belong to its opponent. Commit accepted costs/
+# effects and restore decision ownership; do not roll the core escape batch.
 fun faction_fallback_selection(Board board, UnitID mover) -> OrksFallbackSelection:
     return orks_fallback_selection(board, mover)
 
-# Read whether pending[event] is selectable by player now: generation,
-# source usage/ownership and ability-specific target existence all matter.
-# Does not consume or resolve the queue entry; event is not a UnitID.
+# Validate pending[event] for player, including bounds, unresolved state,
+# source generation/ownership/use and any required target existence. Return
+# false when unavailable without changing the queue. This must match the
+# resolver's accepted choices; a selectable event must have a completion path.
 fun faction_movement_event_available(Board board, PendingSourceEvents pending, SourceEventID event, Bool player) -> Bool:
     return orks_move_source_valid(board, pending, event, player)
 
-# Scan the same movement-source queue/eligibility policy for this controller,
-# optionally counting only mandatory entries. Used for finish gates; includes
-# common source fallback paths, not just explicitly named faction effects.
+# Report whether player has any selectable movement-source event using the
+# same predicate as faction_movement_event_available. mandatory_only counts
+# only nonoptional entries and controls core's finish gate. Include unhandled
+# events supported by common commit; return false for an empty/exhausted queue.
 fun faction_movement_events_remaining(Board board, PendingSourceEvents pending, Bool player, Bool mandatory_only) -> Bool:
     return orks_move_sources_remaining(board, pending, player, mandatory_only)
 
-# Refresh cargo-dependent sources from actual carrier/passenger identities
-# and re-register affected datasheet sources. Mutates Board source metadata;
-# does not replace common transport permission/capacity/seat calculations.
+# Refresh/register cargo-dependent source metadata after completed embark
+# transfers, using actual carrier/model/passenger identities across banks.
+# Repeated calls must preserve source usage and avoid duplicate registrations.
+# Core owns transport permissions, capacity and the bank transfer itself.
 fun register_faction_cargo_passives(Board board):
     register_orks_cargo_passives(board)
 
-# Return extra OC contributed through this carrier, not the carrier's total
-# OC. Raucous/Bossbunka checks passengers and the owner's home objective;
-# no distance/visibility is measured from an embarked unit (core p54/01.02.04).
-# player selects the home-marker assignment (home == int(player) + 1); caller
-# supplies the carrier owner. No contribution exists without an assigned home.
+# Return additional nonnegative OC through carrier for player, or zero.
+# Core calls for each in-range friendly model in an unshocked unit: verify live
+# carrier/effect eligibility here. It adds the result to ordinary OC. No queried-
+# objective argument exists, so further marker conditions must use Board here.
+# Do not measure distance from embarked models or update objective control.
 fun faction_passenger_objective_control(Board board, Model carrier, Bool player) -> Int:
     return orks_bunka_passenger_control(board, carrier, player)
 
-# Run passenger-owned Idol/Beastscent choices before exit placement.
-# passenger indexes embarked_units; carrier identifies the actual carrier bank.
-# Accepted grants can persist if placement is cancelled; this child neither
-# compacts the passenger bank nor completes a Movement activation (core p64).
+# Resolve passenger options before disembark placement/decline. passenger
+# indexes embarked_units; carrier is the already resolved CarrierLocation.
+# Record accepted costs/grants at this boundary even if later exit is declined;
+# keep that bank slot valid until core transfers it. Do not place passengers
+# or complete a Movement activation on core's behalf.
 fun faction_disembark_selection(Board board, UnitID passenger, CarrierLocation carrier) -> OrksDisembarkSelection:
     return orks_disembark_selection(board, passenger, carrier)
 
-# Resolve eligible Surly casualties in reserves and embarked units at phase
-# cleanup, current player then opponent, using the shared return procedure.
-# Battlefield returns have a separate entrypoint; this is not a generic bank move.
+# During phase-retained cleanup, resolve extension casualty returns for reserve
+# and embarked banks in core sequencing order, current player then opponent.
+# Reuse common return/placement/damage procedures and restore decision ownership.
+# Battlefield return windows are separate; preserve original model/weapon usage.
 fun faction_pending_returns(Board board) -> OrksBankReturns:
     return resolve_orks_bank_returns(board)
 
-# Resolve one accepted event against the original pending queue, marking
-# resolution/usage and executing its rolls, targets or damage. Handles named
-# movement abilities, falling back to common commit for unhandled source rules.
-# Caller must select an event passing faction_movement_event_available first;
-# construction indexes that entry immediately. Keep its queue alive throughout.
+# Resolve one accepted pending movement event for player against the original
+# queue. Caller validated faction_movement_event_available; construction may
+# index it immediately. Finish required targets/rolls/effects, commit required
+# usage once, and mark the entry resolved while preserving other entries.
+# Return decision ownership to player; core owns controller-group order.
 fun faction_resolve_movement_source(Board board, PendingSourceEvents pending, SourceEventID event, Bool player) -> OrksMovementSource:
     return orks_resolve_movement_source(board, pending, event, player)
 
-# Peer alternative to ordinary move modes: started becomes true only on an
-# accepted input. On completion, kind selects the mode and extra is its budget
-# (Pulse Jet D6+18 inches, not M plus that value); core then performs placement.
-# Construction leaves Board unchanged. Read kind/extra only after this peer
-# was selected and completed, before reinitializing its frame.
+# Peer menu beside ordinary move modes. Construction must leave Board
+# unchanged; set started on first accepted input and complete the mode's dice/
+# choices. Core reads kind/extra only after selection and completion, then places
+# models through the shared movement procedure. extra must use that kind's
+# model_move_budget convention: it may be an addition or an absolute allowance.
 fun faction_special_move_choice(Board board, UnitID id) -> OrksSpecialMoveChoice:
     return orks_special_move_choice(board, id)
 
-# Offer Shokk-boosta before the common Advance die/reroll. Accepting sets
-# selected-move metadata, not a rolled distance; subsequent policy/roll hooks
-# read it and finish_faction_move_selection clears it after the attempt.
+# Resolve choices needed before the common Advance die/reroll. May record
+# temporary selected-move metadata, but must not roll the common die or commit
+# placement. Finish without inputs when inapplicable; later policy/roll hooks
+# can read this state and finish_faction_move_selection clears temporary state.
 fun faction_prepare_advance(Board board, UnitID id) -> OrksPrepareAdvance:
     return orks_prepare_advance(board, id)
 
-# After ordinary Advance rerolls, offer supported replacements of the die
-# result (Shokk-boosta/Unstoppable Momentum). Mutates current_roll.result;
-# core adds M and separate distance bonuses afterwards.
+# After the common Advance die and rerolls, resolve permitted replacements
+# or adjustments of current_roll.result before core computes move distance.
+# Do not add M or separately returned distance bonuses here. Preserve roll
+# history/ownership and leave the result unchanged when no exception is chosen.
 fun faction_modify_advance_roll(Board board, UnitID id) -> OrksModifyAdvanceRoll:
     return orks_modify_advance_roll(board, id)
 
-# Return additional Advance distance in inches: Fuel Mixa Grot and the
-# source-owned Advance+2 effect. This is neither an M change nor replacement
-# of the common Advance die result (Orks cards).
+# Return additional signed Advance distance in inches, or zero. Core adds
+# this after the final Advance die result; it does not change printed/effective
+# M or replace the die. No movement, use consumption or grant installation
+# may occur while evaluating this contribution.
 fun faction_advance_distance_bonus(Board board, Unit unit) -> Int:
     return orks_advance_distance_bonus(board, unit)
 
-# Clear the temporary Shokk-boosta selection after this placement attempt,
-# including cancellation. Does not erase captured movement history or revoke
-# longer-lived effects installed by a completed move.
+# Clear temporary extension selection state after the movement attempt,
+# including failed/cancelled placement. Preserve captured selection history and
+# effects whose explicit duration continues. Do not undo paid choices, move
+# models again or erase common completion/history flags.
 fun finish_faction_move_selection(Board board, UnitID id):
     orks_finish_move_selection(board, id)
 
-# After committed placement, finish Wagon effects, reactive Trukk exits and
-# enemy move reactions before common optional embarkation. Borrow the live
-# Board and finish the child before reusing shared movement frames.
+# After a completed nonstationary move, resolve extension follow-up reactions
+# before core's optional embarkation. Complete each nested action using shared
+# procedures, preserving caller context and valid identities through bank/death
+# changes. Do not re-enter an already active shared Move/Attack frame.
 fun faction_after_move(Board board, UnitID id) -> OrksAfterMove:
     return orks_after_move(board, id)
 
-# Peer menu offering one faction Movement-phase activation beside core
-# choices. started distinguishes the selected child; finish its atomic ability
-# before returning to the phase menu. Bank adapters select the real source.
-# Construction must leave Board unchanged even if no faction input is enabled;
-# the parent initializes this frame alongside the core menu on every iteration.
+# Peer menu beside core Movement-phase activations. Construct without Board
+# mutation, even when no input is enabled. Set started on acceptance, then
+# finish the selected atomic ability before core reopens the phase menu.
+# Resolve bank selectors against the actual source; do not finish the core phase.
 fun faction_movement_phase_choice(Board board) -> OrksMovementPhaseChoice:
     return orks_movement_phase_choice(board)
 
-# Return additive unit charge-roll inches from Banner/Trophy Hunters.
-# These distinct contributions can add together; core combines the aura/roll
-# terms and applies the final charge cap (Orks Bannernob/Breaka-Boyz cards).
+# Return the signed additive unit-local charge-roll contribution in inches,
+# or zero, based on the supplied unit's current eligible sources. Core adds
+# Board-dependent aura contributions and applies modifier order/caps. This is
+# not final charge distance and must not consume a charge or roll.
 fun faction_unit_charge_bonus(Unit unit) -> Int:
     return orks_unit_charge_bonus(unit)
 
-# Adjust only traversal policy for Get Out da Way, using the original unit:
-# if enemy traversal is not already allowed, permit it except Monster/Vehicle.
-# Existing FLY traversal takes precedence; final charge target, overlap,
-# engagement and coherency requirements remain core (Nobz; core pp36-37).
+# Adjust charge path traversal policy using the original unit rather than
+# staged positions. Mutate only policy and preserve higher-priority common
+# permissions where required. Core retains total distance, target engagement,
+# final overlap/coherency and board-boundary validation.
 fun faction_charge_traversal(Unit original, MovementGeometryPolicy policy):
     orks_charge_traversal(original, policy)
 
-# Test whether destroyed_models[archive] in this unit still has a Surly
-# return pending; archive is not a live model slot. replacement_slot uses true
-# to protect the UNIT's retired battlefield slot from recycling for a new unit.
-# True promises neither a successful roll nor legal return placement.
+# Report whether destroyed_models[archive] has an unresolved extension return
+# that requires its unit's original slot. archive is an archived-model selector.
+# replacement_slot uses true to prevent recycling that UNIT's retired battlefield
+# slot. No roll or revival occurs here; false adds no reservation.
 fun faction_casualty_has_pending_return(Board board, Unit unit, ModelID archive) -> Bool:
     return orks_surly_casualty_valid(board, unit, archive)
 
-# Clear private per-unit psychic usage when core constructs a NEW unit.
-# Fresh identities, common history and bank insertion belong to the shared
-# replacement constructor; ordinary resurrection must retain its original unit.
+# Reset extension-owned per-unit transient/usage state on a NEW replacement
+# working copy, whose unit identity is already fresh. Core owns common history,
+# model restoration and subsequent component/model identity remapping. Do not
+# use this reset for ordinary revival or mutate the original roster unit.
 fun prepare_faction_replacement_unit(Unit unit):
     prepare_orks_replacement_unit(unit)
 
-# Reset private riled-up/upgrade-origin metadata for a NEW replacement model.
-# Preserve core's newly assigned original-component mapping; replacement is
-# the fresh unit identity. Does not reset an ordinary returned casualty.
+# Prepare extension metadata on a NEW replacement model after core assigns
+# its fresh identity/original component. replacement is the new containing-unit
+# identity. Remap persistent option provenance and clear transient effects
+# without overwriting core identities; ordinary returned casualties skip this.
 fun prepare_faction_replacement_model(Model model, EntityIdentity replacement):
     prepare_orks_replacement_model(model, replacement)

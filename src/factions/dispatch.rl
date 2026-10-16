@@ -1,18 +1,19 @@
-# Static composition boundary: core imports neutral domain hooks from here;
-# dispatch modules select the concrete faction adapters. Catalog enums and
-# typed frame storage may contain faction names without making core interpret
-# their private rule codes. This is implementation infrastructure, not a rule.
-# Action-returning hooks construct the actual child frame, with borrowed caller
-# contexts; they add neither a wrapper frame nor a copied Board. See each
-# domain header for query/mutation, selector-bank and result conventions.
-# Queries can run repeatedly during valid-action discovery; commands run only
-# at the named gameplay boundary. Peer-menu constructors are a stricter case:
-# both peers are initialized, so neither may change shared state before input.
-# Current dispatch is static: the adapter checks source metadata/applicability,
-# rather than selecting an army from the recipient's owner alone.
-# A bounded selector is not proof that its slot exists in the current bank.
-# Except for predicates that explicitly validate selectors, callers supply
-# in-range IDs and keep the borrowed contexts alive until the child completes.
+# Core-facing composition boundary. Each hook comment specifies what core
+# supplies, when it calls, what any implementation must return/change, and how
+# no applicable contribution behaves. Particular army rules and their source
+# citations belong in adapters, not in these interface contracts.
+# Queries must be repeatable without mutation; contribution hooks change only
+# their supplied output; commands execute at the documented gameplay boundary.
+# Action-returning functions construct the real child with borrowed contexts,
+# without another Board copy. Peer menus must not mutate shared state until an
+# input is accepted, because both core and faction peers are initialized.
+# A bounded selector still needs an existing slot in the right bank. Callers
+# validate selectors before commands and retain borrowed contexts through child
+# completion; predicates explicitly documenting validation can reject bad IDs.
+# Composition must route by rule/source applicability, including cross-army
+# recipients. Core must not identify a faction from a recipient to interpret
+# private state, rule codes or named effect policy. Finite catalogs/frame types
+# remain explicit; see README.md and the contract review for remaining coupling.
 import factions.types
 import factions.dispatch_combat
 import factions.dispatch_movement

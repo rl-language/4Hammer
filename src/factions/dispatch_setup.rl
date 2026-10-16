@@ -1,60 +1,69 @@
 import factions.orks.enhancements
 import factions.orks.roster
 
-# Army construction/composition contracts. Current interactive adapters build
-# Orks; legacy roster identities remain composition data. Queries are read-only;
-# returned setup frames can mutate Board as they initialize/resume. Core owns
-# battle/deployment order, shared roster limits and common Warlord selection.
-# Concrete eligibility/citations: orks/{roster,enhancements}.rl and the Orks
-# Detachments/Datasheets at https://wahapedia.ru/wh40k11ed/factions/orks/.
-# User policy omits points/detachment costs and permits at most three detachments.
 
-# Run the custom Orks muster for owner: add/configure units in reserve_units,
-# with finish gated by roster requirements including a Warlord candidate.
-# Does not deploy or attach them; shared roster limits still apply.
+# Muster and setup composition contract. Core owns battle order, identity
+# allocation and shared muster restrictions; adapters supply selectable content,
+# extra eligibility and roster effects. Queries are pure. Setup actions borrow
+# Board and operate on the supplied owner's reserve roster before formations/
+# deployment. No army points or detachment-price calculation is requested.
+# Concrete catalog/frame types remain current composition choices, not portable
+# interface guarantees. See README.md and the contract review for limitations.
+
+# Construct the chosen owner's custom reserve roster after detachment choice
+# and before options/Warlord selection. Add/configure only that owner's units;
+# enforce shared copy restrictions and finish only with a selectable legal
+# roster. Core subsequently forms attachments and deploys; do not do either here.
 fun build_faction_roster(Board board, Bool owner) -> BuildOrksRoster:
     return build_orks_roster(board, owner)
 
-# Append the predefined starter units to out and assign owner; do not clear
-# existing units. Return the legacy roster identifier used by composition,
-# not the army's general faction enum (Orks starter roster data).
+# Append the owner's predefined roster to out without clearing other entries;
+# ensure capacity and assign ownership. Return its legacy Faction roster ID,
+# not an ArmyFaction keyword. Caller sets army configuration and identifies
+# models afterward. This constructs data and exposes no interactive decisions.
 fun make_faction_starter_roster(UnitVector out, Bool owner) -> Faction:
     return make_orks_starter_roster(out, owner)
 
-# Invoke shared Warlord selection with the adapter's faction keyword and
-# eligibility policy. Stores stable identity/keyword, not a bank index;
-# unsupported non-Orks armies currently offer no inputs (supplied Warlord rule).
+# Select the owner's Warlord from the completed reserve roster under shared
+# Character/faction and required/prohibited rules. Store the chosen model's
+# stable identity and keyword, never a mutable slot. Use the shared selection
+# procedure; return completed without inputs where this adapter is not enabled.
 fun select_faction_warlord(Board board, Bool player) -> SelectWarlord:
     return select_orks_warlord(board, player)
 
-# Apply selected package Battleline grants to qualifying units in all three
-# banks, retaining existing keywords. This mutates unit keyword metadata;
-# copy-limit queries use faction_force_battleline before those grants exist.
+# Apply roster-wide keyword dispositions granted by the selected configuration
+# to qualifying units across all banks. Preserve intrinsic keywords and make
+# repeated calls safe. Core calls before and after formations; the pure
+# faction_force_battleline query must predict the corresponding muster status.
 fun register_faction_force_dispositions(Board board):
     register_orks_force_dispositions(board)
 
-# Let detachment_player choose distinct packages, up to the user limit of
-# three, or finish. Updates army configuration and decision owner; non-Orks
-# armies skip this menu. No points or detachment-cost calculation is performed.
+# Offer the permitted distinct detachments for detachment_player and write
+# that army's configuration before roster options. Enforce selection validity
+# and the configured maximum (currently three), provide a legal finish path,
+# and skip unsupported armies. Do not deploy units or calculate detachment prices.
 fun select_faction_detachments(Board board, Bool detachment_player) -> SelectOrksDetachments:
     return select_orks_detachments(board, detachment_player)
 
-# Veto combining these units when existing enhancement/upgrade selections
-# would violate the user-supplied Epic Hero attachment exclusion. Does not
-# grant Leader permission, select new options or remove illegal options.
+# Veto combining leader/bodyguard if their already selected options would
+# violate option-recipient/attachment restrictions. Return true when compatible.
+# Do not select/remove options or grant Leader/bodyguard permission; core
+# checks the remaining attachment requirements and preserves original recipients.
 fun faction_enhancement_attachment_valid(Unit leader, Unit bodyguard) -> Bool:
     return orks_enhancement_attachment_valid(leader, bodyguard)
 
-# Run pre-attachment enhancement/upgrade choices on owner's reserve roster.
-# Enforces shared selection limits plus catalog eligibility and installs option
-# metadata/equipment. No points/CP payment is introduced for roster options.
+# Choose legal enhancements/upgrades on owner's reserve roster after units
+# and detachments, before attachments/Warlord selection. Enforce shared counts
+# and recipient exclusions plus catalog eligibility; record bearer/component
+# provenance and install chosen data. A finish/decline spends no battle resources.
 fun select_faction_options(Board board, Bool owner) -> SelectOrksOptions:
     return select_orks_options(board, owner)
 
-# Composition entrypoint: choose legacy/custom roster, set point-free army
-# identity, then select detachments, custom units if requested, options and
-# Warlord. Units remain in reserves for later formation/attachment/deployment;
-# current_player here is the roster's owner, not a new battle-turn transition.
+# Composition entrypoint used once per roster owner by full_game: choose the
+# roster, set ArmyFaction and point-free reserve policy, identify units, then
+# select detachments, custom roster when applicable, options and Warlord.
+# current_player is this action's roster owner. Leave units in setup banks;
+# core owns subsequent formations, attachments, deployment and battle turns.
 act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
     board.current_decision_maker = current_player
     frm custom_orks = false
@@ -88,21 +97,24 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
     board.shared_actions.select_orks_warlord = select_faction_warlord(board, current_player)
     subaction*(board) board.shared_actions.select_orks_warlord
 
-# Validate one prospective package addition: Orks army, known non-none
-# enum, spare capacity and no duplicate. Does not mutate configuration;
-# the bounded collection enforces the user maximum of three.
+# Validate one prospective detachment addition without modifying army.
+# Check supported faction/catalog membership, duplicate exclusion and available
+# selection capacity. Core calls this before append; validation of an already
+# stored full configuration is a separate contract. The type is catalog-specific.
 fun faction_detachment_selection_valid(ArmyConfiguration army, OrksDetachment detachment) -> Bool:
     return orks_detachment_selection_valid(army, detachment)
 
-# Check only faction/package compatibility in existing configuration:
-# non-Orks armies must not contain Orks detachments. This is a save-integrity
-# subcheck, not duplicate/capacity validation or complete army legality.
+# Validate additional faction/catalog compatibility of stored army configuration
+# as part of core save validation. Return true when no extra constraint applies.
+# Core separately checks enum validity, duplicates and common configuration
+# invariants; this predicate must not repair or change the selection.
 fun faction_army_configuration_valid(ArmyConfiguration army) -> Bool:
     return orks_army_configuration_valid(army)
 
-# Translate historical roster IDs to the army faction used by rule queries.
-# The current fallback is Space Marines for remaining IDs; this is a literal
-# composition mapping, not validation or faction inference from unit contents.
+# Map a supported legacy roster ID to its ArmyFaction configuration value.
+# Composition must define this mapping for each offered roster before core rules
+# query army identity. This is catalog translation, not inference from models
+# or validation of an arbitrary integer; caller supplies a supported roster.
 fun army_faction_for_roster(Faction roster) -> ArmyFaction:
     if roster == Faction::insidious_infiltrators:
         return ArmyFaction::tyranids
@@ -114,8 +126,9 @@ fun army_faction_for_roster(Faction roster) -> ArmyFaction:
         return ArmyFaction::adeptus_custodes
     return ArmyFaction::space_marines
 
-# Predict whether selected packages grant this unit Battleline, without
-# mutating it. Shared muster copy limits use this before disposition keywords
-# are installed; normal Battleline membership is checked separately.
+# Predict whether selected configuration grants Battleline to unit before
+# disposition metadata is installed. Core ORs this with ordinary membership
+# when enforcing copy limits. Return false for no grant; do not change the
+# unit, select a detachment or implement the copy-count algorithm here.
 fun faction_force_battleline(Board board, Unit unit) -> Bool:
     return orks_force_battleline(board, unit)
