@@ -800,8 +800,7 @@ fun configure_attack_info(Board board, Int source, Int target, Bool overwatch, B
         attack.only_hits_on_6 = true 
 
     attack.shooting_kind = board[source].shooting_kind
-    # Beastboss/Dodge Dis! also applies to the compatibility attack entrypoint.
-    attack.faction_innate_hit_bonus = faction_innate_hit_bonus(board[source])
+    append_unit_hit_modifiers(board[source], attack.unit_ability_hit_modifiers)
     # p.18 / appendix05.02.01: snapshot effective T without bounded clamping.
     # The storage capacity is engine infrastructure, not a tabletop maximum.
     let target_toughness = board[target].get_unit_toughtness()
@@ -1054,8 +1053,8 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
     info.source_profile = board[source][model].profile
     # Damaged is bearer-local, refreshed for every new group (core24.39).
     info.damaged_hit_penalty = board[source][model].is_damaged()
-    # Beastboss/Dodge Dis! is a unit hit-roll contribution, not WS/BS.
-    info.faction_innate_hit_bonus = faction_innate_hit_bonus(board[source])
+    info.unit_ability_hit_modifiers.clear()
+    append_unit_hit_modifiers(board[source], info.unit_ability_hit_modifiers)
     #02.02.02: permissions follow the actual bearer (carrier for Firing Deck),
     # not the chosen target or an unrelated model in a mixed unit.
     info.may_ignore_skill_modifiers = attack_permission_available(board, board[source][model], info.source.range() == 0, true)
@@ -1088,7 +1087,7 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
             info.engaged_hit_penalties = info.engaged_hit_penalties + 1
         if board.is_in_melee(board[target]) and (board[target].has_keyword(Keyword::monster) or board[target].has_keyword(Keyword::vehicle)):
             info.engaged_hit_penalties = info.engaged_hit_penalties + 1
-    append_faction_attack_effects(board, source, target, weapon, info)
+    append_attack_effects(board, source, target, weapon, info)
     return info
 
 # Group comparisons finish in an ordinary helper before any suspension;
@@ -2152,7 +2151,9 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
     board.current_decision_maker = board[source].owned_by_player1
     board.timing.active_player = board[source].owned_by_player1
     board.moving_unit = source
-    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source].can_reroll_charge() or faction_charge_reroll(board, board[source]), false, true, board[source].owned_by_player1, source)
+    frm charge_roll_effects : ChargeRollEffects
+    append_charge_roll_effects(board, board[source], charge_roll_effects)
+    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source].can_reroll_charge() or charge_roll_effects.reroll, false, true, board[source].owned_by_player1, source)
     subaction*(board) board.current_pair_roll
     if original.has_keyword(Keyword::fly):
         act charge_take_to_skies(Bool do_it)
@@ -2258,7 +2259,7 @@ act charge_phase(ctx Board board) -> ChargePhase:
 # ordinary mortal allocation/FNP/destruction instead of deleting models (pp.24/33).
 act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
     # Orks/Big-ed-Bossbunka Fortification automatically passes these hazards.
-    if !board[id].battle_socked and faction_engagement_exception(board, board[id]):
+    if !board[id].battle_socked and permits_escape_without_hazards(board, board[id]):
         return
     frm count : CombatCounter
     count = live_attachment_strength(board[id])
@@ -2960,12 +2961,16 @@ act core_move_kind_choice(ctx Board board, frm UnitID id, frm Bool use_the_gilde
                 kind = MovementKind::advance
                 board.shared_actions.faction_move_mode = faction_move_mode(board, id, kind)
                 subaction*(board) board.shared_actions.faction_move_mode
-                board[id].history.advance_allows_charge = faction_advance_charge_status(board[id]) or faction_move_charge_permission(board, board[id], kind)
+                capture_advance_charge_permission(board, id)
                 subaction*(board) advance_selection = faction_prepare_advance(board, id)
-                board.current_roll = rerollable_dice_roll(board, faction_advance_reroll(board[id]), false, true, board[id].owned_by_player1, id)
+                frm advance_roll_effects : AdvanceRollEffects
+                append_advance_roll_effects(board, board[id], advance_roll_effects)
+                board.current_roll = rerollable_dice_roll(board, advance_roll_effects.reroll, false, true, board[id].owned_by_player1, id)
                 subaction*(board) board.current_roll
                 subaction*(board) advance_result = faction_modify_advance_roll(board, id)
-                extra = board.current_roll.result.value + faction_advance_distance_bonus(board, board[id])
+                advance_roll_effects.modifiers.clear()
+                append_advance_roll_effects(board, board[id], advance_roll_effects)
+                extra = modified_dice_result(board.current_roll.result.value, advance_roll_effects.modifiers, false, false)
                 capture_faction_selected_move(board, id, kind)
         act ordered_retreat() {battlefield_move_eligible(board, id, MovementKind::ordered_retreat)}
             started = true

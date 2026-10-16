@@ -53,20 +53,31 @@ fun charge_target_valid(Board board, UnitID source, UnitID target, Int maximum, 
 fun charge_distance(Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
     return charge_distance_with_sources(unit, roll, kind, skies, 0)
 
-# Banner+1 and distinct Stampede+1 combine before ordered modifiers and caps.
-# Source: Orks/Bannernob; Beastboss-on-Squigosaur Thundering Stampede (Aura).
+# Board-aware effects add their actual terms before the common charge cap;
+# the hook never owns arithmetic or flight/Into the Fray limits (pp37/57/71).
 fun charge_distance(Board board, Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
-    return charge_distance_with_sources(unit, roll, kind, skies, faction_charge_aura_bonus(board, unit))
+    let effects : ChargeRollEffects
+    effects.modifiers = unit.phase_modifiers.charge_roll
+    append_charge_roll_effects(board, unit, effects)
+    return evaluate_charge_distance(roll, effects.modifiers, kind, skies, unit.has_ability(AbilityKind::hover))
 
-# Banner/Trophy Hunters follow live combined membership; an aura is queried
-# on the battlefield only. All join addition before division (02.02.01).
-# https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
-fun charge_distance_with_sources(Unit unit, Int roll, ChargeKind kind, Bool skies, Int aura_bonus) -> Int:
-    let addition = aura_bonus + faction_unit_charge_bonus(unit)
-    let maximum = modified_dice_result(roll, unit.phase_modifiers.charge_roll, false, true, addition)
+# Compatibility entrypoint for an already evaluated external addition; unit
+# sources still contribute independently through their own calculation hook.
+fun charge_distance_with_sources(Unit unit, Int roll, ChargeKind kind, Bool skies, Int external_addition) -> Int:
+    let effects : ChargeRollEffects
+    effects.modifiers = unit.phase_modifiers.charge_roll
+    append_charge_roll_effects(unit, effects)
+    if external_addition != 0:
+        effects.modifiers.append(rule_modifier(ModifierOperation::add, external_addition))
+    return evaluate_charge_distance(roll, effects.modifiers, kind, skies, unit.has_ability(AbilityKind::hover))
+
+# Rerolls have already completed. Apply ordered terms,12 cap, Into the Fray6
+# cap and finally the flight move reduction (pp37/57/71; appendix02.02.01).
+fun evaluate_charge_distance(Int roll, RuleModifiers modifiers, ChargeKind kind, Bool skies, Bool hover) -> Int:
+    let maximum = modified_dice_result(roll, modifiers, false, true)
     if kind == ChargeKind::into_the_fray:
         maximum = min(6, maximum)
-    if skies and !unit.has_ability(AbilityKind::hover):
+    if skies and !hover:
         maximum = max(0, maximum - 2)
     return maximum
 

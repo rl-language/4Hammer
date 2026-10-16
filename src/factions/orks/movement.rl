@@ -29,10 +29,7 @@ fun orks_charge_reroll(Board board, Unit unit) -> Bool:
 # cannot retroactively change that selected move's restrictions (source wording).
 fun capture_orks_selected_move(Board board, UnitID source, MovementKind kind):
     ref unit = board[source]
-    if kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape:
-        unit.history.fallback_allows_charge = orks_move_charge_permission(board, unit, kind)
-        unit.history.fallback_allows_shooting = unit_has_orks_enhancement(unit, OrksEnhancement::kunnin_but_brutal)
-    unit.history.selected_move_allows_action = orks_move_action_permission(board, unit, kind)
+    capture_selected_move_permissions(board, source, kind)
     if orks_package(board, unit, OrksDetachment::kult_of_speed) and unit.has_keyword(Keyword::speed_freeks):
         grant_orks_effect(board, source, source, 430, RuleEffectKind::ranged_assault, 1, SourceDuration::turn, invalid_entity_identity())
 
@@ -797,3 +794,38 @@ fun orks_finish_movement_policy(MovementKind kind, MovementGeometryPolicy policy
         policy.free_vertical_movement = true
         policy.exclude_titanic = false
         policy.exclude_monster_vehicle = false
+
+# Banner/Trophy Hunters are distinct charge modifiers, not a hardcoded bonus
+# interpreted by core. Orks/Bannernob and Breaka-Boyz; appendix02.02.01.
+fun append_orks_charge_roll_effects(Unit unit, ChargeRollEffects effects):
+    if unit.has_ability(AbilityKind::waaagh_banner):
+        effects.modifiers.append(rule_modifier(ModifierOperation::add, 1))
+    if unit.has_ability(AbilityKind::trophy_hunters):
+        effects.modifiers.append(rule_modifier(ModifierOperation::add, 1))
+
+# Thundering Stampede, Blitz Brigade and Competitive Streak require actual
+# Board/package/range facts (Orks cards). Never measure from offboard units.
+fun append_orks_charge_roll_effects(Board board, Unit unit, ChargeRollEffects effects):
+    append_orks_charge_roll_effects(unit, effects)
+    let aura = orks_stampede_charge_bonus(board, unit)
+    if aura != 0:
+        effects.modifiers.append(rule_modifier(ModifierOperation::add, aura))
+    effects.reroll = effects.reroll or orks_charge_reroll(board, unit)
+
+# Waaagh! supplies the reroll permission; Fuel Mixa and accepted Advance+2
+# effects add ordinary terms at the Advance boundary (Orks Army Rules/cards).
+fun append_orks_advance_roll_effects(Board board, Unit unit, AdvanceRollEffects effects):
+    effects.reroll = effects.reroll or unit_has_waaagh(unit)
+    if unit.has_ability(AbilityKind::fuel_mixa_grot):
+        effects.modifiers.append(rule_modifier(ModifierOperation::add, 1))
+    let boost = 2 * unit_rule_effect(board, unit, RuleEffectKind::advance_plus_two)
+    if boost != 0:
+        effects.modifiers.append(rule_modifier(ModifierOperation::add, boost))
+
+# Advance riled-up and named speed/retreat/action options waive only their
+# printed gates. Core owns the persistent selected-move snapshot (Orks cards).
+fun append_orks_selected_move_permissions(Board board, Unit unit, MovementKind kind, SelectedMovePermissions permissions):
+    permissions.charge = permissions.charge or orks_move_charge_permission(board, unit, kind) or (kind == MovementKind::advance and unit_is_riled_up(unit))
+    let fallback = kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape
+    permissions.shoot = permissions.shoot or (fallback and unit_has_orks_enhancement(unit, OrksEnhancement::kunnin_but_brutal))
+    permissions.start_action = permissions.start_action or orks_move_action_permission(board, unit, kind)

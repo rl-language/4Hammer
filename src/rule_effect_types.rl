@@ -70,6 +70,7 @@ enum RuleEffectKind:
     pulse_engine
     pulse_defence
     no_action
+    riled_up
 
 cls RuleEffectGrant:
     SourceEffectKey source_effect

@@ -100,8 +100,9 @@ fun grant_orks_model_effect(Board board, UnitID source, ModelID bearer, Int rule
 # One typed status installs all three printed riled benefits through consumers,
 # with exact-key expiry rather than independent buff lifetimes (Orks Waaagh!).
 fun riled_up_grant() -> SourceGrant:
-    let grant : RiledUpGrant
-    grant.enabled = true
+    let grant : RuleEffectGrant
+    grant.kind = RuleEffectKind::riled_up
+    grant.amount = 1
     let result : SourceGrant
     result = grant
     return result

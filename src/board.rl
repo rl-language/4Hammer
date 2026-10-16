@@ -40,14 +40,14 @@ cls AttackSequenceInfo:
     LinearlyDistributedInt<0, MAX_STAT_MODIFIER> melta_damage_bonus
     Bool precision_visibility_known
     Bool[32] precision_visible_targets
-    # Beastboss Dodge Dis!: separate contribution before the cumulative cap.
-    Bool faction_innate_hit_bonus
+    # Independent unit-ability terms retain optional-ignore identity; core p18.
+    RuleModifiers unit_ability_hit_modifiers
     Bool hit_roll_bonus
-    RuleModifiers faction_hit_modifiers
+    RuleModifiers attack_hit_modifiers
     # Preserve each repair source in addition to the four unit-rule slots;
     # all modifiers are cumulative and individually ignorable (02.02.01/02).
-    CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS> faction_unit_hit_modifiers
-    RuleModifiers faction_wound_modifiers
+    CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS> unit_hit_modifiers
+    RuleModifiers attack_wound_modifiers
     Bool fail_hits_up_to_three
     # Cover changes BS, separate from the clamped hit modifier (p.50).
     Bool target_has_cover
@@ -139,7 +139,7 @@ cls AttackSequenceInfo:
     # and appendix02.02.01). Optional ignoring retains its own provenance.
     # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
     fun total_hit_modifier() -> Int:
-        let result = apply_rule_modifiers(0, self.faction_hit_modifiers, false) + apply_rule_modifiers(0, self.faction_unit_hit_modifiers, false) + int(self.hit_roll_bonus) + int(self.faction_innate_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
+        let result = apply_rule_modifiers(0, self.attack_hit_modifiers, false) + apply_rule_modifiers(0, self.unit_hit_modifiers, false) + int(self.hit_roll_bonus) + apply_rule_modifiers(0, self.unit_ability_hit_modifiers, false) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
         let i = 0
         while i != self.profile_hit_roll_bonus.size():
             if self.profile_hit_roll_bonus[i] == self.source_profile:
@@ -149,7 +149,7 @@ cls AttackSequenceInfo:
         return result
 
     fun total_wound_modifier() -> Int:
-        let result = apply_rule_modifiers(0, self.faction_wound_modifiers, false) + int(self.wound_roll_bonus) - int(self.wound_roll_malus)
+        let result = apply_rule_modifiers(0, self.attack_wound_modifiers, false) + int(self.wound_roll_bonus) - int(self.wound_roll_malus)
         let i = 0
         while i != self.profile_wound_roll_bonus.size():
             if self.profile_wound_roll_bonus[i] == self.source_profile:
@@ -693,7 +693,9 @@ cls Board:
                     if self.model_in_objective_range(unit[j], objective):
                         total = total + max(0, unit.model_objective_control(j))
                         if !unit.battle_socked:
-                            total = total + faction_passenger_objective_control(self, unit[j], player)
+                            let cargo_effects : ObjectiveControlEffects
+                            append_objective_control_effects(self, objective, unit[j], player, cargo_effects)
+                            total = total + cargo_effects.additional_control.value
         return total
 
     # Stateless marker query retained for existing diagnostic fixtures. Real

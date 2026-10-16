@@ -8629,8 +8629,10 @@ fun orks17f_fixture() -> Board:
 # Zero-key is an explicit intrinsic fixture grant; actual passives register
 # stable model sources. No datasheet grants are inferred (Orks Waaagh!).
 fun orks17f_intrinsic_riled(Model model):
-    let key : SourceEffectKey
-    model.riled_source_effects.append(key)
+    let grant : RuleEffectGrant
+    grant.kind = RuleEffectKind::riled_up
+    grant.amount = 1
+    model.rule_effects.append(grant)
 
 # Snapshot charge permission when selected to Advance, as Army Rules says;
 # movement history persists it separately from subsequently changing buffs.
@@ -8693,7 +8695,7 @@ fun test_orks17f_advance_charge_snapshot() -> Bool:
     let board = orks17f_fixture()
     orks17f_intrinsic_riled(board[0][0])
     orks17f_select_advance(board, unit_id(0))
-    board[0][0].riled_source_effects.clear()
+    board[0][0].rule_effects.clear()
     let retained = charge_source_valid(board, unit_id(0), false)
     board.start_turn_history()
     orks17f_select_advance(board, unit_id(0))
@@ -8823,15 +8825,15 @@ fun test_orks17f_permanent_and_war_cry_overlap() -> Bool:
     board[0][0].grants_unit_riled_up = true
     register_orks_passive_rules(board)
     register_orks_passive_rules(board)
-    let single = board.source_instances.size() == 1 and board[0][0].riled_source_effects.size() == 1
+    let single = board.source_instances.size() == 1 and board[0][0].rule_effects.size() == 1
     board.open_timing_window(TimingWindow::command_start)
     call_war_cry(board, false)
     board.close_timing_window()
-    let overlap = board[0][0].riled_source_effects.size() == 2
+    let overlap = board[0][0].rule_effects.size() == 2
     board.current_player = true
     board.start_turn_history()
     refresh_source_effects(board, TimingWindow::turn_end)
-    return single and overlap and board[0][0].riled_source_effects.size() == 1 and unit_is_riled_up(board[0])
+    return single and overlap and board[0][0].rule_effects.size() == 1 and unit_is_riled_up(board[0])
 
 # Own-unit passives work in reserves/embarked banks; they are not external
 # auras and require no range to an offboard unit (appendix01.02.04).
@@ -8957,7 +8959,7 @@ fun test_orks17f_saved_state_and_forged_handles() -> Bool:
     let restored = play()
     let accepted = set_state(restored, saved)
     let retained = accepted and restored.board.armies[0].war_cry_used and is_riled_up(restored.board[0][0]) and restored.board.armies[0].warlord == game.board.armies[0].warlord
-    restored.board[0][0].riled_source_effects[0].value = 999
+    restored.board[0][0].rule_effects[0].source_effect.value = 999
     return retained and !valid_state_foundations(restored.board)
 
 # Stale selected Assault snapshots cannot outlive their riled effect (p.78;
@@ -10015,7 +10017,7 @@ fun test_orks17h23_dodge_hit_pipeline_and_individual_choices() -> Bool:
     let result = resolve_attack_dice(board, board[3], board[0], attack_test_count(1))
     result.roll(board, board[3], board[0], attack_test_die(3))
     result.roll(board, board[3], board[0], attack_test_die(1))
-    return info.faction_innate_hit_bonus and info.total_hit_modifier() == 1 and get_hit_roll_bonus(board) == 1 and options.size() == 3 and result.is_done() and result.generated_wounds == 0
+    return info.unit_ability_hit_modifiers.size() == 1 and info.total_hit_modifier() == 1 and get_hit_roll_bonus(board) == 1 and options.size() == 3 and result.is_done() and result.generated_wounds == 0
 
 # Attached unit attacks all receive Dodge Dis! until the boss's conferral
 # ends; unsupported old factories have no new grants (core pp66-67).
@@ -10030,15 +10032,15 @@ fun test_orks17h23_dodge_attached_component_lifetime() -> Bool:
     target.owned_by_player1 = true
     board.units.append(target)
     configure_attack_info(board, 0, 1, false, true)
-    let live = board.attack_info.faction_innate_hit_bonus
+    let live = !board.attack_info.unit_ability_hit_modifiers.empty()
     board[0][10].suffered_wounds = 6
     board[0][10].state = ModelState::pending_destruction
     board[0][10].attachment_abilities_retained = true
     configure_attack_info(board, 0, 1, false, true)
-    let retained = board.attack_info.faction_innate_hit_bonus
+    let retained = !board.attack_info.unit_ability_hit_modifiers.empty()
     board[0][10].attachment_abilities_retained = false
     configure_attack_info(board, 0, 1, false, true)
-    return live and retained and !board.attack_info.faction_innate_hit_bonus and !make_beastboss_morgrim().has_ability(AbilityKind::dodge_dis)
+    return live and retained and board.attack_info.unit_ability_hit_modifiers.empty() and !make_beastboss_morgrim().has_ability(AbilityKind::dodge_dis)
 
 # Bomb Squig: only completed Normal-move end in own Movement phase.
 fun test_orks17h23_bomb_timing_gates() -> Bool:
@@ -10853,7 +10855,7 @@ fun test_orks17all_flyboyz_riled_hit_modifier() -> Bool:
     orks17all_tag(board[0], OrksDatasheet::deffkoptas)
     orks17f_intrinsic_riled(board[0][0])
     let info = orks17c2b_info(board, 0)
-    return info.faction_hit_modifiers.size() == 1 and info.total_hit_modifier() == 1
+    return info.attack_hit_modifiers.size() == 1 and info.total_hit_modifier() == 1
 
 # Brute Warboss3+/riled2+ has no CP cost, closes after selecting its unit to
 # fight, and remains distinct from paid4+ permissions.
@@ -12989,7 +12991,7 @@ fun test_orks17p2_repair_contributions_and_full_choice_capacity() -> Bool:
     grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE, RuleEffectKind::clever_hit)
     grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE + 10, RuleEffectKind::clever_hit)
     let info = orks17p2_info(board, 0)
-    let independent = info.faction_unit_hit_modifiers.size() == 3 and info.total_hit_modifier() == 3
+    let independent = info.unit_hit_modifiers.size() == 3 and info.total_hit_modifier() == 3
     let choices : AttackModifierChoices
     for index in range(MAX_ATTACK_MODIFIER_CHOICES):
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::faction_datasheet))
@@ -13988,12 +13990,12 @@ fun test_orks17p3_bunka_home_objective_embarked_oc() -> Bool:
     let board = orks17p3_cargo(make_orks_big_ed_bossbunka(0, 0), make_orks_gretchin(10))
     board.objectives[0].custom_position = true
     board.objectives[0].position = board_position(5, 5)
-    let unspecified = orks_bunka_passenger_control(board, board[0][0], false)
+    let unspecified = orks_bunka_passenger_control(board, board.objective_range_definition(0), board[0][0], false)
     board.objectives[0].home = ObjectiveHome::army_0
-    let occupied = orks_bunka_passenger_control(board, board[0][0], false)
+    let occupied = orks_bunka_passenger_control(board, board.objective_range_definition(0), board[0][0], false)
     let control = board.objective_control_level(board.objective_range_definition(0), false)
     board.embarked_units[0].battle_socked = true
-    return unspecified == 0 and occupied == 10 and control == 10 and orks_bunka_passenger_control(board, board[0][0], false) == 0
+    return unspecified == 0 and occupied == 10 and control == 10 and orks_bunka_passenger_control(board, board.objective_range_definition(0), board[0][0], false) == 0
 
 # Butchery counts bodies, caps at22 and affects the named melee weapon only.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig
@@ -15437,7 +15439,14 @@ fun test_weapon_catalog_nonattacking_equipment_cannot_be_selected() -> Bool:
 fun test_faction_dispatch_unmodified_model_defaults() -> Bool:
     let board = attack_declaration_fixture()
     ref model = board[0][0]
-    return faction_keyword_override(model, Keyword::mounted) == 0 and faction_movement_bonus(model) == 0 and faction_toughness_bonus(model) == 0 and faction_invulnerable_base(model) == model.profile.invuln_save() and !model_has_fights_first_grant(model) and rule_charge_allowed(board, board[0]) and rule_action_allowed(board, board[0]) and rule_flight_allowed(board, board[0]) and faction_hidden_allowed(board, board[0])
+    let movement_modifiers : RuleModifiers
+    let toughness_modifiers : RuleModifiers
+    append_model_modifiers(model, ModifiedCharacteristic::movement, movement_modifiers)
+    append_model_modifiers(model, ModifiedCharacteristic::toughness, toughness_modifiers)
+    let permission : InvulnerableSavePermission
+    permission.target = model.profile.invuln_save()
+    append_model_save_permissions(model, permission)
+    return faction_keyword_override(model, Keyword::mounted) == 0 and movement_modifiers.empty() and toughness_modifiers.empty() and permission.target.value == model.profile.invuln_save() and !model_has_fights_first_grant(model) and rule_charge_allowed(board, board[0]) and rule_action_allowed(board, board[0]) and rule_flight_allowed(board, board[0]) and faction_hidden_allowed(board, board[0])
 
 # A faction-owned effect is consumed on its actual recipient, independently
 # of which army owns that recipient (Orks psychic grants; core p67/01.02.02).
@@ -15725,3 +15734,130 @@ fun test_shared_hooks_transport_grouped_seat_weights() -> Bool:
     ordinary.transport_space = 3
     unit.models.append(ordinary)
     return passenger_space(unit) == 5
+
+# The same carrier can overlap two markers. Only the queried friendly home
+# receives Raucous Occupants, never a nearby unrelated/enemy marker.
+# Orks/Big'ed Bossbunka; objective control core p52.
+fun test_ability_hooks_objective_context_does_not_leak_between_markers() -> Bool:
+    let board = orks17p3_cargo(make_orks_big_ed_bossbunka(0, 0), make_orks_gretchin(10))
+    board.objectives[0].custom_position = true
+    board.objectives[0].position = board_position(5, 5)
+    board.objectives[0].home = ObjectiveHome::army_0
+    board.objectives[1].custom_position = true
+    board.objectives[1].position = board_position(6, 5)
+    board.objectives[1].home = ObjectiveHome::army_1
+    let friendly = board.objective_control_level(board.objective_range_definition(0), false)
+    let enemy_home = board.objective_control_level(board.objective_range_definition(1), false)
+    board.objectives[1].home = ObjectiveHome::none
+    let unassigned = board.objective_control_level(board.objective_range_definition(1), false)
+    return friendly == 10 and enemy_home == 0 and unassigned == 0
+
+
+# A unit ability can supply an arbitrary signed magnitude through the common
+# hit pipeline, with independently ignorable terms and the ordinary cap.
+# No Orks grant is involved; core p18 and appendix02.02.01/02.
+fun test_ability_hooks_unit_hit_terms_are_not_boolean_bonuses() -> Bool:
+    let board = attack_declaration_fixture()
+    let info : AttackSequenceInfo
+    info.unit_ability_hit_modifiers.append(rule_modifier(ModifierOperation::add, 3))
+    info.unit_ability_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
+    board.attack_info = info
+    let choices = attack_hit_choices(board, info)
+    return info.total_hit_modifier() == 2 and get_hit_roll_bonus(board) == 1 and choices.size() == 2 and choices[0].modifier.signed_amount() == 3 and choices[1].modifier.signed_amount() == 1
+
+
+# Calculation hooks preserve earlier operations and source distinctness;
+# division happens after all additions (appendix02.02.01).
+# Orks/Bannernob grants the one source-specific term used by this fixture.
+fun test_ability_hooks_charge_terms_follow_common_operation_order() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].abilities.append(AbilityKind::waaagh_banner)
+    let effects : ChargeRollEffects
+    effects.modifiers.append(rule_modifier(ModifierOperation::divide, 2))
+    append_charge_roll_effects(board[0], effects)
+    return effects.modifiers.size() == 2 and modified_dice_result(7, effects.modifiers, false, true) == 4 and effects.modifiers[0].operation.value == ModifierOperation::divide.value
+
+
+# Actual instances are supplied by the adapter; core does not manufacture a
+# fixed Sustained Hits value. A preexisting3 and the army's1 remain distinct.
+# Orks/War Horde; duplicate weapon abilities core p78.
+fun test_ability_hooks_weapon_instances_preserve_prior_entries() -> Bool:
+    let board = orks17h23_fixture()
+    board.armies[0].faction = ArmyFaction::orks
+    board.armies[0].detachments.append(OrksDetachment::war_horde)
+    let before = to_string(board)
+    let rules : WeaponAbilitySet
+    rules.append(weapon_rule(WeaponRuleKind::sustained_hit, 3))
+    let family : WeaponCode
+    family = equipped_weapon_family(board[0][0], 1).value
+    append_weapon_rules(board, unit_id(0), 0, board[0][0].weapons[1].profile, family, rules)
+    let first = rules.size() == 2 and rules[0].parameter.value == 3 and rules[1].parameter.value == 1
+    let repeated : WeaponAbilitySet
+    repeated.append(weapon_rule(WeaponRuleKind::sustained_hit, 3))
+    append_weapon_rules(board, unit_id(0), 0, board[0][0].weapons[1].profile, family, repeated)
+    return first and repeated.size() == rules.size() and to_string(board) == before
+
+
+# Advance grants are frozen before roll-stage effects. The later selected-
+# movement handler must not rewrite them after their source has expired.
+# Core pp32/36 and Orks/Waaagh! selected-to-Advance timing.
+fun test_ability_hooks_advance_permission_is_not_recaptured_after_roll() -> Bool:
+    let board = orks17f_fixture()
+    orks17f_intrinsic_riled(board[0][0])
+    capture_advance_charge_permission(board, unit_id(0))
+    let selected = board[0].history.advance_allows_charge
+    board[0][0].rule_effects.clear()
+    capture_faction_selected_move(board, unit_id(0), MovementKind::advance)
+    return selected and board[0].history.advance_allows_charge and !unit_is_riled_up(board[0])
+
+
+# A generic source-owned status uses the same install/remove/duplicate path
+# as other rule effects. No dedicated army lifecycle hook is needed.
+# Infrastructure for persisting effects01.02.02, independent of status meaning.
+fun test_ability_hooks_status_lifecycle_preserves_other_sources() -> Bool:
+    let board = attack_declaration_fixture()
+    let grant : RuleEffectGrant
+    grant.kind = RuleEffectKind::riled_up
+    grant.amount = 1
+    let payload : SourceGrant
+    payload = grant
+    let first : SourceEffectKey
+    let second : SourceEffectKey
+    first = 31
+    second = 32
+    install_source_grant(board[0][0], payload, first)
+    install_source_grant(board[0][0], payload, second)
+    remove_source_grant(board[0][0], first)
+    return board[0][0].rule_effects.size() == 1 and board[0][0].rule_effects[0].source_effect == second and model_has_source_grant(board[0][0], second) and !model_has_source_grant(board[0][0], first)
+
+
+# Newly generalized modifier terms must pass ordinary save validation too.
+# A forged divide-by-zero is rejected before core evaluates it (02.02.01).
+fun test_ability_hooks_reject_invalid_unit_hit_term_on_save() -> Bool:
+    let board = attack_declaration_fixture()
+    let term = rule_modifier(ModifierOperation::divide, 1)
+    term.amount = 0
+    board.attack_info.unit_ability_hit_modifiers.append(term)
+    return !valid_attack_results(board)
+
+
+# Every supported term must fit simultaneously. Generalizing the old Boolean
+# adds16 independent ability terms, not one slot (core p18; appendix02.02.02).
+fun test_ability_hooks_full_hit_modifier_envelope() -> Bool:
+    let board = attack_declaration_fixture()
+    let info : AttackSequenceInfo
+    for index in range(MAX_DATASHEET_HIT_MODIFIERS):
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+    for index in range(16):
+        info.attack_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.unit_ability_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+    info.hit_roll_bonus = true
+    info.hit_roll_malus = true
+    info.profile_hit_roll_bonus.append(info.source_profile)
+    info.damaged_hit_penalty = true
+    info.heavy_bonus = true
+    info.selected_weapon_rules.append(weapon_rule(WeaponRuleKind::heavy))
+    info.weapon_rules_known = true
+    info.engaged_hit_penalties = 2
+    let choices = attack_hit_choices(board, info)
+    return choices.size() == MAX_ATTACK_MODIFIER_CHOICES

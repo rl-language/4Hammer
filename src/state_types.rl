@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 46
+const STATE_SCHEMA_VERSION = 47
 const ACTION_SCHEMA_VERSION = 27
-const OBSERVATION_SCHEMA_VERSION = 46
+const OBSERVATION_SCHEMA_VERSION = 47
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -24,11 +24,14 @@ fun get_observation_schema_version() -> Int:
 # These are configurable supported ranges, not tabletop restrictions.
 const MAX_CP = 257
 const MAX_SCORE = 201
-# Up to16 sourced model effects may each contribute a distinct repair modifier.
-const MAX_MODEL_RULE_EFFECTS = 16
-const MAX_DATASHEET_HIT_MODIFIERS = 26
-const MAX_ATTACK_MODIFIER_CHOICES = 56
-const MAX_ATTACK_MODIFIER_INDEX = 57
+# Preserve the old16 mechanical-effect slots plus8 independently owned status
+# slots in the unified store. Every mechanical entry can supply a repair term.
+const MAX_MODEL_RULE_EFFECTS = 24
+const MAX_DATASHEET_HIT_MODIFIERS = 34
+#34 unit terms +16 attack terms +16 unit-ability terms +7 core terms.
+# All remain independently selectable; the last index is the completed state.
+const MAX_ATTACK_MODIFIER_CHOICES = 73
+const MAX_ATTACK_MODIFIER_INDEX = 74
 # Validated13-profile envelope. Included Stompa needs10; current17.H1
 # families need at most4. Excluded Kill Tank is not a playable-data obligation.
 # Review actual copies/quotas in each remaining included54-card adapter.
@@ -140,7 +143,7 @@ fun<T, Int capacity> size_as_observation_tensor(CheckedVector<T, capacity> obj) 
 # Nonnegative bounds keep generated Python/Godot names valid in RLC 0.4.14.
 const MAX_ENTITY_IDENTITIES = 16384
 const MAX_IDENTITY_SEQUENCE = 16385
-const NEXT_STATE_SCHEMA_VERSION = 47
+const NEXT_STATE_SCHEMA_VERSION = 48
 const MAX_PHASE_SERIAL = 64
 const MAX_TURN_SERIAL = 16
 const MAX_PHASE_STAMP = 65

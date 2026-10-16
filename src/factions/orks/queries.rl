@@ -81,10 +81,11 @@ fun orks_stratagem_owner_allowed(Stratagem strat, Unit target, Bool player) -> B
 fun append_riled_assault_rules(Model model, Weapon weapon, WeaponAbilitySet rules):
     if weapon.range() == 0:
         return
-    for riled_index in range(model.riled_source_effects.size()):
-        let granted = weapon_rule(WeaponRuleKind::assault)
-        granted.source_effect = model.riled_source_effects[riled_index]
-        rules.append(granted)
+    for riled_index in range(model.rule_effects.size()):
+        if model.rule_effects[riled_index].kind.value == RuleEffectKind::riled_up.value:
+            let granted = weapon_rule(WeaponRuleKind::assault)
+            granted.source_effect = model.rule_effects[riled_index].source_effect
+            rules.append(granted)
 
 # Orks army/detachment rule, formerly embedded in core (Waaagh!/Get Stuck In; core p78).
 fun war_horde_melee_rule_applies(Board board, UnitID source, Weapon weapon) -> Bool:
@@ -169,8 +170,9 @@ fun orks_charge_effects_remaining(FactionChargeProgress progress) -> Bool:
     return progress.mobbed or progress.impetus
 
 # Dodge Dis provides a separately selectable+1 hit contribution (Orks/Squighog-Boyz; core modifier rules).
-fun orks_innate_hit_bonus(Unit unit) -> Bool:
-    return unit.has_ability(AbilityKind::dodge_dis)
+fun append_orks_unit_hit_modifiers(Unit unit, RuleModifiers modifiers):
+    if unit.has_ability(AbilityKind::dodge_dis):
+        modifiers.append(rule_modifier(ModifierOperation::add, 1))
 
 # Brutal Impact contributes damage before other faction modifiers, preserving operation order (Orks/Squighog-Boyz).
 fun append_orks_intrinsic_modifiers(Board board, UnitID source, ModifiedCharacteristic kind, RuleModifiers result):
@@ -201,4 +203,24 @@ fun orks_army_configuration_valid(ArmyConfiguration army) -> Bool:
 
 # Orks riled status is source-owned; keep the existing public read query.
 fun is_riled_up(Model model) -> Bool:
-    return !model.riled_source_effects.empty()
+    for index in range(model.rule_effects.size()):
+        if model.rule_effects[index].kind.value == RuleEffectKind::riled_up.value:
+            return true
+    return false
+
+# Painboss, Cybork Boosta and It Came From Da Drops apply model-local
+# characteristic terms; no unit-wide property is inferred (Orks cards).
+fun append_orks_model_modifiers(Model model, ModifiedCharacteristic kind, RuleModifiers modifiers):
+    if kind.value == ModifiedCharacteristic::movement.value:
+        if model.painboss_mounted_attachment:
+            modifiers.append(rule_modifier(ModifierOperation::add, 4))
+        if model.orks_enhancement.value == OrksEnhancement::cybork_boosta.value:
+            modifiers.append(rule_modifier(ModifierOperation::add, 2))
+    if kind.value == ModifiedCharacteristic::toughness.value and model.orks_enhancement.value == OrksEnhancement::it_came_from_da_drops.value:
+        modifiers.append(rule_modifier(ModifierOperation::add, 1))
+
+# Riled-up/Blastajet confer a5+ base; other saves and characteristic modifiers
+# remain common. Orks Army Rules and Wazbom Blastajet wargear.
+fun append_orks_model_save_permissions(Model model, InvulnerableSavePermission permission):
+    if model.blastajet_force_field or is_riled_up(model):
+        permission.target = min(permission.target.value, 5)

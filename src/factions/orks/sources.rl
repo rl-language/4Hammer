@@ -403,9 +403,6 @@ act orks_timing_choice(ctx Board board, ctx CoreTimingProgress core_progress, ct
 fun orks_model_state_valid(Model model) -> Bool:
     if model.orks_enhancement.value < 0 or model.orks_enhancement.value > OrksEnhancement::warphead.value or model.orks_upgrade_origin.value < 0 or model.orks_upgrade_origin.value >= MAX_IDENTITY_SEQUENCE:
         return false
-    for riled_index in range(model.riled_source_effects.size()):
-        if model.riled_source_effects[riled_index].value < 0 or model.riled_source_effects[riled_index].value >= MAX_SOURCE_EFFECT_KEY:
-            return false
     return true
 
 # Validate bounded Orks psychic usage on save load; generic Psyker level validation remains core.
@@ -413,34 +410,7 @@ fun orks_unit_state_valid(Unit unit) -> Bool:
     return !(unit.orks_psychic_usage.budget.round_stamp.value < 0 or unit.orks_psychic_usage.budget.round_stamp.value >= MAX_ROUNDS or unit.orks_psychic_usage.budget.spent.value < 0 or unit.orks_psychic_usage.budget.spent.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.roar_phase.value < 0 or unit.orks_psychic_usage.roar_phase.value >= MAX_PHASE_STAMP or unit.orks_psychic_usage.visions_phase.value < 0 or unit.orks_psychic_usage.visions_phase.value >= MAX_PHASE_STAMP)
 
 # Orks typed/riled grants share generic source handles and expiry (Waaagh!/01.02.02).
-fun orks_install_source_grant(Model model, SourceGrant installed, SourceEffectKey key):
-    if installed is RiledUpGrant:
-        model.riled_source_effects.append(key)
-
 # Remove only the matching Orks effect/riled key, including archived models (01.02.02; core p88).
-fun orks_remove_source_grant(Model model, SourceEffectKey key):
-    let index = model.riled_source_effects.size()
-    while index > 0:
-        index = index - 1
-        if model.riled_source_effects[index] == key:
-            model.riled_source_effects.erase(index)
-
 # Validate faction typed source payloads before loading/dispatch; generic arithmetic validation stays core.
-fun orks_source_grant_valid(SourceGrant grant) -> Bool:
-    if grant is RiledUpGrant:
-        return grant.enabled
-    return false
-
 # Returned members inherit only missing faction-owned grant keys (core p88/01.02.02).
-fun orks_model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
-    let present = false
-    for riled_index in range(model.riled_source_effects.size()):
-        present = present or model.riled_source_effects[riled_index] == key
-    return present
-
 # Restored faction grants must refer to their real source recipients; preserve existing handle validation.
-fun orks_model_source_handles_valid(Board board, Model model) -> Bool:
-    let valid = true
-    for riled_index in range(model.riled_source_effects.size()):
-        valid = valid and source_handle_matches_model(board, model.riled_source_effects[riled_index], model.identity)
-    return valid

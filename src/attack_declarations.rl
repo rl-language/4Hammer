@@ -360,11 +360,9 @@ fun declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration
     let model = declared_model_index(board, source, declaration)
     assert(model >= 0, "declared source no longer exists")
     let result = model_weapon_modifiers(board[source][model], declaration.slot.value, kind, declaration.borrowed_weapon, declaration.weapon_name, declaration.profile_name)
-    # Squighog Boyz/Brutal Impact: every attack (ranged or melee) gains +1D
-    # after a completed charge this turn, within the ordinary addition step.
-    append_faction_intrinsic_modifiers(board, source, kind, result)
-    append_faction_declaration_modifiers(board, source, declaration, kind, result)
-    append_faction_datasheet_modifiers(board, source, declaration, kind, result)
+    # Actual bearer/profile provenance reaches one calculation-specific hook;
+    # arithmetic order and identical-attack grouping remain core (p17).
+    append_weapon_modifiers(board, source, declaration, kind, result)
     return result
 
 # Hazardous counts actual selected physical weapons, not every simultaneously

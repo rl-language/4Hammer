@@ -60,12 +60,7 @@ cls SourceWeaponGrant:
     WeaponCode profile_name
     Bool physical_scope
 
-# Orks Waaagh! grants riled status as one owned effect, not three unrelated
-# buffs; see the faction Army Rules / Waaagh! section.
-cls RiledUpGrant:
-    Bool enabled
-
-using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant | AttackModifierPermission | RiledUpGrant | RuleEffectGrant
+using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant | AttackModifierPermission | RuleEffectGrant
 
 cls SourceUseLimits:
     # Zero is unlimited for this interval; combine all four printed limits.

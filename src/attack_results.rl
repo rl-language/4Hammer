@@ -55,7 +55,7 @@ fun end_attack_results(Board board):
 fun valid_attack_results(Board board) -> Bool:
     if board.attack_serial.value < 0 or board.attack_serial.value >= 1025 or board.forced_attack_target.value < 0 or board.forced_attack_target.value > board.next_identity.value:
         return false
-    if !valid_rule_modifiers(board.attack_info.faction_hit_modifiers) or !valid_rule_modifiers(board.attack_info.faction_wound_modifiers):
+    if !valid_rule_modifiers(board.attack_info.attack_hit_modifiers) or !valid_rule_modifiers(board.attack_info.attack_wound_modifiers) or !valid_rule_modifiers(board.attack_info.unit_ability_hit_modifiers):
         return false
     for record in range(board.attack_records.size()):
         ref entry = board.attack_records[record]

@@ -77,7 +77,7 @@ fun ranged_target_valid(Board board, UnitID source, Model bearer, Weapon weapon,
     if engaged:
         if chosen_weapon_has_rule(board, target, rules, WeaponRuleKind::blast):
             return false
-        if !faction_engagement_exception(board, board[target]) and !(kind == ShootingKind::close_quarters and mutually_engaged) and (!(board.timing.phase == BattlePhase::shooting) or board.current_player != board[source].owned_by_player1 or (!board[target].has_keyword(Keyword::monster) and !board[target].has_keyword(Keyword::vehicle))):
+        if !permits_shooting_at_engaged_unit(board, board[target]) and !(kind == ShootingKind::close_quarters and mutually_engaged) and (!(board.timing.phase == BattlePhase::shooting) or board.current_player != board[source].owned_by_player1 or (!board[target].has_keyword(Keyword::monster) and !board[target].has_keyword(Keyword::vehicle))):
             return false
     if kind == ShootingKind::assault and !chosen_weapon_has_rule(board, target, rules, WeaponRuleKind::assault):
         return false

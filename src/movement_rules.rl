@@ -647,3 +647,20 @@ fun battlefield_entry_available(Board board, Unit unit) -> Bool:
     if unit.has_return_slot:
         return unit.return_slot.get() < board.units.size() and board[unit.return_slot].retired and board[unit.return_slot].empty()
     return board.units.has_capacity() or (unit.is_generated_replacement and replacement_slot(board) >= 0)
+
+# Capture waivers once for the actual selection (pp32-33/36/58). This is a
+# historical fact; later aura/effect expiry cannot retroactively change it.
+fun capture_selected_move_permissions(Board board, UnitID source, MovementKind kind):
+    let permissions : SelectedMovePermissions
+    append_selected_move_permissions(board, board[source], kind, permissions)
+    if kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape:
+        board[source].history.fallback_allows_charge = permissions.charge
+        board[source].history.fallback_allows_shooting = permissions.shoot
+    board[source].history.selected_move_allows_action = permissions.start_action
+
+# Advance eligibility is captured before its optional roll-stage effects, not
+# refreshed when those effects finish (core pp32/36; source selection timing).
+fun capture_advance_charge_permission(Board board, UnitID source):
+    let permissions : SelectedMovePermissions
+    append_selected_move_permissions(board, board[source], MovementKind::advance, permissions)
+    board[source].history.advance_allows_charge = permissions.charge

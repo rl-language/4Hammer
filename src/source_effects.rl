@@ -396,7 +396,6 @@ fun install_source_grant(Model model, SourceGrant grant, SourceEffectKey key):
     if installed is RuleEffectGrant:
         installed.source_effect = key
         model.rule_effects.append(installed)
-    faction_install_source_grant(model, installed, key)
     if installed is SourceWeaponGrant:
         installed.rule.source_effect = key
         for slot in range(model.weapons.size()):
@@ -431,7 +430,6 @@ fun remove_source_grant(Model model, SourceEffectKey key):
         status_index = status_index - 1
         if model.rule_effects[status_index].source_effect == key:
             model.rule_effects.erase(status_index)
-    faction_remove_source_grant(model, key)
     let index = model.characteristic_modifiers.size()
     while index > 0:
         index = index - 1
@@ -562,7 +560,7 @@ fun source_weapon_grant(WeaponRule rule) -> SourceWeaponGrant:
 # Validate typed source payloads before loading/dispatch, rather than permitting
 # invalid modifiers, foreign ownership or forged effect handles into consumers.
 fun valid_source_grant(SourceGrant grant) -> Bool:
-    let valid = faction_source_grant_valid(grant)
+    let valid = false
     if grant is RuleEffectGrant:
         valid = valid_rule_effect(grant)
     if grant is CharacteristicModifier:
@@ -685,7 +683,7 @@ fun source_aura_target(Board board, SourceInstance instance, SourceLocation targ
 # Unit effects extend to returned/new constituents without duplicating a grant
 # already carried by a surviving model (returning models p.88/01.02.02).
 fun model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
-    let present = faction_model_has_source_grant(model, key)
+    let present = false
     for status_index in range(model.rule_effects.size()):
         present = present or model.rule_effects[status_index].source_effect == key
     for index in range(model.characteristic_modifiers.size()):
@@ -739,7 +737,6 @@ fun valid_model_source_handles(Board board, Model model) -> Bool:
         valid = valid and source_handle_matches_model(board, model.incoming_attack_modifiers[incoming].source_effect, model.identity)
     for permission_index in range(model.attack_modifier_permissions.size()):
         valid = valid and source_handle_matches_model(board, model.attack_modifier_permissions[permission_index].source_effect, model.identity)
-    valid = valid and faction_model_source_handles_valid(board, model)
     for slot in range(model.weapons.size()):
         for rule in range(model.additional_weapon_rules[slot].size()):
             valid = valid and source_handle_matches_model(board, model.additional_weapon_rules[slot][rule].source_effect, model.identity)

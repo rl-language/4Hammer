@@ -227,4 +227,3 @@ fun prepare_orks_replacement_unit(Unit unit):
 fun prepare_orks_replacement_model(Model model, EntityIdentity replacement):
     if model.orks_upgrade_origin.value > 0:
         model.orks_upgrade_origin = replacement
-    model.riled_source_effects.clear()

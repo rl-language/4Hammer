@@ -59,16 +59,10 @@ fun faction_finish_movement_policy(MovementKind kind, MovementGeometryPolicy pol
 # Core captures it in Advance/Fall-Back history and combines other permission
 # sources; false grants no exception. Resolve applicability now, without changing
 # history or treating this as complete later charge eligibility.
-fun faction_move_charge_permission(Board board, Unit unit, MovementKind kind) -> Bool:
-    return orks_move_charge_permission(board, unit, kind)
-
 # Return an additional permission to reroll the common charge roll. Core ORs
 # this with ordinary permissions, rerolls the complete pair before modifiers
 # and enforces the one-reroll limit. Default false; no roll, payment, movement
 # or source-use mutation may occur in this query.
-fun faction_charge_reroll(Board board, Unit unit) -> Bool:
-    return orks_charge_reroll(board, unit)
-
 # Record extension consequences of selecting kind on the battlefield source:
 # capture action/shooting/charge waivers in selection history and install any
 # selection-triggered grants. Called before placement, including fallback
@@ -143,9 +137,6 @@ fun faction_prebattle_formations(Board board) -> OrksKommandoFormations:
 # in inches, or zero. Determine applicable sources and their stacking policy;
 # exclude offboard measurements. Core combines the unit bonus and ordered roll
 # modifiers, then applies charge and flight limits.
-fun faction_charge_aura_bonus(Board board, Unit unit) -> Int:
-    return orks_stampede_charge_bonus(board, unit)
-
 # Resolve permitted choices after actor is selected, before charge resolution
 # or movement-mode selection. charging distinguishes those two call boundaries.
 # Accepted choices own their CP/use and grants; they do not themselves commit
@@ -188,13 +179,12 @@ fun faction_movement_events_remaining(Board board, PendingSourceEvents pending, 
 fun register_faction_cargo_passives(Board board):
     register_orks_cargo_passives(board)
 
-# Return additional nonnegative OC through carrier for player, or zero.
-# Core calls for each in-range friendly model in an unshocked unit: verify live
-# carrier/effect eligibility here. It adds the result to ordinary OC. No queried-
-# objective argument exists, so further marker conditions must use Board here.
-# Do not measure distance from embarked models or update objective control.
-fun faction_passenger_objective_control(Board board, Model carrier, Bool player) -> Int:
-    return orks_bunka_passenger_control(board, carrier, player)
+# Append additional control for this exact scored marker and live carrier.
+# Core calls only for an in-range friendly model in an unshocked unit; cargo
+# contributes only where its rule permits. Pure; no distances from cargo and
+# no objective/mission mutation (core pp52/64; appendix01.02.04).
+fun append_objective_control_effects(Board board, Objective objective, Model carrier, Bool player, ObjectiveControlEffects effects):
+    effects.additional_control = effects.additional_control.value + orks_bunka_passenger_control(board, objective, carrier, player)
 
 # Resolve passenger options before disembark placement/decline. passenger
 # indexes embarked_units; carrier is the already resolved CarrierLocation.
@@ -245,9 +235,6 @@ fun faction_modify_advance_roll(Board board, UnitID id) -> OrksModifyAdvanceRoll
 # this after the final Advance die result; it does not change printed/effective
 # M or replace the die. No movement, use consumption or grant installation
 # may occur while evaluating this contribution.
-fun faction_advance_distance_bonus(Board board, Unit unit) -> Int:
-    return orks_advance_distance_bonus(board, unit)
-
 # Clear temporary extension selection state after the movement attempt,
 # including failed/cancelled placement. Preserve captured selection history and
 # effects whose explicit duration continues. Do not undo paid choices, move
@@ -273,9 +260,6 @@ fun faction_movement_phase_choice(Board board) -> OrksMovementPhaseChoice:
 # or zero, based on the supplied unit's current eligible sources. Core adds
 # Board-dependent aura contributions and applies modifier order/caps. This is
 # not final charge distance and must not consume a charge or roll.
-fun faction_unit_charge_bonus(Unit unit) -> Int:
-    return orks_unit_charge_bonus(unit)
-
 # Adjust charge path traversal policy using the original unit rather than
 # staged positions. Mutate only policy and preserve higher-priority common
 # permissions where required. Core retains total distance, target engagement,
@@ -303,3 +287,33 @@ fun prepare_faction_replacement_unit(Unit unit):
 # without overwriting core identities; ordinary returned casualties skip this.
 fun prepare_faction_replacement_model(Model model, EntityIdentity replacement):
     prepare_orks_replacement_model(model, replacement)
+
+# Waive only Desperate Escape hazards for this actual Fall Back; never grants
+# shooting at an engaged target or waives a separate forced-escape rule.
+# Core still applies Battle-shock and ordinary move legality (core p33).
+fun permits_escape_without_hazards(Board board, Unit unit) -> Bool:
+    return orks_engaged_only_fortifications(board, unit)
+
+# Append unit-local charge terms; no Board/range query is possible in this
+# overload. Preserve earlier operations; core applies ordering and the12 cap.
+# Pure and repeatable (core p37; supplied appendix02.02.01).
+fun append_charge_roll_effects(Unit unit, ChargeRollEffects effects):
+    append_orks_charge_roll_effects(unit, effects)
+
+# Board-aware charge calculation includes applicable live external sources.
+# Core supplies an initialized accumulator; no dice/CP/use/state changes.
+# A reroll permission does not bypass the one-reroll rule (core pp16/37).
+fun append_charge_roll_effects(Board board, Unit unit, ChargeRollEffects effects):
+    append_orks_charge_roll_effects(board, unit, effects)
+
+# Advance has its own roll boundary and output. Contributions are evaluated
+# before rerolls and refreshed after accepted roll-stage effects; core applies
+# their arithmetic after rerolls (core p32; appendix02.02.01).
+fun append_advance_roll_effects(Board board, Unit unit, AdvanceRollEffects effects):
+    append_orks_advance_roll_effects(board, unit, effects)
+
+# Calculate only waivers associated with this selected movement kind. Core
+# captures them in history at selection; later source changes cannot rewrite
+# that event. No grants, costs or movement are committed here (pp32-33/36/58).
+fun append_selected_move_permissions(Board board, Unit unit, MovementKind kind, SelectedMovePermissions permissions):
+    append_orks_selected_move_permissions(board, unit, kind, permissions)

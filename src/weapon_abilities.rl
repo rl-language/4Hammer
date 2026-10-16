@@ -20,16 +20,12 @@ fun model_weapon_rules(Board board, UnitID source, Int model, Int slot) -> Weapo
         result.append(intrinsic[i])
     for i in range(board[source][model].additional_weapon_rules[slot].size()):
         result.append(board[source][model].additional_weapon_rules[slot][i])
-    append_faction_intrinsic_weapon_rules(board[source][model], board[source][model].weapons[slot].profile, result)
-    # War Horde/Get Stuck In supplies a distinct Sustained Hits1 instance;
-    # select duplicate instances through the existing p78 ability choice.
-    if faction_melee_sustained_rule_applies(board, source, board[source][model].weapons[slot].profile):
-        result.append(weapon_rule(WeaponRuleKind::sustained_hit, 1))
     let granted = board[source].get_temporary_weapon_rules()
     for i in range(granted.size()):
         result.append(granted[i])
-    append_faction_package_weapon_rules(board, source, model, slot, result)
-    append_faction_datasheet_weapon_rules(board, source, board[source][model].weapons[slot].profile, result)
+    let family : WeaponCode
+    family = equipped_weapon_family(board[source][model], slot).value
+    append_weapon_rules(board, source, model, board[source][model].weapons[slot].profile, family, result)
     return result
 
 # Selection/eligibility uses ability presence before the target is declared (p.78).

@@ -129,7 +129,7 @@ fun append_orks_attack_effects(Board board, UnitID source, UnitID target, Declar
     if orks_package(board, unit, OrksDetachment::da_big_hunt) and unit.has_keyword(Keyword::beast_snagga) and (victim.has_keyword(Keyword::monster) or victim.has_keyword(Keyword::vehicle)):
         info.ap_modifiers.append(rule_modifier(ModifierOperation::add, -1))
     if ranged and orks_package(board, unit, OrksDetachment::flyboyz) and unit_is_riled_up(unit) and unit.has_keyword(Keyword::orks) and (unit.has_keyword(Keyword::aircraft) or orks_type(unit, OrksDatasheet::deffkoptas)):
-        info.faction_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.attack_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if model_has_orks_enhancement(unit, model, OrksEnhancement::proper_killy) or unit_rule_effect(board, unit, RuleEffectKind::reroll_hits_ones) > 0:
         info.reroll1_hits = true
     if unit_rule_effect(board, unit, RuleEffectKind::reroll_hits_all) > 0:
@@ -143,17 +143,17 @@ fun append_orks_attack_effects(Board board, UnitID source, UnitID target, Declar
         if unit_rule_effect(board, unit, RuleEffectKind::reroll_hits_fly) > 0 and victim.has_keyword(Keyword::fly):
             info.reroll_hits = true
         if unit_rule_effect(board, unit, RuleEffectKind::wound_bonus_non_monster_vehicle) > 0 and !victim.has_keyword(Keyword::monster) and !victim.has_keyword(Keyword::vehicle):
-            info.faction_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+            info.attack_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
         if unit_rule_effect(board, unit, RuleEffectKind::close_range_ap) > 0 and live_unit_distance(unit, victim) <= 9.0:
             info.ap_modifiers.append(rule_modifier(ModifierOperation::add, -1))
         if weapon.borrowed_weapon and unit_rule_effect(board, unit, RuleEffectKind::deck_hit_bonus) > 0:
-            info.faction_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+            info.attack_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
         if unit_rule_effect(board, unit, RuleEffectKind::hit_plus_one) > 0:
-            info.faction_hit_modifiers.append(rule_modifier(ModifierOperation::add, unit_rule_effect(board, unit, RuleEffectKind::hit_plus_one)))
+            info.attack_hit_modifiers.append(rule_modifier(ModifierOperation::add, unit_rule_effect(board, unit, RuleEffectKind::hit_plus_one)))
         if unit_rule_effect(board, victim, RuleEffectKind::all_wound_protection) > 0 or (unit_rule_effect(board, victim, RuleEffectKind::strong_wound_protection) > 0 and info.attack_strength() > info.target_toughness.value):
-            info.faction_wound_modifiers.append(rule_modifier(ModifierOperation::add, -1))
+            info.attack_wound_modifiers.append(rule_modifier(ModifierOperation::add, -1))
         if victim.all_have_ability(AbilityKind::stealth):
-            info.faction_hit_modifiers.append(rule_modifier(ModifierOperation::add, -1))
+            info.attack_hit_modifiers.append(rule_modifier(ModifierOperation::add, -1))
         info.fail_hits_up_to_three = unit_rule_effect(board, victim, RuleEffectKind::fail_hits_one_to_three) > 0
         if unit_rule_effect(board, victim, RuleEffectKind::lifted) > 0:
             info.target_has_cover = false
@@ -864,12 +864,12 @@ fun append_orks_datasheet_attack_effects(Board board, UnitID source, UnitID targ
     if victim.has_ability(AbilityKind::hardy_bioniks):
         info.greater_strenght_wound_protection = true
     if declaration.weapon.range() == 0 and board.timing.phase == BattlePhase::fight and unit.has_ability(AbilityKind::krumpin_time) and unit_is_riled_up(unit):
-        info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if bearer >= 0:
         for repair_index in range(unit[bearer].rule_effects.size()):
             ref repair = unit[bearer].rule_effects[repair_index]
             if repair.kind.value == RuleEffectKind::clever_hit.value and source_grant_active(board, repair.source_effect):
-                info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, max(1, repair.amount.value)))
+                info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, max(1, repair.amount.value)))
     if orks_pulsa_applies(board, unit, victim.identity):
         info.ap_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
         info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::letal_hits))
@@ -883,36 +883,36 @@ fun append_orks_datasheet_attack_effects(Board board, UnitID source, UnitID targ
     if ranged and victim.has_ability(AbilityKind::mobile_fortress):
         info.damage_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
     if own_shooting and unit.has_ability(AbilityKind::strafing_run) and !victim.has_keyword(Keyword::fly):
-        info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if own_shooting and unit.has_ability(AbilityKind::deff_from_above) and unit.history.has_ingressed and unit.history.ingress_turn == board.turn_serial.value + 1:
-        info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if own_shooting and (unit.has_ability(AbilityKind::mobile_arsenal) or unit.has_ability(AbilityKind::big_an_shooty)) or !ranged and unit.has_ability(AbilityKind::big_an_stompy):
         info.reroll1_hits = true
     if own_shooting and monster_vehicle and unit.has_ability(AbilityKind::weak_spot):
-        info.faction_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.attack_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if !ranged and orks_prophet_aura(board, unit):
-        info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
-        info.faction_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.attack_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if unit.has_ability(AbilityKind::nowhere_to_hide) and unit_is_hidden(board, victim):
-        info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if unit_rule_effect(board, unit, RuleEffectKind::covered_squigs) > 0:
-        info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
     if unit_rule_effect(board, victim, RuleEffectKind::pulse_defence) > 0:
-        info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
     if ranged and orks_engaged_only_fortifications(board, victim) and info.shooting_kind.value != ShootingKind::close_quarters.value:
-        info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
     if ranged and unit_rule_effect(board, victim, RuleEffectKind::burna_mark) > 0:
         info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::ignore_cover))
     if unit_rule_effect(board, victim, RuleEffectKind::busted) > 0 and unit.has_keyword(Keyword::speed_freeks) and unit.owned_by_player1 != victim.owned_by_player1:
         info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::letal_hits))
     if unit_rule_effect(board, unit, RuleEffectKind::beastscent) > 0 and monster_vehicle:
-        info.faction_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.attack_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if !ranged and unit_rule_effect(board, unit, RuleEffectKind::weirdboy_warpath) > 0:
         info.reroll1_wounds = true
     ref model = unit[bearer]
     if declaration.weapon.range() == 0:
         if unit.has_ability(AbilityKind::sumfin_to_prove):
-            info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+            info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
         if declaration.weapon.value == Weapon::orks_paired_krumpas.value:
             info.reroll_hits = true
             info.reroll_wounds = true
@@ -920,11 +920,11 @@ fun append_orks_datasheet_attack_effects(Board board, UnitID source, UnitID targ
             info.reroll_wounds = true
     else:
         if unit_rule_effect(board, unit, RuleEffectKind::ammo_runts_hit) > 0:
-            info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+            info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
         if model_rule_effect(board, model, RuleEffectKind::boss_ammo_hit) > 0:
-            info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+            info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if orks_type(unit, OrksDatasheet::killa_kans) and !orks_target_has_toughness_seven(board[target]):
-        info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
+        info.unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
 
 # Literal selection windows for source cards. Ranged cards say YOUR Shooting
 # phase; Fight cards apply in either player's Fight phase. Unit CP targeting
@@ -1359,3 +1359,26 @@ fun orks_offboard_destruction_trigger(Model model) -> Bool:
 fun record_orks_hit_tags(Board board, AttackResultRecord record, Int count):
     if board.attack_info.squig_launcha_weapon:
         add_attack_count(record.tagged_hits[AttackHitTag::squig_launcha.value], count)
+
+# Orks/Get Stuck In and each printed datasheet/package grant append actual
+# instances. Core p78 selects duplicate instances; Firing Deck p81 uses the
+# actual bearer plus the borrowed profile/family, not an incidental slot.
+fun append_orks_weapon_rules(Board board, UnitID source, Int bearer, Weapon profile, WeaponCode family, WeaponAbilitySet rules):
+    append_riled_assault_rules(board[source][bearer], profile, rules)
+    if war_horde_melee_rule_applies(board, source, profile):
+        rules.append(weapon_rule(WeaponRuleKind::sustained_hit, 1))
+    append_orks_package_weapon_rules(board, source, bearer, profile, family, rules)
+    append_orks_datasheet_weapon_rules(board, source, profile, rules)
+
+# Orks/Brutal Impact, enhancements and datasheets use one declared-weapon
+# contract; source-specific conditions remain here (appendix02.02.01).
+fun append_orks_weapon_modifiers(Board board, UnitID source, DeclaredWeapon declaration, ModifiedCharacteristic kind, RuleModifiers modifiers):
+    append_orks_intrinsic_modifiers(board, source, kind, modifiers)
+    append_orks_declaration_modifiers(board, source, declaration, kind, modifiers)
+    append_orks_datasheet_modifiers(board, source, declaration, kind, modifiers)
+
+# Kustom Force Field grants4+ only against ranged attacks; it is neither a
+# permanent model stat nor a save modifier (Orks/Big Mek in Mega Armour; p19).
+fun append_orks_allocation_effects(Unit unit, Model model, AttackSequenceInfo attack, InvulnerableSavePermission permission):
+    if attack.source.range() > 0 and unit.has_ability(AbilityKind::kustom_force_field):
+        permission.target = min(permission.target.value, 4)

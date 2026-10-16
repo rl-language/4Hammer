@@ -109,13 +109,10 @@ fun force_orks_fight_end_embark(Board board, UnitID passenger, UnitID carrier, M
 # Raucous Occupants adds the OC of embarked models only at an explicitly
 # assigned friendly home marker. No mission/home marker is guessed.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Big-ed-Bossbunka
-fun orks_bunka_passenger_control(Board board, Model carrier, Bool player) -> Int:
+fun orks_bunka_passenger_control(Board board, Objective objective, Model carrier, Bool player) -> Int:
     if !carrier.is_alive() or !carrier.has_ability(AbilityKind::raucous_occupants):
         return 0
-    let at_home = false
-    for marker in range(4):
-        if board.objectives[marker].home.value == int(player) + 1 and board.model_in_objective_range(carrier, board.objective_range_definition(marker)):
-            at_home = true
+    let at_home = objective.home.value == int(player) + 1 and board.model_in_objective_range(carrier, objective)
     let control = 0
     if at_home:
         for passenger in range(board.embarked_units.size()):

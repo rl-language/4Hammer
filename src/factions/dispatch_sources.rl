@@ -30,37 +30,22 @@ fun faction_unit_state_valid(Unit unit) -> Bool:
 # Unhandled/common payload kinds are a no-op; core installs their common parts.
 # Caller chooses recipients and avoids duplicate installation. Do not create
 # another source, spend usage, change lifetime or update unrelated recipients.
-fun faction_install_source_grant(Model model, SourceGrant installed, SourceEffectKey key):
-    orks_install_source_grant(model, installed, key)
-
 # Remove every extension-owned grant matching exactly key from this model.
 # Core calls this during cleanup for current and archived recipients, and removes
 # common grant kinds separately. Missing keys are a no-op; overlapping grants
 # with different keys must survive. Do not erase intrinsic data or whole sources.
-fun faction_remove_source_grant(Model model, SourceEffectKey key):
-    orks_remove_source_grant(model, key)
-
 # Recognize and validate an extension-owned SourceGrant alternative. Return
 # false for an unhandled alternative as well as an invalid payload; core ORs
 # this result with validation of its common alternatives. This is pure type/
 # payload validation, not recipient selection or permission to apply an effect.
-fun faction_source_grant_valid(SourceGrant grant) -> Bool:
-    return orks_source_grant_valid(grant)
-
 # Return whether model already holds an extension grant under key. Core ORs
 # this with common grant stores when refreshing recipients, including returned
 # models, to avoid duplicate installation. Return false when absent; do not
 # refresh lifetime, install the missing grant or infer it merely from its source.
-fun faction_model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
-    return orks_model_has_source_grant(model, key)
-
 # Validate extension-owned grant keys against Board's source-effect records
 # and actual recipient identities. Core validates common stores separately.
 # Follow source_handle_matches_model: zero is an unsourced grant; nonzero keys
 # must name an effect recording this model. Validate only; do not expire/repair.
-fun faction_model_source_handles_valid(Board board, Model model) -> Bool:
-    return orks_model_source_handles_valid(board, model)
-
 # Register source instances supplied by selected roster options across all
 # unit banks, using their real bearer/component provenance. Repeated calls must
 # reuse existing registrations without resetting usage or duplicating grants.
@@ -100,16 +85,10 @@ fun valid_faction_army_state(Board board) -> Bool:
 # at the common Advance-roll boundary. Core offers/executes the reroll before
 # modifiers and enforces the one-reroll limit. False grants no permission;
 # this query must not roll, spend or alter the selected movement kind.
-fun faction_advance_reroll(Unit unit) -> Bool:
-    return unit_has_waaagh(unit)
-
 # Read a unit-local permission to charge after selecting Advance. Core ORs
 # this with faction_move_charge_permission and captures the result before the
 # Advance roll. Return false if absent; later status changes must not rewrite
 # that captured permission. This is not complete charge-source eligibility.
-fun faction_advance_charge_status(Unit unit) -> Bool:
-    return unit_is_riled_up(unit)
-
 # Resolve one accepted timing event for player against the original pending
 # queue. Caller checked pending_source_valid; construction may index the event
 # immediately. Complete its required choices/effects and mark that entry resolved,

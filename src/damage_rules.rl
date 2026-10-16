@@ -30,13 +30,13 @@ fun make_allocation_groups(Board board, Unit target, AttackSequenceInfo info) ->
             continue
         let group_index = -1
         for j in range(groups.size()):
-            if allocation_group_matches(groups[j], target[i], faction_allocation_invulnerable(target, target[i], info)):
+            if allocation_group_matches(groups[j], target[i], allocation_invulnerable_permission(target, target[i], info)):
                 group_index = j
         if group_index < 0:
             let group : AllocationGroup
             group.wounds = target[i].profile.wounds()
             group.save = target[i].effective_save()
-            group.invulnerable = faction_allocation_invulnerable(target, target[i], info)
+            group.invulnerable = allocation_invulnerable_permission(target, target[i], info)
             group.character = target[i].is_character()
             groups.append(group)
             group_index = groups.size() - 1
@@ -299,3 +299,11 @@ fun has_source_unit_destruction_trigger(Board board, DamageJob job) -> Bool:
     for instance in range(board.source_instances.size()):
         found = found or source_event_available(board, board.source_instances[instance], event)
     return found
+
+# Allocation-specific permissions join the model's ordinary effective save.
+# Core owns grouping/rolls; contributors cannot change models (core p19).
+fun allocation_invulnerable_permission(Unit unit, Model model, AttackSequenceInfo attack) -> Int:
+    let permission : InvulnerableSavePermission
+    permission.target = model.effective_invulnerable_save()
+    append_allocation_effects(unit, model, attack, permission)
+    return permission.target.value

@@ -7,6 +7,7 @@ import range
 import state_types
 import geometry
 import modifiers
+import ability_hook_types
 
 using Wounds = LinearlyDistributedInt<0, MAX_WOUNDS>
 using WeaponsVector = CheckedVector<EquippedWeapon, MAX_WEAPONS>
@@ -69,7 +70,6 @@ cls Model:
     Bool must_be_warlord
     Bool cannot_be_warlord
     Bool grants_unit_riled_up
-    CheckedVector<SourceEffectKey, 8> riled_source_effects
     Wounds suffered_wounds
     # Core ability24.39: supplied threshold only; legacy fixtures grant none.
     Bool has_damaged
@@ -232,33 +232,36 @@ cls Model:
     # Effective model characteristics retain one printed arithmetic policy
     # (appendix02.02.01); source selection and expiry are separate consumers.
     fun effective_movement(Int base) -> Int:
-        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, self.profile.movement() == 0, faction_movement_bonus(self))
+        return model_characteristic_value(self, base, ModifiedCharacteristic::movement, self.profile.movement() == 0)
 
     # Multiple Toughness uses each model's effective value (appendix05.02.01).
     fun effective_toughness() -> Int:
-        return effective_characteristic_value(self.profile.thoughness(), ModifiedCharacteristic::toughness, self.characteristic_modifiers, false, faction_toughness_bonus(self))
+        return model_characteristic_value(self, self.profile.thoughness(), ModifiedCharacteristic::toughness, false)
 
     # Save groups compare modified Sv/InSv before allocating dice (p.19).
     fun effective_save() -> Int:
-        return effective_characteristic_value(self.profile.save(), ModifiedCharacteristic::save, self.characteristic_modifiers, false)
+        return model_characteristic_value(self, self.profile.save(), ModifiedCharacteristic::save, false)
 
     # Legacy profiles use >6 for no InSv. This is '-', not a modifiable save
     # that a bonus can turn into an invulnerable permission (appendix02.02.01).
     # Orks/Wazbom-Blastajet Blastajet Force Field is selected equipment.
     fun effective_invulnerable_save() -> Int:
-        let base = granted_invulnerable_base(self, faction_invulnerable_base(self))
-        return effective_characteristic_value(base, ModifiedCharacteristic::invulnerable_save, self.characteristic_modifiers, base > 6)
+        let permission : InvulnerableSavePermission
+        permission.target = granted_invulnerable_base(self, self.profile.invuln_save())
+        append_model_save_permissions(self, permission)
+        let base = permission.target.value
+        return model_characteristic_value(self, base, ModifiedCharacteristic::invulnerable_save, base > 6)
 
     # Riled-up gives a5+ InSv and ranged Assault; owned keys preserve overlapping
     # permanent/timed sources (Orks Army Rules / Waaagh!, appendix01.02.02).
 
     # Leadership and OC consumers use the bearer scope (p.9; appendix02.02.01).
     fun effective_leadership() -> Int:
-        return effective_characteristic_value(self.profile.leadership(), ModifiedCharacteristic::leadership, self.characteristic_modifiers, false)
+        return model_characteristic_value(self, self.profile.leadership(), ModifiedCharacteristic::leadership, false)
 
     # Battle-shocked '-' OC is handled by the unit before this query (p.9).
     fun effective_objective_control() -> Int:
-        return effective_characteristic_value(self.profile.control(), ModifiedCharacteristic::objective_control, self.characteristic_modifiers, self.has_keyword(Keyword::aircraft))
+        return model_characteristic_value(self, self.profile.control(), ModifiedCharacteristic::objective_control, self.has_keyword(Keyword::aircraft))
 
     # Damaged X applies at equal-or-fewer remaining wounds, including retained
     # Fight on Death models. Source: core ability24.39, reproduced in the
@@ -1869,3 +1872,15 @@ fun grant_physical_weapon_rule(Model model, Int slot, WeaponRule rule):
 # Godot reads the printed Nazdreg exception from the actual profile catalog.
 fun permits_simultaneous_profile(Model model, Int slot) -> Bool:
     return slot >= 0 and slot < model.weapons.size() and simultaneous_weapon_profile(model.weapons[slot].profile)
+
+# Model-local passive arithmetic uses the same ordered terms as installed
+# characteristic grants. No faction rule or special magnitude is interpreted
+# here (core p9; supplied appendix02.02.01).
+fun model_characteristic_value(Model model, Int base, ModifiedCharacteristic kind, Bool special) -> Int:
+    assert(valid_characteristic_modifiers(model.characteristic_modifiers), "invalid model modifiers")
+    let modifiers : RuleModifiers
+    for index in range(model.characteristic_modifiers.size()):
+        if model.characteristic_modifiers[index].characteristic.value == kind.value:
+            modifiers.append(model.characteristic_modifiers[index].modifier)
+    append_model_modifiers(model, kind, modifiers)
+    return modified_characteristic(base, kind, modifiers, special)

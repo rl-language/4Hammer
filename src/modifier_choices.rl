@@ -37,15 +37,14 @@ fun attack_skill_choices(Board board, AttackSequenceInfo info) -> AttackModifier
 # Damaged24.39; appendix02.02.02). They never become BS/WS modifications.
 fun attack_hit_choices(Board board, AttackSequenceInfo info) -> AttackModifierChoices:
     let choices : AttackModifierChoices
-    for unit_modifier in range(info.faction_unit_hit_modifiers.size()):
-        choices.append(attack_modifier_choice(info.faction_unit_hit_modifiers[unit_modifier], ModifierOrigin::faction_datasheet))
-    for orks_modifier in range(info.faction_hit_modifiers.size()):
-        choices.append(attack_modifier_choice(info.faction_hit_modifiers[orks_modifier], ModifierOrigin::faction_detachment))
+    for unit_modifier in range(info.unit_hit_modifiers.size()):
+        choices.append(attack_modifier_choice(info.unit_hit_modifiers[unit_modifier], ModifierOrigin::faction_datasheet))
+    for orks_modifier in range(info.attack_hit_modifiers.size()):
+        choices.append(attack_modifier_choice(info.attack_hit_modifiers[orks_modifier], ModifierOrigin::faction_detachment))
     if info.hit_roll_bonus:
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::hit_bonus))
-    # Beastboss/Dodge Dis!: unit-wide +1, separately selectable under02.02.02.
-    if info.faction_innate_hit_bonus:
-        choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::dodge_dis))
+    for ability_modifier in range(info.unit_ability_hit_modifiers.size()):
+        choices.append(attack_modifier_choice(info.unit_ability_hit_modifiers[ability_modifier], ModifierOrigin::unit_ability))
     if info.hit_roll_malus:
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, -1), ModifierOrigin::hit_penalty))
     for profile_index in range(info.profile_hit_roll_bonus.size()):

@@ -37,30 +37,26 @@ fun faction_offboard_destruction_trigger(Model model) -> Bool:
 # result already contains intrinsic/earlier contributions; preserve their
 # conditions/keys. May append or apply specified numeric-instance increments;
 # core owns later duplicate selection. No applicable contribution is a no-op.
-fun append_faction_package_weapon_rules(Board board, UnitID source, Int bearer, Int slot, WeaponAbilitySet result):
-    append_orks_package_weapon_rules(board, source, bearer, slot, result)
+fun append_weapon_rules(Board board, UnitID source, Int bearer, Weapon profile, WeaponCode family, WeaponAbilitySet rules):
+    append_orks_weapon_rules(board, source, bearer, profile, family, rules)
 
-# Explicit-profile variant: source/bearer are the model making the attack,
-# selected is its used profile and name the physical weapon family. The profile
-# can be borrowed and absent from the source's slots. Apply the same contextual
-# contributions without substituting a coincidentally matching equipped slot;
-# preserve prior result instances and source provenance.
-fun append_faction_package_weapon_rules(Board board, UnitID source, Int bearer, Weapon selected, WeaponCode name, WeaponAbilitySet result):
-    append_orks_package_weapon_rules(board, source, bearer, selected, name, result)
+# Append all characteristic terms for an actual declared weapon, preserving
+# bearer/physical-copy provenance. Core evaluates order, caps and attack identity
+# after this pure calculation (core p17; appendix02.02.01).
+fun append_weapon_modifiers(Board board, UnitID source, DeclaredWeapon declaration, ModifiedCharacteristic kind, RuleModifiers modifiers):
+    append_orks_weapon_modifiers(board, source, declaration, kind, modifiers)
+
+# Append unit-wide hit-roll terms, including retained component conferral.
+# Repeated queries never alter Board. Core keeps each term individually
+# ignorable and applies the cumulative cap (core p18; appendix02.02.02).
+fun append_unit_hit_modifiers(Unit unit, RuleModifiers modifiers):
+    append_orks_unit_hit_modifiers(unit, modifiers)
 
 # Append source/bearer/weapon-dependent arithmetic for kind on declaration.
 # Core has resolved the bearer and seeded common model/weapon modifiers;
 # it calls this before datasheet contributions and final evaluation/grouping.
 # Preserve prior modifiers and their operation/source metadata; default no-op.
-fun append_faction_declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration, ModifiedCharacteristic kind, RuleModifiers result):
-    append_orks_declaration_modifiers(board, source, declaration, kind, result)
-
-# Augment initialized info for the actual source/target/declaration group
-# with applicable modifiers, reroll permissions and conditional attack facts.
-# Preserve common facts except where an explicit rule overrides one; keep
-# individually ignorable modifier provenance. Core compares group snapshots
-# and resolves dice later, so this hook must not roll, spend or mutate Board.
-fun append_faction_attack_effects(Board board, UnitID source, UnitID target, DeclaredWeapon weapon, AttackSequenceInfo info):
+fun append_attack_effects(Board board, UnitID source, UnitID target, DeclaredWeapon weapon, AttackSequenceInfo info):
     append_orks_attack_effects(board, source, target, weapon, info)
 
 # Read a model-local grant requiring its containing unit/attachment context.
@@ -113,11 +109,10 @@ fun faction_shooting_finished(Board board, UnitID source) -> OrksShootingOptionE
 fun faction_shooting_support(Board board, UnitID source) -> OrksDreadherderShooting:
     return orks_dreadherder_shooting(board, source)
 
-# Compatibility gate for engagement treated exceptionally by two consumers:
-# true relaxes core's engaged-target shooting restriction and lets an unshocked
-# unit skip Desperate Escape hazards. Grant only when both meanings apply;
-# false preserves ordinary checks. This Boolean cannot express them separately.
-fun faction_engagement_exception(Board board, Unit unit) -> Bool:
+# Waive only the target engagement restriction for this shooting query.
+# Range, visibility, mode, ownership and all other gates still apply (core p35).
+# Pure additional permission; false leaves the ordinary restriction in force.
+fun permits_shooting_at_engaged_unit(Board board, Unit unit) -> Bool:
     return orks_engaged_only_fortifications(board, unit)
 
 # Return an additional partial-obscuration condition between observer/target
@@ -159,21 +154,6 @@ fun faction_melee_weapon_selection(Board board, UnitID source) -> OrksRokkitSele
 # weapon-rule contributions. Preserve parameters, conditions and source keys;
 # core chooses duplicate instances later. The explicit profile may be borrowed:
 # do not assume it occupies a source equipment slot. Default no-op.
-fun append_faction_datasheet_weapon_rules(Board board, UnitID source, Weapon selected, WeaponAbilitySet result):
-    append_orks_datasheet_weapon_rules(board, source, selected, result)
-
-# Append datasheet arithmetic for kind using declaration's actual bearer and
-# weapon provenance. result already contains common, intrinsic and package
-# contributions; preserve them. Core evaluates modifier ordering, bounds and
-# identical-attack grouping. This is a pure contribution, not an activation.
-fun append_faction_datasheet_modifiers(Board board, UnitID source, DeclaredWeapon declaration, ModifiedCharacteristic kind, RuleModifiers result):
-    append_orks_datasheet_modifiers(board, source, declaration, kind, result)
-
-# Resolve additional attacker/defender choices once a target is configured
-# for declared attacks, before refreshing target attack info and gathering dice.
-# Check target/mode eligibility and commit accepted costs/effects. Core can
-# revisit targets while resolving declarations; apply actual usage limits and
-# restore decision ownership without starting a nested ordinary Attack.
 fun faction_attack_targeted(Board board, UnitID source, UnitID target, Bool melee) -> OrksAttackTargeted:
     return orks_attack_targeted(board, source, target, melee)
 
@@ -185,12 +165,11 @@ fun faction_attack_targeted(Board board, UnitID source, UnitID target, Bool mele
 fun intercept_faction_hits(Board board, UnitID target, CombatCounter count) -> OrksHitInterception:
     return intercept_orks_hits(board, target, count)
 
-# Return the absolute allocation-specific InSv target for model against info,
-# starting from model.effective_invulnerable_save() if no extra permission applies.
-# Lower is better; above 6 means none. Core uses this to group eligible recipients
-# and select saves. This is not an arithmetic modifier, a roll or model mutation.
-fun faction_allocation_invulnerable(Unit unit, Model model, AttackSequenceInfo info) -> Int:
-    return orks_allocation_invulnerable(unit, model, info)
+# Add allocation-specific save permission for the actual recipient/attack.
+# Core seeds the effective model save and uses the final permission for save
+# groups. Pure; preserve a better permission and all unrelated state (p19).
+fun append_allocation_effects(Unit unit, Model model, AttackSequenceInfo attack, InvulnerableSavePermission permission):
+    append_orks_allocation_effects(unit, model, attack, permission)
 
 # Resolve responses immediately after subject becomes Battle-shocked. subject
 # is a stable unit identity; locate its actual bank and re-resolve after nested
@@ -285,13 +264,6 @@ fun faction_charge_effects_remaining(FactionChargeProgress progress) -> Bool:
 # ignorable +1 HIT-ROLL term. Core snapshots the Boolean and applies its ordinary
 # modifier selection/cap, independently of WS/BS and other +1 sources. Return
 # false for none; this interface cannot express a magnitude other than +1.
-fun faction_innate_hit_bonus(Unit unit) -> Bool:
-    return orks_innate_hit_bonus(unit)
-
-# Resolve extra choices at attack activation start, before common attack-
-# selection events and declarations. melee identifies the mode. Snapshot any
-# selection-time facts and commit accepted tokens/CP/grants; later grouping reads
-# them. Complete nested effects and leave the ordinary attack/declarations to core.
 fun faction_attack_selection_options(Board board, UnitID source, Bool melee) -> OrksAttackSelectionOptions:
     return orks_attack_selection_options(board, source, melee)
 
@@ -299,13 +271,6 @@ fun faction_attack_selection_options(Board board, UnitID source, Bool melee) -> 
 # and datasheet modifier hooks. This signature has no weapon/target context;
 # contribute only terms valid at that scope, preserving earlier result entries.
 # Core performs operation ordering/caps. No contribution is a no-op.
-fun append_faction_intrinsic_modifiers(Board board, UnitID source, ModifiedCharacteristic kind, RuleModifiers result):
-    append_orks_intrinsic_modifiers(board, source, kind, result)
-
-# Augment only the optional tagged-hit slots of record for count hits in the
-# current attack group. Core already added those successful hits to its total;
-# do not add them again or report wounds/destruction. Use Board's group context
-# for provenance and keep each tag count within recorded successful_hits.
 fun record_faction_hit_tags(Board board, AttackResultRecord record, Int count):
     record_orks_hit_tags(board, record, count)
 
