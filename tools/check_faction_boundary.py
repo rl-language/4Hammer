@@ -1,4 +1,4 @@
-"""Reject concrete Orks behavior in core functions/actions.
+"""Reject concrete adapter calls/imports and named Orks policy in core.
 
 Shared catalogs/types, serialization labels and typed context storage are allowed.
 This is a source audit, separate from the entirely native rule-test runner.
@@ -11,8 +11,10 @@ import re
 def audit(root):
     src = root / 'src'
     concrete = set()
-    for path in (src / 'factions/orks').glob('*.rl'):
-        concrete.update(re.findall(r'^(?:fun|act) (\w+)\(', path.read_text(), re.M))
+    adapter_directories = ['orks', 'legacy']
+    for directory in adapter_directories:
+        for path in (src / 'factions' / directory).glob('*.rl'):
+            concrete.update(re.findall(r'^(?:fun|act) (\w+)\(', path.read_text(), re.M))
     presentation = {'as_string_literal', 'source_label_text', 'weapon_family_label',
                     'pretty_string'}
     common_effects = {'no_charge', 'no_action', 'grounded', 'fights_first',
@@ -26,7 +28,7 @@ def audit(root):
             line = re.sub(r'"[^"\n]*"|#[^\n]*', '', original).rstrip()
             if not line.strip():
                 continue
-            if re.match(r'^import factions\.orks\.(?!types\b)', line):
+            if re.match(r'^import factions\.(?:orks|legacy)\.(?!types\b)', line):
                 errors.append((str(path.relative_to(root)), number,
                                'concrete behavior import'))
             if not line.startswith(' '):
@@ -60,6 +62,8 @@ def audit(root):
                 errors.append((str(path.relative_to(root)), number,
                                'embedded faction rule code'))
     return {'result': 'FAIL' if errors else 'PASS',
+            'adapter_directories_scanned': adapter_directories,
+            'scope': 'adapter calls/imports and named Orks policy; remaining inline legacy policy is not certified',
             'core_functions_and_actions_scanned': functions,
             'concrete_adapter_symbols': len(concrete), 'errors': errors}
 
