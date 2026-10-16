@@ -33,12 +33,12 @@ cls Model:
     # Bank/staged offboard units have no battlefield visibility/ranges
     # (supplied appendix01.02.04, transport pp.64–65).
     Bool off_battlefield
-    Bool orks_transport_permissions
-    Bool beast_snagga_passengers_only
-    Bool forbid_ghaz_passenger
+    Keywords required_passenger_keywords
+    CheckedVector<DatasheetCode, 4> forbidden_passenger_datasheets
     Bool blastajet_force_field
     Bool transport_permissions_known
     LinearlyDistributedInt<0, 33> transport_capacity
+    LinearlyDistributedInt<1, 3> transport_space_divisor
     LinearlyDistributedInt<1, 33> transport_space
     Keywords permitted_passenger_keywords
     Keywords forbidden_passenger_keywords

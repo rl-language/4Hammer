@@ -50,7 +50,7 @@ func check_units():
 	library.register_orks_passive_rules(board)
 	library.register_orks_datasheet_sources(board)
 	assert(library.valid_state_foundations(board))
-	assert(library.orks_passenger_space(units[7]) == 4)
+	assert(library.passenger_space(units[7]) == 4)
 	assert(library.get(units[0].get_models(), 0).get_geometry().get_proxy_diameter_mm().get_value() == 160)
 	library.assign(rules.state.get_board(), board)
 	var restored = library.play()

@@ -941,6 +941,14 @@ fun valid_model_numeric_history(Model model) -> Bool:
         return false
     if model.transport_capacity.value < 0 or model.transport_capacity.value > MAX_UNIT_MODELS or model.transport_space.value < 1 or model.transport_space.value > MAX_UNIT_MODELS or model.firing_deck.value < 0 or model.firing_deck.value > MAX_UNIT_MODELS:
         return false
+    if model.transport_space_divisor.value < 1 or model.transport_space_divisor.value > 2:
+        return false
+    for required in range(model.required_passenger_keywords.size()):
+        if model.required_passenger_keywords[required].value < 0 or model.required_passenger_keywords[required].value > max(Keyword::infantry):
+            return false
+    for excluded in range(model.forbidden_passenger_datasheets.size()):
+        if model.forbidden_passenger_datasheets[excluded].value <= 0 or model.forbidden_passenger_datasheets[excluded].value >= MAX_DATASHEETCODE:
+            return false
     for modifier_slot in range(model.characteristic_modifiers.size()):
         if model.characteristic_modifiers[modifier_slot].weapon_scope.value > model.weapons.size():
             return false

@@ -140,6 +140,8 @@ fun make_orks_model(Profile profile, OrksDatasheet tag) -> Model:
     let model : Model
     model.profile = profile
     set_model_datasheet(model, tag)
+    if tag.value == OrksDatasheet::gretchin.value:
+        model.transport_space_divisor = 2
     model.has_waaagh = true
     model.keywords.append(Keyword::orks)
     return model
@@ -204,7 +206,8 @@ fun make_orks_battlewagon(Int hull_mm, Int big_shootas, Bool ball, Bool klaw) ->
     model.transport_permissions_known = true
     model.transport_capacity = 22
     model.permitted_passenger_keywords.append(Keyword::infantry)
-    model.orks_transport_permissions = true
+    model.required_passenger_keywords.append(Keyword::orks)
+    model.required_passenger_keywords.append(Keyword::infantry)
     assert(big_shootas >= 0 and big_shootas <= 4, "invalid extra Big Shootas")
     assert((big_shootas) >= 0 and (big_shootas) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(big_shootas):
@@ -303,8 +306,9 @@ fun make_orks_big_ed_bossbunka(Int hull_mm, Int big_shootas) -> Unit:
     model.transport_permissions_known = true
     model.transport_capacity = 11
     model.permitted_passenger_keywords.append(Keyword::infantry)
-    model.orks_transport_permissions = true
-    model.forbid_ghaz_passenger = true
+    model.required_passenger_keywords.append(Keyword::orks)
+    model.required_passenger_keywords.append(Keyword::infantry)
+    forbid_passenger_datasheet(model, OrksDatasheet::ghazghkull_thraka.value)
     assert(big_shootas >= 0 and big_shootas <= 3, "invalid extra Big Shootas")
     assert((big_shootas + 1) >= 0 and (big_shootas + 1) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(big_shootas + 1):
@@ -734,8 +738,9 @@ fun make_orks_gorkanaut() -> Unit:
     model.transport_permissions_known = true
     model.transport_capacity = 12
     model.permitted_passenger_keywords.append(Keyword::infantry)
-    model.orks_transport_permissions = true
-    model.forbid_ghaz_passenger = true
+    model.required_passenger_keywords.append(Keyword::orks)
+    model.required_passenger_keywords.append(Keyword::infantry)
+    forbid_passenger_datasheet(model, OrksDatasheet::ghazghkull_thraka.value)
     let primary_profile_41 = model.weapons.size() + 1
     equip_weapon(model, Weapon::orks_gorkanaut_deffstorm_mega_shoota_aimed, 0)
     equip_weapon(model, Weapon::orks_gorkanaut_deffstorm_mega_shoota_point_blank, primary_profile_41)
@@ -794,7 +799,8 @@ fun make_orks_gunwagon(Int hull_mm, Int big_shootas, Bool ball, Bool klaw, Bool 
     model.transport_permissions_known = true
     model.transport_capacity = 12
     model.permitted_passenger_keywords.append(Keyword::infantry)
-    model.orks_transport_permissions = true
+    model.required_passenger_keywords.append(Keyword::orks)
+    model.required_passenger_keywords.append(Keyword::infantry)
     assert(big_shootas >= 0 and big_shootas <= 4, "invalid extra Big Shootas")
     assert((big_shootas) >= 0 and (big_shootas) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(big_shootas):
@@ -836,8 +842,9 @@ fun make_orks_hunta_rig() -> Unit:
     model.transport_permissions_known = true
     model.transport_capacity = 22
     model.permitted_passenger_keywords.append(Keyword::infantry)
-    model.orks_transport_permissions = true
-    model.beast_snagga_passengers_only = true
+    model.required_passenger_keywords.append(Keyword::orks)
+    model.required_passenger_keywords.append(Keyword::infantry)
+    model.required_passenger_keywords.append(Keyword::beast_snagga)
     equip_weapon(model, Weapon::orks_hunta_rig_eavy_lobba, 0)
     equip_weapon(model, Weapon::orks_hunta_rig_stikka_kannon, 0)
     equip_weapon(model, Weapon::orks_hunta_rig_butcha_boyz, 0)
@@ -868,8 +875,9 @@ fun make_orks_kill_rig() -> Unit:
     model.transport_permissions_known = true
     model.transport_capacity = 12
     model.permitted_passenger_keywords.append(Keyword::infantry)
-    model.orks_transport_permissions = true
-    model.beast_snagga_passengers_only = true
+    model.required_passenger_keywords.append(Keyword::orks)
+    model.required_passenger_keywords.append(Keyword::infantry)
+    model.required_passenger_keywords.append(Keyword::beast_snagga)
     equip_weapon(model, Weapon::orks_kill_rig_eavy_lobba, 0)
     equip_weapon(model, Weapon::orks_kill_rig_stikka_kannon, 0)
     equip_weapon(model, Weapon::orks_kill_rig_wurrtower, 0)
@@ -1049,8 +1057,9 @@ fun make_orks_morkanaut() -> Unit:
     model.transport_permissions_known = true
     model.transport_capacity = 12
     model.permitted_passenger_keywords.append(Keyword::infantry)
-    model.orks_transport_permissions = true
-    model.forbid_ghaz_passenger = true
+    model.required_passenger_keywords.append(Keyword::orks)
+    model.required_passenger_keywords.append(Keyword::infantry)
+    forbid_passenger_datasheet(model, OrksDatasheet::ghazghkull_thraka.value)
     assert((2) >= 0 and (2) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(2):
         equip_weapon(model, Weapon::orks_morkanaut_dual_big_shoota, 0)
@@ -1245,7 +1254,8 @@ fun make_orks_stompa(Int hull_mm) -> Unit:
     model.transport_permissions_known = true
     model.transport_capacity = 22
     model.permitted_passenger_keywords.append(Keyword::infantry)
-    model.orks_transport_permissions = true
+    model.required_passenger_keywords.append(Keyword::orks)
+    model.required_passenger_keywords.append(Keyword::infantry)
     assert((5) >= 0 and (5) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(5):
         equip_weapon(model, Weapon::orks_stompa_big_shoota, 0)
@@ -1352,8 +1362,9 @@ fun make_orks_trukk(Int hull_mm, Bool rokkit, Weapon extra) -> Unit:
     model.transport_permissions_known = true
     model.transport_capacity = 12
     model.permitted_passenger_keywords.append(Keyword::infantry)
-    model.orks_transport_permissions = true
-    model.forbid_ghaz_passenger = true
+    model.required_passenger_keywords.append(Keyword::orks)
+    model.required_passenger_keywords.append(Keyword::infantry)
+    forbid_passenger_datasheet(model, OrksDatasheet::ghazghkull_thraka.value)
     model.forbidden_passenger_keywords.append(Keyword::jump_pack)
     assert(weapon_allowed(extra, orks_trukk_extra_choices()), "invalid Trukk extra")
     if rokkit:

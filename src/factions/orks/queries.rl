@@ -53,15 +53,6 @@ fun orks_prepare_attached_model(Unit leader, Unit bodyguard, Model model):
 
 # Warp Visions grants Fights First; core still checks every participating model (Orks/Wurrband; core p40).
 # Orks transport passenger faction/type and Ghazghkull restrictions (Orks transport cards; core p64).
-fun orks_passenger_permitted(Model carrier, Model passenger) -> Bool:
-    if carrier.orks_transport_permissions and (!passenger.has_keyword(Keyword::orks) or !passenger.has_keyword(Keyword::infantry)):
-        return false
-    if carrier.beast_snagga_passengers_only and !passenger.has_keyword(Keyword::beast_snagga):
-        return false
-    if carrier.forbid_ghaz_passenger and model_matches_datasheet(passenger, OrksDatasheet::ghazghkull_thraka):
-        return false
-    return true
-
 # Burna Mark prevents Hidden (Orks/Burna-Bommer).
 fun orks_hidden_allowed(Board board, Unit unit) -> Bool:
     return unit_rule_effect(board, unit, RuleEffectKind::burna_mark) == 0

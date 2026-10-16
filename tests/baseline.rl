@@ -13117,7 +13117,7 @@ fun test_orks17p2_gretchin_grouped_rounding_and_characters() -> Bool:
     let ten = make_orks_gretchin(10)
     let eleven = make_orks_gretchin(11)
     let mixed = orks17p2_attached(eleven, make_orks_runtherd())
-    return orks_passenger_space(ten) == 5 and orks_passenger_space(eleven) == 6 and orks_passenger_space(make_orks_gretchin(20)) == 10 and orks_passenger_space(mixed) == 7 and mixed.models.size() == 12
+    return passenger_space(ten) == 5 and passenger_space(eleven) == 6 and passenger_space(make_orks_gretchin(20)) == 10 and passenger_space(mixed) == 7 and mixed.models.size() == 12
 
 # Existing occupied seats and candidate units use the same grouped calculation.
 # Transport core p64 and Gretchin Downtrodden; explicit generic carrier fixture.
@@ -13824,14 +13824,14 @@ fun test_orks17p3_transport_literal_permissions() -> Bool:
     let boyz = make_orks_beast_snagga_boyz(1, 9, 0)
     let rig = make_orks_hunta_rig()
     let ordinary = orks17p3_kommandos()
-    return passenger_model_permitted(wagon[0], ghaz[0]) and orks_passenger_space(ghaz) == 4 and !passenger_model_permitted(gork[0], ghaz[0]) and !passenger_model_permitted(trukk[0], ghaz[0]) and passenger_model_permitted(rig[0], boyz[0]) and !passenger_model_permitted(rig[0], ordinary[0])
+    return passenger_model_permitted(wagon[0], ghaz[0]) and passenger_space(ghaz) == 4 and !passenger_model_permitted(gork[0], ghaz[0]) and !passenger_model_permitted(trukk[0], ghaz[0]) and passenger_model_permitted(rig[0], boyz[0]) and !passenger_model_permitted(rig[0], ordinary[0])
 
 # Gretchin alone halves seats; Jump Pack models really occupy2 seats and a
 # Trukk forbids them regardless of its remaining capacity.
 fun test_orks17p3_transport_jump_and_gretchin_seats() -> Bool:
     let stormboyz = make_orks_stormboyz(4, false)
     let trukk = make_orks_trukk(0, false, Weapon::none)
-    return orks_passenger_space(stormboyz) == 10 and orks_passenger_space(make_orks_gretchin(11)) == 6 and !passenger_model_permitted(trukk[0], stormboyz[0])
+    return passenger_space(stormboyz) == 10 and passenger_space(make_orks_gretchin(11)) == 6 and !passenger_model_permitted(trukk[0], stormboyz[0])
 
 # Passive query assertions exercise the same gathered attack snapshots as play.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Dakkajet (Strafing Run).
@@ -15482,7 +15482,7 @@ fun test_faction_dispatch_overlapping_grants_keep_other_source() -> Bool:
 # permission; the shared known/capacity gate still owns eligibility (core p64).
 fun test_faction_dispatch_neutral_hook_does_not_authorize_transport() -> Bool:
     let board = attack_declaration_fixture()
-    return faction_passenger_permitted(board[0][0], board[1][0]) and !passenger_model_permitted(board[0][0], board[1][0])
+    return passenger_requirements_match(board[0][0], board[1][0]) and !passenger_model_permitted(board[0][0], board[1][0])
 
 # Core source choices and faction timing choices remain peers, in either order.
 # User Rules Sequencing; War Cry is Orks army policy, numeric grants core01.02.02.
@@ -15585,7 +15585,9 @@ fun test_shared_hooks_replacement_uses_fresh_identity_and_template() -> Bool:
     let replacement = make_replacement_unit(board, board[0])
     return replacement.identity != board[0].identity and replacement[0].identity != original_id and replacement[0].original_unit == replacement.identity and replacement[0].weapons.size() == 1 and replacement[0].suffered_wounds == 0 and !replacement.has_shoot and replacement.history.strategic_reserve and replacement.off_battlefield and board[0][0].suffered_wounds == 1
 
-# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+# Common grants have their own keys even when no faction is selected. Granting
+# InSv establishes a permission; a worse grant cannot worsen an existing save.
+# Core p19 and appendix01.02.02/02.02.01.
 fun test_shared_hooks_status_grants_and_best_invulnerable_save() -> Bool:
     let board = attack_declaration_fixture()
     let grant : RuleEffectGrant
@@ -15605,8 +15607,7 @@ fun test_shared_hooks_status_grants_and_best_invulnerable_save() -> Bool:
     remove_source_grant(board[1][0], first)
     return best and board[1][0].effective_invulnerable_save() == min(5, board[1][0].profile.invuln_save()) and model_has_source_grant(board[1][0], second)
 
-
-# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+# Common permission consumers no longer need a faction adapter (pp38/40/58).
 fun test_shared_hooks_common_permissions_without_faction() -> Bool:
     let board = attack_declaration_fixture()
     let status : RuleEffectGrant
@@ -15619,8 +15620,7 @@ fun test_shared_hooks_common_permissions_without_faction() -> Bool:
     board[0][0].rule_effects.append(status)
     return !rule_charge_allowed(board, board[0]) and !rule_action_allowed(board, board[0]) and model_has_fights_first_grant(board[0][0]) and rule_charge_allowed(board, board[1])
 
-
-# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+# Invalid save grants cannot fabricate a1+ or missing/zero save (core p19).
 fun test_shared_hooks_reject_invalid_invulnerable_grants() -> Bool:
     let status : RuleEffectGrant
     status.kind = RuleEffectKind::invulnerable_save
@@ -15631,8 +15631,8 @@ fun test_shared_hooks_reject_invalid_invulnerable_grants() -> Bool:
     status.amount = 4
     return invalid_low and invalid_high and valid_rule_effect(status)
 
-
-# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+# Hits and prevented wound losses are generic per-activation facts; starting
+# another attack clears the ledger (core pp18-24/87).
 fun test_shared_hooks_attack_results_are_faction_independent() -> Bool:
     let board = attack_declaration_fixture()
     begin_attack_results(board)
@@ -15648,8 +15648,8 @@ fun test_shared_hooks_attack_results_are_faction_independent() -> Bool:
     begin_attack_results(board)
     return correct and closed and board.attack_records.empty() and board.attack_serial == 2
 
-
-# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+# Generic tagged counters cannot fabricate more hit triggers than actually
+# occurred. Save integrity is shared regardless of which rule uses the tag.
 fun test_shared_hooks_attack_tag_validation() -> Bool:
     let board = attack_declaration_fixture()
     begin_attack_results(board)
@@ -15659,8 +15659,8 @@ fun test_shared_hooks_attack_tag_validation() -> Bool:
     board.attack_records[0].tagged_hits[0] = 1
     return rejected and valid_attack_results(board)
 
-
-# General Select Army restrictions (user supplied Warlord/enhancement rules).
+# Shared Warlord selection accepts an explicitly supplied non-Orks faction
+# keyword; no legacy army is automatically enabled by this fixture.
 fun test_shared_hooks_warlord_uses_supplied_faction_keyword() -> Bool:
     let fixture = attack_declaration_fixture()
     let board : Board
@@ -15677,8 +15677,8 @@ fun test_shared_hooks_warlord_uses_supplied_faction_keyword() -> Bool:
         sequence.choose_warlord_model(board, member)
     return allowed and sequence.is_done() and board.armies[0].warlord == board.reserve_units[0][0].identity and board.reserve_units[0][0].has_keyword(Keyword::warlord)
 
-
-# General Select Army restrictions (user supplied Warlord/enhancement rules).
+# General limits distinguish counted enhancement types from repeated Upgrade
+# copies, including the fourth distinct selection (user supplied Select Army).
 fun test_shared_hooks_enhancement_limits() -> Bool:
     let counter : EnhancementSelectionCounter
     counter.record_choice(1)
@@ -15694,3 +15694,34 @@ fun test_shared_hooks_enhancement_limits() -> Bool:
     counter.record_unit_copy(true)
     return full and ordinary_unique and second_upgrade and !counter.permits(1, true)
 
+# Shared transport ALL requirements and named exclusions do not invent
+# permissions; unknown carrier metadata still fails the core gate (p64).
+fun test_shared_hooks_transport_metadata_requirements() -> Bool:
+    let board = attack_declaration_fixture()
+    let carrier = board[0][0]
+    let passenger = board[1][0]
+    carrier.required_passenger_keywords.append(Keyword::infantry)
+    carrier.required_passenger_keywords.append(Keyword::orks)
+    let wrong_faction = !passenger_requirements_match(carrier, passenger)
+    passenger.keywords.append(Keyword::orks)
+    let matches = passenger_requirements_match(carrier, passenger)
+    passenger.datasheet = 1
+    forbid_passenger_datasheet(carrier, 1)
+    return wrong_faction and matches and !passenger_requirements_match(carrier, passenger) and !passenger_model_permitted(carrier, passenger)
+
+# Half-seat allocation rounds once for the group and leaves ordinary members
+# whole (core p64; card-specific divisors are constructor metadata).
+fun test_shared_hooks_transport_grouped_seat_weights() -> Bool:
+    let board = attack_declaration_fixture()
+    let unit : Unit
+    let half = board[0][0]
+    half.transport_space = 1
+    half.transport_space_divisor = 2
+    unit.models.append(half)
+    unit.models.append(half)
+    unit.models.append(half)
+    let ordinary = half
+    ordinary.transport_space_divisor = 1
+    ordinary.transport_space = 3
+    unit.models.append(ordinary)
+    return passenger_space(unit) == 5

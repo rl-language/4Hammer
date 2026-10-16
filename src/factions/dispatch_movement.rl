@@ -113,9 +113,6 @@ fun faction_disembark_selection(Board board, UnitID passenger, CarrierLocation c
     return orks_disembark_selection(board, passenger, carrier)
 
 # Composition hook: transports adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_passenger_space(Unit unit) -> Int:
-    return orks_passenger_space(unit)
-
 # Composition hook: recovery adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_pending_returns(Board board) -> OrksBankReturns:
     return resolve_orks_bank_returns(board)

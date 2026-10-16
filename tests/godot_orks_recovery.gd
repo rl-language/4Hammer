@@ -39,7 +39,7 @@ func check_units():
 	library.register_orks_passive_rules(board)
 	library.register_orks_datasheet_sources(board)
 	assert(library.valid_state_foundations(board))
-	assert(library.orks_passenger_space(units[11]) == 5)
+	assert(library.passenger_space(units[11]) == 5)
 	library.assign(rules.state.get_board(), board)
 	var restored = library.play()
 	assert(library.set_state(restored, RLCLib.godot_string_to_rlc_string(rules.as_indented_str(rules.state))))

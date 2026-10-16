@@ -5,7 +5,7 @@ import movement_rules
 fun passenger_model_permitted(Model carrier, Model passenger) -> Bool:
     if !carrier.transport_permissions_known or carrier.transport_capacity.value == 0 or !carrier.has_keyword(Keyword::transport):
         return false
-    if !faction_passenger_permitted(carrier, passenger):
+    if !passenger_requirements_match(carrier, passenger):
         return false
     let permitted = carrier.permitted_passenger_keywords.empty()
     for permission in range(carrier.permitted_passenger_keywords.size()):
@@ -23,7 +23,7 @@ fun passenger_space_used(Board board, EntityIdentity carrier) -> Int:
     let occupied = 0
     for passenger_index in range(board.embarked_units.size()):
         if board.embarked_units[passenger_index].embarked_transport == carrier:
-            occupied = occupied + faction_passenger_space(board.embarked_units[passenger_index])
+            occupied = occupied + passenger_space(board.embarked_units[passenger_index])
     return occupied
 
 # Entire friendly units embark; no partial unit can exceed per-model capacity
@@ -31,7 +31,7 @@ fun passenger_space_used(Board board, EntityIdentity carrier) -> Int:
 fun transport_can_carry(Board board, Unit passenger, Unit carrier_unit, Int carrier_model) -> Bool:
     if passenger.empty() or carrier_model < 0 or carrier_model >= carrier_unit.models.size() or passenger.owned_by_player1 != carrier_unit.owned_by_player1 or passenger.identity == carrier_unit.identity or !carrier_unit[carrier_model].is_alive() or !board.embarked_units.has_capacity():
         return false
-    let required = passenger_space_used(board, carrier_unit[carrier_model].identity) + faction_passenger_space(passenger)
+    let required = passenger_space_used(board, carrier_unit[carrier_model].identity) + passenger_space(passenger)
     for model_index in range(passenger.models.size()):
         if !passenger_model_permitted(carrier_unit[carrier_model], passenger[model_index]):
             return false
@@ -560,4 +560,44 @@ fun returned_passenger_permitted(Board board, Unit unit, Model model) -> Bool:
     let candidate : Unit
     candidate = unit
     candidate.models.append(model)
-    return passenger_model_permitted(transport, model) and passenger_space_used(board, unit.embarked_transport) - faction_passenger_space(unit) + faction_passenger_space(candidate) <= transport.transport_capacity.value
+    return passenger_model_permitted(transport, model) and passenger_space_used(board, unit.embarked_transport) - passenger_space(unit) + passenger_space(candidate) <= transport.transport_capacity.value
+
+# ALL required keywords and explicit datasheet exclusions augment the existing
+# ANY/excluded keyword lists. Metadata comes from the carrier card (core p64).
+fun passenger_requirements_match(Model carrier, Model passenger) -> Bool:
+    for required in range(carrier.required_passenger_keywords.size()):
+        if !passenger.has_keyword(carrier.required_passenger_keywords[required]):
+            return false
+    for forbidden in range(carrier.forbidden_passenger_datasheets.size()):
+        if carrier.forbidden_passenger_datasheets[forbidden] == passenger.datasheet:
+            return false
+    return true
+
+# Datasheet constructors encode their explicit named exclusions (core p64).
+fun forbid_passenger_datasheet(Model carrier, Int code):
+    assert(code > 0 and code < MAX_DATASHEETCODE, "invalid excluded passenger datasheet")
+    let datasheet : DatasheetCode
+    datasheet = code
+    carrier.forbidden_passenger_datasheets.append(datasheet)
+
+# Seat weights are data. Half-seat models are rounded up once per whole unit,
+# while ordinary members retain their full weight (core p64; card exceptions).
+fun passenger_space(Unit unit) -> Int:
+    let ordinary = 0
+    let half_seats = 0
+    for member in range(unit.models.size()):
+        if unit[member].transport_space_divisor.value == 2:
+            half_seats = half_seats + unit[member].transport_space.value
+        else:
+            ordinary = ordinary + max(unit[member].transport_space.value, 2 * int(unit[member].has_keyword(Keyword::mega_armour) or unit[member].has_keyword(Keyword::jump_pack)))
+    return ordinary + (half_seats + 1) / 2
+
+# A card-granted embarkation can supply its own whole-unit range without
+# copying ordinary after-move timing restrictions (transport core p64).
+fun transport_within_embark_range(Board board, UnitID passenger, UnitID carrier, ModelID model, Int inches) -> Bool:
+    if carrier.get() >= board.units.size() or board[carrier].off_battlefield or model.get() >= board[carrier].models.size() or !transport_can_carry(board, board[passenger], board[carrier], model.get()):
+        return false
+    for member in range(board[passenger].models.size()):
+        if board[passenger][member].is_alive() and !passenger_wholly_within(board[passenger][member], board[carrier][model], inches):
+            return false
+    return true

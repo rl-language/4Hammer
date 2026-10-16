@@ -3,9 +3,6 @@ import factions.orks.queries
 import factions.orks.stratagems
 
 # Orks transport passenger faction/type and Ghazghkull restrictions (Orks transport cards; core p64).
-fun faction_passenger_permitted(Model carrier, Model passenger) -> Bool:
-    return orks_passenger_permitted(carrier, passenger)
-
 # Burna Mark prevents Hidden (Orks/Burna-Bommer).
 fun faction_hidden_allowed(Board board, Unit unit) -> Bool:
     return orks_hidden_allowed(board, unit)

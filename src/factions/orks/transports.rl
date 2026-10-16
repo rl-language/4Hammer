@@ -76,14 +76,6 @@ fun register_orks_cargo_passives(Board board):
 
 # Fight-end embarkation has its own whole-unit6in requirement. It deliberately
 # does not reuse normal after-move3in or same-phase disembark restrictions.
-fun orks_fight_end_carrier(Board board, UnitID passenger, UnitID carrier, ModelID model) -> Bool:
-    if carrier.get() >= board.units.size() or board[carrier].off_battlefield or model.get() >= board[carrier].models.size() or !transport_can_carry(board, board[passenger], board[carrier], model.get()):
-        return false
-    for member in range(board[passenger].models.size()):
-        if board[passenger][member].is_alive() and !passenger_wholly_within(board[passenger][member], board[carrier][model], 6):
-            return false
-    return true
-
 # Every permitted carrier model is checked independently; a unit may contain
 # more than one transport model and capacity is model-specific (p64).
 fun orks_fight_end_carrier_available(Board board, UnitID passenger) -> Bool:
@@ -201,12 +193,7 @@ act orks_disembark_selection(ctx Board board, frm UnitID passenger, frm CarrierL
 # adds ordinary attached-model seats. Never halve a Character or round every
 # Gretchin separately; all actually stored weights remain bounded integers.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Gretchin
-fun orks_passenger_space(Unit unit) -> Int:
-    let gretchin = 0
-    let ordinary = 0
-    for member in range(unit.models.size()):
-        if model_matches_datasheet(unit[member], OrksDatasheet::gretchin):
-            gretchin = gretchin + 1
-        else:
-            ordinary = ordinary + max(unit[member].transport_space.value, 2 * int(unit[member].has_keyword(Keyword::mega_armour) or unit[member].has_keyword(Keyword::jump_pack)))
-    return ordinary + (gretchin + 1) / 2
+
+# Keep It Runnin supplies the6in allowance and its own Fight-end eligibility.
+fun orks_fight_end_carrier(Board board, UnitID passenger, UnitID carrier, ModelID model) -> Bool:
+    return transport_within_embark_range(board, passenger, carrier, model, 6)
