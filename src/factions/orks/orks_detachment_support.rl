@@ -1,17 +1,5 @@
 import factions.orks.orks_detachment_actions
 
-# Usage belongs to the printed bearer/army scope, not an action-frame address.
-# Da Boss is Watchin'/Morgog/Surly are once per battle PER ARMY. Psychic phase
-# and round budgets are separate (Unstable Energies; appendix22.03.01).
-fun orks_option_usage(Unit unit, Model model, OrksEnhancement option) -> SourceInstance:
-    let instance : SourceInstance
-    instance.rule = 200 + option.value
-    instance.owner = unit.owned_by_player1
-    instance.source_unit = unit.identity
-    instance.source_model = model.identity
-    instance.use_scope = SourceUseScope::army
-    instance.limits.battle = 1
-    return instance
 
 # A source choice needs a real battlefield actor; offboard units can keep
 # their own effects but cannot select external ranged targets (01.02.04).
@@ -308,7 +296,7 @@ fun orks_morgog_valid(Board board, UnitID source, Bool owner, TimingWindow windo
         return false
     for member in range(board[source].models.size()):
         ref model = board[source][member]
-        if model_has_orks_enhancement(board[source], model, OrksEnhancement::morgogs_finkin_cap) and source_usage_available(board, orks_option_usage(board[source], model, OrksEnhancement::morgogs_finkin_cap)):
+        if model_has_orks_enhancement(board[source], model, OrksEnhancement::morgogs_finkin_cap) and source_usage_available(board, make_source_usage(board[source].owned_by_player1, 200 + OrksEnhancement::morgogs_finkin_cap.value, board[source].identity, model.identity, SourceUseScope::army, source_use_limits(0, 0, 0, 1))):
             return true
     return false
 
@@ -325,7 +313,7 @@ fun orks_surly_casualty_valid(Board board, Unit unit, ModelID archive) -> Bool:
     if archive.get() >= unit.destroyed_models.value.size():
         return false
     ref model = unit.destroyed_models.value[archive.get()]
-    return model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value and model.destroyed_phase == board.phase_serial.value + 1 and source_usage_available(board, orks_option_usage(unit, model, OrksEnhancement::surly_as_a_squiggoth))
+    return model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value and model.destroyed_phase == board.phase_serial.value + 1 and source_usage_available(board, make_source_usage(unit.owned_by_player1, 200 + OrksEnhancement::surly_as_a_squiggoth.value, unit.identity, model.identity, SourceUseScope::army, source_use_limits(0, 0, 0, 1)))
 
 # No distances are measured from offboard units; Surly uses its archived
 # physical death location instead (source card, not reserve visibility).
@@ -349,7 +337,7 @@ act resolve_orks_surly(ctx Board board, frm UnitID source, frm Bool owner) -> Or
 # One Surly roll/usage/restoration path. Battlefield returns select a nearest
 # legal quad; passengers need capacity; reserves need no position (01.02.03).
 act return_orks_surly(ctx Board board, ctx Unit unit, frm SourceBank bank, frm UnitID source, frm ModelID archive) -> OrksSurlyReturn:
-    commit_source_usage(board, orks_option_usage(unit, unit.destroyed_models.value[archive.get()], OrksEnhancement::surly_as_a_squiggoth))
+    commit_source_usage(board, make_source_usage(unit.owned_by_player1, 200 + OrksEnhancement::surly_as_a_squiggoth.value, unit.identity, unit.destroyed_models.value[archive.get()].identity, SourceUseScope::army, source_use_limits(0, 0, 0, 1)))
     act roll(Dice surly_face)
     if surly_face.value >= 2:
         board.shared_actions.return_model = return_model(board, unit, bank, source, archive, ReturnPlacementPolicy::nearest_unengaged, 3)
@@ -386,7 +374,7 @@ act orks_package_window(ctx Board board, frm UnitID source, frm Bool owner, frm 
         act use_morgogs_finkin_cap() {orks_morgog_valid(board, source, owner, window)}
             for member in range(board[source].models.size()):
                 if model_has_orks_enhancement(board[source], board[source][member], OrksEnhancement::morgogs_finkin_cap):
-                    commit_source_usage(board, orks_option_usage(board[source], board[source][member], OrksEnhancement::morgogs_finkin_cap))
+                    commit_source_usage(board, make_source_usage(board[source].owned_by_player1, 200 + OrksEnhancement::morgogs_finkin_cap.value, board[source].identity, board[source][member].identity, SourceUseScope::army, source_use_limits(0, 0, 0, 1)))
             board.current_roll = rerollable_dice_roll(board, unit_is_riled_up(board[source]), false, false, owner, source)
             subaction*(board) board.current_roll
             frm distance_result_snapshot_2 = board.current_roll.result
@@ -576,7 +564,7 @@ act select_orks_enemy_move_reaction(ctx Board board, frm UnitID mover) -> OrksEn
         actions:
             act decline_orks_move_reaction()
             act choose_supreme_kunnin_unit(frm UnitID nazdreg) {orks_supreme_kunnin_valid(board, mover, nazdreg)}
-                commit_source_usage(board, orks_remaining_usage(board[nazdreg], 154, true, false))
+                commit_source_usage(board, make_source_usage(board[nazdreg].owned_by_player1, 154, board[nazdreg].identity, invalid_entity_identity(), SourceUseScope::army, source_use_limits(1, 0, 0, 0)))
                 target = nazdreg
                 available = true
                 frm fixed_five = false
@@ -913,7 +901,7 @@ fun orks_kaptin_source(Board board, Bool owner) -> SourceInstance:
                 continue
             for member in range(unit.models.size()):
                 if model_has_orks_enhancement(unit, unit[member], OrksEnhancement::kaptins_hat):
-                    result = orks_option_usage(unit, unit[member], OrksEnhancement::kaptins_hat)
+                    result = make_source_usage(unit.owned_by_player1, 200 + OrksEnhancement::kaptins_hat.value, unit.identity, unit[member].identity, SourceUseScope::army, source_use_limits(0, 0, 0, 1))
     return result
 
 # A unit is redeployed at most once by this source, even if its reserve bank
@@ -981,7 +969,7 @@ fun orks_watchin_available(Board board, Unit unit) -> Bool:
         return false
     for member in range(unit.models.size()):
         ref model = unit[member]
-        if model.is_alive() and model_has_orks_enhancement(unit, model, OrksEnhancement::da_boss_is_watchin) and source_usage_available(board, orks_option_usage(unit, model, OrksEnhancement::da_boss_is_watchin)):
+        if model.is_alive() and model_has_orks_enhancement(unit, model, OrksEnhancement::da_boss_is_watchin) and source_usage_available(board, make_source_usage(unit.owned_by_player1, 200 + OrksEnhancement::da_boss_is_watchin.value, unit.identity, model.identity, SourceUseScope::army, source_use_limits(0, 0, 0, 1))):
             return true
     return false
 
@@ -990,7 +978,7 @@ fun orks_watchin_available(Board board, Unit unit) -> Bool:
 fun commit_orks_watchin(Board board, Unit unit):
     for bearer in range(unit.models.size()):
         if unit[bearer].is_alive() and model_has_orks_enhancement(unit, unit[bearer], OrksEnhancement::da_boss_is_watchin):
-            commit_source_usage(board, orks_option_usage(unit, unit[bearer], OrksEnhancement::da_boss_is_watchin))
+            commit_source_usage(board, make_source_usage(unit.owned_by_player1, 200 + OrksEnhancement::da_boss_is_watchin.value, unit.identity, unit[bearer].identity, SourceUseScope::army, source_use_limits(0, 0, 0, 1)))
     grant_orks_own_payload(board, unit, 200 + OrksEnhancement::da_boss_is_watchin.value, riled_up_grant(), SourceDuration::next_own_turn)
 
 # Bank and unit choices are separate finite stages; spare IDs are rejected

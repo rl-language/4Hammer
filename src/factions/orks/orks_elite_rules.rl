@@ -285,21 +285,6 @@ fun orks_mek_unit_has_target(Board board, SourceInstance instance, UnitID target
             return true
     return false
 
-# Original-unit token metadata, not a model wound counter. A restored bearer
-# cannot refresh Catch Dat Red Bit/Pulsa/That'll Learn Ya (source cards).
-fun orks_elite_usage(Unit unit, Model bearer, Int rule, Bool battle) -> SourceInstance:
-    let instance : SourceInstance
-    instance.rule = rule
-    instance.source_unit = bearer.original_unit
-    instance.source_model = bearer.identity
-    instance.owner = unit.owned_by_player1
-    instance.use_scope = SourceUseScope::unit
-    if battle:
-        instance.limits.battle = 1
-    else:
-        instance.limits.round = 1
-    instance.grant = riled_up_grant()
-    return instance
 
 # All-bank command healing calls the same one-wound kernel as existing
 # revival cards. Roll optional D3 BEFORE allocating any of the total wounds.
@@ -319,7 +304,7 @@ act orks_elite_command(ctx Board board, frm SourceInstance instance) -> OrksElit
     if instance.rule.value == ORKS_SURGERY_RULE:
         frm bearer : ModelID
         bearer = source_bank_unit(board, actor.bank, actor.unit.value).find_model(instance.source_model)
-        frm token = orks_elite_usage(source_bank_unit(board, actor.bank, actor.unit.value), source_bank_unit(board, actor.bank, actor.unit.value)[bearer], ORKS_ORDERLY_RULE, true)
+        frm token = make_source_usage(source_bank_unit(board, actor.bank, actor.unit.value).owned_by_player1, ORKS_ORDERLY_RULE, source_bank_unit(board, actor.bank, actor.unit.value)[bearer].original_unit, source_bank_unit(board, actor.bank, actor.unit.value)[bearer].identity, SourceUseScope::unit, source_use_limits(0, 0, 0, 1))
         if source_usage_available(board, token):
             act use_grot_orderly(Bool use_orderly)
             if use_orderly:
@@ -350,7 +335,7 @@ act orks_runtherd_shock(ctx Board board, ctx Unit unit) -> OrksRuntherdShock:
     for index in range(unit.models.size()):
         if unit[index].is_alive() and unit[index].has_ability(AbilityKind::thatll_learn_ya):
             bearer = index
-    frm token = orks_elite_usage(unit, unit[bearer], ORKS_RUNTHERD_RULE, false)
+    frm token = make_source_usage(unit.owned_by_player1, ORKS_RUNTHERD_RULE, unit[bearer].original_unit, unit[bearer].identity, SourceUseScope::unit, source_use_limits(0, 0, 1, 0))
     if !source_usage_available(board, token):
         return
     frm previous_owner = board.current_decision_maker
@@ -419,7 +404,7 @@ fun orks_pulsa_available(Board board, UnitID source) -> Bool:
     for member in range(board[source].models.size()):
         if board[source][member].is_alive() and board[source][member].has_ability(AbilityKind::pulsa_rokkit):
             bearer = member
-    if bearer < 0 or !source_usage_available(board, orks_elite_usage(board[source], board[source][bearer], ORKS_PULSA_RULE, true)):
+    if bearer < 0 or !source_usage_available(board, make_source_usage(board[source].owned_by_player1, ORKS_PULSA_RULE, board[source][bearer].original_unit, board[source][bearer].identity, SourceUseScope::unit, source_use_limits(0, 0, 0, 1))):
         return false
     let target : UnitID
     for slot in range(board.units.size()):
@@ -438,7 +423,7 @@ act orks_pulsa_selection(ctx Board board, frm UnitID source) -> OrksPulsaSelecti
         act choose_pulsa_target(frm UnitID target) {orks_pulsa_target_valid(board, source, target)}
         for member in range(board[source].models.size()):
             if board[source][member].is_alive() and board[source][member].has_ability(AbilityKind::pulsa_rokkit):
-                commit_source_usage(board, orks_elite_usage(board[source], board[source][member], ORKS_PULSA_RULE, true))
+                commit_source_usage(board, make_source_usage(board[source].owned_by_player1, ORKS_PULSA_RULE, board[source][member].original_unit, board[source][member].identity, SourceUseScope::unit, source_use_limits(0, 0, 0, 1)))
         grant_orks_effect(board, source, source, ORKS_PULSA_RULE, OrksEffectKind::pulsa_target, 1, SourceDuration::phase, board[target].identity)
 
 # Rokkit Barrage uses actual successful hit records, not declarations; it

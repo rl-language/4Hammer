@@ -144,6 +144,34 @@ fun source_event_location(Board board, SourceInstance instance, SourceEvent even
         location = locate_source(board, instance.source_unit, invalid_entity_identity())
     return location
 
+# Infrastructure for printed per-phase/turn/round/battle use restrictions.
+# Zero means unlimited for that interval; limits combine conjunctively rather
+# than replacing one another (e.g. Bomb Squigs; supplied appendix22.03.01).
+fun source_use_limits(Int phase_limit, Int turn_limit, Int round_limit, Int battle_limit) -> SourceUseLimits:
+    assert(phase_limit >= 0 and phase_limit < MAX_CHARACTERISTIC and turn_limit >= 0 and turn_limit < MAX_CHARACTERISTIC and round_limit >= 0 and round_limit < MAX_CHARACTERISTIC and battle_limit >= 0 and battle_limit < MAX_CHARACTERISTIC, "invalid source use limit")
+    let limits : SourceUseLimits
+    limits.phase = phase_limit
+    limits.turn = turn_limit
+    limits.round = round_limit
+    limits.battle = battle_limit
+    return limits
+
+# Construct a usage specification, not a spent-use record. Source identities
+# and scope remain explicit so attachments/returns cannot replenish a token;
+# source_usage_subject resolves the current unit only when the rule is per-unit
+# (core pp66/88; source-card per-army/unit/model limits). Actual counters stay
+# in Board.source_uses and are committed only after accepting the ability.
+fun make_source_usage(Bool owner, Int rule, EntityIdentity source_unit, EntityIdentity source_model, SourceUseScope scope, SourceUseLimits limits) -> SourceInstance:
+    assert(rule > 0 and rule < 513, "invalid source use rule")
+    let instance : SourceInstance
+    instance.rule = rule
+    instance.owner = owner
+    instance.source_unit = source_unit
+    instance.source_model = source_model
+    instance.use_scope = scope
+    instance.limits = limits
+    return instance
+
 # Per-army/unit/model keys remain distinct. Attached model sources resolve the
 # current containing unit for per-unit use (pp.66–67; sourced Orks restrictions).
 fun source_usage_subject(Board board, SourceInstance instance) -> EntityIdentity:

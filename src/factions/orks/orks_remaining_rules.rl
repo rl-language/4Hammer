@@ -174,21 +174,6 @@ fun orks_bunka_passenger_control(Board board, Model carrier, Bool player) -> Int
 fun orks_datasheet_stratagem_cost(Stratagem card, Unit unit) -> Int:
     return max(0, card.cost() - int(card == Stratagem::crushing_impact and unit.has_ability(AbilityKind::tramplasquig_charge)))
 
-# Source codes140-176 are independent from detachment/enhancement codes.
-# Unit identity preserves source usage across attachments and bank transfers.
-# Sources: the current Orks25 remaining datasheets; appendix01.02.02/22.03.01.
-fun orks_remaining_usage(Unit unit, Int rule, Bool army, Bool battle) -> SourceInstance:
-    let usage : SourceInstance
-    usage.rule = rule
-    usage.owner = unit.owned_by_player1
-    usage.source_unit = unit.identity
-    usage.use_scope = SourceUseScope::unit
-    usage.limits.phase = 1
-    if army:
-        usage.use_scope = SourceUseScope::army
-    if battle:
-        usage.limits.battle = 1
-    return usage
 
 # Register simultaneous printed windows with the existing player-chosen order,
 # not a separate phase-end loop. Unit-wide sources are registered once even
@@ -214,7 +199,7 @@ fun register_orks_remaining_rules(Board board):
                     ability = AbilityKind::full_throttle
                 if !unit.has_ability(ability):
                     continue
-                let instance = orks_remaining_usage(unit, 140 + entry, false, false)
+                let instance = make_source_usage(unit.owned_by_player1, 140 + entry, unit.identity, invalid_entity_identity(), SourceUseScope::unit, source_use_limits(1, 0, 0, 0))
                 instance.trigger = SourceEventKind::timing_window
                 instance.window = TimingWindow::fight_end
                 instance.phase = BattlePhase::fight
@@ -247,7 +232,7 @@ fun register_orks_remaining_rules(Board board):
                     let handle = register_source_instance(board, instance)
             if unit.has_ability(AbilityKind::get_back_in_da_race):
                 for entry in range(2):
-                    let instance = orks_remaining_usage(unit, 147, true, false)
+                    let instance = make_source_usage(unit.owned_by_player1, 147, unit.identity, invalid_entity_identity(), SourceUseScope::army, source_use_limits(1, 0, 0, 0))
                     instance.limits.phase = 0
                     instance.limits.round = 1
                     instance.trigger = SourceEventKind::move_start
@@ -487,7 +472,10 @@ fun orks_datasheet_psychic_available(Board board, UnitID source, Int rule) -> Bo
         ability = AbilityKind::beastscent
     if !unit.has_ability(ability):
         return false
-    let usage = orks_remaining_usage(unit, rule, rule == 151, false)
+    let psychic_usage_scope = SourceUseScope::unit
+    if rule == 151:
+        psychic_usage_scope = SourceUseScope::army
+    let usage = make_source_usage(unit.owned_by_player1, rule, unit.identity, invalid_entity_identity(), psychic_usage_scope, source_use_limits(1, 0, 0, 0))
     if rule == 151:
         usage.limits.round = 1
     return unit.orks_psychic_usage.budget.available(board.current_round.value + 1, orks_psyker_level(unit)) and source_usage_available(board, usage)
@@ -496,7 +484,10 @@ fun orks_datasheet_psychic_available(Board board, UnitID source, Int rule) -> Bo
 # with Wurrband and other datasheets (Unstable Energies22.03.01).
 fun orks_datasheet_psychic(Board board, UnitID source, BInt<151, 163> rule) -> OrksPsychicTest:
     assert(orks_datasheet_psychic_available(board, source, rule.value), "datasheet psychic unavailable")
-    let usage = orks_remaining_usage(board[source], rule.value, rule.value == 151, false)
+    let psychic_usage_scope = SourceUseScope::unit
+    if rule.value == 151:
+        psychic_usage_scope = SourceUseScope::army
+    let usage = make_source_usage(board[source].owned_by_player1, rule.value, board[source].identity, invalid_entity_identity(), psychic_usage_scope, source_use_limits(1, 0, 0, 0))
     if rule.value == 151:
         usage.limits.round = 1
     commit_source_usage(board, usage)
@@ -548,11 +539,11 @@ fun orks_datasheet_move_available(Board board, UnitID source, OrksDatasheetMoveA
         return false
     ref unit = board[source]
     if ability.value == OrksDatasheetMoveAbility::makari.value:
-        return unit.has_ability(AbilityKind::makari_banner) and source_usage_available(board, orks_remaining_usage(unit, 148, true, true))
+        return unit.has_ability(AbilityKind::makari_banner) and source_usage_available(board, make_source_usage(unit.owned_by_player1, 148, unit.identity, invalid_entity_identity(), SourceUseScope::army, source_use_limits(1, 0, 0, 1)))
     if ability.value == OrksDatasheetMoveAbility::da_jump.value:
         return board.reserve_units.has_capacity() and orks_datasheet_psychic_available(board, source, 151)
     let skorch = ability.value == OrksDatasheetMoveAbility::drive_by_skorchin.value
-    if (!skorch and !unit.has_ability(AbilityKind::found_em)) or (skorch and !unit.has_ability(AbilityKind::drive_by_skorchin)) or !source_usage_available(board, orks_remaining_usage(unit, 149 + int(skorch), false, false)):
+    if (!skorch and !unit.has_ability(AbilityKind::found_em)) or (skorch and !unit.has_ability(AbilityKind::drive_by_skorchin)) or !source_usage_available(board, make_source_usage(unit.owned_by_player1, 149 + int(skorch), unit.identity, invalid_entity_identity(), SourceUseScope::unit, source_use_limits(1, 0, 0, 0))):
         return false
     let target : UnitID
     for slot in range(board.units.size()):
@@ -593,7 +584,7 @@ act orks_datasheet_movement(ctx Board board, frm UnitID source) -> OrksDatasheet
     frm previous_bank = board.orks_support_bank
     act choose_datasheet_move_ability(frm OrksDatasheetMoveAbility ability) {orks_datasheet_move_available(board, source, ability)}
     if ability.value == OrksDatasheetMoveAbility::makari.value:
-        commit_source_usage(board, orks_remaining_usage(board[source], 148, true, true))
+        commit_source_usage(board, make_source_usage(board[source].owned_by_player1, 148, board[source].identity, invalid_entity_identity(), SourceUseScope::army, source_use_limits(1, 0, 0, 1)))
         frm chosen : EntityIdentity[5]
         frm count : BInt<0, 6>
         while count.value < board.current_round.value + 1:
@@ -612,7 +603,7 @@ act orks_datasheet_movement(ctx Board board, frm UnitID source) -> OrksDatasheet
     if ability.value == OrksDatasheetMoveAbility::found_em.value or ability.value == OrksDatasheetMoveAbility::drive_by_skorchin.value:
         frm skorch = ability.value == OrksDatasheetMoveAbility::drive_by_skorchin.value
         act choose_datasheet_move_target(frm UnitID target) {orks_datasheet_move_target(board, source, target, skorch)}
-        commit_source_usage(board, orks_remaining_usage(board[source], 149 + int(skorch), false, false))
+        commit_source_usage(board, make_source_usage(board[source].owned_by_player1, 149 + int(skorch), board[source].identity, invalid_entity_identity(), SourceUseScope::unit, source_use_limits(1, 0, 0, 0)))
         frm kind = OrksEffectKind::found_detection
         if skorch:
             kind = OrksEffectKind::overwatch_blocked
@@ -631,7 +622,7 @@ act orks_datasheet_movement(ctx Board board, frm UnitID source) -> OrksDatasheet
 # completed endpoint. It cannot trigger from the controlling player's moves.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg
 fun orks_supreme_kunnin_valid(Board board, UnitID mover, UnitID source) -> Bool:
-    return mover.get() < board.units.size() and source.get() < board.units.size() and board.timing.phase == BattlePhase::movement and board[source].owned_by_player1 != board.current_player and board[source].owned_by_player1 != board[mover].owned_by_player1 and !board[source].off_battlefield and has_live_model(board[source]) and board[source].has_ability(AbilityKind::supreme_kunnin) and !board.is_in_melee(board[source]) and live_unit_distance(board[source], board[mover]) <= 8.0 and source_usage_available(board, orks_remaining_usage(board[source], 154, true, false))
+    return mover.get() < board.units.size() and source.get() < board.units.size() and board.timing.phase == BattlePhase::movement and board[source].owned_by_player1 != board.current_player and board[source].owned_by_player1 != board[mover].owned_by_player1 and !board[source].off_battlefield and has_live_model(board[source]) and board[source].has_ability(AbilityKind::supreme_kunnin) and !board.is_in_melee(board[source]) and live_unit_distance(board[source], board[mover]) <= 8.0 and source_usage_available(board, make_source_usage(board[source].owned_by_player1, 154, board[source].identity, invalid_entity_identity(), SourceUseScope::army, source_use_limits(1, 0, 0, 0)))
 
 # A rapid exit is a reaction to the actual carrier MODEL within8in. A prior
 # same-phase embark still forbids exit; already handled passengers are skipped.

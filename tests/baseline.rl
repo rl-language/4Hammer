@@ -11795,7 +11795,7 @@ fun test_orks17all_surly_original_identity_three_wounds() -> Bool:
     revival.choose_surly_casualty(board, damage_test_model(0))
     revival.roll(board, attack_test_die(2))
     revival.place_returned_model(board, board_position(12, 5))
-    return revival.is_done() and board[1][0].identity == identity and board[1][0].wounds_left() == 3 and board[1].destroyed_models.value.empty() and !source_usage_available(board, orks_option_usage(board[1], board[1][0], OrksEnhancement::surly_as_a_squiggoth))
+    return revival.is_done() and board[1][0].identity == identity and board[1][0].wounds_left() == 3 and board[1].destroyed_models.value.empty() and !source_usage_available(board, make_source_usage(board[1].owned_by_player1, 200 + OrksEnhancement::surly_as_a_squiggoth.value, board[1].identity, board[1][0].identity, SourceUseScope::army, source_use_limits(0, 0, 0, 1)))
 
 # Returned passengers need a real available seat; no-trigger destruction on
 # lack of seats cannot start another death explosion/recursion (01.02.03).
@@ -13019,7 +13019,7 @@ fun test_orks17p2_command_window_healing_and_decline_token() -> Bool:
     window.choose_healed_model(board, damage_test_model(0))
     window.choose_healed_model(board, damage_test_model(0))
     window.finish_timing_rules(board)
-    let token = orks_elite_usage(board[0], board[0][0], ORKS_ORDERLY_RULE, true)
+    let token = make_source_usage(board[0].owned_by_player1, ORKS_ORDERLY_RULE, board[0][0].original_unit, board[0][0].identity, SourceUseScope::unit, source_use_limits(0, 0, 0, 1))
     return window.is_done() and board[0][0].suffered_wounds == 0 and source_usage_available(board, token)
 
 # Healing sum3+D3 is determined before allocation and can exceed the old3 cap.
@@ -13039,7 +13039,7 @@ fun test_orks17p2_orderly_six_wounds_and_battle_token() -> Bool:
         sequence.choose_healed_model(board, damage_test_model(index))
         sequence.choose_healed_model(board, damage_test_model(index))
     let bearer = board[0].models.size() - 1
-    let token = orks_elite_usage(board[0], board[0][bearer], ORKS_ORDERLY_RULE, true)
+    let token = make_source_usage(board[0].owned_by_player1, ORKS_ORDERLY_RULE, board[0][bearer].original_unit, board[0][bearer].identity, SourceUseScope::unit, source_use_limits(0, 0, 0, 1))
     return sequence.is_done() and !source_usage_available(board, token) and board[0][0].suffered_wounds == 0 and board[0][1].suffered_wounds == 0 and board[0][2].suffered_wounds == 0
 
 # The archive is a real original model and returns without stale death flags;
@@ -15288,3 +15288,54 @@ fun test_procedures_return_original_model_nearest_without_faction() -> Bool:
     let nearest = can sequence.place_returned_model(board, board[0], board_position(5, 5)) and !can sequence.place_returned_model(board, board[0], board_position(4, 5))
     sequence.place_returned_model(board, board[0], board_position(5, 5))
     return nearest and sequence.is_done() and !board[0].retired and board[0][0].identity == identity and board[0][0].used_once_per_battle_weapon[0] and !board[0][0].destruction_pending and board[0][0].state == ModelState::normal and board[0].destroyed_models.value.empty()
+
+# Shared construction must not spend a token, and per-army/unit/model keys
+# must remain distinct (core pp66/88; printed source limits, e.g. Orks tokens).
+fun test_usage_specification_preserves_scope_and_owner() -> Bool:
+    let board = attack_declaration_fixture()
+    board.units.append(make_orks_mek())
+    board.identify_units()
+    let limits = source_use_limits(0, 0, 0, 1)
+    let army = make_source_usage(board[0].owned_by_player1, 490, board[0].identity, board[0][0].identity, SourceUseScope::army, limits)
+    let duplicate = make_source_usage(board[0].owned_by_player1, 490, board[2].identity, board[2][0].identity, SourceUseScope::army, limits)
+    let opponent = make_source_usage(!board[0].owned_by_player1, 490, board[1].identity, board[1][0].identity, SourceUseScope::army, limits)
+    let unit = make_source_usage(board[0].owned_by_player1, 490, board[0].identity, board[0][0].identity, SourceUseScope::unit, limits)
+    let model = make_source_usage(board[0].owned_by_player1, 490, board[0].identity, board[0][0].identity, SourceUseScope::model, limits)
+    let not_spent = board.source_uses.empty() and source_usage_available(board, army)
+    commit_source_usage(board, army)
+    return not_spent and !source_usage_available(board, duplicate) and source_usage_available(board, opponent) and source_usage_available(board, unit) and source_usage_available(board, model)
+
+# Limit construction preserves simultaneous interval restrictions. A new
+# phase/turn never replenishes an exhausted round/battle budget (source cards).
+fun test_usage_specification_combines_interval_limits() -> Bool:
+    let board = attack_declaration_fixture()
+    let spec = make_source_usage(board[0].owned_by_player1, 491, board[0].identity, invalid_entity_identity(), SourceUseScope::unit, source_use_limits(1, 1, 2, 3))
+    commit_source_usage(board, spec)
+    board.phase_serial = board.phase_serial + 1
+    let turn_blocked = !source_usage_available(board, spec)
+    board.turn_serial = board.turn_serial + 1
+    let second = source_usage_available(board, spec)
+    commit_source_usage(board, spec)
+    board.phase_serial = board.phase_serial + 1
+    board.turn_serial = board.turn_serial + 1
+    let round_blocked = !source_usage_available(board, spec)
+    board.current_round = board.current_round + 1
+    let third = source_usage_available(board, spec)
+    commit_source_usage(board, spec)
+    board.phase_serial = board.phase_serial + 1
+    board.turn_serial = board.turn_serial + 1
+    board.current_round = board.current_round + 1
+    return turn_blocked and second and round_blocked and third and !source_usage_available(board, spec)
+
+# Explicit original model identity remains the model-scoped use key across
+# a bank transfer; storage indices must not create another use (pp65/68/88).
+fun test_usage_specification_survives_bank_transfer() -> Bool:
+    let board = attack_declaration_fixture()
+    let unit_identity = board[0].identity
+    let model_identity = board[0][0].identity
+    let spec = make_source_usage(board[0].owned_by_player1, 492, unit_identity, model_identity, SourceUseScope::model, source_use_limits(0, 0, 0, 1))
+    commit_source_usage(board, spec)
+    board.reserve_units.append(board[0])
+    board.units.erase(0)
+    let restored = make_source_usage(board.reserve_units[0].owned_by_player1, 492, unit_identity, model_identity, SourceUseScope::model, source_use_limits(0, 0, 0, 1))
+    return !source_usage_available(board, restored) and restored.source_unit == unit_identity and restored.source_model == model_identity and source_usage_subject(board, restored) == model_identity
