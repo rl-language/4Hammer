@@ -249,8 +249,6 @@ cls Model:
 
     # Riled-up gives a5+ InSv and ranged Assault; owned keys preserve overlapping
     # permanent/timed sources (Orks Army Rules / Waaagh!, appendix01.02.02).
-    fun is_riled_up() -> Bool:
-        return !self.riled_source_effects.empty()
 
     # Leadership and OC consumers use the bearer scope (p.9; appendix02.02.01).
     fun effective_leadership() -> Int:

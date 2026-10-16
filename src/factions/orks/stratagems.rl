@@ -162,8 +162,8 @@ fun orks_phase_support_available(Board board, UnitID source) -> Bool:
 act orks_phase_support(ctx Board board, frm UnitID source) -> OrksPhaseSupport:
     actions:
         act choose_orks_free_move_ability() {orks_movement_ability_available(board, source)}
-            board.shared_actions.orks_movement_abilities = orks_movement_abilities(board, source)
-            subaction*(board) board.shared_actions.orks_movement_abilities
+            board.shared_actions.faction_movement_abilities = orks_movement_abilities(board, source)
+            subaction*(board) board.shared_actions.faction_movement_abilities
         act choose_orks_phase_card(frm Stratagem card) {orks_support_card_valid(board, source, card, board.current_player, TimingWindow::none), card == Stratagem::orks_dread_power or card == Stratagem::orks_delicious_eating_squigs}
             board.shared_actions.use_orks_support_card = use_orks_support_card(board, source, card)
             subaction*(board) board.shared_actions.use_orks_support_card

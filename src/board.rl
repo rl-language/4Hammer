@@ -40,7 +40,7 @@ cls AttackSequenceInfo:
     Bool precision_visibility_known
     Bool[32] precision_visible_targets
     # Beastboss Dodge Dis!: separate contribution before the cumulative cap.
-    Bool dodge_dis_hit_bonus
+    Bool faction_innate_hit_bonus
     Bool hit_roll_bonus
     RuleModifiers faction_hit_modifiers
     # Preserve each repair source in addition to the four unit-rule slots;
@@ -138,7 +138,7 @@ cls AttackSequenceInfo:
     # and appendix02.02.01). Optional ignoring retains its own provenance.
     # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
     fun total_hit_modifier() -> Int:
-        let result = apply_rule_modifiers(0, self.faction_hit_modifiers, false) + apply_rule_modifiers(0, self.faction_unit_hit_modifiers, false) + int(self.hit_roll_bonus) + int(self.dodge_dis_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
+        let result = apply_rule_modifiers(0, self.faction_hit_modifiers, false) + apply_rule_modifiers(0, self.faction_unit_hit_modifiers, false) + int(self.hit_roll_bonus) + int(self.faction_innate_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
         let i = 0
         while i != self.profile_hit_roll_bonus.size():
             if self.profile_hit_roll_bonus[i] == self.source_profile:
@@ -252,7 +252,7 @@ cls Board:
     LinearlyDistributedInt<0, 1025> orks_attack_serial
     Bool move_requires_objective
     UnitID constrained_mover
-    EntityIdentity orks_reaction_target
+    EntityIdentity forced_attack_target
     Bool orks_attack_active
     SourceBank orks_support_bank
     UnitID orks_selected_unit
@@ -696,7 +696,7 @@ cls Board:
                     if self.model_in_objective_range(unit[j], objective):
                         total = total + max(0, unit.model_objective_control(j))
                         if !unit.battle_socked:
-                            total = total + faction_bunka_passenger_control(self, unit[j], player)
+                            total = total + faction_passenger_objective_control(self, unit[j], player)
         return total
 
     # Stateless marker query retained for existing diagnostic fixtures. Real

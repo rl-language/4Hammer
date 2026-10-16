@@ -831,3 +831,23 @@ fun retained_source_present(Board board, SourceInstance instance) -> Bool:
         if unit[member].state == ModelState::fight_on_death:
             return true
     return false
+
+# Remove one explicit source effect through every bank/archive (01.02.02/p88);
+# this shared mechanism grants no faction permission.
+fun remove_scoped_source_effect(Board board, SourceEffectKey key):
+    if key.value == 0:
+        return
+    let bank : SourceBank
+    for b in range(3):
+        bank.value = b
+        for slot in range(source_bank_size(board, bank)):
+            ref unit = source_bank_unit(board, bank, slot)
+            for member in range(unit.models.size()):
+                remove_source_grant(unit[member], key)
+            for archived in range(unit.destroyed_models.value.size()):
+                remove_source_grant(unit.destroyed_models.value[archived], key)
+    let index = board.source_effects.size() - 1
+    while index >= 0:
+        if board.source_effects[index].identity == key:
+            board.source_effects.erase(index)
+        index = index - 1

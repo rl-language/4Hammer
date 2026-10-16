@@ -8,7 +8,7 @@ fun action_start_valid(Board board, UnitID source, Bool player) -> Bool:
         return false
     # Boyz/Never Too Busy to Fight waives engagement alone; all other p58
     # gates (shock, OC, shooting, movement and once/turn) stay in effect.
-    if board.is_in_melee(board[source]) and !board[source].has_keyword(Keyword::titanic) and !board[source].has_ability(AbilityKind::never_too_busy_to_fight):
+    if board.is_in_melee(board[source]) and !board[source].has_keyword(Keyword::titanic) and !faction_action_while_engaged(board[source]):
         return false
     let control = false
     for i in range(board[source].models.size()):

@@ -13,8 +13,8 @@ func press(panel, label):
 func check_roster():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 44)
-	assert(library.get_action_schema_version() == 26)
+	assert(library.get_state_schema_version() == 45)
+	assert(library.get_action_schema_version() == 27)
 	var panel = VBoxContainer.new()
 	panel.set_script(load("res://MultipleChoises.gd"))
 	var buttons = VBoxContainer.new()

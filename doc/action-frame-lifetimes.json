@@ -3,9 +3,10 @@
     "function": "declare_allocation_order",
     "frame": "AllocationOrder",
     "source": "src/rules.rl",
-    "line": 409,
+    "line": 395,
     "game_copies": 1,
     "native_bytes": 104,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -14,9 +15,10 @@
     "function": "attach_leaders",
     "frame": "AttachLeaderStep",
     "source": "src/rules.rl",
-    "line": 2845,
+    "line": 2607,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -25,9 +27,10 @@
     "function": "attack",
     "frame": "Attack",
     "source": "src/rules.rl",
-    "line": 1218,
+    "line": 1187,
     "game_copies": 1,
-    "native_bytes": 7072,
+    "native_bytes": 7128,
+    "single_step_alternative": false,
     "storage": "Board.attack",
     "nested_reentry": false,
     "calls": [
@@ -38,13 +41,12 @@
       "GatherAttackGroup",
       "GroupAttackDice",
       "HazardRolls",
-      "OrksAttackSelection",
+      "OrksAttackSelectionOptions",
       "OrksAttackTargeted",
-      "OrksDatasheetSelection",
+      "OrksDeclarationsComplete",
       "OrksHitEffects",
       "OrksShokkaSelection",
       "OrksShootingOptionEnd",
-      "OrksUnpredictableGenius",
       "PrepareTargetWeaponAbilities",
       "RevalidateAttackTargets",
       "SelectFiringDeck",
@@ -56,9 +58,10 @@
     "function": "resolve_attack_damage",
     "frame": "AttackDamage",
     "source": "src/rules.rl",
-    "line": 680,
+    "line": 650,
     "game_copies": 1,
     "native_bytes": 416,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -72,9 +75,10 @@
     "function": "collect_attack_dice",
     "frame": "AttackDiceBatch",
     "source": "src/rules.rl",
-    "line": 252,
+    "line": 238,
     "game_copies": 1,
     "native_bytes": 152,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.collect_attack_dice",
     "nested_reentry": false,
     "calls": []
@@ -83,10 +87,11 @@
     "function": "attack_with_orks_reactions",
     "frame": "AttackWithOrksReactions",
     "source": "src/factions/orks/combat.rl",
-    "line": 375,
+    "line": 376,
     "game_copies": 1,
     "native_bytes": 56,
-    "storage": "Board.shared_actions.attack_with_orks_reactions",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.attack_with_faction_reactions",
     "nested_reentry": false,
     "calls": [
       "Attack",
@@ -97,9 +102,10 @@
     "function": "battle",
     "frame": "Battle",
     "source": "src/rules.rl",
-    "line": 2982,
+    "line": 2744,
     "game_copies": 1,
-    "native_bytes": 2200,
+    "native_bytes": 2264,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -117,9 +123,10 @@
     "function": "battle_shock_step",
     "frame": "BattleShockStep",
     "source": "src/rules.rl",
-    "line": 1787,
+    "line": 1691,
     "game_copies": 1,
     "native_bytes": 144,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -131,9 +138,10 @@
     "function": "battle_shock_test",
     "frame": "BattleShockTest",
     "source": "src/rules.rl",
-    "line": 1744,
+    "line": 1648,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.battle_shock_test",
     "nested_reentry": false,
     "calls": [
@@ -149,6 +157,7 @@
     "line": 629,
     "game_copies": 1,
     "native_bytes": 568,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -159,15 +168,15 @@
     "function": "charge",
     "frame": "Charge",
     "source": "src/rules.rl",
-    "line": 2271,
+    "line": 2131,
     "game_copies": 1,
-    "native_bytes": 1584,
+    "native_bytes": 1632,
+    "single_step_alternative": true,
     "storage": "Board.shared_actions.charge",
     "nested_reentry": false,
     "calls": [
-      "CrushingImpact",
-      "OrksKrushinImpetus",
-      "OrksMobbed",
+      "CoreChargeChoice",
+      "OrksChargeChoice",
       "OrksWagonChargeEnd",
       "RerollableDicePair"
     ]
@@ -176,9 +185,10 @@
     "function": "charge_phase",
     "frame": "ChargePhase",
     "source": "src/rules.rl",
-    "line": 2395,
+    "line": 2245,
     "game_copies": 1,
     "native_bytes": 16,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -192,6 +202,7 @@
     "line": 85,
     "game_copies": 1,
     "native_bytes": 144,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.choose_attack_modifiers",
     "nested_reentry": false,
     "calls": []
@@ -203,6 +214,7 @@
     "line": 68,
     "game_copies": 1,
     "native_bytes": 104,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.choose_weapon_abilities",
     "nested_reentry": false,
     "calls": []
@@ -211,9 +223,10 @@
     "function": "command_phase",
     "frame": "CommandPhase",
     "source": "src/rules.rl",
-    "line": 1857,
+    "line": 1761,
     "game_copies": 1,
     "native_bytes": 152,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -222,12 +235,98 @@
     ]
   },
   {
+    "function": "core_charge_choice",
+    "frame": "CoreChargeChoice",
+    "source": "src/rules.rl",
+    "line": 2929,
+    "game_copies": 1,
+    "native_bytes": 24,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "CrushingImpact"
+    ]
+  },
+  {
+    "function": "core_move_kind_choice",
+    "frame": "CoreMoveKindChoice",
+    "source": "src/rules.rl",
+    "line": 2942,
+    "game_copies": 1,
+    "native_bytes": 72,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "DesperateEscapeTest",
+      "OrksModifyAdvanceRoll",
+      "OrksMoveMode",
+      "OrksPrepareAdvance",
+      "RerollableDice"
+    ]
+  },
+  {
+    "function": "core_movement_phase_choice",
+    "frame": "CoreMovementPhaseChoice",
+    "source": "src/rules.rl",
+    "line": 2859,
+    "game_copies": 1,
+    "native_bytes": 72,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "Disembark",
+      "Movement"
+    ]
+  },
+  {
+    "function": "core_shooting_phase_choice",
+    "frame": "CoreShootingPhaseChoice",
+    "source": "src/rules.rl",
+    "line": 2903,
+    "game_copies": 1,
+    "native_bytes": 112,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "Explosives",
+      "SelectedShooting"
+    ]
+  },
+  {
+    "function": "core_timing_choice",
+    "frame": "CoreTimingChoice",
+    "source": "src/rules.rl",
+    "line": 2813,
+    "game_copies": 1,
+    "native_bytes": 2144,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "NeuralDisruption",
+      "OrksTimingSource",
+      "RegainCoherency",
+      "ShadowInTheWarp",
+      "TimingHeroicIntervention",
+      "TimingOathOfMoment",
+      "TimingObjectiveStratagem",
+      "TimingOverwatch",
+      "TimingRapidIngress",
+      "TimingSmokescreen"
+    ]
+  },
+  {
     "function": "resolve_crushing_impact",
     "frame": "CrushingImpact",
     "source": "src/rules.rl",
-    "line": 1530,
+    "line": 1490,
     "game_copies": 1,
     "native_bytes": 104,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.resolve_crushing_impact",
     "nested_reentry": false,
     "calls": [
@@ -238,14 +337,16 @@
     "function": "resolve_damage_jobs",
     "frame": "DamageResolution",
     "source": "src/rules.rl",
-    "line": 444,
+    "line": 430,
     "game_copies": 1,
-    "native_bytes": 5160,
+    "native_bytes": 5224,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.resolve_damage_jobs",
     "nested_reentry": false,
     "calls": [
       "AttackDiceBatch",
       "OnModelDestroyed",
+      "OrksBeforeDestruction",
       "RollStat",
       "SourceEventResolution",
       "WoundPrevention"
@@ -255,9 +356,10 @@
     "function": "declare_model_weapons",
     "frame": "DeclareModelWeapons",
     "source": "src/rules.rl",
-    "line": 969,
+    "line": 939,
     "game_copies": 1,
     "native_bytes": 72,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -268,9 +370,10 @@
     "function": "declare_strategic_reserves",
     "frame": "DeclareStrategicReserves",
     "source": "src/rules.rl",
-    "line": 2895,
+    "line": 2657,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -279,9 +382,10 @@
     "function": "declare_transport_passengers",
     "frame": "DeclareTransportPassengers",
     "source": "src/rules.rl",
-    "line": 2871,
+    "line": 2633,
     "game_copies": 1,
     "native_bytes": 56,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -290,9 +394,10 @@
     "function": "declare_weapon_targets",
     "frame": "DeclareWeaponTargets",
     "source": "src/rules.rl",
-    "line": 1000,
+    "line": 970,
     "game_copies": 1,
     "native_bytes": 1176,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -301,9 +406,10 @@
     "function": "deploy",
     "frame": "Deployment",
     "source": "src/rules.rl",
-    "line": 2913,
+    "line": 2675,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -312,9 +418,10 @@
     "function": "desperate_escape",
     "frame": "DesperateEscapeTest",
     "source": "src/rules.rl",
-    "line": 2408,
+    "line": 2258,
     "game_copies": 1,
     "native_bytes": 168,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.desperate_escape",
     "nested_reentry": false,
     "calls": [
@@ -326,9 +433,10 @@
     "function": "disembark",
     "frame": "Disembark",
     "source": "src/rules.rl",
-    "line": 2603,
+    "line": 2408,
     "game_copies": 1,
     "native_bytes": 880,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.disembark",
     "nested_reentry": false,
     "calls": [
@@ -340,9 +448,10 @@
     "function": "resolve_explosives",
     "frame": "Explosives",
     "source": "src/rules.rl",
-    "line": 1502,
+    "line": 1462,
     "game_copies": 1,
     "native_bytes": 64,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -353,9 +462,10 @@
     "function": "fight_phase",
     "frame": "FightPhase",
     "source": "src/rules.rl",
-    "line": 2260,
+    "line": 2120,
     "game_copies": 1,
     "native_bytes": 40,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -367,9 +477,10 @@
     "function": "fight_step",
     "frame": "FightStep",
     "source": "src/rules.rl",
-    "line": 2190,
+    "line": 2050,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -382,7 +493,8 @@
     "source": "src/full_game.rl",
     "line": 6,
     "game_copies": 1,
-    "native_bytes": 33344,
+    "native_bytes": 33800,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -394,9 +506,10 @@
     "function": "gather_attack_group",
     "frame": "GatherAttackGroup",
     "source": "src/rules.rl",
-    "line": 1176,
+    "line": 1145,
     "game_copies": 1,
     "native_bytes": 2112,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -410,6 +523,7 @@
     "line": 14,
     "game_copies": 1,
     "native_bytes": 104,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.granted_move",
     "nested_reentry": false,
     "calls": [
@@ -420,9 +534,10 @@
     "function": "resolve_attack_dice",
     "frame": "GroupAttackDice",
     "source": "src/rules.rl",
-    "line": 278,
+    "line": 264,
     "game_copies": 1,
     "native_bytes": 408,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -435,9 +550,10 @@
     "function": "resolve_hazards",
     "frame": "HazardRolls",
     "source": "src/rules.rl",
-    "line": 768,
+    "line": 738,
     "game_copies": 1,
     "native_bytes": 96,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.resolve_hazards",
     "nested_reentry": false,
     "calls": [
@@ -449,9 +565,10 @@
     "function": "melee_move",
     "frame": "MeleeMove",
     "source": "src/rules.rl",
-    "line": 2044,
+    "line": 1904,
     "game_copies": 1,
     "native_bytes": 1784,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.melee_move",
     "nested_reentry": false,
     "calls": [
@@ -462,9 +579,10 @@
     "function": "melee_move_step",
     "frame": "MeleeMoveStep",
     "source": "src/rules.rl",
-    "line": 2226,
+    "line": 2086,
     "game_copies": 1,
     "native_bytes": 64,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.melee_move_step",
     "nested_reentry": false,
     "calls": [
@@ -479,6 +597,7 @@
     "line": 107,
     "game_copies": 1,
     "native_bytes": 2752,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.return_model",
     "nested_reentry": false,
     "calls": []
@@ -487,9 +606,10 @@
     "function": "resolve_mortal_wounds",
     "frame": "MortalWounds",
     "source": "src/rules.rl",
-    "line": 663,
+    "line": 633,
     "game_copies": 1,
     "native_bytes": 72,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.resolve_mortal_wounds",
     "nested_reentry": false,
     "calls": [
@@ -500,9 +620,10 @@
     "function": "move",
     "frame": "Move",
     "source": "src/rules.rl",
-    "line": 1941,
+    "line": 1801,
     "game_copies": 1,
     "native_bytes": 1592,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.move",
     "nested_reentry": false,
     "calls": [
@@ -513,25 +634,24 @@
     "function": "movement",
     "frame": "Movement",
     "source": "src/rules.rl",
-    "line": 2440,
+    "line": 2290,
     "game_copies": 1,
-    "native_bytes": 424,
+    "native_bytes": 552,
+    "single_step_alternative": true,
     "storage": "Board.shared_actions.movement",
     "nested_reentry": false,
     "calls": [
       "BattleShockTest",
+      "CoreMoveKindChoice",
       "DesperateEscapeTest",
-      "GrantedMove",
       "Move",
-      "OrksEnemyMoveReaction",
+      "OrksAfterMove",
       "OrksFallbackSelection",
       "OrksMoveMode",
       "OrksMoveSelection",
       "OrksMovementAbilities",
-      "OrksTrukkReactions",
-      "OrksWagonMoveEnd",
+      "OrksSpecialMoveChoice",
       "PostMoveEmbark",
-      "RerollableDice",
       "RollStat"
     ]
   },
@@ -539,34 +659,29 @@
     "function": "movement_phase",
     "frame": "MovementPhase",
     "source": "src/rules.rl",
-    "line": 2661,
+    "line": 2466,
     "game_copies": 1,
-    "native_bytes": 256,
+    "native_bytes": 288,
+    "single_step_alternative": true,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
-      "Disembark",
-      "Movement",
-      "OrksDatasheetMovement",
-      "OrksOffboardDreadPower",
-      "OrksOffboardSupportSelection",
-      "OrksPhaseSupport"
+      "CoreMovementPhaseChoice",
+      "OrksMovementPhaseChoice"
     ]
   },
   {
     "function": "resolve_movement_sources",
     "frame": "MovementSourceResolution",
     "source": "src/rules.rl",
-    "line": 1871,
+    "line": 1775,
     "game_copies": 1,
-    "native_bytes": 1264,
+    "native_bytes": 1288,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.resolve_movement_sources",
     "nested_reentry": false,
     "calls": [
-      "HazardRolls",
-      "MortalWounds",
-      "OrksVehicleRepair",
-      "RollStat"
+      "OrksMovementSource"
     ]
   },
   {
@@ -576,6 +691,7 @@
     "line": 606,
     "game_copies": 1,
     "native_bytes": 552,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -584,9 +700,10 @@
     "function": "neural_disruption",
     "frame": "NeuralDisruption",
     "source": "src/rules.rl",
-    "line": 1831,
+    "line": 1735,
     "game_copies": 1,
     "native_bytes": 56,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.neural_disruption",
     "nested_reentry": false,
     "calls": [
@@ -597,31 +714,66 @@
     "function": "on_model_destroyed",
     "frame": "OnModelDestroyed",
     "source": "src/rules.rl",
-    "line": 794,
+    "line": 764,
     "game_copies": 1,
     "native_bytes": 40,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.on_model_destroyed",
     "nested_reentry": false,
     "calls": []
   },
   {
+    "function": "orks_after_move",
+    "frame": "OrksAfterMove",
+    "source": "src/factions/orks/movement.rl",
+    "line": 727,
+    "game_copies": 1,
+    "native_bytes": 336,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "GrantedMove",
+      "OrksEnemyMoveReaction",
+      "OrksTrukkReactions",
+      "OrksWagonMoveEnd"
+    ]
+  },
+  {
     "function": "orks_attack_selection",
     "frame": "OrksAttackSelection",
     "source": "src/factions/orks/combat.rl",
-    "line": 1027,
+    "line": 1019,
     "game_copies": 1,
     "native_bytes": 72,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
   },
   {
+    "function": "orks_attack_selection_options",
+    "frame": "OrksAttackSelectionOptions",
+    "source": "src/factions/orks/combat.rl",
+    "line": 1382,
+    "game_copies": 1,
+    "native_bytes": 144,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "OrksAttackSelection",
+      "OrksDatasheetSelection"
+    ]
+  },
+  {
     "function": "orks_attack_targeted",
     "frame": "OrksAttackTargeted",
     "source": "src/factions/orks/combat.rl",
-    "line": 1116,
+    "line": 1108,
     "game_copies": 1,
     "native_bytes": 64,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -633,6 +785,7 @@
     "line": 156,
     "game_copies": 1,
     "native_bytes": 72,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -646,12 +799,40 @@
     "line": 7,
     "game_copies": 1,
     "native_bytes": 72,
-    "storage": "Board.shared_actions.orks_became_shocked",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.faction_became_shocked",
     "nested_reentry": false,
     "calls": [
       "MortalWounds",
       "OrksRuntherdShock",
       "RollStat"
+    ]
+  },
+  {
+    "function": "orks_before_destruction",
+    "frame": "OrksBeforeDestruction",
+    "source": "src/factions/orks/combat.rl",
+    "line": 1324,
+    "game_copies": 1,
+    "native_bytes": 88,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
+    "function": "orks_charge_choice",
+    "frame": "OrksChargeChoice",
+    "source": "src/factions/orks/combat.rl",
+    "line": 1365,
+    "game_copies": 1,
+    "native_bytes": 80,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "OrksKrushinImpetus",
+      "OrksMobbed"
     ]
   },
   {
@@ -661,6 +842,7 @@
     "line": 280,
     "game_copies": 1,
     "native_bytes": 1016,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -672,9 +854,10 @@
     "function": "orks_datasheet_fight_selection",
     "frame": "OrksDatasheetFightSelection",
     "source": "src/factions/orks/combat.rl",
-    "line": 723,
+    "line": 715,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -688,6 +871,7 @@
     "line": 375,
     "game_copies": 1,
     "native_bytes": 120,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -698,9 +882,10 @@
     "function": "orks_datasheet_selection",
     "frame": "OrksDatasheetSelection",
     "source": "src/factions/orks/combat.rl",
-    "line": 788,
+    "line": 780,
     "game_copies": 1,
     "native_bytes": 48,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -711,14 +896,29 @@
     "function": "orks_datasheet_window",
     "frame": "OrksDatasheetWindow",
     "source": "src/factions/orks/sources.rl",
-    "line": 166,
+    "line": 123,
     "game_copies": 1,
     "native_bytes": 592,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
       "MortalWounds",
       "RollStat"
+    ]
+  },
+  {
+    "function": "orks_declarations_complete",
+    "frame": "OrksDeclarationsComplete",
+    "source": "src/factions/orks/combat.rl",
+    "line": 1356,
+    "game_copies": 1,
+    "native_bytes": 104,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "OrksUnpredictableGenius"
     ]
   },
   {
@@ -728,6 +928,7 @@
     "line": 183,
     "game_copies": 1,
     "native_bytes": 80,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -738,10 +939,11 @@
     "function": "orks_dreadherder_shooting",
     "frame": "OrksDreadherderShooting",
     "source": "src/factions/orks/combat.rl",
-    "line": 539,
+    "line": 531,
     "game_copies": 1,
     "native_bytes": 504,
-    "storage": "Board.shared_actions.orks_dreadherder_shooting",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.faction_shooting_support",
     "nested_reentry": false,
     "calls": []
   },
@@ -752,6 +954,7 @@
     "line": 124,
     "game_copies": 1,
     "native_bytes": 80,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.select_orks_enemy_move_reaction",
     "nested_reentry": false,
     "calls": []
@@ -763,7 +966,8 @@
     "line": 574,
     "game_copies": 1,
     "native_bytes": 32,
-    "storage": "Board.shared_actions.orks_fallback_selection",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.faction_fallback_selection",
     "nested_reentry": false,
     "calls": []
   },
@@ -771,9 +975,10 @@
     "function": "orks_resolve_hit_effects",
     "frame": "OrksHitEffects",
     "source": "src/factions/orks/combat.rl",
-    "line": 691,
+    "line": 683,
     "game_copies": 1,
     "native_bytes": 40,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -782,10 +987,11 @@
     "function": "intercept_orks_hits",
     "frame": "OrksHitInterception",
     "source": "src/factions/orks/combat.rl",
-    "line": 1179,
+    "line": 1171,
     "game_copies": 1,
     "native_bytes": 48,
-    "storage": "Board.shared_actions.intercept_orks_hits",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.intercept_faction_hits",
     "nested_reentry": false,
     "calls": [
       "MortalWounds"
@@ -798,6 +1004,7 @@
     "line": 246,
     "game_copies": 1,
     "native_bytes": 1224,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -809,6 +1016,7 @@
     "line": 460,
     "game_copies": 1,
     "native_bytes": 48,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -817,9 +1025,10 @@
     "function": "orks_krushin_impetus",
     "frame": "OrksKrushinImpetus",
     "source": "src/factions/orks/combat.rl",
-    "line": 1248,
+    "line": 1240,
     "game_copies": 1,
     "native_bytes": 56,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -833,6 +1042,7 @@
     "line": 53,
     "game_copies": 1,
     "native_bytes": 16,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -846,11 +1056,24 @@
     "line": 151,
     "game_copies": 1,
     "native_bytes": 80,
-    "storage": "Board.shared_actions.resolve_orks_mobbed",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.faction_after_charge_shock",
     "nested_reentry": false,
     "calls": [
       "BattleShockTest"
     ]
+  },
+  {
+    "function": "orks_modify_advance_roll",
+    "frame": "OrksModifyAdvanceRoll",
+    "source": "src/factions/orks/movement.rl",
+    "line": 716,
+    "game_copies": 1,
+    "native_bytes": 16,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
   },
   {
     "function": "orks_move_mode",
@@ -859,7 +1082,8 @@
     "line": 548,
     "game_copies": 1,
     "native_bytes": 24,
-    "storage": "Board.shared_actions.orks_move_mode",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.faction_move_mode",
     "nested_reentry": false,
     "calls": []
   },
@@ -870,7 +1094,8 @@
     "line": 527,
     "game_copies": 1,
     "native_bytes": 40,
-    "storage": "Board.shared_actions.orks_move_selection",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.faction_move_selection",
     "nested_reentry": false,
     "calls": []
   },
@@ -881,10 +1106,45 @@
     "line": 90,
     "game_copies": 1,
     "native_bytes": 16,
-    "storage": "Board.shared_actions.orks_movement_abilities",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.faction_movement_abilities",
     "nested_reentry": false,
     "calls": [
       "OrksPsychic"
+    ]
+  },
+  {
+    "function": "orks_movement_phase_choice",
+    "frame": "OrksMovementPhaseChoice",
+    "source": "src/factions/orks/movement.rl",
+    "line": 743,
+    "game_copies": 1,
+    "native_bytes": 208,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "OrksDatasheetMovement",
+      "OrksOffboardDreadPower",
+      "OrksOffboardSupportSelection",
+      "OrksPhaseSupport"
+    ]
+  },
+  {
+    "function": "orks_resolve_movement_source",
+    "frame": "OrksMovementSource",
+    "source": "src/factions/orks/movement.rl",
+    "line": 649,
+    "game_copies": 1,
+    "native_bytes": 1152,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "HazardRolls",
+      "MortalWounds",
+      "OrksVehicleRepair",
+      "RollStat"
     ]
   },
   {
@@ -894,6 +1154,7 @@
     "line": 185,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -905,6 +1166,7 @@
     "line": 144,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.choose_orks_offboard_support",
     "nested_reentry": false,
     "calls": [
@@ -918,6 +1180,7 @@
     "line": 116,
     "game_copies": 1,
     "native_bytes": 72,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.orks_package_window",
     "nested_reentry": false,
     "calls": [
@@ -935,6 +1198,7 @@
     "line": 162,
     "game_copies": 1,
     "native_bytes": 24,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -946,9 +1210,10 @@
     "function": "resolve_orks_post_attack",
     "frame": "OrksPostAttack",
     "source": "src/factions/orks/combat.rl",
-    "line": 323,
+    "line": 324,
     "game_copies": 1,
     "native_bytes": 88,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.resolve_orks_post_attack",
     "nested_reentry": false,
     "calls": [
@@ -957,12 +1222,25 @@
     ]
   },
   {
+    "function": "orks_prepare_advance",
+    "frame": "OrksPrepareAdvance",
+    "source": "src/factions/orks/movement.rl",
+    "line": 710,
+    "game_copies": 1,
+    "native_bytes": 16,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
     "function": "use_orks_psychic",
     "frame": "OrksPsychic",
     "source": "src/factions/orks/psychic.rl",
     "line": 79,
     "game_copies": 1,
     "native_bytes": 80,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.use_orks_psychic",
     "nested_reentry": false,
     "calls": [
@@ -977,6 +1255,7 @@
     "line": 62,
     "game_copies": 1,
     "native_bytes": 48,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.orks_psychic_test",
     "nested_reentry": false,
     "calls": [
@@ -988,9 +1267,10 @@
     "function": "orks_pulsa_selection",
     "frame": "OrksPulsaSelection",
     "source": "src/factions/orks/combat.rl",
-    "line": 1292,
+    "line": 1284,
     "game_copies": 1,
     "native_bytes": 24,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -999,9 +1279,10 @@
     "function": "orks_rokkit_barrage",
     "frame": "OrksRokkitBarrage",
     "source": "src/factions/orks/combat.rl",
-    "line": 1316,
+    "line": 1308,
     "game_copies": 1,
     "native_bytes": 40,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1012,9 +1293,10 @@
     "function": "orks_rokkit_selection",
     "frame": "OrksRokkitSelection",
     "source": "src/factions/orks/combat.rl",
-    "line": 805,
+    "line": 797,
     "game_copies": 1,
     "native_bytes": 24,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -1026,6 +1308,7 @@
     "line": 102,
     "game_copies": 1,
     "native_bytes": 568,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.orks_runtherd_shock",
     "nested_reentry": false,
     "calls": [
@@ -1037,9 +1320,10 @@
     "function": "orks_shokka_selection",
     "frame": "OrksShokkaSelection",
     "source": "src/factions/orks/combat.rl",
-    "line": 459,
+    "line": 451,
     "game_copies": 1,
     "native_bytes": 40,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -1048,9 +1332,10 @@
     "function": "orks_shooting_option_end",
     "frame": "OrksShootingOptionEnd",
     "source": "src/factions/orks/combat.rl",
-    "line": 491,
+    "line": 483,
     "game_copies": 1,
     "native_bytes": 120,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1059,12 +1344,39 @@
     ]
   },
   {
+    "function": "orks_shooting_phase_choice",
+    "frame": "OrksShootingPhaseChoice",
+    "source": "src/factions/orks/combat.rl",
+    "line": 1347,
+    "game_copies": 1,
+    "native_bytes": 24,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "OrksDreadherderShooting"
+    ]
+  },
+  {
+    "function": "orks_special_move_choice",
+    "frame": "OrksSpecialMoveChoice",
+    "source": "src/factions/orks/movement.rl",
+    "line": 698,
+    "game_copies": 1,
+    "native_bytes": 40,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": []
+  },
+  {
     "function": "use_orks_support_card",
     "frame": "OrksSupportCard",
     "source": "src/factions/orks/stratagems.rl",
     "line": 43,
     "game_copies": 1,
     "native_bytes": 80,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.use_orks_support_card",
     "nested_reentry": false,
     "calls": [
@@ -1078,6 +1390,7 @@
     "line": 139,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.resolve_orks_surly",
     "nested_reentry": false,
     "calls": [
@@ -1091,10 +1404,41 @@
     "line": 146,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.return_orks_surly",
     "nested_reentry": false,
     "calls": [
       "ModelReturn"
+    ]
+  },
+  {
+    "function": "orks_timing_choice",
+    "frame": "OrksTimingChoice",
+    "source": "src/factions/orks/sources.rl",
+    "line": 409,
+    "game_copies": 1,
+    "native_bytes": 40,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "OrksOffboardSupportSelection",
+      "OrksPackageWindow"
+    ]
+  },
+  {
+    "function": "orks_resolve_timing_source",
+    "frame": "OrksTimingSource",
+    "source": "src/factions/orks/sources.rl",
+    "line": 390,
+    "game_copies": 1,
+    "native_bytes": 2104,
+    "single_step_alternative": false,
+    "storage": "single parent/root",
+    "nested_reentry": false,
+    "calls": [
+      "OrksCommandHealing",
+      "OrksDatasheetWindow"
     ]
   },
   {
@@ -1104,6 +1448,7 @@
     "line": 164,
     "game_copies": 1,
     "native_bytes": 296,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1114,9 +1459,10 @@
     "function": "orks_unpredictable_genius",
     "frame": "OrksUnpredictableGenius",
     "source": "src/factions/orks/combat.rl",
-    "line": 424,
+    "line": 416,
     "game_copies": 1,
     "native_bytes": 64,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1131,6 +1477,7 @@
     "line": 230,
     "game_copies": 1,
     "native_bytes": 1008,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1144,7 +1491,8 @@
     "line": 181,
     "game_copies": 1,
     "native_bytes": 64,
-    "storage": "Board.shared_actions.orks_wagon_charge_end",
+    "single_step_alternative": false,
+    "storage": "Board.shared_actions.faction_charge_finished",
     "nested_reentry": false,
     "calls": [
       "BattleShockTest"
@@ -1157,6 +1505,7 @@
     "line": 170,
     "game_copies": 1,
     "native_bytes": 16,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.orks_wagon_move_end",
     "nested_reentry": false,
     "calls": []
@@ -1165,9 +1514,10 @@
     "function": "cleanup_phase_retained",
     "frame": "PhaseRetainedCleanup",
     "source": "src/rules.rl",
-    "line": 2033,
+    "line": 1893,
     "game_copies": 1,
     "native_bytes": 104,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1178,10 +1528,11 @@
   {
     "function": "pick_army",
     "frame": "PickFaction",
-    "source": "src/rules.rl",
-    "line": 3054,
+    "source": "src/factions/dispatch_setup.rl",
+    "line": 37,
     "game_copies": 1,
     "native_bytes": 584,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.pick_army",
     "nested_reentry": false,
     "calls": [
@@ -1195,9 +1546,10 @@
     "function": "post_move_embark",
     "frame": "PostMoveEmbark",
     "source": "src/rules.rl",
-    "line": 2583,
+    "line": 2388,
     "game_copies": 1,
     "native_bytes": 48,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.post_move_embark",
     "nested_reentry": false,
     "calls": []
@@ -1206,9 +1558,10 @@
     "function": "prepare_target_weapon_abilities",
     "frame": "PrepareTargetWeaponAbilities",
     "source": "src/rules.rl",
-    "line": 1199,
+    "line": 1168,
     "game_copies": 1,
     "native_bytes": 520,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1219,9 +1572,10 @@
     "function": "regain_coherency",
     "frame": "RegainCoherency",
     "source": "src/rules.rl",
-    "line": 1462,
+    "line": 1422,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.regain_coherency",
     "nested_reentry": false,
     "calls": []
@@ -1230,9 +1584,10 @@
     "function": "rerollable_dice_roll",
     "frame": "RerollableDice",
     "source": "src/rules.rl",
-    "line": 207,
+    "line": 193,
     "game_copies": 1,
     "native_bytes": 48,
+    "single_step_alternative": false,
     "storage": "Board.current_roll",
     "nested_reentry": false,
     "calls": []
@@ -1241,9 +1596,10 @@
     "function": "rerollable_pair_dices_roll",
     "frame": "RerollableDicePair",
     "source": "src/rules.rl",
-    "line": 178,
+    "line": 164,
     "game_copies": 1,
     "native_bytes": 56,
+    "single_step_alternative": false,
     "storage": "Board.current_pair_roll",
     "nested_reentry": false,
     "calls": []
@@ -1252,9 +1608,10 @@
     "function": "resolve_scouts",
     "frame": "ResolveScouts",
     "source": "src/rules.rl",
-    "line": 2946,
+    "line": 2708,
     "game_copies": 1,
     "native_bytes": 64,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1265,9 +1622,10 @@
     "function": "revalidate_attack_targets",
     "frame": "RevalidateAttackTargets",
     "source": "src/rules.rl",
-    "line": 1038,
+    "line": 1008,
     "game_copies": 1,
     "native_bytes": 56,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.revalidate_attack_targets",
     "nested_reentry": false,
     "calls": []
@@ -1276,9 +1634,10 @@
     "function": "evaluate_random_stat",
     "frame": "RollStat",
     "source": "src/rules.rl",
-    "line": 88,
+    "line": 74,
     "game_copies": 1,
     "native_bytes": 80,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.evaluate_random_stat",
     "nested_reentry": false,
     "calls": []
@@ -1287,9 +1646,10 @@
     "function": "round",
     "frame": "Round",
     "source": "src/rules.rl",
-    "line": 2823,
+    "line": 2585,
     "game_copies": 1,
-    "native_bytes": 704,
+    "native_bytes": 768,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1304,6 +1664,7 @@
     "line": 116,
     "game_copies": 1,
     "native_bytes": 1240,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1317,6 +1678,7 @@
     "line": 928,
     "game_copies": 1,
     "native_bytes": 16,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.select_orks_detachments",
     "nested_reentry": false,
     "calls": []
@@ -1328,6 +1690,7 @@
     "line": 196,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.select_orks_options",
     "nested_reentry": false,
     "calls": []
@@ -1339,6 +1702,7 @@
     "line": 858,
     "game_copies": 1,
     "native_bytes": 40,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.select_orks_warlord",
     "nested_reentry": false,
     "calls": []
@@ -1347,9 +1711,10 @@
     "function": "selected_fight",
     "frame": "SelectedFight",
     "source": "src/rules.rl",
-    "line": 2154,
+    "line": 2014,
     "game_copies": 1,
     "native_bytes": 88,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.selected_fight",
     "nested_reentry": false,
     "calls": [
@@ -1363,9 +1728,10 @@
     "function": "selected_shooting",
     "frame": "SelectedShooting",
     "source": "src/rules.rl",
-    "line": 2712,
+    "line": 2485,
     "game_copies": 1,
     "native_bytes": 24,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.selected_shooting",
     "nested_reentry": false,
     "calls": [
@@ -1377,9 +1743,10 @@
     "function": "shadow_in_the_warp",
     "frame": "ShadowInTheWarp",
     "source": "src/rules.rl",
-    "line": 1812,
+    "line": 1716,
     "game_copies": 1,
     "native_bytes": 24,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.shadow_in_the_warp",
     "nested_reentry": false,
     "calls": [
@@ -1390,24 +1757,25 @@
     "function": "shooting_phase",
     "frame": "ShootingPhase",
     "source": "src/rules.rl",
-    "line": 2724,
+    "line": 2497,
     "game_copies": 1,
-    "native_bytes": 112,
+    "native_bytes": 144,
+    "single_step_alternative": true,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
-      "Explosives",
-      "OrksDreadherderShooting",
-      "SelectedShooting"
+      "CoreShootingPhaseChoice",
+      "OrksShootingPhaseChoice"
     ]
   },
   {
     "function": "single_attack",
     "frame": "SingleAttack",
     "source": "src/rules.rl",
-    "line": 785,
+    "line": 755,
     "game_copies": 0,
     "native_bytes": 832,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1419,9 +1787,10 @@
     "function": "resolve_source_event",
     "frame": "SourceEventResolution",
     "source": "src/rules.rl",
-    "line": 43,
+    "line": 29,
     "game_copies": 1,
     "native_bytes": 136,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.resolve_source_event",
     "nested_reentry": false,
     "calls": []
@@ -1430,9 +1799,10 @@
     "function": "timing_heroic_intervention",
     "frame": "TimingHeroicIntervention",
     "source": "src/rules.rl",
-    "line": 1582,
+    "line": 1542,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.timing_heroic_intervention",
     "nested_reentry": false,
     "calls": [
@@ -1443,9 +1813,10 @@
     "function": "timing_oath_of_moment",
     "frame": "TimingOathOfMoment",
     "source": "src/rules.rl",
-    "line": 1597,
+    "line": 1557,
     "game_copies": 1,
     "native_bytes": 16,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.timing_oath_of_moment",
     "nested_reentry": false,
     "calls": []
@@ -1454,9 +1825,10 @@
     "function": "timing_objective_stratagem",
     "frame": "TimingObjectiveStratagem",
     "source": "src/rules.rl",
-    "line": 1611,
+    "line": 1571,
     "game_copies": 1,
     "native_bytes": 24,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.timing_objective_stratagem",
     "nested_reentry": false,
     "calls": []
@@ -1465,9 +1837,10 @@
     "function": "timing_overwatch",
     "frame": "TimingOverwatch",
     "source": "src/rules.rl",
-    "line": 1571,
+    "line": 1531,
     "game_copies": 1,
     "native_bytes": 32,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.timing_overwatch",
     "nested_reentry": false,
     "calls": [
@@ -1478,9 +1851,10 @@
     "function": "timing_rapid_ingress",
     "frame": "TimingRapidIngress",
     "source": "src/rules.rl",
-    "line": 1481,
+    "line": 1441,
     "game_copies": 1,
     "native_bytes": 24,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.timing_rapid_ingress",
     "nested_reentry": false,
     "calls": []
@@ -1489,9 +1863,10 @@
     "function": "timing_smokescreen",
     "frame": "TimingSmokescreen",
     "source": "src/rules.rl",
-    "line": 1492,
+    "line": 1452,
     "game_copies": 1,
     "native_bytes": 16,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.timing_smokescreen",
     "nested_reentry": false,
     "calls": []
@@ -1500,34 +1875,25 @@
     "function": "resolve_timing_window",
     "frame": "TimingWindowResolution",
     "source": "src/rules.rl",
-    "line": 1635,
+    "line": 1595,
     "game_copies": 1,
-    "native_bytes": 2256,
+    "native_bytes": 2328,
+    "single_step_alternative": true,
     "storage": "Board.shared_actions.resolve_timing_window",
     "nested_reentry": false,
     "calls": [
-      "NeuralDisruption",
-      "OrksCommandHealing",
-      "OrksDatasheetWindow",
-      "OrksOffboardSupportSelection",
-      "OrksPackageWindow",
-      "RegainCoherency",
-      "ShadowInTheWarp",
-      "TimingHeroicIntervention",
-      "TimingOathOfMoment",
-      "TimingObjectiveStratagem",
-      "TimingOverwatch",
-      "TimingRapidIngress",
-      "TimingSmokescreen"
+      "CoreTimingChoice",
+      "OrksTimingChoice"
     ]
   },
   {
     "function": "turn",
     "frame": "Turn",
     "source": "src/rules.rl",
-    "line": 2752,
+    "line": 2514,
     "game_copies": 1,
-    "native_bytes": 696,
+    "native_bytes": 760,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1547,6 +1913,7 @@
     "line": 136,
     "game_copies": 1,
     "native_bytes": 48,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.heal_unit",
     "nested_reentry": false,
     "calls": [
@@ -1557,9 +1924,10 @@
     "function": "use_attack_stratagems",
     "frame": "UseAttackStratagems",
     "source": "src/rules.rl",
-    "line": 858,
+    "line": 828,
     "game_copies": 1,
     "native_bytes": 72,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1573,9 +1941,10 @@
     "function": "gather_weapon_count",
     "frame": "WeaponAttackCount",
     "source": "src/rules.rl",
-    "line": 1159,
+    "line": 1128,
     "game_copies": 1,
     "native_bytes": 1176,
+    "single_step_alternative": false,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1586,9 +1955,10 @@
     "function": "evaluate_weapon_characteristic",
     "frame": "WeaponStatRoll",
     "source": "src/rules.rl",
-    "line": 122,
+    "line": 108,
     "game_copies": 1,
     "native_bytes": 136,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.evaluate_weapon_characteristic",
     "nested_reentry": false,
     "calls": [
@@ -1599,9 +1969,10 @@
     "function": "prevent_wound_loss",
     "frame": "WoundPrevention",
     "source": "src/rules.rl",
-    "line": 421,
+    "line": 407,
     "game_copies": 1,
     "native_bytes": 64,
+    "single_step_alternative": false,
     "storage": "Board.shared_actions.prevent_wound_loss",
     "nested_reentry": false,
     "calls": []

@@ -1,6 +1,7 @@
 import board
 
-# Source-owned policies extracted from shared mechanics. No core sequencing.
+# Bearer/army properties and source-card permissions consumed through neutral
+# faction contracts. Shared arithmetic and sequencing remain in core.
 
 # Orks active keywords, Blastajet Smoke suppression and Painboss bearer-only Mounted (respective cards; core p67).
 fun orks_keyword_override(Model model, Keyword keyword) -> Int:
@@ -47,7 +48,7 @@ fun orks_invulnerable_base(Model model) -> Int:
     let base = model.profile.invuln_save()
     if model.blastajet_force_field:
         base = min(base, 5)
-    if model.is_riled_up():
+    if is_riled_up(model):
         base = min(base, 5)
     for effect in range(model.orks_effects.size()):
         if model.orks_effects[effect].kind.value == OrksEffectKind::invulnerable_four.value:
@@ -78,10 +79,6 @@ fun orks_passenger_permitted(Model carrier, Model passenger) -> Bool:
         return false
     return true
 
-# Assault Disembark and Gut Hatch grant specific post-move charge permission (Orks transport cards).
-fun orks_assault_disembark(Board board, Unit carrier_unit) -> Bool:
-    return unit_orks_effect(board, carrier_unit, OrksEffectKind::assault_disembark) > 0 or carrier_unit.has_ability(AbilityKind::gut_hatch) and carrier_unit.history.move_kind == MovementKind::normal
-
 # Burna Mark prevents Hidden (Orks/Burna-Bommer).
 fun orks_hidden_allowed(Board board, Unit unit) -> Bool:
     return unit_orks_effect(board, unit, OrksEffectKind::burna_mark) == 0
@@ -102,27 +99,6 @@ fun orks_action_allowed(Board board, Unit unit) -> Bool:
 fun orks_flight_allowed(Board board, Unit unit) -> Bool:
     return unit_orks_effect(board, unit, OrksEffectKind::grounded) == 0
 
-# Minefield Detail supplies Scouts6; all combined printed Scouts values must match (Orks/Taktikal Brigade; user ruling).
-fun orks_scouts_override(Unit unit) -> Int:
-    if unit_has_orks_enhancement(unit, OrksEnhancement::minefield_detail) and unit.embarked_transport.value == 0:
-        for member in range(unit.models.size()):
-            for entry in range(unit[member].scout_distances.size()):
-                assert(unit[member].scout_distances[entry].value == 6, "Scouts values must all be identical")
-        return 6
-    return -1
-
-# Completed Pulse Jet installs its source-owned charge/action/defence effects (Orks Pulse Jet Move).
-fun orks_record_move_effects(Board board, UnitID id, MovementKind kind):
-    if kind == MovementKind::pulse_jet:
-        board[id].can_charge = false
-        grant_orks_effect(board, id, id, 173, OrksEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
-        grant_orks_effect(board, id, id, 174, OrksEffectKind::no_action, 1, SourceDuration::turn, invalid_entity_identity())
-        grant_orks_effect(board, id, id, 175, OrksEffectKind::pulse_defence, 1, SourceDuration::next_own_turn, invalid_entity_identity())
-
-# Pulse Engine supplies Pulse Jet selection permission (Orks/Wazdakka).
-fun orks_special_move_available(Board board, Unit unit, MovementKind kind) -> Bool:
-    return kind == MovementKind::pulse_jet and unit_orks_effect(board, unit, OrksEffectKind::pulse_engine) > 0
-
 # Only selected Orks packages grant their support cards; unassociated core cards pass through (Orks detachment sections).
 fun orks_stratagem_selected(Board board, Bool player, Stratagem strat) -> Bool:
     let package = strat.orks_detachment()
@@ -135,23 +111,6 @@ fun orks_stratagem_target_allowed(Board board, Bool player, Stratagem strat, Uni
 # Orks support cards select friendly targets; generic core cards retain their own owner policy (Orks cards).
 fun orks_stratagem_owner_allowed(Stratagem strat, Unit target, Bool player) -> Bool:
     return strat.orks_detachment() == OrksDetachment::none or target.owned_by_player1 == player
-
-# Validate bounded Orks effects/enhancement handles on save load; infrastructure, not another tabletop restriction.
-fun orks_model_state_valid(Model model) -> Bool:
-    if model.orks_enhancement.value < 0 or model.orks_enhancement.value > OrksEnhancement::warphead.value or model.orks_upgrade_origin.value < 0 or model.orks_upgrade_origin.value >= MAX_IDENTITY_SEQUENCE:
-        return false
-    for ork_effect in range(model.orks_effects.size()):
-        ref grant = model.orks_effects[ork_effect]
-        if grant.kind.value <= 0 or grant.kind.value > max(grant.kind) or grant.source_effect.value < 0 or grant.source_effect.value >= MAX_SOURCE_EFFECT_KEY or grant.amount.value < 0 or grant.amount.value >= MAX_CHARACTERISTIC or grant.associated_unit.value < 0 or grant.associated_unit.value >= MAX_IDENTITY_SEQUENCE:
-            return false
-    for riled_index in range(model.riled_source_effects.size()):
-        if model.riled_source_effects[riled_index].value < 0 or model.riled_source_effects[riled_index].value >= MAX_SOURCE_EFFECT_KEY:
-            return false
-    return true
-
-# Validate bounded Orks psychic usage on save load; generic Psyker level validation remains core.
-fun orks_unit_state_valid(Unit unit) -> Bool:
-    return !(unit.orks_psychic_usage.budget.round_stamp.value < 0 or unit.orks_psychic_usage.budget.round_stamp.value >= MAX_ROUNDS or unit.orks_psychic_usage.budget.spent.value < 0 or unit.orks_psychic_usage.budget.spent.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.roar_phase.value < 0 or unit.orks_psychic_usage.roar_phase.value >= MAX_PHASE_STAMP or unit.orks_psychic_usage.visions_phase.value < 0 or unit.orks_psychic_usage.visions_phase.value >= MAX_PHASE_STAMP)
 
 # Orks army/detachment rule, formerly embedded in core (Waaagh!/Get Stuck In; core p78).
 fun append_riled_assault_rules(Model model, Weapon weapon, WeaponAbilitySet rules):
@@ -169,77 +128,6 @@ fun war_horde_melee_rule_applies(Board board, UnitID source, Weapon weapon) -> B
     ref unit = board[source]
     ref army = board.armies[int(unit.owned_by_player1)]
     return army.faction == ArmyFaction::orks and army.has_detachment(OrksDetachment::war_horde) and unit.has_keyword(Keyword::orks)
-
-# Orks typed/riled grants share generic source handles and expiry (Waaagh!/01.02.02).
-fun orks_install_source_grant(Model model, SourceGrant installed, SourceEffectKey key):
-    if installed is OrksEffectGrant:
-        installed.source_effect = key
-        model.orks_effects.append(installed)
-    if installed is RiledUpGrant:
-        model.riled_source_effects.append(key)
-
-# Remove only the matching Orks effect/riled key, including archived models (01.02.02; core p88).
-fun orks_remove_source_grant(Model model, SourceEffectKey key):
-    let effect_index = model.orks_effects.size()
-    while effect_index > 0:
-        effect_index = effect_index - 1
-        if model.orks_effects[effect_index].source_effect == key:
-            model.orks_effects.erase(effect_index)
-    let index = model.riled_source_effects.size()
-    while index > 0:
-        index = index - 1
-        if model.riled_source_effects[index] == key:
-            model.riled_source_effects.erase(index)
-
-# Validate faction typed source payloads before loading/dispatch; generic arithmetic validation stays core.
-fun orks_source_grant_valid(SourceGrant grant) -> Bool:
-    if grant is OrksEffectGrant:
-        return grant.kind.value > 0 and grant.kind.value <= max(grant.kind) and grant.amount.value >= 0 and grant.associated_unit.value >= 0
-    if grant is RiledUpGrant:
-        return grant.enabled
-    return false
-
-# Returned members inherit only missing faction-owned grant keys (core p88/01.02.02).
-fun orks_model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
-    let present = false
-    for orks_effect in range(model.orks_effects.size()):
-        present = present or model.orks_effects[orks_effect].source_effect == key
-    for riled_index in range(model.riled_source_effects.size()):
-        present = present or model.riled_source_effects[riled_index] == key
-    return present
-
-# Restored faction grants must refer to their real source recipients; preserve existing handle validation.
-fun orks_model_source_handles_valid(Board board, Model model) -> Bool:
-    let valid = true
-    for riled_index in range(model.riled_source_effects.size()):
-        valid = valid and source_handle_matches_model(board, model.riled_source_effects[riled_index], model.identity)
-    return valid
-
-# Surly return and Flyboyz aircraft destruction retain their pending casualty (Orks cards; core p87).
-fun orks_has_destruction_trigger(Board board, Model model) -> Bool:
-    return model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value or orks_aircraft_death_source(board, model)
-
-# Orks attack ledger records actual wounds lost before clamping, not rolled damage (Orks detachment triggers).
-fun orks_record_wound_loss(Board board, Unit unit, ModelID model, Int lost, Bool from_attack):
-    if lost > 0 and from_attack and board.orks_attack_active:
-        ref record = orks_attack_record(board, unit.identity)
-        add_attack_count(record.wounds_lost, min(lost, unit[model].wounds_left()))
-
-# Track Orks attack/phase kill provenance only after actual last-model destruction (Orks combat triggers).
-fun orks_record_unit_destruction(Board board, Unit unit):
-    if board.orks_attack_active and live_attachment_strength(unit) == 0:
-        ref destruction_record = orks_attack_record(board, unit.identity)
-        destruction_record.destroyed = true
-        unit.orks_destroyed_attack = board.orks_attack_serial
-        unit.orks_destroyed_phase = board.phase_serial.value + 1
-
-# Flyin Headbutt requires the Aircraft unit destruction event (Orks/Flyboyz).
-fun orks_unit_destruction_trigger(Board board, Unit unit, Model model) -> Bool:
-    return orks_package(board, unit, OrksDetachment::flyboyz) and model.has_keyword(Keyword::aircraft)
-
-# Surly return retains its source even in reserves/passengers; no offboard distance permission is introduced (Orks/Surly).
-fun orks_offboard_destruction_trigger(Model model) -> Bool:
-    return model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value
 
 # Only an attached Painboss may retain its bearer-specific Mounted conversion (Orks/Painboss).
 fun orks_attachment_origin_valid(Unit unit, Model model) -> Bool:
@@ -268,22 +156,6 @@ fun orks_component_has_army_rules(Unit unit, EntityIdentity component) -> Bool:
 fun orks_model_confers_army_rules(Model model) -> Bool:
     return model.has_waaagh or model.grants_unit_riled_up
 
-# Shokk-boosta permits model traversal without granting FLY or terrain traversal (Orks/Big-Mek).
-fun orks_prepare_movement_policy(Unit unit, MovementKind kind, MovementGeometryPolicy policy):
-    if kind == MovementKind::advance and unit.shokk_boosta_move:
-        policy.traverse_enemies = true
-        policy.exclude_titanic = false
-        policy.exclude_monster_vehicle = false
-
-# Pulse Jet traversal overrides remain separate from ordinary FLY/Walker costs (Orks Special Move Types).
-fun orks_finish_movement_policy(MovementKind kind, MovementGeometryPolicy policy):
-    if kind == MovementKind::pulse_jet:
-        policy.traverse_enemies = true
-        policy.traverse_terrain = true
-        policy.free_vertical_movement = true
-        policy.exclude_titanic = false
-        policy.exclude_monster_vehicle = false
-
 # Nazdreg Unit Composition explicitly permits the three simultaneous profiles.
 fun orks_simultaneous_weapon_profile(Weapon profile) -> Bool:
     return profile.value == Weapon::orks_nazdreg_kustom_blasta_x_gatler.value or profile.value == Weapon::orks_nazdreg_kustom_blasta_x_shoota.value or profile.value == Weapon::orks_nazdreg_kustom_blasta_x_skorcha.value
@@ -294,4 +166,83 @@ fun orks_nonattacking_equipment(Weapon profile) -> Bool:
 
 # Waaagh riled-up supplies ranged Assault; intrinsic rules remain core (Orks Army Rules).
 fun orks_model_has_weapon_rule(Model model, Weapon profile, WeaponRuleKind kind) -> Bool:
-    return kind == WeaponRuleKind::assault and profile.range() > 0 and model.is_riled_up()
+    return kind == WeaponRuleKind::assault and profile.range() > 0 and is_riled_up(model)
+
+# Orks mandatory/optional timing availability; core owns controller grouping (user Rules Sequencing).
+fun orks_timing_options_remaining(Board board, TimingWindow window, Bool player, FactionTimingProgress progress, Bool mandatory_only) -> Bool:
+    return orks_timing_rules_remaining(board, window, player, progress.orks_rules, mandatory_only) or orks_package_windows_remaining(board, player, window, mandatory_only) or (!mandatory_only and window == TimingWindow::fight_start and (orks_offboard_support_available(board, SourceBank::reserves, player, true) or orks_offboard_support_available(board, SourceBank::embarked, player, true)))
+
+# Per-controller Orks timing flags reset without exposing their count to core.
+fun orks_reset_timing_progress(FactionTimingProgress progress):
+    progress.orks_rules[0] = false
+    progress.orks_rules[1] = false
+
+# Da Button adds one Hazardous use after ordinary selected physical weapons (Orks/Dread Mob).
+fun orks_extra_attack_hazards(Board board, Unit unit) -> Int:
+    return int(unit_orks_effect(board, unit, OrksEffectKind::button_hazard) > 0)
+
+# Finish the Orks attack ledger only after attack-end source processing.
+fun orks_end_attack(Board board):
+    board.orks_attack_active = false
+
+# Automatic shock success is a source-owned permission, not a change to the core test (Orks cards).
+fun orks_automatic_shock_success(Board board, Unit unit) -> Bool:
+    return unit_orks_effect(board, unit, OrksEffectKind::automatic_shock_success) > 0
+
+# Snotling psychic penalty contributes before the common Leadership comparison (Orks psychic card).
+fun orks_leadership_roll_penalty(Board board, Unit unit) -> Int:
+    return unit_orks_effect(board, unit, OrksEffectKind::snotling_leadership_penalty)
+
+# Fuel Mixa Grot and source-owned Advance+2 contribute without replacing the shared roll (Orks cards).
+fun orks_advance_distance_bonus(Board board, Unit unit) -> Int:
+    return int(unit.has_ability(AbilityKind::fuel_mixa_grot)) + 2 * unit_orks_effect(board, unit, OrksEffectKind::advance_plus_two)
+
+# Selected Shokk-boosta permission ends at this move boundary (Orks/Big-Mek).
+fun orks_finish_move_selection(Board board, UnitID id):
+    board[id].shokk_boosta_move = false
+
+# Snapshot actual charge-end triggers after the completed move (Orks Mobbed/Krushin Impetus).
+fun orks_charge_progress(Board board, UnitID source) -> FactionChargeProgress:
+    let progress : FactionChargeProgress
+    progress.mobbed = board[source].has_ability(AbilityKind::mobbed)
+    progress.impetus = board[source].has_ability(AbilityKind::krushin_impetus)
+    return progress
+
+# Only unresolved Orks charge triggers remain; no core movement/charge rule is synthesized.
+fun orks_charge_effects_remaining(FactionChargeProgress progress) -> Bool:
+    return progress.mobbed or progress.impetus
+
+# Dodge Dis provides a separately selectable+1 hit contribution (Orks/Squighog-Boyz; core modifier rules).
+fun orks_innate_hit_bonus(Unit unit) -> Bool:
+    return unit.has_ability(AbilityKind::dodge_dis)
+
+# Brutal Impact contributes damage before other faction modifiers, preserving operation order (Orks/Squighog-Boyz).
+fun append_orks_intrinsic_modifiers(Board board, UnitID source, ModifiedCharacteristic kind, RuleModifiers result):
+    if kind.value == ModifiedCharacteristic::damage.value and board[source].has_charged and board[source].has_ability(AbilityKind::brutal_impact):
+        result.append(rule_modifier(ModifierOperation::add, 1))
+
+# Banner/Trophy Hunters add their distinct unit-wide charge contributions (Orks/Bannernob/Breaka-Boyz).
+fun orks_unit_charge_bonus(Unit unit) -> Int:
+    return int(unit.has_ability(AbilityKind::waaagh_banner)) + int(unit.has_ability(AbilityKind::trophy_hunters))
+
+# Get Out da Way permits charge traversal only; common final overlap/engagement checks remain mandatory (Orks/Nobz).
+fun orks_charge_traversal(Unit original, MovementGeometryPolicy policy):
+    if original.has_ability(AbilityKind::get_out_da_way) and !policy.traverse_enemies:
+        policy.traverse_enemies = true
+        policy.exclude_monster_vehicle = true
+
+# Never Too Busy waives only the engagement action gate (Orks/Boyz; core p58).
+fun orks_action_while_engaged(Unit unit) -> Bool:
+    return unit.has_ability(AbilityKind::never_too_busy_to_fight)
+
+# Only Orks select Orks detachments; finite catalog, duplicate and user maximum-three gates remain explicit (Orks index).
+fun orks_detachment_selection_valid(ArmyConfiguration army, OrksDetachment detachment) -> Bool:
+    return army.faction == ArmyFaction::orks and detachment.value > 0 and detachment.value <= OrksDetachment::taktikal_brigade.value and army.detachments.has_capacity() and !army.has_detachment(detachment)
+
+# Saved Orks detachments require the actual Orks army faction (roster integrity; core p8).
+fun orks_army_configuration_valid(ArmyConfiguration army) -> Bool:
+    return army.faction == ArmyFaction::orks or army.detachments.empty()
+
+# Orks riled status is source-owned; keep the existing public read query.
+fun is_riled_up(Model model) -> Bool:
+    return !model.riled_source_effects.empty()

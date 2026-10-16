@@ -644,3 +644,156 @@ fun commit_orks_keep_huntin(Board board, PendingSourceEvents pending, SourceEven
     commit_source_effect_to_unit(board, instance, pending[event.value].source.value, board[target].identity)
     board[target].battle_socked = false
     pending[event.value].resolved = true
+
+# Selected movement-source ability: Race/Keep Huntin/Bomb Squig/Mek/Shokk-boosta, with existing core damage/hazard procedures (Orks cards; pp24/87).
+act orks_resolve_movement_source(ctx Board board, ctx PendingSourceEvents pending, frm SourceEventID event, frm Bool player) -> OrksMovementSource:
+    frm source_index : SourceInstanceID
+    source_index = pending[event.value].source.value
+    if board.source_instances[source_index.value].rule.value == 147:
+        act choose_race_target(frm UnitID race_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], race_target)}
+        pending[event.value].resolved = true
+        commit_orks_race(board, board.source_instances[source_index.value], race_target)
+    else:
+        if board.source_instances[source_index.value].rule.value == ORKS_KEEP_HUNTIN_RULE or board.source_instances[source_index.value].rule.value == ORKS_INTIMIDATING_RULE:
+            act choose_keep_huntin_target(frm UnitID hunt_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], hunt_target)}
+            commit_orks_keep_huntin(board, pending, event, player, hunt_target)
+        else:
+            if board.source_instances[source_index.value].rule.value == ORKS_BOMB_SQUIG_RULE:
+                act choose_bomb_squig_target(frm UnitID bomb_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], bomb_target)}
+                commit_source_usage(board, board.source_instances[source_index.value])
+                pending[event.value].resolved = true
+                frm location = locate_source(board, board.source_instances[source_index.value].source_unit, invalid_entity_identity())
+                frm bomb_source : UnitID
+                bomb_source = location.unit.value
+                act roll(Dice bomb_result)
+                if bomb_result.value >= 3:
+                    board.shared_actions.evaluate_random_stat = evaluate_random_stat(dice_stat(3))
+                    subaction* board.shared_actions.evaluate_random_stat
+                    frm bomb_damage_result_snapshot_1 = board.shared_actions.evaluate_random_stat.result
+                    frm amount : CombatCounter
+                    amount = bomb_damage_result_snapshot_1.value
+                    board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, bomb_target, bomb_source, true, amount)
+                    subaction*(board) board.shared_actions.resolve_mortal_wounds
+            else:
+                if board.source_instances[source_index.value].rule.value == ORKS_MEK_REPAIR_RULE:
+                    pending[event.value].resolved = true
+                    subaction*(board) mek_repair = repair_orks_vehicle(board, board.source_instances[source_index.value])
+                else:
+                    if board.source_instances[source_index.value].rule.value == ORKS_SHOKK_BOOST_RULE:
+                        pending[event.value].resolved = true
+                        frm boost_location = locate_source(board, board.source_instances[source_index.value].source_unit, invalid_entity_identity())
+                        frm boosting_unit : UnitID
+                        boosting_unit = boost_location.unit.value
+                        frm boost_hazards : HazardousUses
+                        for member_index in range(board[boosting_unit].models.size()):
+                            if board[boosting_unit][member_index].is_alive():
+                                boost_hazards = boost_hazards + 1
+                        board.shared_actions.resolve_hazards = resolve_hazards(board, boosting_unit, boost_hazards)
+                        subaction*(board) board.shared_actions.resolve_hazards
+                    else:
+                        commit_pending_source(board, pending, event, player)
+        board.current_decision_maker = player
+
+# Pulse Jet selection and D6+18 budget are Orks special-move rules, offered alongside ordinary move modes (Orks index).
+act orks_special_move_choice(ctx Board board, frm UnitID id) -> OrksSpecialMoveChoice:
+    frm kind : MovementKind
+    frm extra : StatModifier
+    frm started = false
+    actions:
+        act pulse_jet_move() {battlefield_move_eligible(board, id, MovementKind::pulse_jet), orks_special_move_available(board, board[id], MovementKind::pulse_jet)}
+            started = true
+            kind = MovementKind::pulse_jet
+            act roll(Dice pulse_roll)
+            extra = pulse_roll.value + 18
+
+# Shokk-boosta is selected before the ordinary Advance roll (Orks/Big-Mek).
+act orks_prepare_advance(ctx Board board, frm UnitID id) -> OrksPrepareAdvance:
+    if board.timing.phase == BattlePhase::movement and board[id].owned_by_player1 == board.current_player and board[id].has_ability(AbilityKind::shokk_boosta):
+        act use_shokk_boosta(Bool boost_move)
+        board[id].shokk_boosta_move = boost_move
+
+# Shokk six and Unstoppable Advance can replace the rerolled face before the remaining move bonuses (Orks/Big-Mek/Blitz Brigade).
+act orks_modify_advance_roll(ctx Board board, frm UnitID id) -> OrksModifyAdvanceRoll:
+    if board[id].shokk_boosta_move:
+        act use_shokk_six(Bool change_to_six)
+        if change_to_six:
+            board.current_roll.result = 6
+    if orks_package(board, board[id], OrksDetachment::blitz_brigade) and board[id].has_keyword(Keyword::wagon):
+        act use_unstoppable_advance(Bool six_instead)
+        if six_instead:
+            board.current_roll.result = 6
+
+# Completed-move wagon, passenger and enemy reactions use shared reactive movement; preserve original source order (Orks cards).
+act orks_after_move(ctx Board board, frm UnitID id) -> OrksAfterMove:
+    board.shared_actions.orks_wagon_move_end = orks_wagon_move_end(board, id)
+    subaction*(board) board.shared_actions.orks_wagon_move_end
+    subaction*(board) trukk_reactions = orks_trukk_reactions(board, id)
+    while orks_enemy_move_available(board, id):
+        board.shared_actions.select_orks_enemy_move_reaction = select_orks_enemy_move_reaction(board, id)
+        subaction*(board) board.shared_actions.select_orks_enemy_move_reaction
+        frm reply_available_snapshot_11 = board.shared_actions.select_orks_enemy_move_reaction.available
+        frm reply_distance_snapshot_11 = board.shared_actions.select_orks_enemy_move_reaction.distance
+        frm reply_target_snapshot_11 = board.shared_actions.select_orks_enemy_move_reaction.target
+        if !reply_available_snapshot_11:
+            break
+        board.shared_actions.granted_move = reactive_move(board, reply_target_snapshot_11, reply_distance_snapshot_11, false)
+        subaction*(board) board.shared_actions.granted_move
+
+# Own-unit psychic/datasheet/support choices use their real banks alongside core Movement choices (Orks cards;01.02.04).
+act orks_movement_phase_choice(ctx Board board) -> OrksMovementPhaseChoice:
+    frm started = false
+    actions:
+        act use_orks_offboard_dread_power() {orks_offboard_dread_power_available(board, SourceBank::reserves, board.current_player) or orks_offboard_dread_power_available(board, SourceBank::embarked, board.current_player)}
+            started = true
+            subaction*(board) power = choose_orks_offboard_dread_power(board, board.current_player)
+        act use_orks_offboard_watchin() {orks_offboard_support_available(board, SourceBank::reserves, board.current_player, false) or orks_offboard_support_available(board, SourceBank::embarked, board.current_player, false)}
+            started = true
+            board.shared_actions.choose_orks_offboard_support = choose_orks_offboard_support(board, board.current_player, false)
+            subaction*(board) board.shared_actions.choose_orks_offboard_support
+        act use_orks_datasheet_movement(frm UnitID datasheet_unit) {orks_datasheet_move_any(board, datasheet_unit)}
+            started = true
+            subaction*(board) datasheet_move = orks_datasheet_movement(board, datasheet_unit)
+        act use_orks_movement_support(frm UnitID support_unit) {orks_phase_support_available(board, support_unit)}
+            started = true
+            subaction*(board) support = orks_phase_support(board, support_unit)
+
+# Assault Disembark and Gut Hatch grant specific post-move charge permission (Orks transport cards).
+fun orks_assault_disembark(Board board, Unit carrier_unit) -> Bool:
+    return unit_orks_effect(board, carrier_unit, OrksEffectKind::assault_disembark) > 0 or carrier_unit.has_ability(AbilityKind::gut_hatch) and carrier_unit.history.move_kind == MovementKind::normal
+
+# Minefield Detail supplies Scouts6; all combined printed Scouts values must match (Orks/Taktikal Brigade; user ruling).
+fun orks_scouts_override(Unit unit) -> Int:
+    if unit_has_orks_enhancement(unit, OrksEnhancement::minefield_detail) and unit.embarked_transport.value == 0:
+        for member in range(unit.models.size()):
+            for entry in range(unit[member].scout_distances.size()):
+                assert(unit[member].scout_distances[entry].value == 6, "Scouts values must all be identical")
+        return 6
+    return -1
+
+# Completed Pulse Jet installs its source-owned charge/action/defence effects (Orks Pulse Jet Move).
+fun orks_record_move_effects(Board board, UnitID id, MovementKind kind):
+    if kind == MovementKind::pulse_jet:
+        board[id].can_charge = false
+        grant_orks_effect(board, id, id, 173, OrksEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
+        grant_orks_effect(board, id, id, 174, OrksEffectKind::no_action, 1, SourceDuration::turn, invalid_entity_identity())
+        grant_orks_effect(board, id, id, 175, OrksEffectKind::pulse_defence, 1, SourceDuration::next_own_turn, invalid_entity_identity())
+
+# Pulse Engine supplies Pulse Jet selection permission (Orks/Wazdakka).
+fun orks_special_move_available(Board board, Unit unit, MovementKind kind) -> Bool:
+    return kind == MovementKind::pulse_jet and unit_orks_effect(board, unit, OrksEffectKind::pulse_engine) > 0
+
+# Shokk-boosta permits model traversal without granting FLY or terrain traversal (Orks/Big-Mek).
+fun orks_prepare_movement_policy(Unit unit, MovementKind kind, MovementGeometryPolicy policy):
+    if kind == MovementKind::advance and unit.shokk_boosta_move:
+        policy.traverse_enemies = true
+        policy.exclude_titanic = false
+        policy.exclude_monster_vehicle = false
+
+# Pulse Jet traversal overrides remain separate from ordinary FLY/Walker costs (Orks Special Move Types).
+fun orks_finish_movement_policy(MovementKind kind, MovementGeometryPolicy policy):
+    if kind == MovementKind::pulse_jet:
+        policy.traverse_enemies = true
+        policy.traverse_terrain = true
+        policy.free_vertical_movement = true
+        policy.exclude_titanic = false
+        policy.exclude_monster_vehicle = false

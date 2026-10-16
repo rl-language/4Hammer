@@ -56,13 +56,13 @@ fun charge_distance(Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
 # Banner+1 and distinct Stampede+1 combine before ordered modifiers and caps.
 # Source: Orks/Bannernob; Beastboss-on-Squigosaur Thundering Stampede (Aura).
 fun charge_distance(Board board, Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
-    return charge_distance_with_sources(unit, roll, kind, skies, faction_stampede_charge_bonus(board, unit))
+    return charge_distance_with_sources(unit, roll, kind, skies, faction_charge_aura_bonus(board, unit))
 
 # Banner/Trophy Hunters follow live combined membership; an aura is queried
 # on the battlefield only. All join addition before division (02.02.01).
 # https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
 fun charge_distance_with_sources(Unit unit, Int roll, ChargeKind kind, Bool skies, Int aura_bonus) -> Int:
-    let addition = aura_bonus + int(unit.has_ability(AbilityKind::waaagh_banner)) + int(unit.has_ability(AbilityKind::trophy_hunters))
+    let addition = aura_bonus + faction_unit_charge_bonus(unit)
     let maximum = modified_dice_result(roll, unit.phase_modifiers.charge_roll, false, true, addition)
     if kind == ChargeKind::into_the_fray:
         maximum = min(6, maximum)
@@ -99,9 +99,7 @@ fun charge_waypoint_valid(Board board, Unit original, ModelPath path, BoardPosit
     # Nobz/Get Out da Way! affects this unit's CHARGE traversal only. A
     # traversable target cannot waive final overlap/engagement restrictions.
     # https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
-    if original.has_ability(AbilityKind::get_out_da_way) and !policy.traverse_enemies:
-        policy.traverse_enemies = true
-        policy.exclude_monster_vehicle = true
+    faction_charge_traversal(original, policy)
     return path_distance(model, path, skies and model.has_keyword(Keyword::fly)) + distance <= float(maximum * MICROMETRES_PER_INCH) and model_segment_valid(board, original, model, start, finish, policy)
 
 # All targets must be engaged and every unselected enemy must be unengaged

@@ -118,6 +118,7 @@ fun append_orks_declaration_modifiers(Board board, UnitID source, DeclaredWeapon
 # classification; each hit contribution remains individually ignorable.
 # Sources: Da Hunt is On, Skyborne Loons and the40 Orks source cards.
 fun append_orks_attack_effects(Board board, UnitID source, UnitID target, DeclaredWeapon weapon, AttackSequenceInfo info):
+    info.squig_launcha_weapon = weapon.weapon_name.value == Weapon::orks_rukkatrukk_squigbuggies_squig_launchas.family_id()
     ref unit = board[source]
     ref victim = board[target]
     let bearer = declared_model_index(board, source, weapon)
@@ -373,7 +374,7 @@ fun orks_post_attack_owner_available(Board board, UnitID attacker, Bool melee, B
 # once-per-phase stratagem limit, so repeated reactions end by rule rather than
 # an invented depth cutoff. Its sole target is the enemy unit that just shot.
 act attack_with_orks_reactions(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee, frm Bool overwatch) -> AttackWithOrksReactions:
-    frm caller_target = board.orks_reaction_target
+    frm caller_target = board.forced_attack_target
     frm continuing = true
     frm first = true
     while continuing:
@@ -392,22 +393,13 @@ act attack_with_orks_reactions(ctx Board board, frm UnitID source, frm UnitID ta
             source = post_reaction_source_snapshot_1
             melee = false
             overwatch = false
-            board.orks_reaction_target = board[target].identity
+            board.forced_attack_target = board[target].identity
             first = false
-    board.orks_reaction_target = caller_target
+    board.forced_attack_target = caller_target
 
 # Unpredictable Genius triggers only when all declared ranged attacks share
 # one target. Multiple-target declarations remain legal and do NOT trigger it.
 # Madcap Meks source; target declarations/core grouping pp16-17.
-fun orks_single_declared_target(DeclaredWeapons declarations) -> Int:
-    let target = -1
-    for weapon in range(declarations.size()):
-        for unit in range(MAX_UNIT_COUNT):
-            if declarations[weapon].targeted[unit]:
-                if target >= 0 and target != unit:
-                    return -1
-                target = unit
-    return target
 
 # The actual selected source keywords, not profile names or a guessed legacy
 # Big Mek factory, determine whether the table roll is required.
@@ -1327,3 +1319,96 @@ act orks_rokkit_barrage(ctx Board board, frm UnitID source) -> OrksRokkitBarrage
         penalty = 1
         board.shared_actions.battle_shock_test = battle_shock_test(board, board[shocked], false, false, penalty)
         subaction*(board, board[shocked]) board.shared_actions.battle_shock_test
+
+# Flyin Headbutt decides suppression/target/eight dice; return mortal jobs to the shared destruction stack (Orks/Flyboyz; core p87).
+act orks_before_destruction(ctx Board board, ctx Model casualty, frm PendingDestruction event) -> OrksBeforeDestruction:
+    frm suppress_demise = false
+    frm headbutt_recipient : UnitID
+    frm crash_mortals : CombatCounter
+    crash_mortals = 0
+    if event.bank.value == SourceBank::battlefield.value and casualty.has_keyword(Keyword::aircraft) and casualty.destroyed_whole_unit and board.can_target_strat(source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1, Stratagem::orks_flyin_headbutt, source_bank_unit(board, event.bank, event.unit.get())) and orks_headbutt_has_target(board, event.unit, casualty):
+        actions:
+            act decline_flyin_headbutt()
+            act flyin_headbutt()
+                board.commit_stratagem(source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1, Stratagem::orks_flyin_headbutt, source_bank_unit(board, event.bank, event.unit.get()))
+                suppress_demise = true
+                act choose_headbutt_target(frm UnitID crash_target) {orks_headbutt_target(board, event.unit, casualty, crash_target)}
+                headbutt_recipient = crash_target
+                frm headbutt_rolls : BInt<0, 9>
+                frm headbutt_mortals : CombatCounter
+                while headbutt_rolls.value < 8:
+                    act roll(Dice crash_face)
+                    headbutt_rolls = headbutt_rolls + 1
+                    headbutt_mortals = headbutt_mortals.value + int(crash_face.value >= 4)
+                if headbutt_mortals > 0:
+                    crash_mortals = headbutt_mortals
+
+# Dreadherder support is an optional Shooting-phase action alongside core shooting (Orks/Dread Mob).
+act orks_shooting_phase_choice(ctx Board board) -> OrksShootingPhaseChoice:
+    frm started = false
+    actions:
+        act use_dreadherder_support(frm UnitID dreadherder_source) {orks_dreadherder_available(board, dreadherder_source)}
+            started = true
+            board.shared_actions.faction_shooting_support = orks_dreadherder_shooting(board, dreadherder_source)
+            subaction*(board) board.shared_actions.faction_shooting_support
+
+# Unpredictable Genius owns its single-target trigger and effect; common declarations/grouping remain core (Orks/Madcap Meks).
+act orks_declarations_complete(ctx Board board, ctx DeclaredWeapons declarations, frm UnitID source, frm Bool melee) -> OrksDeclarationsComplete:
+    frm effect : SourceEffectKey
+    if !melee and single_declared_target(declarations) >= 0:
+        frm target : UnitID
+        target = single_declared_target(declarations)
+        subaction*(board) genius = orks_unpredictable_genius(board, source, target)
+        effect = genius.effect
+
+# Mobbed/Impetus remain interleaved with common charge-end effects in the charger-chosen order (Orks cards; user Rules Sequencing).
+act orks_charge_choice(ctx Board board, ctx FactionChargeProgress progress, ctx Bool crushing_pending, frm UnitID source) -> OrksChargeChoice:
+    frm started = false
+    actions:
+        act resolve_krushin_impetus() {progress.impetus}
+            started = true
+            progress.impetus = false
+            subaction*(board) impetus = orks_krushin_impetus(board, source)
+        act decline_krushin_impetus() {progress.impetus}
+            started = true
+            progress.impetus = false
+        act resolve_mobbed() {progress.mobbed}
+            started = true
+            progress.mobbed = false
+            board.shared_actions.faction_after_charge_shock = resolve_orks_mobbed(board, source)
+            subaction*(board) board.shared_actions.faction_after_charge_shock
+
+# Capture Wrecka objective selection, Ammo Runt and paid attack choices before declarations (Orks cards).
+act orks_attack_selection_options(ctx Board board, frm UnitID source, frm Bool melee) -> OrksAttackSelectionOptions:
+    board[source].history.wrecka_objective_selection = unit_in_any_objective_range(board, board[source])
+    # Source-specific free choices enter the same declaration snapshots as
+    # paid rules: Ammo Runts (Boyz/Nobz/Warboss).
+    if !melee:
+        subaction*(board) datasheet_selection = orks_datasheet_selection(board, source)
+    subaction*(board) detachment_selection = orks_attack_selection(board, source, melee)
+
+# Surly return and Flyboyz aircraft destruction retain their pending casualty (Orks cards; core p87).
+fun orks_has_destruction_trigger(Board board, Model model) -> Bool:
+    return model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value or orks_aircraft_death_source(board, model)
+
+# Orks attack ledger records actual wounds lost before clamping, not rolled damage (Orks detachment triggers).
+fun orks_record_wound_loss(Board board, Unit unit, ModelID model, Int lost, Bool from_attack):
+    if lost > 0 and from_attack and board.orks_attack_active:
+        ref record = orks_attack_record(board, unit.identity)
+        add_attack_count(record.wounds_lost, min(lost, unit[model].wounds_left()))
+
+# Track Orks attack/phase kill provenance only after actual last-model destruction (Orks combat triggers).
+fun orks_record_unit_destruction(Board board, Unit unit):
+    if board.orks_attack_active and live_attachment_strength(unit) == 0:
+        ref destruction_record = orks_attack_record(board, unit.identity)
+        destruction_record.destroyed = true
+        unit.orks_destroyed_attack = board.orks_attack_serial
+        unit.orks_destroyed_phase = board.phase_serial.value + 1
+
+# Flyin Headbutt requires the Aircraft unit destruction event (Orks/Flyboyz).
+fun orks_unit_destruction_trigger(Board board, Unit unit, Model model) -> Bool:
+    return orks_package(board, unit, OrksDetachment::flyboyz) and model.has_keyword(Keyword::aircraft)
+
+# Surly return retains its source even in reserves/passengers; no offboard distance permission is introduced (Orks/Surly).
+fun orks_offboard_destruction_trigger(Model model) -> Bool:
+    return model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value

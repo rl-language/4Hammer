@@ -13,8 +13,8 @@ func position(x, y):
 
 func check_procedures():
 	var library = root.get_node("GlobalRules").library
-	assert(library.get_state_schema_version() == 44)
-	assert(library.get_action_schema_version() == 26)
+	assert(library.get_state_schema_version() == 45)
+	assert(library.get_action_schema_version() == 27)
 	var board = RLCBoard.make()
 	board.set_current_decision_maker(true)
 	var budget = RLCRoundResourceBudget.make()

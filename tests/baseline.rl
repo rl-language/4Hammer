@@ -8812,9 +8812,9 @@ fun test_orks17f_war_cry_source_death_archive_cleanup() -> Bool:
     board[0].remove_model(0)
     board.current_player = true
     board.start_turn_history()
-    let persisted = board[0].destroyed_models.value[0].is_riled_up()
+    let persisted = is_riled_up(board[0].destroyed_models.value[0])
     refresh_source_effects(board, TimingWindow::turn_end)
-    return persisted and !board[0].destroyed_models.value[0].is_riled_up()
+    return persisted and !is_riled_up(board[0].destroyed_models.value[0])
 
 # Overlapping permanent and War Cry copies retain independent handles; only
 # live-model permanent sources end on source death (Stompa Effigy/Super Runts).
@@ -8877,7 +8877,7 @@ fun test_orks17f_permanent_source_death() -> Bool:
     register_orks_passive_rules(board)
     board[0][0].state = ModelState::pending_destruction
     refresh_source_effects(board, TimingWindow::none)
-    return !unit_is_riled_up(board[0]) and !board[0][0].is_riled_up() and board.source_effects.empty()
+    return !unit_is_riled_up(board[0]) and !is_riled_up(board[0][0]) and board.source_effects.empty()
 
 # Da Boss requires exactly the selected live Warlord's explicit ability, not
 # an arbitrary living boss. Mandatory round-start1CP is separate from Core CP.
@@ -8956,7 +8956,7 @@ fun test_orks17f_saved_state_and_forged_handles() -> Bool:
     let saved = to_string(game)
     let restored = play()
     let accepted = set_state(restored, saved)
-    let retained = accepted and restored.board.armies[0].war_cry_used and restored.board[0][0].is_riled_up() and restored.board.armies[0].warlord == game.board.armies[0].warlord
+    let retained = accepted and restored.board.armies[0].war_cry_used and is_riled_up(restored.board[0][0]) and restored.board.armies[0].warlord == game.board.armies[0].warlord
     restored.board[0][0].riled_source_effects[0].value = 999
     return retained and !valid_state_foundations(restored.board)
 
@@ -10015,7 +10015,7 @@ fun test_orks17h23_dodge_hit_pipeline_and_individual_choices() -> Bool:
     let result = resolve_attack_dice(board, board[3], board[0], attack_test_count(1))
     result.roll(board, board[3], board[0], attack_test_die(3))
     result.roll(board, board[3], board[0], attack_test_die(1))
-    return info.dodge_dis_hit_bonus and info.total_hit_modifier() == 1 and get_hit_roll_bonus(board) == 1 and options.size() == 3 and result.is_done() and result.generated_wounds == 0
+    return info.faction_innate_hit_bonus and info.total_hit_modifier() == 1 and get_hit_roll_bonus(board) == 1 and options.size() == 3 and result.is_done() and result.generated_wounds == 0
 
 # Attached unit attacks all receive Dodge Dis! until the boss's conferral
 # ends; unsupported old factories have no new grants (core pp66-67).
@@ -10030,15 +10030,15 @@ fun test_orks17h23_dodge_attached_component_lifetime() -> Bool:
     target.owned_by_player1 = true
     board.units.append(target)
     configure_attack_info(board, 0, 1, false, true)
-    let live = board.attack_info.dodge_dis_hit_bonus
+    let live = board.attack_info.faction_innate_hit_bonus
     board[0][10].suffered_wounds = 6
     board[0][10].state = ModelState::pending_destruction
     board[0][10].attachment_abilities_retained = true
     configure_attack_info(board, 0, 1, false, true)
-    let retained = board.attack_info.dodge_dis_hit_bonus
+    let retained = board.attack_info.faction_innate_hit_bonus
     board[0][10].attachment_abilities_retained = false
     configure_attack_info(board, 0, 1, false, true)
-    return live and retained and !board.attack_info.dodge_dis_hit_bonus and !make_beastboss_morgrim().has_ability(AbilityKind::dodge_dis)
+    return live and retained and !board.attack_info.faction_innate_hit_bonus and !make_beastboss_morgrim().has_ability(AbilityKind::dodge_dis)
 
 # Bomb Squig: only completed Normal-move end in own Movement phase.
 fun test_orks17h23_bomb_timing_gates() -> Bool:
@@ -10820,9 +10820,9 @@ fun test_orks17all_madcap_single_target_condition() -> Bool:
     let same : DeclaredWeapon
     same.targeted[1] = true
     declarations.append(same)
-    let single = orks_single_declared_target(declarations) == 1
+    let single = single_declared_target(declarations) == 1
     declarations[1].targeted[2] = true
-    return single and orks_single_declared_target(declarations) == -1
+    return single and single_declared_target(declarations) == -1
 
 # Try Dat Button table additions accumulate for distinct faces1/2, even
 # though those faces belong to the same band. S/AP use their ordered consumers.
@@ -11521,7 +11521,7 @@ fun test_orks17all_madcap_toughness_scoped_expiry() -> Bool:
     let table = orks_unpredictable_genius(board, unit_id(0), unit_id(1))
     table.roll(board, attack_test_die(6))
     let changed = board[1].get_unit_toughtness() == initial - 1
-    remove_orks_scoped_effect(board, table.effect)
+    remove_scoped_source_effect(board, table.effect)
     return table.is_done() and changed and board[1].get_unit_toughtness() == initial
 
 # Lifted adds FLY and removes cover only for the scoped activation; it does
@@ -11532,7 +11532,7 @@ fun test_orks17all_madcap_lifted_keyword_and_cover() -> Bool:
     let table = orks_unpredictable_genius(board, unit_id(0), unit_id(1))
     table.roll(board, attack_test_die(5))
     let lifted = board[1].has_keyword(Keyword::fly)
-    remove_orks_scoped_effect(board, table.effect)
+    remove_scoped_source_effect(board, table.effect)
     return lifted and !board[1].has_keyword(Keyword::fly)
 
 # Madcap1's granted4+ keeps a better original save; it expires after shooting.
@@ -11543,7 +11543,7 @@ fun test_orks17all_madcap_invulnerable_grant_and_expiry() -> Bool:
     let table = orks_unpredictable_genius(board, unit_id(0), unit_id(1))
     table.roll(board, attack_test_die(1))
     let granted = board[1][0].effective_invulnerable_save() == 4
-    remove_orks_scoped_effect(board, table.effect)
+    remove_scoped_source_effect(board, table.effect)
     return granted and board[1][0].effective_invulnerable_save() == initial
 
 # Temperamental's named-weapon Sustained2 belongs only to its bearer, not
@@ -12396,7 +12396,7 @@ fun test_orks17p1_modifier_full_capacity_and_origin() -> Bool:
     let board = orks17p1_fixture(make_orks_bigboss())
     let choices : AttackModifierChoices
     for index in range(34):
-        choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::orks_datasheet))
+        choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::faction_datasheet))
     let sequence = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::hit_roll, true)
     for index in range(34):
         sequence.apply_attack_modifier(board, true)
@@ -12992,7 +12992,7 @@ fun test_orks17p2_repair_contributions_and_full_choice_capacity() -> Bool:
     let independent = info.faction_unit_hit_modifiers.size() == 3 and info.total_hit_modifier() == 3
     let choices : AttackModifierChoices
     for index in range(MAX_ATTACK_MODIFIER_CHOICES):
-        choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::orks_datasheet))
+        choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::faction_datasheet))
     let sequence = choose_attack_modifiers(board, choices, false, ModifierSelectionKind::hit_roll, true)
     for index in range(MAX_ATTACK_MODIFIER_CHOICES):
         sequence.apply_attack_modifier(board, true)
@@ -15480,3 +15480,65 @@ fun test_faction_dispatch_overlapping_grants_keep_other_source() -> Bool:
 fun test_faction_dispatch_neutral_hook_does_not_authorize_transport() -> Bool:
     let board = attack_declaration_fixture()
     return faction_passenger_permitted(board[0][0], board[1][0]) and !passenger_model_permitted(board[0][0], board[1][0])
+
+# Core source choices and faction timing choices remain peers, in either order.
+# User Rules Sequencing; War Cry is Orks army policy, numeric grants core01.02.02.
+fun faction_dispatch_timing_order(Bool faction_first, Bool mandatory) -> Bool:
+    let board = orks17f_fixture()
+    board.begin_phase(BattlePhase::command)
+    let instance = source17e_instance(board, 0, 511)
+    instance.window = TimingWindow::command_start
+    instance.optional = !mandatory
+    let handle = register_source_instance(board, instance)
+    let sequence = resolve_timing_window(board, TimingWindow::command_start)
+    let event = source17e_id(0)
+    let both = can sequence.choose_window_source(board, event) and can sequence.choose_orks_timing_rule(board, OrksTimingRule::war_cry)
+    let gated = !mandatory or !(can sequence.finish_timing_rules(board))
+    if faction_first:
+        sequence.choose_orks_timing_rule(board, OrksTimingRule::war_cry)
+        sequence.choose_window_source(board, event)
+    else:
+        sequence.choose_window_source(board, event)
+        sequence.choose_orks_timing_rule(board, OrksTimingRule::war_cry)
+    let next_controller = board.current_decision_maker
+    sequence.finish_timing_rules(board)
+    return both and gated and next_controller and sequence.is_done() and board.armies[0].war_cry_used and !board.armies[1].war_cry_used and board[0][0].effective_movement(board[0][0].profile.movement()) == board[0][0].profile.movement() + 2
+
+fun test_faction_dispatch_faction_then_core_timing() -> Bool:
+    return faction_dispatch_timing_order(true, false)
+
+fun test_faction_dispatch_core_then_faction_timing() -> Bool:
+    return faction_dispatch_timing_order(false, false)
+
+fun test_faction_dispatch_mandatory_core_choice_still_blocks_finish() -> Bool:
+    return faction_dispatch_timing_order(true, true)
+
+# A selected ordinary Advance completes its roll/reroll before its sibling
+# move choices can be offered again (core p33; Orks free Advance re-roll).
+fun test_faction_dispatch_selected_move_is_atomic() -> Bool:
+    let board = orks17f_fixture()
+    board.begin_phase(BattlePhase::movement)
+    let sequence = movement(board, unit_id(0), false)
+    let initial = can sequence.advance(board, true) and can sequence.normal_move(board)
+    sequence.advance(board, true)
+    let locked = !(can sequence.normal_move(board)) and !(can sequence.remain_stationary(board))
+    sequence.roll(board, attack_test_die(2))
+    sequence.keep_it(board, true)
+    return initial and locked and sequence.kind == MovementKind::advance and sequence.extra.value == 2
+
+# Faction special modes share the same choice point, then finish atomically;
+# the common placement procedure consumes the returned bounded allowance.
+# Orks index Pulse Jet Move D6+18; core movement/placement pp12/33.
+fun test_faction_dispatch_special_move_is_peer_and_atomic() -> Bool:
+    let board = attack_declaration_fixture()
+    board.begin_phase(BattlePhase::movement)
+    let grant : OrksEffectGrant
+    grant.kind = OrksEffectKind::pulse_engine
+    grant.amount = 1
+    board[0][0].orks_effects.append(grant)
+    let sequence = movement(board, unit_id(0), false)
+    let peers = can sequence.normal_move(board) and can sequence.pulse_jet_move(board)
+    sequence.pulse_jet_move(board)
+    let locked = !(can sequence.normal_move(board))
+    sequence.roll(board, attack_test_die(3))
+    return peers and locked and sequence.kind == MovementKind::pulse_jet and sequence.extra.value == 21

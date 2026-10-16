@@ -38,7 +38,7 @@ fun register_orks_option_passives(Board board):
 # Save integrity covers the new bounded activation ledger and modifier stacks;
 # these are implementation invariants, not additional tabletop restrictions.
 fun valid_orks_detachment_foundations(Board board) -> Bool:
-    if board.orks_attack_serial.value < 0 or board.orks_attack_serial.value >= 1025 or board.orks_reaction_target.value < 0 or board.orks_reaction_target.value > board.next_identity.value:
+    if board.orks_attack_serial.value < 0 or board.orks_attack_serial.value >= 1025 or board.forced_attack_target.value < 0 or board.forced_attack_target.value > board.next_identity.value:
         return false
     if !valid_rule_modifiers(board.attack_info.faction_hit_modifiers) or !valid_rule_modifiers(board.attack_info.faction_wound_modifiers):
         return false
@@ -385,3 +385,103 @@ fun register_orks_datasheet_sources(Board board):
                     window_instance.label.value = SourceLabel::get_back_in_da_race
                     if !orks_unit_source_registered(board, window_instance):
                         let window_handle = register_source_instance(board, window_instance)
+
+# Orks datasheet windows, healing and Scavengers own their code dispatch; unhandled generic grants commit normally (Orks cards; core pp28-30/01.02.02).
+act orks_resolve_timing_source(ctx Board board, ctx PendingSourceEvents pending, frm SourceEventID event, frm Bool player) -> OrksTimingSource:
+    frm chosen_source = board.source_instances[pending[event.value].source.value]
+    if chosen_source.rule.value >= 140 and chosen_source.rule.value <= 145:
+        pending[event.value].resolved = true
+        subaction*(board) datasheet_window = orks_datasheet_window(board, chosen_source)
+    else:
+        if chosen_source.rule.value >= ORKS_SURGERY_RULE and chosen_source.rule.value <= ORKS_PAINBOSS_RULE:
+            commit_source_usage(board, chosen_source)
+            pending[event.value].resolved = true
+            subaction*(board) command_healing = orks_command_healing(board, chosen_source)
+        else:
+            if chosen_source.rule.value == ORKS_SCAVENGERS_RULE:
+                secure_orks_gretchin_objectives(board, chosen_source)
+                commit_source_usage(board, chosen_source)
+                pending[event.value].resolved = true
+            else:
+                commit_pending_source(board, pending, event, player)
+
+# Offer one faction timing choice alongside core alternatives, not as a batch before/after them (user Rules Sequencing; Orks War Cry/Da Boss/support cards).
+act orks_timing_choice(ctx Board board, ctx CoreTimingProgress core_progress, ctx FactionTimingProgress progress, ctx PendingSourceEvents pending, frm TimingWindow window, frm Bool player) -> OrksTimingChoice:
+    frm started = false
+    actions:
+        act use_orks_offboard_visions() {window == TimingWindow::fight_start, orks_offboard_support_available(board, SourceBank::reserves, player, true) or orks_offboard_support_available(board, SourceBank::embarked, player, true)}
+            started = true
+            board.shared_actions.choose_orks_offboard_support = choose_orks_offboard_support(board, player, true)
+            subaction*(board) board.shared_actions.choose_orks_offboard_support
+            board.current_decision_maker = player
+        act choose_orks_package_source(frm UnitID package_source) {orks_package_window_available(board, package_source, player, window)}
+            started = true
+            board.shared_actions.orks_package_window = orks_package_window(board, package_source, player, window)
+            subaction*(board) board.shared_actions.orks_package_window
+            board.current_decision_maker = player
+        act choose_orks_timing_rule(frm OrksTimingRule orks_rule) {orks_timing_rule_available(board, window, player, orks_rule, progress.orks_rules)}
+            started = true
+            progress.orks_rules[orks_rule.value] = true
+            resolve_orks_timing_rule(board, player, orks_rule)
+
+# Validate bounded Orks effects/enhancement handles on save load; infrastructure, not another tabletop restriction.
+fun orks_model_state_valid(Model model) -> Bool:
+    if model.orks_enhancement.value < 0 or model.orks_enhancement.value > OrksEnhancement::warphead.value or model.orks_upgrade_origin.value < 0 or model.orks_upgrade_origin.value >= MAX_IDENTITY_SEQUENCE:
+        return false
+    for ork_effect in range(model.orks_effects.size()):
+        ref grant = model.orks_effects[ork_effect]
+        if grant.kind.value <= 0 or grant.kind.value > max(grant.kind) or grant.source_effect.value < 0 or grant.source_effect.value >= MAX_SOURCE_EFFECT_KEY or grant.amount.value < 0 or grant.amount.value >= MAX_CHARACTERISTIC or grant.associated_unit.value < 0 or grant.associated_unit.value >= MAX_IDENTITY_SEQUENCE:
+            return false
+    for riled_index in range(model.riled_source_effects.size()):
+        if model.riled_source_effects[riled_index].value < 0 or model.riled_source_effects[riled_index].value >= MAX_SOURCE_EFFECT_KEY:
+            return false
+    return true
+
+# Validate bounded Orks psychic usage on save load; generic Psyker level validation remains core.
+fun orks_unit_state_valid(Unit unit) -> Bool:
+    return !(unit.orks_psychic_usage.budget.round_stamp.value < 0 or unit.orks_psychic_usage.budget.round_stamp.value >= MAX_ROUNDS or unit.orks_psychic_usage.budget.spent.value < 0 or unit.orks_psychic_usage.budget.spent.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.roar_phase.value < 0 or unit.orks_psychic_usage.roar_phase.value >= MAX_PHASE_STAMP or unit.orks_psychic_usage.visions_phase.value < 0 or unit.orks_psychic_usage.visions_phase.value >= MAX_PHASE_STAMP)
+
+# Orks typed/riled grants share generic source handles and expiry (Waaagh!/01.02.02).
+fun orks_install_source_grant(Model model, SourceGrant installed, SourceEffectKey key):
+    if installed is OrksEffectGrant:
+        installed.source_effect = key
+        model.orks_effects.append(installed)
+    if installed is RiledUpGrant:
+        model.riled_source_effects.append(key)
+
+# Remove only the matching Orks effect/riled key, including archived models (01.02.02; core p88).
+fun orks_remove_source_grant(Model model, SourceEffectKey key):
+    let effect_index = model.orks_effects.size()
+    while effect_index > 0:
+        effect_index = effect_index - 1
+        if model.orks_effects[effect_index].source_effect == key:
+            model.orks_effects.erase(effect_index)
+    let index = model.riled_source_effects.size()
+    while index > 0:
+        index = index - 1
+        if model.riled_source_effects[index] == key:
+            model.riled_source_effects.erase(index)
+
+# Validate faction typed source payloads before loading/dispatch; generic arithmetic validation stays core.
+fun orks_source_grant_valid(SourceGrant grant) -> Bool:
+    if grant is OrksEffectGrant:
+        return grant.kind.value > 0 and grant.kind.value <= max(grant.kind) and grant.amount.value >= 0 and grant.associated_unit.value >= 0
+    if grant is RiledUpGrant:
+        return grant.enabled
+    return false
+
+# Returned members inherit only missing faction-owned grant keys (core p88/01.02.02).
+fun orks_model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
+    let present = false
+    for orks_effect in range(model.orks_effects.size()):
+        present = present or model.orks_effects[orks_effect].source_effect == key
+    for riled_index in range(model.riled_source_effects.size()):
+        present = present or model.riled_source_effects[riled_index] == key
+    return present
+
+# Restored faction grants must refer to their real source recipients; preserve existing handle validation.
+fun orks_model_source_handles_valid(Board board, Model model) -> Bool:
+    let valid = true
+    for riled_index in range(model.riled_source_effects.size()):
+        valid = valid and source_handle_matches_model(board, model.riled_source_effects[riled_index], model.identity)
+    return valid

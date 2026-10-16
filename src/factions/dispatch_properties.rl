@@ -1,8 +1,5 @@
 import factions.orks.queries
 
-# Neutral properties entrypoints. This composition module is the only layer
-# that selects concrete faction behavior; core algorithms do not inspect it.
-
 # Orks active keywords, Blastajet Smoke suppression and Painboss bearer-only Mounted (respective cards; core p67).
 fun faction_keyword_override(Model model, Keyword keyword) -> Int:
     return orks_keyword_override(model, keyword)

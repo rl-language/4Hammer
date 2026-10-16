@@ -38,13 +38,13 @@ fun attack_skill_choices(Board board, AttackSequenceInfo info) -> AttackModifier
 fun attack_hit_choices(Board board, AttackSequenceInfo info) -> AttackModifierChoices:
     let choices : AttackModifierChoices
     for unit_modifier in range(info.faction_unit_hit_modifiers.size()):
-        choices.append(attack_modifier_choice(info.faction_unit_hit_modifiers[unit_modifier], ModifierOrigin::orks_datasheet))
+        choices.append(attack_modifier_choice(info.faction_unit_hit_modifiers[unit_modifier], ModifierOrigin::faction_datasheet))
     for orks_modifier in range(info.faction_hit_modifiers.size()):
-        choices.append(attack_modifier_choice(info.faction_hit_modifiers[orks_modifier], ModifierOrigin::orks_detachment))
+        choices.append(attack_modifier_choice(info.faction_hit_modifiers[orks_modifier], ModifierOrigin::faction_detachment))
     if info.hit_roll_bonus:
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::hit_bonus))
     # Beastboss/Dodge Dis!: unit-wide +1, separately selectable under02.02.02.
-    if info.dodge_dis_hit_bonus:
+    if info.faction_innate_hit_bonus:
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::dodge_dis))
     if info.hit_roll_malus:
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, -1), ModifierOrigin::hit_penalty))

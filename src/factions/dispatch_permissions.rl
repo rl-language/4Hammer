@@ -2,9 +2,6 @@ import factions.orks.detachments
 import factions.orks.queries
 import factions.orks.stratagems
 
-# Neutral permissions entrypoints. This composition module is the only layer
-# that selects concrete faction behavior; core algorithms do not inspect it.
-
 # Orks transport passenger faction/type and Ghazghkull restrictions (Orks transport cards; core p64).
 fun faction_passenger_permitted(Model carrier, Model passenger) -> Bool:
     return orks_passenger_permitted(carrier, passenger)
@@ -46,37 +43,13 @@ fun faction_attachment_origin_valid(Unit unit, Model model) -> Bool:
     return orks_attachment_origin_valid(unit, model)
 
 # Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_package_window_available(Board board, UnitID source, Bool owner, TimingWindow window) -> Bool:
-    return orks_package_window_available(board, source, owner, window)
-
-# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_package_windows_remaining(Board board, Bool owner, TimingWindow window, Bool mandatory) -> Bool:
-    return orks_package_windows_remaining(board, owner, window, mandatory)
-
-# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_package_window(Board board, UnitID source, Bool owner, TimingWindow window) -> OrksPackageWindow:
-    return orks_package_window(board, source, owner, window)
-
-# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_phase_support_available(Board board, UnitID source) -> Bool:
-    return orks_phase_support_available(board, source)
-
-# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_phase_support(Board board, UnitID source) -> OrksPhaseSupport:
-    return orks_phase_support(board, source)
-
-# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_headbutt_target(Board board, UnitID source, Model casualty, UnitID target) -> Bool:
-    return orks_headbutt_target(board, source, casualty, target)
-
-# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_headbutt_has_target(Board board, UnitID source, Model casualty) -> Bool:
-    return orks_headbutt_has_target(board, source, casualty)
-
-# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_datasheet_stratagem_cost(Stratagem card, Unit unit) -> Int:
     return orks_datasheet_stratagem_cost(card, unit)
 
 # Composition hook: detachments adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_unit_grants_ability(Unit unit, AbilityKind kind) -> Bool:
     return orks_unit_grants_ability(unit, kind)
+
+# Never Too Busy waives only the engagement action gate (Orks/Boyz; core p58).
+fun faction_action_while_engaged(Unit unit) -> Bool:
+    return orks_action_while_engaged(unit)

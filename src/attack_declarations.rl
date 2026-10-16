@@ -105,7 +105,7 @@ fun declaration_target_valid(Board board, UnitID source, DeclaredWeapon weapon, 
         return false
     if board[source].owned_by_player1 == board[target].owned_by_player1:
         return false
-    if !melee and board.orks_reaction_target.value > 0 and board[target].identity != board.orks_reaction_target:
+    if !melee and board.forced_attack_target.value > 0 and board[target].identity != board.forced_attack_target:
         return false
     # Supplied appendix 04.01.03: Hunter restrictions also apply to replacement targets.
     if !board[target].weapon_rule_applies(weapon.hunter_condition):
@@ -362,8 +362,7 @@ fun declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration
     let result = model_weapon_modifiers(board[source][model], declaration.slot.value, kind, declaration.borrowed_weapon, declaration.weapon_name, declaration.profile_name)
     # Squighog Boyz/Brutal Impact: every attack (ranged or melee) gains +1D
     # after a completed charge this turn, within the ordinary addition step.
-    if kind.value == ModifiedCharacteristic::damage.value and board[source].has_charged and board[source].has_ability(AbilityKind::brutal_impact):
-        result.append(rule_modifier(ModifierOperation::add, 1))
+    append_faction_intrinsic_modifiers(board, source, kind, result)
     append_faction_declaration_modifiers(board, source, declaration, kind, result)
     append_faction_datasheet_modifiers(board, source, declaration, kind, result)
     return result
@@ -401,3 +400,15 @@ fun declared_hazardous_uses(DeclaredWeapons declarations) -> Int:
                 supa = supa or declared_weapon_has_kind(declarations[selected], WeaponRuleKind::supa_hazardous)
         result = result + int(ordinary) + 2 * int(supa)
     return result
+
+# Return the one declared target only when all declared attacks share it
+# (core pp16-17); adapters decide whether that fact triggers an ability.
+fun single_declared_target(DeclaredWeapons declarations) -> Int:
+    let target = -1
+    for weapon in range(declarations.size()):
+        for unit in range(MAX_UNIT_COUNT):
+            if declarations[weapon].targeted[unit]:
+                if target >= 0 and target != unit:
+                    return -1
+                target = unit
+    return target

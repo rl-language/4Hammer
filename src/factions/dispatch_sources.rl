@@ -3,9 +3,6 @@ import factions.orks.effects
 import factions.orks.queries
 import factions.orks.sources
 
-# Neutral sources entrypoints. This composition module is the only layer
-# that selects concrete faction behavior; core algorithms do not inspect it.
-
 # Validate bounded Orks effects/enhancement handles on save load; infrastructure, not another tabletop restriction.
 fun faction_model_state_valid(Model model) -> Bool:
     return orks_model_state_valid(model)
@@ -34,10 +31,6 @@ fun faction_model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
 fun faction_model_source_handles_valid(Board board, Model model) -> Bool:
     return orks_model_source_handles_valid(board, model)
 
-# Composition hook: effects adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun remove_faction_scoped_effect(Board board, SourceEffectKey key):
-    remove_orks_scoped_effect(board, key)
-
 # Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun register_faction_option_passives(Board board):
     register_orks_option_passives(board)
@@ -51,24 +44,8 @@ fun faction_source_event_available(Board board, SourceInstance instance, SourceE
     return orks_source_event_available(board, instance, event)
 
 # Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_datasheet_window(Board board, SourceInstance instance) -> OrksDatasheetWindow:
-    return orks_datasheet_window(board, instance)
-
-# Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun register_faction_datasheet_sources(Board board):
     register_orks_datasheet_sources(board)
-
-# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_timing_rule_available(Board board, TimingWindow window, Bool player, OrksTimingRule rule, Bool[2] resolved) -> Bool:
-    return orks_timing_rule_available(board, window, player, rule, resolved)
-
-# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_timing_rules_remaining(Board board, TimingWindow window, Bool player, Bool[2] resolved, Bool mandatory_only) -> Bool:
-    return orks_timing_rules_remaining(board, window, player, resolved, mandatory_only)
-
-# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun resolve_faction_timing_rule(Board board, Bool player, OrksTimingRule rule):
-    resolve_orks_timing_rule(board, player, rule)
 
 # Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun register_faction_passive_rules(Board board):
@@ -85,3 +62,21 @@ fun faction_advance_reroll(Unit unit) -> Bool:
 # Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_advance_charge_status(Unit unit) -> Bool:
     return unit_is_riled_up(unit)
+
+# Route the originating source ability, preserving pending generation/use checks and controller ordering.
+fun faction_resolve_timing_source(Board board, PendingSourceEvents pending, SourceEventID event, Bool player) -> OrksTimingSource:
+    return orks_resolve_timing_source(board, pending, event, player)
+
+# Return one faction alternative action; core retains simultaneous interleaving and finish gates.
+# Both alternatives use the same original timing contexts; the selected child
+# completes before the next simultaneous choice (user Rules Sequencing).
+fun faction_timing_choice(Board board, CoreTimingProgress core_progress, FactionTimingProgress progress, PendingSourceEvents pending, TimingWindow window, Bool player) -> OrksTimingChoice:
+    return orks_timing_choice(board, core_progress, progress, pending, window, player)
+
+# Orks mandatory/optional timing availability; core owns controller grouping (user Rules Sequencing).
+fun faction_timing_options_remaining(Board board, TimingWindow window, Bool player, FactionTimingProgress progress, Bool mandatory_only) -> Bool:
+    return orks_timing_options_remaining(board, window, player, progress, mandatory_only)
+
+# Faction-local timing progress uses generated initialization; no custom lifecycle.
+fun reset_faction_timing_progress(FactionTimingProgress progress):
+    orks_reset_timing_progress(progress)

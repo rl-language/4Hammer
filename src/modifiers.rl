@@ -349,8 +349,8 @@ enum ModifierOrigin:
     cover
     plunging_fire
     dodge_dis
-    orks_detachment
-    orks_datasheet
+    faction_detachment
+    faction_datasheet
 
 enum ModifierSelectionKind:
     weapon_skill

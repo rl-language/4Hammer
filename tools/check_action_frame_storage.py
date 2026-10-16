@@ -54,6 +54,12 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     actions, producers, functions = {}, {}, collections.defaultdict(list)
+    # These menus choose one initialized child input, then finish that child
+    # before offering siblings again. This is intentional single-step forwarding,
+    # not simultaneous execution of two unfinished sequences.
+    alternative_menus = {'resolve_timing_window', 'movement_phase',
+                         'shooting_phase', 'charge', 'movement'}
+    alternative_sites = set()
     for path in sorted((root / 'src').rglob('*.rl')):
         source = path.read_text()
         # Ordinary helpers may construct a child without returning its frame.
@@ -66,13 +72,24 @@ def main():
             tail = source[header.end():]
             end = re.search(r'^\S', tail, re.M)
             body = tail[:end.start()] if end else tail
-            assert not re.search(r'^\s*subaction(?!\*)\b', body, re.M), header[1]
+            steps = list(re.finditer(r'^\s*subaction(?!\*)\b[^\n]*', body, re.M))
+            if steps:
+                assert header[1] in alternative_menus and len(steps) == 1, header[1]
+                step = steps[0]
+                assert re.search(r'\bcore_choice, faction_choice\s*$', step[0]), header[1]
+                prefix, suffix = body[:step.start()], body[step.end():]
+                assert 'frm core_choice =' in prefix and 'frm faction_choice =' in prefix, header[1]
+                assert 'if core_choice.started:' in suffix, header[1]
+                assert re.search(r'subaction\*[^\n]*\bcore_choice\s*$', suffix, re.M), header[1]
+                assert re.search(r'subaction\*[^\n]*\bfaction_choice\s*$', suffix, re.M), header[1]
+                alternative_sites.add(header[1])
             assert header[3] not in actions, ('Duplicate frame declaration', header[3])
             actions[header[3]] = dict(function=header[1], frame=header[3],
                                      source=str(path.relative_to(root)),
                                      line=source[:header.start()].count('\n') + 1,
                                      body=body)
             producers[header[1]] = header[3]
+    assert alternative_sites == alternative_menus, alternative_sites
     def called_frames(body, visited):
         result = set()
         # Ignore comments and strings so prose/example calls are not edges.
@@ -109,6 +126,7 @@ def main():
     for frame, action in sorted(actions.items()):
         row = {key: value for key, value in action.items() if key != 'body'}
         row.update(game_copies=counts[frame], native_bytes=ctypes.sizeof(getattr(module, frame)),
+                   single_step_alternative=action['function'] in alternative_sites,
                    storage=('Board.' + ('shared_actions.' if frame not in
                             ('Attack', 'RerollableDice', 'RerollableDicePair') else '')
                             + slots[frame]) if frame in slots else 'single parent/root',

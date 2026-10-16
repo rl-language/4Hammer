@@ -206,7 +206,7 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
         # ingress callers; prebattle deployment/redeployment is not ingress.
         let arrival : UnitID
         arrival = destination
-        faction_flyboss_ingress(board, arrival)
+        faction_after_reserve_arrival(board, arrival)
     board.reserve_units.erase(reserve.get())
 
 # Repositioning preserves effects/history and retires the battlefield slot

@@ -80,14 +80,14 @@ fun model_partially_obscured(Board board, Model observer, Model target) -> Bool:
     for i in range(board.terrain_areas.size()):
         if sight_crosses_terrain_area(observer, target, board.terrain_areas[i]):
             return true
-    return faction_ramshackle_obscures(board, observer, target)
+    return faction_intervening_cover(board, observer, target)
 
 # Every target model needs at least one cover condition (p.50), possibly a
 # different condition per model. Other keywords cannot borrow Infantry cover.
 fun unit_has_benefit_of_cover(Board board, Model observer, Unit target) -> Bool:
     if target.empty():
         return false
-    if faction_wobbled_observer(board, observer):
+    if faction_observer_grants_cover(board, observer):
         return true
     for i in range(target.models.size()):
         let covered = model_partially_obscured(board, observer, target[i])

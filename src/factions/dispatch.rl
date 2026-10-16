@@ -1,3 +1,4 @@
+import factions.types
 # Static faction composition for the jointly compiled game. Contracts are
 # grouped by responsibility; adding an adapter does not copy core algorithms.
 import factions.dispatch_combat

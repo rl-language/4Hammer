@@ -179,5 +179,5 @@ fun unit_has_waaagh(Unit unit) -> Bool:
 fun unit_is_riled_up(Unit unit) -> Bool:
     let active = false
     for index in range(unit.models.size()):
-        active = active or ((unit[index].is_alive() or unit[index].state == ModelState::fight_on_death) and unit[index].is_riled_up())
+        active = active or ((unit[index].is_alive() or unit[index].state == ModelState::fight_on_death) and is_riled_up(unit[index]))
     return active

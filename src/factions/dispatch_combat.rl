@@ -2,9 +2,6 @@ import factions.orks.combat
 import factions.orks.morale
 import factions.orks.queries
 
-# Neutral combat entrypoints. This composition module is the only layer
-# that selects concrete faction behavior; core algorithms do not inspect it.
-
 # Surly return and Flyboyz aircraft destruction retain their pending casualty (Orks cards; core p87).
 fun faction_has_destruction_trigger(Board board, Model model) -> Bool:
     return orks_has_destruction_trigger(board, model)
@@ -62,7 +59,7 @@ fun faction_fight_death_threshold(Board board, Unit unit, Model model) -> Int:
     return orks_fight_death_threshold(board, unit, model)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_grot_shield(Board board, Unit unit) -> Int:
+fun faction_hit_interceptor(Board board, Unit unit) -> Int:
     return orks_grot_shield(board, unit)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
@@ -70,43 +67,31 @@ fun attack_with_faction_reactions(Board board, UnitID source, UnitID target, Boo
     return attack_with_orks_reactions(board, source, target, melee, overwatch)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_single_declared_target(DeclaredWeapons declarations) -> Int:
-    return orks_single_declared_target(declarations)
-
-# Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_unpredictable_genius(Board board, UnitID source, UnitID target) -> OrksUnpredictableGenius:
-    return orks_unpredictable_genius(board, source, target)
-
-# Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_shokka_selection(Board board, UnitID source) -> OrksShokkaSelection:
+fun faction_pre_declaration_options(Board board, UnitID source) -> OrksShokkaSelection:
     return orks_shokka_selection(board, source)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_shooting_option_end(Board board, UnitID source) -> OrksShootingOptionEnd:
+fun faction_shooting_finished(Board board, UnitID source) -> OrksShootingOptionEnd:
     return orks_shooting_option_end(board, source)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_dreadherder_shooting(Board board, UnitID source) -> OrksDreadherderShooting:
+fun faction_shooting_support(Board board, UnitID source) -> OrksDreadherderShooting:
     return orks_dreadherder_shooting(board, source)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_dreadherder_available(Board board, UnitID source) -> Bool:
-    return orks_dreadherder_available(board, source)
-
-# Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_engaged_only_fortifications(Board board, Unit unit) -> Bool:
+fun faction_engagement_exception(Board board, Unit unit) -> Bool:
     return orks_engaged_only_fortifications(board, unit)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_ramshackle_obscures(Board board, Model observer, Model target) -> Bool:
+fun faction_intervening_cover(Board board, Model observer, Model target) -> Bool:
     return orks_ramshackle_obscures(board, observer, target)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_wobbled_observer(Board board, Model observer) -> Bool:
+fun faction_observer_grants_cover(Board board, Model observer) -> Bool:
     return orks_wobbled_observer(board, observer)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_resolve_hit_effects(Board board, UnitID source) -> OrksHitEffects:
+fun faction_hit_results(Board board, UnitID source) -> OrksHitEffects:
     return orks_resolve_hit_effects(board, source)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
@@ -114,11 +99,7 @@ fun faction_datasheet_fight_selection(Board board, UnitID source) -> OrksDatashe
     return orks_datasheet_fight_selection(board, source)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_datasheet_selection(Board board, UnitID source) -> OrksDatasheetSelection:
-    return orks_datasheet_selection(board, source)
-
-# Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_rokkit_selection(Board board, UnitID source) -> OrksRokkitSelection:
+fun faction_melee_weapon_selection(Board board, UnitID source) -> OrksRokkitSelection:
     return orks_rokkit_selection(board, source)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
@@ -128,10 +109,6 @@ fun append_faction_datasheet_weapon_rules(Board board, UnitID source, Weapon sel
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun append_faction_datasheet_modifiers(Board board, UnitID source, DeclaredWeapon declaration, ModifiedCharacteristic kind, RuleModifiers result):
     append_orks_datasheet_modifiers(board, source, declaration, kind, result)
-
-# Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_attack_selection(Board board, UnitID actor, Bool melee) -> OrksAttackSelection:
-    return orks_attack_selection(board, actor, melee)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_attack_targeted(Board board, UnitID source, UnitID target, Bool melee) -> OrksAttackTargeted:
@@ -145,14 +122,6 @@ fun intercept_faction_hits(Board board, UnitID target, CombatCounter count) -> O
 fun faction_allocation_invulnerable(Unit unit, Model model, AttackSequenceInfo info) -> Int:
     return orks_allocation_invulnerable(unit, model, info)
 
-# Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun secure_faction_gretchin_objectives(Board board, SourceInstance instance):
-    secure_orks_gretchin_objectives(board, instance)
-
-# Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_krushin_impetus(Board board, UnitID source) -> OrksKrushinImpetus:
-    return orks_krushin_impetus(board, source)
-
 # Composition hook: morale adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_became_shocked(Board board, EntityIdentity subject) -> OrksBecameShocked:
     return orks_became_shocked(board, subject)
@@ -162,9 +131,58 @@ fun faction_became_shocked(Board board, UnitID target) -> OrksBecameShocked:
     return orks_became_shocked(board, target)
 
 # Composition hook: morale adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_mob_mentality_step(Board board) -> OrksMobMentalityStep:
+fun faction_before_battle_shock(Board board) -> OrksMobMentalityStep:
     return orks_mob_mentality_step(board)
 
-# Composition hook: morale adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun resolve_faction_mobbed(Board board, UnitID source) -> OrksMobbed:
-    return resolve_orks_mobbed(board, source)
+# Faction death choices return results; core owns casualty removal and mortal-job order.
+fun faction_before_destruction(Board board, Model casualty, PendingDestruction event) -> OrksBeforeDestruction:
+    return orks_before_destruction(board, casualty, event)
+
+# Da Button adds one Hazardous use after ordinary selected physical weapons (Orks/Dread Mob).
+fun faction_extra_attack_hazards(Board board, Unit unit) -> Int:
+    return orks_extra_attack_hazards(board, unit)
+
+# Core attack-end sequencing precedes faction ledger closure.
+fun end_faction_attack(Board board):
+    orks_end_attack(board)
+
+# Automatic shock success is a source-owned permission, not a change to the core test (Orks cards).
+fun faction_automatic_shock_success(Board board, Unit unit) -> Bool:
+    return orks_automatic_shock_success(board, unit)
+
+# Snotling psychic penalty contributes before the common Leadership comparison (Orks psychic card).
+fun faction_leadership_roll_penalty(Board board, Unit unit) -> Int:
+    return orks_leadership_roll_penalty(board, unit)
+
+# Offer one faction Shooting-phase ability alongside ordinary shooting choices.
+fun faction_shooting_phase_choice(Board board) -> OrksShootingPhaseChoice:
+    return orks_shooting_phase_choice(board)
+
+# Unpredictable Genius owns its single-target trigger and effect; common declarations/grouping remain core (Orks/Madcap Meks).
+fun faction_declarations_complete(Board board, DeclaredWeapons declarations, UnitID source, Bool melee) -> OrksDeclarationsComplete:
+    return orks_declarations_complete(board, declarations, source, melee)
+
+# Mobbed/Impetus remain interleaved with common charge-end effects in the charger-chosen order (Orks cards; user Rules Sequencing).
+# Preserve the common pending context while choosing one atomic faction effect.
+fun faction_charge_choice(Board board, FactionChargeProgress progress, Bool crushing_pending, UnitID source) -> OrksChargeChoice:
+    return orks_charge_choice(board, progress, crushing_pending, source)
+
+# Snapshot actual charge-end triggers after the completed move (Orks Mobbed/Krushin Impetus).
+fun faction_charge_progress(Board board, UnitID source) -> FactionChargeProgress:
+    return orks_charge_progress(board, source)
+
+# Only unresolved Orks charge triggers remain; no core movement/charge rule is synthesized.
+fun faction_charge_effects_remaining(FactionChargeProgress progress) -> Bool:
+    return orks_charge_effects_remaining(progress)
+
+# Dodge Dis provides a separately selectable+1 hit contribution (Orks/Squighog-Boyz; core modifier rules).
+fun faction_innate_hit_bonus(Unit unit) -> Bool:
+    return orks_innate_hit_bonus(unit)
+
+# Capture Wrecka objective selection, Ammo Runt and paid attack choices before declarations (Orks cards).
+fun faction_attack_selection_options(Board board, UnitID source, Bool melee) -> OrksAttackSelectionOptions:
+    return orks_attack_selection_options(board, source, melee)
+
+# Brutal Impact contributes damage before other faction modifiers, preserving operation order (Orks/Squighog-Boyz).
+fun append_faction_intrinsic_modifiers(Board board, UnitID source, ModifiedCharacteristic kind, RuleModifiers result):
+    append_orks_intrinsic_modifiers(board, source, kind, result)

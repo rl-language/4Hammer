@@ -89,7 +89,7 @@ cls ArmyConfiguration:
     # Enum's none value and duplicates cannot consume selection slots;
     # non-Orks cannot select an Orks package (user limit; faction source).
     fun detachment_selection_valid(OrksDetachment detachment) -> Bool:
-        return self.faction == ArmyFaction::orks and detachment.value > 0 and detachment.value <= OrksDetachment::taktikal_brigade.value and self.detachments.has_capacity() and !self.has_detachment(detachment)
+        return faction_detachment_selection_valid(self, detachment)
 
     # Invalid picks are atomic and do not erase an earlier legal selection.
     # This is configuration infrastructure for the user's maximum of three.
@@ -104,7 +104,7 @@ cls ArmyConfiguration:
 fun army_configuration_valid(ArmyConfiguration army) -> Bool:
     if army.faction.value < 0 or army.faction.value > ArmyFaction::adeptus_custodes.value or army.reserve_budget.value < 0 or army.reserve_budget.value > ReserveBudgetMode::point_free.value:
         return false
-    if army.faction != ArmyFaction::orks and !army.detachments.empty():
+    if !faction_army_configuration_valid(army):
         return false
     for entry in range(army.detachments.size()):
         if army.detachments[entry].value <= 0 or army.detachments[entry].value > OrksDetachment::taktikal_brigade.value:
