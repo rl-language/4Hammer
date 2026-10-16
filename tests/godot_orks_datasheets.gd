@@ -21,8 +21,8 @@ func panel_for(rules, library, action):
 func check_units():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 46)
-	assert(library.get_observation_schema_version() == 46)
+	assert(library.get_state_schema_version() == 47)
+	assert(library.get_observation_schema_version() == 47)
 	assert(library.get_action_schema_version() == 27)
 	# All included cards are constructed through the public roster factory.
 	# Use-model sizes intentionally use user-authorized circular proxies.

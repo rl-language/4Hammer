@@ -5,7 +5,7 @@ func _initialize():
 
 func check_shared_muster():
 	var library = root.get_node("GlobalRules").library
-	assert(library.get_state_schema_version() == 46)
+	assert(library.get_state_schema_version() == 47)
 	var board = RLCBoard.make()
 	var unit = library.make_infernus_squad()
 	library.resize(unit.get_models(), 1)

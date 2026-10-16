@@ -22,8 +22,8 @@ func panel_for(rules, library, action):
 func check_units():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 46)
-	assert(library.get_observation_schema_version() == 46)
+	assert(library.get_state_schema_version() == 47)
+	assert(library.get_observation_schema_version() == 47)
 	assert(library.get_action_schema_version() == 27)
 	var gun = library.orks_mega_mek_gun_choice(0)
 	var extra = library.orks_mega_mek_extra_choice(2)
