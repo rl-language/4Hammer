@@ -3,7 +3,9 @@
 The [passive/triggered ability specification](../../doc/army-api.md) defines the
 replacement mechanism. The faction-specific army-building action is the catalog:
 it defines legal choices and constructs the army. The dispatch modules below
-remain the current runtime implementation until their consumers are migrated.
+implement the active calculation and event hooks. See the
+[runtime hook guide](../../doc/ability-hooks.md) for exact boundaries and remaining
+metadata/legacy work.
 
 Core functions and actions use the neutral contracts in
 [dispatch.rl](dispatch.rl). These composition modules select the concrete
@@ -26,7 +28,8 @@ remaining interfaces that still restrict what another faction can express.
 | [dispatch_properties.rl](dispatch_properties.rl) | Model keywords/abilities, characteristic contributions, intrinsic weapon rules and component army-rule metadata |
 | [dispatch_combat.rl](dispatch_combat.rl) | Selection/target/hit/destruction hooks, modifiers, defensive permissions and faction combat choices |
 | [dispatch_movement.rl](dispatch_movement.rl) | Source movement events, mode/Advance choices, traversal, charge contributions, prebattle formations/redeploy, cargo choices/OC, arrival/reactions and replacement metadata |
-| [dispatch_sources.rl](dispatch_sources.rl) | Source registration/availability, typed faction grant lifecycle, validation, timing-source resolution and faction timing choices |
+| [dispatch_sources.rl](dispatch_sources.rl) | Actual source registration/availability and adapter-state validation; common effect lifecycle lives in core |
+| [dispatch_timing.rl](dispatch_timing.rl) | Concrete round/turn/phase/Command-step actions, pending predicates and controller progress |
 | [dispatch_permissions.rl](dispatch_permissions.rl) | Action, detection, stratagem, attachment and other source-specific eligibility queries |
 | [dispatch_setup.rl](dispatch_setup.rl) | Existing roster menu, selected detachments/options/Warlord and muster/attachment policy |
 | [types.rl](types.rl) | Explicit bounded extension progress used by neutral action controllers |
@@ -54,7 +57,7 @@ Read result fields after completion and before reusing their frame. The `started
 routing flag is deliberately read earlier, after forwarding one input, to choose
 which peer to finish. Check each result's guard: `reaction.available` before its
 actor/target fields,
-`crash_mortals > 0` before using the death-reaction recipient, and a selected,
+the ordered `DestructionAbilityEffects.damage_jobs` after completion, and a selected,
 completed special-move peer before using `kind`/`extra`. A zero source-effect key
 means no scoped effect to remove; an interceptor unit index of zero is valid and
 its absence sentinel is `-1`. Never infer these meanings from integer truthiness.
@@ -87,7 +90,7 @@ faction child, then forward one step from either:
 
 ```text
 frm core_choice = core_timing_choice(...)
-frm faction_choice = faction_timing_choice(...)
+frm faction_choice = on_command_phase_start(...)
 subaction(board, core_progress, progress, pending) core_choice, faction_choice
 if core_choice.started:
     subaction*(board, core_progress, progress, pending) core_choice
@@ -118,7 +121,7 @@ Public input names/payloads remain the Godot contract. Moving a private action
 body or changing saved frame layout requires matching generated bindings and a
 state schema update. Reordered action tags also require a matching action schema,
 even when input field shapes are preserved. The current versions are
-state/observation46, action27 and next-state bound47. Use the source boundary
+state/observation47, action27 and next-state bound48. Use the source boundary
 audit and frame-storage audit;
 [ROADMAP.md](../../ROADMAP.md) records executed validation and current schemas.
 

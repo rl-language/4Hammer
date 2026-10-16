@@ -5,6 +5,12 @@ replacement mechanism. The faction-specific army-building action is the catalog
 and owns legal selection and construction. This review describes current
 dispatch and the dependencies that migration must fix.
 
+The [implemented hook migration](ability-hooks.md) supersedes the narrow
+interfaces identified here. Fixed weapon/hit bonuses, selected-move permissions,
+marker-specific cargo OC, destruction results, operation effect keys and standard
+status lifecycle have been migrated. Model/component metadata and the remaining
+inline legacy policy are still follow-ups.
+
 This review follows dispatch hooks into their **core consumers**. It records
 the interfaces implemented now and the work still required for a core that does
 not interpret particular factions' rules. Documentation changes do not perform
@@ -33,8 +39,9 @@ datasheet is eligible for an effect merely because the interface supports it.
 
 ## Findings requiring implementation follow-up
 
-The following are current interface limits or remaining dependencies, not
-problems that comments alone resolve.
+The table records the reviewed interfaces before the active-hook migration.
+Completed replacements are described above and in the runtime guide; remaining
+metadata/legacy dependencies are not problems that comments alone resolve.
 
 A concrete type name in composition/generated frame storage is not itself
 interpretation of an army rule. Preserve typed storage and change ownership
@@ -68,9 +75,12 @@ passing current audit is useful evidence within that scope only.
 
 ## Model-field refactor remains planned
 
-The eight fields are `has_waaagh`, `has_da_boss`, `grants_unit_riled_up`,
+The original eight fields were `has_waaagh`, `has_da_boss`, `grants_unit_riled_up`,
 `blastajet_force_field`, `orks_enhancement`, `orks_upgrade_origin`,
 `painboss_mounted_attachment` and `riled_source_effects`.
+
+`riled_source_effects` has now been removed; its grants use common `rule_effects`
+and standard source lifecycle. The other seven named fields remain.
 
 Use the existing ability list for explicit rule conferral, the shared weapon
 catalog's nonattacking equipment support for selected wargear, a shared

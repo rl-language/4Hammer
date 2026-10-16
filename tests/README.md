@@ -25,7 +25,7 @@ Each compilation uses four workers; change this with
 be supplied with `-DRULE_TEST_CLANG=/path/to/clang`. CTest process parallelism
 (`ctest -j`) is separate from compiler workers.
 
-`ctest -N --test-dir build-tests` lists **1,191 entries**:1,190 assertions and
+`ctest -N --test-dir build-tests` lists **1,231 entries**:1,230 assertions and
 one compilation fixture. `ctest --test-dir build-tests -R test_timing_opponent_charge --output-on-failure` selects one case. Labels `baseline`, `discrepancies` and
 `expected-failure` allow filtering with `-L`. CTest includes the compilation
 fixture for filtered runs. That fixture builds the native runner and suite with
@@ -56,8 +56,8 @@ python tools/check_godot_state.py --build-path /path/to/matching/native/bindings
   --script tests/godot_shared_procedures.gd --timeout 120
 ```
 
-Generate both native bindings and headers at state/observation40, action26
-(next-state41). This is a host integration check, separate from native CTest.
+Generate both native bindings and headers at state/observation47, action27
+(next-state48). This is a host integration check, separate from native CTest.
 
 `baseline.rl` tests supported behavior, legality and state transitions. `known_discrepancies.rl` asserts desired behavior that currently fails; its manifest links each failure to a source rule, category and roadmap owner. These failures are reported as XFAIL, never as semantic passes. When fixing one, move its assertion into the passing suite and remove its manifest entry. Do not change the assertion to approve incorrect behavior or broadly skip a failing subsystem.
 
@@ -603,3 +603,25 @@ plus empty input, both memory replays, the new985-action terminal game replay
 and30 mutation runs pass with leak detection. ROADMAP.md records the full
 source/layout/roster/finite-observation evidence. Runtime sources exactly match
 the sanitized build snapshot; no Python enters the native pure-rule test path.
+
+## Concrete ability-hook migration
+
+The native suite includes11 `test_ability_hooks_*` regressions for actual
+modifier instances/order/capacity, pure repeated hook evaluation, selected
+Advance snapshots, overlapping objective markers, generic status lifecycle,
+multiple operation effect keys, neutral destruction results, precise timing
+and saved modifier validation. The [runtime guide](../doc/ability-hooks.md)
+defines these contracts; no Python participates in these assertions.
+
+Use `tests/godot_ability_hooks.gd` against matching schema47/27 bindings for the
+new calculation outputs, general hit magnitudes, standard status lifecycle and
+destruction result API. Like the existing host checks, it explicitly frees its
+Godot `RLCLib` object. This is a separate headless integration check. The shared
+source/frame/layout audits, finite Gym smoke and sanitized fuzzer check distinct
+properties; none substitutes for the rule assertions.
+
+The completed migration records1,230 native assertions plus compilation,22
+passing headless Godot scripts and the matching source/frame/layout/finite-ML
+and sanitized checks in ROADMAP. The additional broad `godot_state.gd` flow
+exceeded600s; it is incomplete and remains tracked, rather than skipped or
+reported as a pass. No test assertions or instrumentation were disabled.

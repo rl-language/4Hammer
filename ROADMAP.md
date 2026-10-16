@@ -6,8 +6,10 @@ the end of this roadmap remain pending. Their objective is removal of faction
 rule interpretation from core, using whatever adequate bounded storage is needed.
 
 Corrected replacement: [passive and triggered abilities](doc/army-api.md).
-The faction-specific army-building action is the catalog. Mechanism definition
-is complete; runtime migration is pending.
+The faction-specific army-building action is the catalog. Active calculation
+and event hooks are implemented and validated. The latest entry records one
+incomplete broad UI check; Model/component metadata and remaining legacy
+extraction stay separate.
 
 [The Rulebook design and architecture guide](doc/rulebook-architecture.md) documents the current engine structure and execution paths. The guide is completed documentation work; this roadmap owns implementation status and validation.
 
@@ -1946,12 +1948,12 @@ for evidence, actual interface limitations and implementation order.
 - [ ] Replace Model's eight named fields with shared ability/equipment/selected-
   option/effect data; retain original-recipient provenance and independent keys.
 - [ ] Generalize captured component army-rule metadata with its retention rules.
-- [ ] Fold fixed Sustained Hits1, Boolean+1 hit and duplicate selected-move
-  permission hooks into general contribution/permission mechanisms.
-- [ ] Separate engaged-target shooting permission from escape-hazard bypass.
-- [ ] Pass the queried objective to passenger OC. Add overlapping-marker
-  regression coverage and fix any contribution to a nonqualifying marker.
-- [ ] Replace legacy-named destruction results and the single scoped-effect
+- [x] Fold fixed Sustained Hits1, Boolean+1 hit and duplicate selected-move
+  permission hooks into general calculation/permission mechanisms.
+- [x] Separate engaged-target shooting permission from escape-hazard bypass.
+- [x] Pass the queried objective to passenger OC. Add overlapping-marker
+  regression coverage and fix contribution to a nonqualifying marker.
+- [x] Replace legacy-named destruction results and the single scoped-effect
   result with mechanically general results, preserving core damage order.
 - [ ] Review composition-owned frame/progress contracts without opaque state,
   extra Board copies or recursive shared-frame entry.
@@ -1986,11 +1988,11 @@ triggered actions, with explicit common effects, events and lifecycle contracts.
   action/shared-procedure ownership without another ability-step interpreter.
 - [x] Correct the architecture/faction guides and AGENTS instructions so future
   work does not follow the superseded six-family proposal.
-- [ ] Implement the common passive contexts/effects and precise event/pending
-  records with native regressions, reusing current shared primitives.
-- [ ] Migrate passive consumers and remove fixed-bonus/bundled-permission hooks;
+- [x] Implement the active calculation-specific outputs/event hooks with native
+  regressions, reusing current shared contexts and pending/source primitives.
+- [x] Migrate passive consumers and remove fixed-bonus/bundled-permission hooks;
   pass the actual scored objective to cargo OC and test overlapping markers.
-- [ ] Implement separate typed triggered-action hooks at the actual event
+- [x] Implement separate typed triggered-action hooks at the active event
   boundaries, reusing queue/validation/sequencing helpers where needed and
   shared cost/use/effect lifecycle. Preserve true interruption order and
   prevent shared-frame re-entry; no universal ability/event dispatcher.
@@ -2006,3 +2008,90 @@ action27 and next-state47. Mechanism/signature coverage, removal of rejected
 APIs, event-specific hook coverage, guidance consistency,116 local Markdown
 links and `git diff --check` pass.
 No runtime tests were run for this Markdown-only correction.
+
+## Concrete passive and triggered hooks —2026-10-16 implementation
+
+The user approved placing specialized hooks in the existing domain dispatch
+modules, with a separate timing module. [The runtime guide](doc/ability-hooks.md)
+records actual signatures, core call sites, results and remaining scope.
+
+- [x] Typed model/weapon/attack/allocation and roll calculations; retire fixed
+  Sustained Hits1 and Boolean+1 hit channels, combining the actual terms.
+- [x] Independent selected-move permissions and escape/shooting exceptions;
+  preserve the pre-roll Advance charge-permission snapshot.
+- [x] Pass the actual objective to cargo OC; regress two overlapping markers.
+- [x] Concrete movement, shooting, fight, declaration, shock and destruction
+  event hooks with ordinary Rulebook action sequences.
+- [x] Separate round/turn/phase/Command-step action/pending hooks in
+  `dispatch_timing.rl`; shared core controller sequencing stays in core.
+- [x] Shared standard status lifecycle replaces the separate riled-key store,
+  RiledUpGrant and five bespoke install/remove/validation/presence callbacks.
+- [x] Standard ordered destruction jobs and multiple operation-scoped effect
+  keys; move original-roster model-destruction compatibility into its adapter.
+- [x] Add11 native regressions, including all-term capacity and save validation;
+  the pure rule suite remains native with no Python runner/wrapper/cache.
+- [x] Run final matching native, source/frame/layout, focused Godot and sanitized
+  gameplay/replay/fuzzer checks; record passing and incomplete checks below.
+- [ ] Complete/investigate the additional broad `godot_state.gd` editor-flow
+  check, which exceeded600s. Do not treat its partial progress as a semantic pass.
+- [ ] Extract remaining seven named Model fields and component-conferral
+  metadata, retaining original-recipient scope and source lifetime.
+- [ ] Qualify source/use identities before enabling overlapping local rule IDs
+  from another sourced army. Current adapters remain explicit static composition.
+- [ ] Extract remaining inline legacy-faction policy and broaden the semantic
+  boundary audit. Adapter imports/calls are audited for Orks and legacy; remaining
+  inline legacy interpretation is not certified faction-independent.
+
+State/observation47, action27 and next-state48 describe the matching final batch.
+The unified effect store preserves16 mechanical plus8 prior status slots. Hit
+choice storage covers34 unit +16 attack +16 unit-ability +7 core terms,73 total,
+with completed progress index74. There are no changes to army-building selection,
+rendering, grid/circular geometry, generated init/drop or valid-action discovery.
+
+Artifacts and logs: `/workspace/4hammer-validation/specialized-hooks`.
+The passive commit stage independently passes type checking. The final forced,
+unoptimized four-worker native rebuild passes **1,230 assertions plus its
+compilation fixture (1,231/1,231 CTest entries)** in359.21s, including351.99s
+compilation. Earlier runs before the final model/unit destruction split are
+historical evidence, not the final binary. Pure rule tests use no Python.
+
+Fresh matching headers/native/C++ pass **22 headless Godot scripts**, including
+the new ability-hook API regression and the existing roster/Warlord/attachment
+flow. The additional `godot_state.gd` full save/deployment UI check exceeds its
+600s limit after confirming three-detachment buttons, duplicate rejection,
+pending save and both-player handoff; no assertion failure is reported, but the
+remaining flow is **incomplete**, not passed. Its timeout and partial output are
+preserved. The new test initially omitted freeing its Godot RLCLib object;
+corrected test cleanup passes without ObjectDB leaks. No Rulebook init/drop or
+production UI workaround was introduced. Full rendered integration is excluded.
+
+All **319 public inputs** and **351 reachable payload declarations** compare
+identically, with **zero tag-index changes**; action schema27 remains correct.
+State/observation47 and next-state48 require matching clients. AnyGameAction
+stays24 bytes; Game/Board grow33,992/31,720→34,328/32,056 (+336 each), while Model
+shrinks2,760→2,736 (-24). The frame audit passes139 actions/66 shared slots with
+zero duplicates or recursive re-entry. A fresh2,620-line action graph is saved.
+
+The source audit passes936 core functions/actions and423 adapter symbols, with
+negative controls rejecting a concrete legacy import/call and a named status
+interpreted in core. It explicitly excludes certification of remaining inline
+legacy policy. Cached HTML checks pass54 cards/63 model profiles/253 weapon
+rows; all54 default and184 variant rosters match after explicit representation
+normalization. Twenty Gym steps pass30,072 candidates and18,296,107 finite
+observations. No valid-action discovery optimization or speedup is claimed.
+
+A fresh native game completes985 actions (44 supplied prefix decisions), reaches
+terminal owner−4 and restores its final save. The matching optimized ASAN/UBSAN/
+LeakSanitizer fuzzer passes404 selected semantic assertions plus empty input
+(405 runs/144.48s), both preserved memory inputs (12.67s), the previous game input
+(80.67s), fresh mutation (27 runs/31.42s) and the new985-action replay (72.057s),
+with no sanitizer failure or crash artifact. Runtime source snapshots match;
+the recorded final cleanup changes trailing whitespace/blank EOF only.
+
+Relative to45b81ac (which already contains the expanded hook comments), runtime
+Rulebook sources change27,842→28,137 lines (+295): core+171, Orks+65,
+composition+23 and a36-line legacy adapter. This is an API/ownership refactor,
+not a total code reduction. Remaining seven named Model fields, component
+metadata, source/use identity qualification and inline legacy policy remain
+explicit implementation tasks above. Broader proposed event records/hooks are
+not claimed implemented merely because their design is documented.

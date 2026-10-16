@@ -9,11 +9,13 @@ listing API or a separate army-description interface.
 
 This specification covers passive and triggered abilities only.
 
-The task is to define **passive abilities** and **triggered abilities** so core
-can apply the same mechanics for any army. The contracts below are to be
-implemented; the [current dispatch layer](../src/factions/README.md) has not yet
-been migrated. Signatures/layouts are contract notation, not callable additions
-to the current library.
+The mechanism separates **passive abilities** from **triggered abilities** so
+core can apply the same mechanics for any army. The active calculation/event
+hooks are now implemented in the [dispatch layer](../src/factions/README.md).
+[The runtime guide](ability-hooks.md) gives their actual modules, signatures,
+outputs and limits. The broader record/effect vocabulary below remains design
+notation where that guide does not list a runtime implementation; it is not a
+claim that every proposed event or all named model metadata has been migrated.
 
 ## The two mechanisms
 
@@ -231,8 +233,7 @@ Remaining stationary does not invent a move-start/end event.
 ### Event-specific action hooks
 
 Core calls a separate action hook at each boundary. This is the public extension
-surface, not a universal queue/validate/execute dispatcher. The planned hook
-inventory follows; each name has its own typed event and action frame.
+surface, not a universal queue/validate/execute dispatcher. The event inventory follows; each name has its own typed event and action frame.
 
 | Hooks | Boundary and permitted work |
 | --- | --- |
@@ -474,7 +475,8 @@ overlapping expiry, offboard persistence, retained component abilities,
 revival versus replacement, selection snapshots/retargeting, rolled versus
 generated hits, two-marker cargo OC and genuine interruption order.
 
-The [roadmap](../ROADMAP.md) tracks this implementation separately from the
-completed definition. Current runtime and schemas remain unchanged by writing
-this specification. Adequate bounds are permitted; valid-action discovery and
-rendering remain outside this refactor.
+The [roadmap](../ROADMAP.md) distinguishes implemented active hooks from
+remaining metadata, identity and legacy-faction work. Do not add empty hook
+stubs for hypothetical rules: introduce a concrete event when a supplied rule
+and core call site need it. Adequate bounds are permitted; valid-action discovery
+and rendering remain outside this refactor.

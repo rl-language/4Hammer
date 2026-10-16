@@ -303,7 +303,6 @@ does not make this model a Character.
 | `must_be_warlord` | `Bool` | Model-level mandatory Warlord candidate; selection also considers faction and unit requirements. |
 | `cannot_be_warlord` | `Bool` | Model-level prohibition, which overrides a mandatory requirement. |
 | `grants_unit_riled_up` | `Bool` | Live bearer can confer riled status to its unit under its source rule. |
-| `riled_source_effects` | `CheckedVector<SourceEffectKey, 8>` | Keys of continuing riled grants so expiry/removal does not erase another source's grant. |
 | `suffered_wounds` | `Wounds` | Cumulative wounds lost, initially 0. Damage increases it; healing reduces it. It is not wounds remaining. |
 | `has_damaged` | `Bool` | Whether an explicit Damaged threshold was supplied by this datasheet. |
 | `damaged_threshold` | `Wounds` | Remaining-wounds threshold; use is_damaged, not suffered_wounds >= threshold. |
@@ -602,11 +601,11 @@ not be confused with a printed Weapon or with a target's current live state.
 | `melta_damage_bonus` | `LinearlyDistributedInt<0, MAX_STAT_MODIFIER>` | Applicable additional damage for this group, a characteristic contribution rather than a second damage event. |
 | `precision_visibility_known` | `Bool` | Whether the per-target-model Precision visibility snapshot has been established. |
 | `precision_visible_targets` | `Bool[32]` | Which target model slots satisfy the current Precision visibility selection condition. |
-| `faction_innate_hit_bonus` | `Bool` | Source-supplied intrinsic hit contribution, distinct from a BS/WS characteristic modifier; currently populated by Orks Dodge Dis. |
+| `unit_ability_hit_modifiers` | `RuleModifiers` | Actual independently selectable unit-ability hit operations; arbitrary supported magnitudes, separate from WS/BS. |
 | `hit_roll_bonus` | `Bool` | Retained generic/legacy positive hit contribution; combine it with other terms before the +/-1 cap. |
-| `faction_hit_modifiers` | `RuleModifiers` | Source-owned faction hit arithmetic for this attack group; core applies the common modifier rules. |
-| `faction_unit_hit_modifiers` | `CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS>` | Separately retained unit/repair hit contributions so optional ignoring can distinguish sources. |
-| `faction_wound_modifiers` | `RuleModifiers` | Source-owned faction wound arithmetic for the group. |
+| `attack_hit_modifiers` | `RuleModifiers` | Source-owned faction hit arithmetic for this attack group; core applies the common modifier rules. |
+| `unit_hit_modifiers` | `CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS>` | Separately retained unit/repair hit contributions so optional ignoring can distinguish sources. |
+| `attack_wound_modifiers` | `RuleModifiers` | Source-owned faction wound arithmetic for the group. |
 | `fail_hits_up_to_three` | `Bool` | Rule-specific unmodified low-hit failure gate; not just a -1 arithmetic modifier. |
 | `target_has_cover` | `Bool` | Cover snapshot used by the current edition's BS handling, not a copied armour-save bonus. |
 | `plunging_fire` | `Bool` | Printed Plunging Fire condition; current handling affects BS and excludes Aircraft as required. |
@@ -952,7 +951,6 @@ See [modifiers.rl](../src/modifiers.rl) and
 | `SourceWeaponGrant.weapon_name` | `WeaponCode` | Optional representative Weapon family ID, zero means no filter |
 | `SourceWeaponGrant.profile_name` | `WeaponCode` | Optional exact Weapon ID, zero means no filter |
 | `SourceWeaponGrant.physical_scope` | `Bool` | Extend the representative slot to linked profiles of that physical copy |
-| `RiledUpGrant.enabled` | `Bool` | Installs the source-owned riled state when enabled; source keys preserve overlapping grants |
 | `RuleEffectGrant.source_effect` | `SourceEffectKey` | Owner key of the installed effect; supports keyed expiry |
 | `RuleEffectGrant.kind` | `RuleEffectKind` | Finite shared effect catalog; core interprets common kinds and faction adapters interpret their named entries |
 | `RuleEffectGrant.amount` | `FixedStat` | That effect's magnitude where relevant; not a universal characteristic modifier |
@@ -966,9 +964,9 @@ supported operations, rather than erasing every negative number wholesale.
 
 `SourceGrant` is a typed alternative of `CharacteristicModifier`,
 `IncomingAttackModifier`, `SourceWeaponGrant`, `AttackModifierPermission`,
-`RiledUpGrant` or the current `RuleEffectGrant`. Source conditions and timing
-do not make every payload faction-independent yet. The existing Orks adapters
-still own unique effects and permissions.
+and `RuleEffectGrant`. Riled-up is one adapter-interpreted effect kind in that
+shared store. Standard installation, exact-key removal, presence and handle
+validation are common; named effect eligibility/meaning remains in adapters.
 
 ## Shared procedure frames
 
@@ -1163,3 +1161,29 @@ copy count. Neither mechanism enables an unsupported legacy army automatically.
 Replacement construction maps old component membership onto newly allocated
 identities; ordinary revived models continue using the separate identity-
 preserving return procedure.
+
+## Calculation and triggered-ability results
+
+[ability_hook_types.rl](../src/ability_hook_types.rl) contains mechanical outputs,
+not another army-state provider. [The hook guide](ability-hooks.md) specifies
+callers, event boundaries, ownership and current implementation limits.
+
+| Record / fields | Meaning |
+| --- | --- |
+| `ChargeRollEffects.modifiers`, `.reroll` | Independent charge terms and reroll permission; core applies caps after rerolls |
+| `AdvanceRollEffects.modifiers`, `.reroll` | Advance-specific arithmetic and reroll permission |
+| `SelectedMovePermissions.charge`, `.shoot`, `.start_action` | Independent gate waivers captured at selection; they do not grant complete legality |
+| `InvulnerableSavePermission.target` | Caller-seeded base permission, improved before characteristic arithmetic; above6 is no save |
+| `HitResolutionPolicy.before_critical_conversion` | Original rolled-hit effects must complete before critical conversion; generated hits stay separate |
+| `BattleShockRollEffects.automatic_success`, `.modifiers` | Test permission and roll arithmetic; neither changes recovery eligibility |
+| `HazardousRollEffects.additional_uses` | Extra checks, not mortal damage |
+| `EscapeRollEffects.ignore_rolls`, `.additional_rolls`, `.ordinary_modifiers`, `.additional_modifiers` | Independent hazard bypass and ordinary/extra batch policies |
+| `ObjectiveControlEffects.additional_control` | Cargo OC permitted at the actual queried objective |
+| `DestructionAbilityEffects.suppress_demise`, `.damage_jobs` | Explicit demise replacement and ordered standard damage jobs for the common work stack |
+| `ScopedEffectKeys` | Independently owned grants sharing one enclosing operation deadline |
+
+Common `RuleEffectGrants` has24 slots, preserving the previous16 mechanical
+slots plus8 status slots. Hit choices support34 unit terms,16 attack terms,
+16 unit-ability terms and7 core terms:73 independently selectable operations.
+Its progress bound includes the completed index74. Public choice inputs remain
+one Bool. These are representation envelopes, not extra tabletop permissions.

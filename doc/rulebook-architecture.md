@@ -7,8 +7,9 @@ implementation guide.
 The [passive/triggered ability specification](army-api.md) defines the corrected
 replacement for the current faction dispatch layer. The faction-specific
 army-building action is the catalog and owns legal selection and construction.
-Runtime migration is pending; the architecture below describes the existing
-implementation.
+The [active runtime hook guide](ability-hooks.md) describes the implemented
+calculation/event boundary. Broader model metadata and legacy extraction remain
+tracked in ROADMAP.
 
 This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes all54 standard Orks adapters through17.Q and the shared ability procedures, using Rulebook compiler0.4.18. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
@@ -223,7 +224,7 @@ The project requires authored persistent numeric game/frame values to use `BInt`
 
 There is no z-coordinate action. Model elevation and terrain/path metadata retain their bounded domains. Physical calculations can reconstruct micrometre coordinates and use local floats while actual saved positions remain quads. `ModelHistory` stores bounded squared horizontal segment lengths plus vertical distance, then computes square roots on demand; it does not persist a float distance cache.
 
-The current full-game layout is state/observation schema **46**, action schema **27**, with next-state bound **47**. The validated catalog has **30,072** candidates and **16,316,492** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Observations pass the finite-value check; the user owns valid-action discovery optimization in the compiler.
+The current full-game layout is state/observation schema **47**, action schema **27**, with next-state bound **48**. The validated catalog has **30,072** candidates and **18,296,107** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Observations pass the finite-value check; the user owns valid-action discovery optimization in the compiler.
 
 ## Turn sequence and decision ownership
 
@@ -619,7 +620,7 @@ Home-objective ownership is explicit mission metadata, not inferred geometry.
 All54 included standard cards use [one datasheet guide](factions/orks/orks-datasheets.md)
 and public roster selection. ROADMAP.md owns validation and scope limits.
 Internal frame names describe Command healing, datasheet windows and hit
-effects; state/observation46 requires matching clients. Public action payloads
+effects; state/observation47 requires matching clients. Public action payloads
 retain their names/fields, but reordered tags require action schema27. No custom
 lifecycle hook is introduced.
 
@@ -698,3 +699,23 @@ Warlord keywords/enabling and Battleline exceptions remain explicit adapter
 inputs. Invulnerable-save grants establish a permission and choose the better
 base before modifiers. New replacements allocate identities while ordinary
 model returns preserve them. See ROADMAP.md for current validation and schemas.
+
+## Concrete passive and triggered hooks
+
+See [the runtime hook guide](ability-hooks.md). Core calls calculation-specific
+appenders and event-specific action constructors in the existing dispatch files;
+round/turn/phase hooks now live in `factions/dispatch_timing.rl`. Shared timing
+controllers route their finite window to the named boundary. Armies implement
+those concrete contracts, not a universal event-kind/ability dispatcher.
+
+Weapon instances, characteristic/hit modifiers, roll policies, selected-move
+permissions and save permissions contain their actual mechanical data. Core
+never translates a named army Boolean into a fixed bonus. Objective calculations
+supply the scored marker. Source-owned named statuses use `RuleEffectGrant` and
+common installation/removal/expiry across all banks and archives.
+
+Destruction results are ordered ordinary damage jobs plus demise suppression.
+`on_unit_destroyed` runs on actual last-model destruction; the compatibility
+model-destruction action has moved into `factions/legacy/combat.rl`. Multiple
+independent grant keys can share the enclosing attack lifetime and are cleaned
+up after all groups. Common damage frames remain non-recursive.

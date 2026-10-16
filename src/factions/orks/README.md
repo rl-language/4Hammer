@@ -55,3 +55,10 @@ transport mechanisms are documented in [the shared guide](../../../doc/shared-ru
 Do not add parallel faction implementations of those engines. This adapter
 supplies Orks status choices, tagged hits, metadata and eligibility; common
 status kinds and data lifetimes are owned by the shared modules.
+
+The [ability-hook guide](../../../doc/ability-hooks.md) documents the concrete
+calculation/event entrypoints. Riled status now uses common `rule_effects`;
+Orks supplies its meaning, while common code handles key installation/expiry.
+Package/datasheet helpers are private organization behind the single relevant
+weapon/attack calculation contract. Shared timing sequencing calls distinct
+round/turn/phase boundary hooks.

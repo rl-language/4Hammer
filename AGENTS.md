@@ -909,10 +909,45 @@ Core owns event identity, compulsory/optional sequencing, cost/use records,
 mechanical effect evaluation, source/expiry and shared-frame lifetime. Army
 code owns actual named conditions and ability-specific choices.
 
-The specification's signatures are contract notation, not callable runtime
-additions. Runtime migration is pending in ROADMAP. Retire superseded ad hoc
+Read [the runtime hook guide](doc/ability-hooks.md) for implemented signatures
+and exact boundaries; broader proposed records/events in the design are not
+runtime declarations. ROADMAP distinguishes completed active-hook migration
+from remaining metadata/legacy extraction. Retire superseded ad hoc
 channels as consumers move, preserve original-recipient/source identities and
 all-bank semantics, and use adequate typed bounded state. Do not introduce an
 ability-step interpreter, opaque state, strings for rule identity, another Board
 copy or custom init/drop. Document each common mechanism independently of Orks;
 keep named tabletop rule citations beside their army implementations.
+
+## Concrete ability hooks —2026-10-16 implementation
+
+Use the existing domain dispatch files and `dispatch_timing.rl`; every exposed
+calculation/event has its own contract. Core timing/attack controllers may route
+their fixed stage to concrete hooks. Do not pass an arbitrary event payload for
+every army to decode, and do not create unused callbacks for hypothetical rules.
+Armies organize private helpers normally behind the concrete entrypoints.
+
+Riled-up is an adapter-interpreted `RuleEffectKind` in shared `rule_effects`.
+Do not restore RiledUpGrant, a separate Model status-key vector or faction-specific
+install/remove/presence/handle lifecycle hooks. Preserve exact independent keys,
+expiry, original-recipient provenance and all-bank/archive handling.
+
+Use actual modifiers/weapon-rule instances and independent selected-move,
+shooting/escape/save permissions. Never encode a fixed named bonus in a Boolean
+hook. Pass the queried objective to cargo OC. Destruction actions return ordered
+standard jobs; core queues them before removal without nested damage entry.
+Declaration-scoped cleanup accepts multiple exact keys and occurs after all
+groups. Capacity must accommodate all independently selectable modifier terms.
+
+State/observation47, action27, next-state48 require matching clients; final
+validation/status is recorded in ROADMAP. Remaining seven named Model fields,
+component metadata and inline legacy policy are separate pending work; this
+batch does not certify another army or change army-building actions.
+
+Final hook-migration validation:1,230 native assertions plus compilation pass;
+22 headless Godot scripts, matching319-input/351-payload declarations and tag
+order,139-action/66-slot frame audit, source/table/roster/finite-ML audits and
+sanitized selected semantics/memory/game/mutation runs pass. A fresh985-action
+game reaches terminal and restores. The additional broad `godot_state.gd` UI
+flow timed out at600s; its remaining checks are incomplete. Preserve that open
+item, and do not claim all editor flows or other armies are certified.
