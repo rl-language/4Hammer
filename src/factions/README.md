@@ -84,6 +84,18 @@ Public input names/payloads remain the Godot contract. Moving a private action
 body or changing saved frame layout requires matching generated bindings and a
 state schema update. Reordered action tags also require a matching action schema,
 even when input field shapes are preserved. The current versions are
-state/observation45, action27 and next-state bound46. Use the source boundary
+state/observation46, action27 and next-state bound47. Use the source boundary
 audit and frame-storage audit;
 [ROADMAP.md](../../ROADMAP.md) records executed validation and current schemas.
+
+
+## Shared mechanisms beneath the boundary
+
+Use [the shared-mechanism guide](../../doc/shared-rule-mechanisms.md) before
+adding another hook. Generic source reuse/cleanup, status grants and common
+permission consumers, attack-result bookkeeping, flat reaction execution,
+replacement construction, Warlord/roster restrictions and passenger metadata
+belong in common modules. Keep actual faction triggers, catalog conditions,
+CP/use decisions and named rule tables here. The concrete Orks action returns a
+`ReactionAttackRequest`; core executes it. Shared typed statuses retain source
+keys across every bank and archive. Riled-up itself remains Orks policy.

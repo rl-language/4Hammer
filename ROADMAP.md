@@ -1847,3 +1847,78 @@ scope; this does not certify current adapters for them or an independently
 compiled core. Before enabling another sourced faction with colliding local
 rule IDs, qualify source/use identities as described in the composition map.
 Full rendered integration remains outside the requested scope.
+
+
+## Shared mechanics from faction hooks —completed 2026-10-16
+
+User approved extracting the reusable mechanics identified in the hook review.
+The [shared-mechanism guide](doc/shared-rule-mechanisms.md) documents ownership.
+
+- [x] Shared source reuse, registration identity and temporary-grant cleanup.
+- [x] Shared identity allocator, replacement construction and safe slot reuse;
+  Orks retains eligibility, private-data reset and registration policy.
+- [x] Shared bounded status grants and common permission/save consumers;
+  named Orks effects retain their adapter interpreters.
+- [x] Shared attack ledger/tag validation and flat typed reaction requests.
+- [x] Shared Warlord, copy-count and enhancement restriction algorithms.
+- [x] Declarative transport requirements, grouped seats and embark-range helper.
+- [x] Equipment behavior properties in the shared Weapon catalog.
+- [x] Complete combined native/Godot/source/layout/finite-ML/sanitized checks
+  and record actual evidence in focused implementation/documentation commits.
+
+State/observation **46**, action **27**, next-state **47** require matching
+regenerated clients. All **319 public input types**, fields and tag indices are
+unchanged; all351 reachable payload storage declarations compare identically.
+The action union stays24 bytes. Game grows33,800→33,992 bytes;
+Board31,528→31,720; Model2,696→2,760. The frame audit passes139 actions/66 shared
+slots, with no duplicates or nested shared-frame re-entry. The fresh dependency
+graph is saved as `actions.dot`.
+
+The final unoptimized `-j4` native build passes **1,219 assertions plus
+compilation (1,220 individual CTest entries)** in326.27s, including312.56s
+compilation. Twelve new assertions cover shared grants/expiry/cleanup,
+replacement identities/templates, common status/save permissions, attack
+bookkeeping/tag validation, explicit non-Orks Warlord selection, enhancement
+counting and transport requirements/grouped seat weights. The Warlord fixture
+explicitly supplies both Character and faction keywords; incomplete fixture
+metadata was corrected before the final successful run. Pure rule tests remain
+native, with no Python wrapper or test cache.
+
+Fresh matching unoptimized Godot bindings pass **17 focused scripts**: the16
+prior army/detachment/ability/bank/procedure/weapon/source/roster/characteristic/
+modifier/attachment/keyword checks plus the new shared-muster regression.
+The independent source audit passes928 core functions/actions and415 concrete
+adapter symbols; its negative control rejects both a concrete adapter call and
+a named faction effect interpreted in core. Rules.gd, TraceManager.gd and valid-
+action discovery are unchanged. HTML passes54 cards/63 model profiles/253 weapon
+rows;54 default and184 variant rosters match after explicit field/transport-
+metadata representation normalization. Twenty Gym steps pass with30,072
+candidates and16,316,492 finite observation values.
+
+A fresh native game reaches terminal owner−4 after985 actions (44 supplied
+prefix decisions), and restores its final save. The final optimized ASAN/UBSAN
+engine passes393 selected semantic assertions plus empty input (394 runs/
+137.48s), both preserved memory inputs (10.40s), the newly generated985-action
+game replay (87.58s) and fresh action mutation (30 runs/31.79s), with leak
+detection enabled and no sanitizer failure or crash artifact. Every runtime
+source matches the final sanitized snapshot byte-for-byte. Matching host native
+libraries were refreshed from the final passing CTest library; the shared-muster
+Godot check also passes against that final binary.
+
+Runtime Rulebook sources change27,193→27,378 lines (+185): Orks modules shrink
+423 lines, core grows635 and composition shrinks27. This extracts shared
+mechanisms for other armies without claiming total code reduction. Generic
+status kinds have core consumers; named Orks effect kinds remain in Orks.
+Replacement eligibility/private-state reset and source registration policy,
+Waaagh!/riled-up, named stratagem choices and datasheet exceptions remain faction
+responsibilities. Legacy armies are not automatically enabled or certified;
+another sourced faction with colliding local IDs needs qualified source/use
+identities. Effects retain independent keys, banks and duration; grouped seats
+round once per unit; granted InSv is a permission applied before modifiers.
+
+An attempted import order crashed the compiler in action dependency resolution.
+Preserving the established composition order and keeping low-level types free
+of action-graph imports resolves that issue; the intermediate source tree also
+passes type checking. No compiler change, custom init/drop, rendering work or
+valid-action discovery optimization was added. Artifacts and logs:
+`/workspace/4hammer-validation/shared-hook-mechanics`.

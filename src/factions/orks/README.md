@@ -9,18 +9,18 @@ and [faction documentation index](../../../doc/factions/orks/README.md).
 | --- | --- |
 | `datasheets.rl` | Every current model/unit factory, equipment choice, composition validator and printed attachment permission list |
 | `army.rl` | Waaagh!, riled-up, War Cry, Da Boss and live army-rule queries |
-| `roster.rl` | Custom/starter roster construction, Warlord/detachment selection, copy limits and roster labels |
+| `roster.rl` | Custom/starter roster data, detachment choices, Orks inputs to shared Warlord/copy rules and roster labels |
 | `detachments.rl` | Selected-package and named unit-group predicates |
 | `enhancements.rl` | Enhancement/Upgrade metadata, selection, recipients and attachment restrictions |
 | `stratagems.rl` | Support-card eligibility, timing choices and CP-cost adapters; combat/movement effects live in their own domains |
 | `queries.rl` | Extracted bearer/army/permission properties and finite catalog exceptions; core accesses these through neutral composition |
 | `types.rl` | Orks enums, records and stable source rule codes |
-| `effects.rl` | Typed grant builders, active-effect queries and scoped cleanup |
+| `effects.rl` | Orks payload/label/lifetime policy; shared effect lookup, installation and cleanup live in core |
 | `sources.rl` | One datasheet registration path, source lifecycle/availability adapters and timing-source dispatch |
-| `combat.rl` | Attack selection, modifiers, live support, hit bookkeeping and post-attack effects |
+| `combat.rl` | Attack selection, modifiers, live support, tagged-hit contributions and post-attack policy |
 | `movement.rl` | Move/charge permissions, reactions, redeployment and formations |
 | `recovery.rl` | Repair/healing/revival eligibility and source-specific decisions |
-| `transports.rl` | Seat accounting, cargo effects and embark/disembark reactions |
+| `transports.rl` | Cargo effects and embark/disembark eligibility/reactions; shared transport code owns seat accounting |
 | `psychic.rl` | Psyker eligibility, shared spending/testing and psychic abilities |
 | `morale.rl` | Mobbed, Runtherd, Breakin' Heads and other Battle-shock reactions |
 
@@ -45,6 +45,13 @@ healing and model return remain in common modules. No custom init/drop is used.
 The engine is jointly compiled: core phases call the
 [neutral composition layer](../README.md), which selects these adapters. Shared
 state still contains explicit faction catalog/storage types. This folder is not a
-standalone library. State/observation45 protects renamed internal frame fields;
+standalone library. State/observation46 protects renamed internal frame fields;
 public action payload compatibility is checked separately. Source display names
 are hidden enum values; the UI derives text only when presenting a choice.
+
+
+General grant, attack-result, reaction execution, replacement, muster and
+transport mechanisms are documented in [the shared guide](../../../doc/shared-rule-mechanisms.md).
+Do not add parallel faction implementations of those engines. This adapter
+supplies Orks status choices, tagged hits, metadata and eligibility; common
+status kinds and data lifetimes are owned by the shared modules.

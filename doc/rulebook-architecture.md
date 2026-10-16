@@ -100,6 +100,10 @@ for completed faction cleanup and the remaining shared-engine proposals.
 | Orks datasheets | [datasheets.rl](../src/factions/orks/datasheets.rl) | All54 current factories, checked composition/equipment, printed metadata and attachment permissions |
 | Neutral faction contracts | [composition map](../src/factions/README.md) | Purpose-named properties, permissions, source lifecycle and complete faction actions; static dispatch to Orks adapters |
 | Orks runtime domains | [module map](../src/factions/orks/README.md) | Army/roster, detachments/enhancements, source/effect lifecycle, combat, movement, recovery, transports, psychic and morale adapters |
+| Shared effect permissions | [rule_effect_types.rl](../src/rule_effect_types.rl), [rule_effects.rl](../src/rule_effects.rl) | Bounded status grants, common permissions and granted invulnerable saves |
+| Attack results and reactions | [attack_results.rl](../src/attack_results.rl), [attack_reactions.rl](../src/attack_reactions.rl) | Stable-target facts and flat requested-attack execution |
+| New-unit construction | [replacement_rules.rl](../src/replacement_rules.rl) | Battle-start templates, fresh identities and safe slot reuse |
+| Shared muster rules | [muster_rules.rl](../src/muster_rules.rl) | Warlord selection, copy limits and general enhancement restrictions |
 | Source lifecycle | [source_effect_types.rl](../src/source_effect_types.rl), [source_effects.rl](../src/source_effects.rl) | Source/event/use/effect records, eligibility, typed grants, expiry, aura refresh and restore validation |
 
 Most interactive sequences live in `rules.rl`. The smaller modules expose calculations, predicates and explicit mutation helpers. Some domain modules also own a small interactive frame, such as `choose_weapon_abilities` or `select_firing_deck`. Keep reusable mechanics in those modules and let the orchestration frame decide when to invoke them.
@@ -213,7 +217,7 @@ The project requires authored persistent numeric game/frame values to use `BInt`
 
 There is no z-coordinate action. Model elevation and terrain/path metadata retain their bounded domains. Physical calculations can reconstruct micrometre coordinates and use local floats while actual saved positions remain quads. `ModelHistory` stores bounded squared horizontal segment lengths plus vertical distance, then computes square roots on demand; it does not persist a float distance cache.
 
-The current full-game layout is state/observation schema **45**, action schema **27**, with next-state bound **46**. The validated catalog has **30,072** candidates and **16,255,282** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Observations pass the finite-value check; the user owns valid-action discovery optimization in the compiler.
+The current full-game layout is state/observation schema **46**, action schema **27**, with next-state bound **47**. The validated catalog has **30,072** candidates and **16,316,492** observation values. These are versioned snapshots, not stable promises. `state_types.rl` and ROADMAP.md are authoritative after further changes. Observations pass the finite-value check; the user owns valid-action discovery optimization in the compiler.
 
 ## Turn sequence and decision ownership
 
@@ -609,7 +613,7 @@ Home-objective ownership is explicit mission metadata, not inferred geometry.
 All54 included standard cards use [one datasheet guide](factions/orks/orks-datasheets.md)
 and public roster selection. ROADMAP.md owns validation and scope limits.
 Internal frame names describe Command healing, datasheet windows and hit
-effects; state/observation45 requires matching clients. Public action payloads
+effects; state/observation46 requires matching clients. Public action payloads
 retain their names/fields, but reordered tags require action schema27. No custom
 lifecycle hook is introduced.
 
@@ -672,3 +676,19 @@ constructors must run before forwarding. The frame audit checks these five
 specific alternatives in addition to constructor dependencies, nested re-entry
 and exact stored copies. The source boundary audit permits shared catalogs,
 labels and typed state while rejecting concrete Orks behavior in core.
+
+
+### Shared mechanisms under faction hooks
+
+The [shared-mechanism guide](shared-rule-mechanisms.md) documents the next layer
+of reuse. Orks supplies payloads, triggers, named eligibility and reaction
+requests; shared code owns status storage/expiry, per-target attack facts,
+flat reaction execution, fresh replacement construction, general muster rules
+and declarative passenger checks. Common effect kinds are interpreted in core;
+named faction-effect kinds remain with their adapters. Equipment behavior flags
+are catalog queries rather than faction hooks.
+
+Warlord keywords/enabling and Battleline exceptions remain explicit adapter
+inputs. Invulnerable-save grants establish a permission and choose the better
+base before modifiers. New replacements allocate identities while ordinary
+model returns preserve them. See ROADMAP.md for current validation and schemas.

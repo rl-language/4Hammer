@@ -829,3 +829,37 @@ source/roster/layout/frame/finite-ML audits and sanitized checks pass. A fresh
 985-action native game reaches terminal and restores its final save. These
 results supersede earlier historical counts above. Read the final ROADMAP entry
 for scope, measured code growth and remaining second-faction identity limits.
+
+
+## Shared mechanics extracted from faction hooks —2026-10-16
+
+Read [the shared-mechanism guide](doc/shared-rule-mechanisms.md). Prefer the
+existing common grant/cleanup, status, attack-result/reaction, replacement,
+muster and transport primitives before adding a faction hook. Keep triggers,
+CP/use decisions, named exceptions and catalog eligibility in the faction.
+`RuleEffectGrant`/`Model.rule_effects` are shared, with source-owned expiry;
+only common kinds may be interpreted in core. The source-boundary audit checks
+this even though the finite enum also contains named Orks effects.
+
+Granting an invulnerable save is a permission, not replacement arithmetic:
+choose the better base first, then modifiers. Keep overlapping source keys
+separate. Generic attack records distinguish hits, actual wounds lost,
+destruction and optional tagged hits. Return a typed `ReactionAttackRequest`
+and use the flat shared runner; never nest the shared Attack frame.
+
+Warlord selection takes an explicit faction keyword/enabling flag. General
+copy/enhancement limits are shared; current catalog eligibility stays in the
+adapter. Carrier metadata expresses ALL required keywords and excluded
+datasheets; grouped half-seats round once per unit. Replacements receive fresh
+identities while ordinary returned models retain theirs. Pure Rulebook tests
+remain native. ROADMAP.md records this batch's actual validation status.
+
+
+Latest completed shared-mechanism schemas are state/observation46, action27,
+next-state47. Unlike the previous dispatch batch, this batch preserves all319
+input types, fields AND tag indices. It passes1,219 native assertions plus
+compilation,17 focused Godot checks, source/roster/layout/frame/finite-ML audits
+and the final sanitized checks recorded in ROADMAP.md. A985-action game reaches
+terminal and restores its save. Orks sources shrink423 lines; total runtime
+source grows185 lines. Read ROADMAP.md for measured evidence and remaining
+second-faction identity/legacy-adapter limits.

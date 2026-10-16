@@ -575,3 +575,31 @@ final save. ROADMAP.md records exact timings, counts and limits. Run
 `python tools/check_faction_boundary.py` as a separate source audit to reject
 concrete faction calls/policies in core functions/actions; it is not part of
 the native pure-rule test runner.
+
+## Shared mechanics from faction hooks —2026-10-16
+
+Use the native build in
+`/workspace/4hammer-validation/shared-hook-mechanics/tests`:1,219 supported
+assertions plus compilation,1,220 individually registered CTest entries. The12
+new `test_shared_hooks_*` assertions exercise source reuse/cleanup, replacement
+identity, common status/save permissions, attack bookkeeping, general Warlord/
+enhancement rules and declarative transport requirements/seat weights.
+
+State/observation46 and next-state47 require matching regenerated clients.
+Action27 is unchanged: all319 public input types, their fields and tag indices
+match the previous catalog. The separate host audits compare351 reachable
+payload storage declarations and check frame ownership/source-data/rosters/ML.
+Pure Rulebook CTest still loads no Python wrapper.
+
+The new `tests/godot_shared_muster.gd` exercises shared Warlord selection with
+explicit Character and non-Orks faction metadata, alongside the16 existing
+focused host checks. It does not enable current-edition legacy army adapters.
+The [shared-mechanism guide](../doc/shared-rule-mechanisms.md) describes which
+rules remain faction policy. ROADMAP.md owns executed validation and limits.
+
+Final evidence: all1,220 CTest entries pass in326.27s, including312.56s unoptimized
+compilation. All17 focused Godot checks and393 selected sanitized assertions
+plus empty input, both memory replays, the new985-action terminal game replay
+and30 mutation runs pass with leak detection. ROADMAP.md records the full
+source/layout/roster/finite-observation evidence. Runtime sources exactly match
+the sanitized build snapshot; no Python enters the native pure-rule test path.

@@ -160,12 +160,12 @@ selects the legacy four-marker fixture.
 | `next_source_effect` | `SourceEffectKey` | Allocator for unique effect keys; prevents a later effect being mistaken for an old one. |
 | `next_source_generation` | `SourceEffectKey` | Allocator for source generations; pending events cannot resolve a newly reused source slot accidentally. |
 | `attack_info` | `AttackSequenceInfo` | Context for the attacks currently being resolved; replaced as gathered groups change. |
-| `orks_attack_records` | `OrksAttackRecords` | Orks per-attack hit/loss provenance used by post-attack reactions; not the unit's battle-long history. |
-| `orks_attack_serial` | `LinearlyDistributedInt<0, 1025>` | Bounded attack-selection sequence stamp used to associate those records with an activation. |
+| `attack_records` | `AttackResultRecords` | Shared per-activation target hits/loss/destruction and optional tagged hits; distinct from battle-long history. |
+| `attack_serial` | `LinearlyDistributedInt<0, 1025>` | Bounded attack-selection sequence stamp used to associate those records with an activation. |
 | `move_requires_objective` | `Bool` | Temporary granted-move destination restriction; not a condition on all ordinary moves. |
 | `constrained_mover` | `UnitID` | Unit whose endpoint is constrained by move_requires_objective; restored after the grant. |
 | `forced_attack_target` | `EntityIdentity` | Optional stable target constraint for a reaction attack; zero is unrestricted. Nested reaction runners restore it. |
-| `orks_attack_active` | `Bool` | Marks the active attack context for Orks attack-dependent source checks. |
+| `attack_active` | `Bool` | Marks the active attack context for Orks attack-dependent source checks. |
 | `orks_support_bank` | `SourceBank` | Actual storage bank for current Orks own-unit support choices. |
 | `orks_selected_unit` | `UnitID` | Selected unit index within the current Orks support/bank context; not a persistent identity. |
 | `active_allocation_groups` | `AllocationGroups` | Current defender model-group choices for saves/allocation; rebuilt for the attack context. |
@@ -218,8 +218,8 @@ are part of the unit, including when offboard.
 | `psyker_level` | `FixedStat` | Printed/combined resource capacity for psychic use, supplied by actual source data. |
 | `orks_psychic_usage` | `OrksPsychicUsage` | Shared round budget plus Roar/Visions phase stamps; persists across banks and attachments. |
 | `is_generated_replacement` | `Bool` | Marks a generated replacement so original-unit-only replacement effects cannot loop indefinitely. |
-| `orks_destroyed_attack` | `LinearlyDistributedInt<0, 1025>` | Attack serial associated with this unit's destruction for eligible Orks reactions. |
-| `orks_destroyed_phase` | `PhaseStamp` | Phase stamp for destruction-dependent Orks rules. |
+| `destroyed_attack` | `LinearlyDistributedInt<0, 1025>` | Attack serial associated with this unit's destruction for eligible Orks reactions. |
+| `destroyed_phase` | `PhaseStamp` | Phase stamp for destruction-dependent Orks rules. |
 | `off_battlefield` | `Bool` | State flag synchronized with reserve/embarked placement; visibility/range helpers also check actual bank membership. |
 | `embarked_transport` | `EntityIdentity` | Carrier model identity; zero means not linked to a transport, even if the unit is otherwise offboard. |
 | `has_return_slot` | `Bool` | Whether return_slot is a valid retained battlefield slot; the index alone has no unset sentinel. |
@@ -275,14 +275,14 @@ does not make this model a Character.
 | --- | --- | --- |
 | `orks_enhancement` | `OrksEnhancement` | Chosen source-backed enhancement/Upgrade option; none by default. |
 | `orks_upgrade_origin` | `EntityIdentity` | Original selection/unit identity for Upgrade accounting through attachments and casualty changes. |
-| `orks_effects` | `OrksEffectGrants` | Current typed Orks grants on this recipient; source ownership/expiry removes the corresponding entries. |
+| `rule_effects` | `RuleEffectGrants` | Current shared typed grants on this recipient; source ownership/expiry removes the corresponding entries. Named effect-specific policy remains in its faction adapter. |
 | `off_battlefield` | `Bool` | Model's placement flag; reserve/passenger membership also prevents external geometry queries. |
-| `orks_transport_permissions` | `Bool` | Enables the Orks infantry passenger filter for this carrier model. |
-| `beast_snagga_passengers_only` | `Bool` | Carrier's extra Beast Snagga passenger restriction. |
-| `forbid_ghaz_passenger` | `Bool` | Carrier's explicit Ghazghkull exclusion; identity predicates, not name text, enforce it. |
+| `required_passenger_keywords` | `Keywords` | Every listed keyword must match each passenger model; distinct from the ANY list. |
+| `forbidden_passenger_datasheets` | `CheckedVector<DatasheetCode, 4>` | Explicit named passenger exclusions, evaluated by stable datasheet code. |
 | `blastajet_force_field` | `Bool` | Source equipment choice which alters the model's Smoke keyword handling. |
 | `transport_permissions_known` | `Bool` | False until actual transport metadata is supplied; unknown legacy data cannot invent capacity permission. |
 | `transport_capacity` | `LinearlyDistributedInt<0, 33>` | Carrier seats, 0–32; zero does not permit passengers. |
+| `transport_space_divisor` | `LinearlyDistributedInt<1, 3>` | One for ordinary seats, two for half-seats summed and rounded up once per passenger unit. |
 | `transport_space` | `LinearlyDistributedInt<1, 33>` | Ordinary seat requirement, 1–32, default 1; effective accounting includes source exceptions such as paired Gretchin seats. |
 | `permitted_passenger_keywords` | `Keywords` | Allowed passenger keyword alternatives; read together with the carrier's other filters. |
 | `forbidden_passenger_keywords` | `Keywords` | Explicit passenger keyword exclusions; these can reject an otherwise permitted passenger. |
@@ -789,7 +789,7 @@ not the continuing buff produced by using it.
 | `allow_retained_source` | `Bool` | Explicitly permits the rule's retained-source handling during the appropriate death lifecycle. |
 | `offboard_allowed` | `Bool` | Permitted source context can be offboard; this does not create external visibility/range. |
 | `trigger_range` | `FixedStat` | Range in inches for ranged source checks; interpret zero with the source's own subject/eligibility policy. |
-| `grant` | `SourceGrant` | Typed payload, e.g. characteristic modifier, weapon rule, riled state or current Orks effect. |
+| `grant` | `SourceGrant` | Typed payload, e.g. characteristic modifier, weapon rule, riled state or catalog effect. |
 | `recipient` | `SourceTarget` | Which source/event/target unit or source model receives the payload. |
 | `duration` | `SourceDuration` | Expiry policy, phase by default; actual source adapters supply their printed duration. |
 | `requires_live_source` | `Bool` | Continuing grant depends on the source remaining eligible to confer rules; retained attack-end exceptions remain explicit. |
@@ -953,10 +953,10 @@ See [modifiers.rl](../src/modifiers.rl) and
 | `SourceWeaponGrant.profile_name` | `WeaponCode` | Optional exact Weapon ID, zero means no filter |
 | `SourceWeaponGrant.physical_scope` | `Bool` | Extend the representative slot to linked profiles of that physical copy |
 | `RiledUpGrant.enabled` | `Bool` | Installs the source-owned riled state when enabled; source keys preserve overlapping grants |
-| `OrksEffectGrant.source_effect` | `SourceEffectKey` | Owner key of the installed faction effect; supports keyed expiry |
-| `OrksEffectGrant.kind` | `OrksEffectKind` | Which current Orks effect the explicit consumer interprets |
-| `OrksEffectGrant.amount` | `FixedStat` | That effect's magnitude where relevant; not a universal characteristic modifier |
-| `OrksEffectGrant.associated_unit` | `EntityIdentity` | Related unit identity where that particular effect requires one |
+| `RuleEffectGrant.source_effect` | `SourceEffectKey` | Owner key of the installed effect; supports keyed expiry |
+| `RuleEffectGrant.kind` | `RuleEffectKind` | Finite shared effect catalog; core interprets common kinds and faction adapters interpret their named entries |
+| `RuleEffectGrant.amount` | `FixedStat` | That effect's magnitude where relevant; not a universal characteristic modifier |
+| `RuleEffectGrant.associated_unit` | `EntityIdentity` | Related unit identity where that particular effect requires one |
 
 All modifiers accumulate through the shared arithmetic policy. Round up after
 the ordered operations, then enforce the characteristic's own limits. Roll
@@ -966,7 +966,7 @@ supported operations, rather than erasing every negative number wholesale.
 
 `SourceGrant` is a typed alternative of `CharacteristicModifier`,
 `IncomingAttackModifier`, `SourceWeaponGrant`, `AttackModifierPermission`,
-`RiledUpGrant` or the current `OrksEffectGrant`. Source conditions and timing
+`RiledUpGrant` or the current `RuleEffectGrant`. Source conditions and timing
 do not make every payload faction-independent yet. The existing Orks adapters
 still own unique effects and permissions.
 
@@ -1140,3 +1140,26 @@ restoring a save requires matching native/Godot state schemas. The shared-frame
 non-re-entry and single-copy rules remain unchanged. Source/recipient dispatch
 uses actual rule context and works across battlefield, reserve and passenger
 banks; another army's ownership alone does not suppress an installed effect.
+
+
+## Shared attack requests and construction helpers
+
+See [shared rule mechanisms](shared-rule-mechanisms.md) for ownership and source
+provenance. `AttackResultRecord` stores a stable target, successful hits, actual
+wounds lost, destruction and `tagged_hits`. Its one current optional tag is
+Squig Launcha; core validates tag counts uniformly against total hits.
+`Board.attack_active` gates recording and `attack_serial` identifies an activation.
+Unit `destroyed_attack`/`destroyed_phase` preserve its destruction provenance.
+
+`ReactionAttackRequest` has Bool `available`, UnitID `source`/`target`, Bool
+`melee`/`overwatch` and Bool `restrict_target`. A faction resolves its choices and
+costs before returning this request. The common flat runner reuses the single
+Attack frame and restores the caller's target restriction after the chain.
+
+The shared `SelectWarlord` frame borrows Board and stores the explicit faction
+keyword and enable flag. `EnhancementSelectionCounter` is temporary bounded
+selection bookkeeping with39 catalog slots, distinct-choice total and per-unit
+copy count. Neither mechanism enables an unsupported legacy army automatically.
+Replacement construction maps old component membership onto newly allocated
+identities; ordinary revived models continue using the separate identity-
+preserving return procedure.
