@@ -1,10 +1,10 @@
 # Faction behavior boundary
 
-The new [army API specification](../../doc/army-api.md) defines the approved
-six-family replacement: Army catalog, Abilities, Passive effects, Available
-abilities, Use ability and Army state. It specifies the interfaces to implement;
-the dispatch modules below remain the current runtime implementation until
-their consumers are migrated.
+The [passive/triggered ability specification](../../doc/army-api.md) defines the
+replacement mechanism. Existing selection actions/constructors remain in charge
+of armies and equipment; no catalog, discovery or army-state provider layer is
+introduced. The dispatch modules below remain the current runtime implementation
+until their consumers are migrated.
 
 Core functions and actions use the neutral contracts in
 [dispatch.rl](dispatch.rl). These composition modules select the concrete

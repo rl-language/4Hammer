@@ -4,9 +4,10 @@ For a gameplay-first explanation, start with the [40K/Godot engine guide](engine
 and [struct/property reference](game-state-reference.md). This page is the deeper
 implementation guide.
 
-The [army API specification](army-api.md) defines the approved replacement for
-the current faction dispatch layer. Its six API families are specified but not
-implemented yet; the architecture below describes the existing runtime.
+The [passive/triggered ability specification](army-api.md) defines the corrected
+replacement for the current faction dispatch layer. It introduces no catalog,
+discovery or army-state provider layer. Runtime migration is pending; the
+architecture below describes the existing implementation.
 
 This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes all54 standard Orks adapters through17.Q and the shared ability procedures, using Rulebook compiler0.4.18. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 

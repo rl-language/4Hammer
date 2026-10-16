@@ -1,374 +1,379 @@
-# Army API specification
+# Passive and triggered abilities
 
-Status: **approved architecture and naming, concrete interface specification;
-runtime implementation and migration are pending**. This document defines the
-APIs to implement. The current game still uses the
-[dispatch modules](../src/factions/README.md). No declarations below are claimed
-to be callable in the current library.
+This is the corrected mechanism specification. It supersedes the six-family
+army-provider proposal. Army, unit, equipment, detachment and enhancement
+selection remain ordinary existing action functions and constructors. There is
+no new catalog API, ability-discovery API or army-state provider API.
 
-The six families are **Army catalog, Abilities, Passive effects, Available
-abilities, Use ability, and Army state**. These names describe different jobs:
-an entity has an ability, that ability can supply passive effects, and an
-activated ability can become available and be used. A stratagem retains its
-tabletop name and category while sharing activation/payment machinery.
+The task is to define **passive abilities** and **triggered abilities** so core
+can apply the same mechanics for any army. The contracts below are to be
+implemented; the [current dispatch layer](../src/factions/README.md) has not yet
+been migrated. Signatures/layouts are contract notation, not callable additions
+to the current library.
 
-The objective is a core that executes common game mechanics without
-interpreting named faction rules. Shared catalog entries may name factions.
-Use adequate bounded, explicit storage; reducing bounds or memory is not a
-prerequisite. Preserve the current grid, circular geometry policy and generated
-initialization/destruction. Do not optimize valid-action discovery.
+## The two mechanisms
 
-## Game rules that determine the boundary
-
-Use the [core reference](11th-edition-core-rules-procedural.txt) and
-[supplied appendix](11th-edition-supplied-appendix.md), with original wording
-taking precedence over editorial summaries.
-
-| Rule requirement | Consequence for the API |
-| --- | --- |
-| Weapon/target selection precedes attack gathering; some conditions use target-selection facts (pp.16–19,79). | Keep declaration snapshots separate from current facts. Include the actual bearer, physical weapon, chosen profile and target in attack contexts. |
-| Rerolls precede modifiers; modifiers retain operation order and ignore permissions (appendix01.05.02/02.02.01–02). | Return individual modifiers/permissions, not a final number or Boolean hit bonus. Dice attempts and final results have distinct boundaries. |
-| Abilities trigger at particular steps, selections and completed events (pp.28–42/54–58). | Open precise windows; do not substitute phase start/end for selection or completion. |
-| User-supplied sequencing gives the current player their simultaneous effects first, then the opponent. | Core groups choices by controller and keeps each selected effect atomic until it reaches a permitted interruption. |
-| Attached models retain their own keywords and bearer-only rules; conferred abilities have source/component lifetime (pp.66–67). | Record the conferring entity, original recipient and grant scope separately. Retain required conferral through the attacking unit's attacks. |
-| Persisting effects continue through transport/reserve transfers (appendix01.02.02–04). | Bank changes do not create a new recipient or reset effect duration/use. No external range or visibility is measured from offboard units. |
-| Destruction/removal can be deferred, including Fight on Death and transport passengers (pp.65/80/87; supplied Fight on Death). | Separate wound loss, destruction, pending removal and completed removal. Core owns their order and common damage work. |
-| A previously eligible target can become ineligible (appendix04.03.03). | Preserve declared facts but revalidate where required; offer replacement targets for unresolved effects without replaying resolved attacks. |
-| Upgrades/options have original recipients; revival and replacement have different identity rules (pp.66–67/88 and supplied muster rules). | Keep selected-option provenance. Revived models keep identity/equipment/use; replacements use explicit identity remapping. |
-
-These requirements define reusable mechanisms. They do not grant an ability to
-an army unless its supplied rules say it has that ability.
-
-## Ownership and types
-
-The signatures below are **interface notation**, not executable Rulebook
-examples. An implementation uses ordinary `fun`/`act` declarations, typed
-contexts and static composition; Rulebook does not need a runtime interface,
-callback registry or another scripting language.
-
-`ReadContext` provides access to the real game state and already resolved facts.
-It is a read-only contract; current Rulebook reference semantics do not by
-themselves enforce constness. Tests must establish that repeated queries leave
-state unchanged. Action contexts borrow the real Board; no child owns a copied
-Board. All retained values use enums, Bool, bounded integers and typed bounded
-collections. Transient calculations may use floats.
-
-| Type | Required meaning |
-| --- | --- |
-| `AbilityId` | Globally unique finite definition ID. Core treats army-specific values as identities, not instructions. Current unqualified local numeric rule codes need explicit translation. |
-| `AbilityInstanceId` | Stable identity of a particular conferring army/unit/model/item/option instance. Reconciliation must not recreate it or reset its use. |
-| `EntityRef` | Tagged army, original component, unit or model reference using stable identities; never an unqualified mutable bank index. |
-| `AbilityDescription` | Definition ID/category, implementing provider, controller policy, conferring entity, original component, scope, source requirements, timing and usage specification. |
-| `GrantScope` | Bearer, original component, combined unit or army. Recipient scope is separate from what keeps the conferring source active. |
-| `SelectedEnhancement` | Shared catalog ID, original recipient identity and bearer/component scope. Scope distinguishes a bearer option from a unit Upgrade without checking its faction in core. |
-| `GameEvent` | A uniquely identified committed fact, its cause, actor/affected identities and the snapshots needed by its triggers. Repeated polling does not create another event. |
-| `WindowContext` | Exact decision boundary, parent operation, triggering event if any, phase/turn roles and immutable relevant snapshots. |
-| `AvailableAbility` | Instance ID, window/event ID, required controller, optional/compulsory status and acceptance context. This is not a use record or payment. |
-| `AbilityUse` | One selected activation, its committed-cost status, typed progress, chosen identities and pending operation/result. Core owns its activation identity. |
-| `EffectBundle` | Independently sourced standard grants sharing recipient policy and explicit lifetime. Each installed bundle has an effect identity; equal grants from different bundles remain independent. |
-| `EffectTermId` | Finite identity of one grant/modifier within its continuous ability or installed bundle. Distinguishes intentional separate terms from accidentally evaluating the same term twice. |
-
-Core registers/reconciles descriptions and assigns instance identities. The
-registration identity includes the definition and actual conferring entity;
-display labels and equal effect values do not identify the same ability.
-Core may recycle arena slots only with generation checks for pending references.
-
-Composition selects the implementing provider by definition/instance, not by
-the recipient's faction. A rule from one army can affect another army. Core
-stratagems can use the same ability protocol through the core provider.
-
-## 1. Army catalog
-
-The army provides selectable content and construction data. Core supplies the
-muster sequence and common validation. Proposed entry points:
-
-```text
-get_army_catalog(faction) -> ArmyCatalog
-get_unit_choices(catalog, roster) -> UnitChoices
-get_equipment_choices(catalog, unit_draft) -> EquipmentChoices
-get_detachment_choices(catalog, army_configuration) -> DetachmentChoices
-get_enhancement_choices(catalog, roster, recipient) -> EnhancementChoices
-get_attachment_choices(catalog, joining_unit, roster) -> AttachmentChoices
-make_unit(catalog, unit_selection, owner) -> Unit
-```
-
-Choice queries are pure and return actual catalog IDs/constraints. A unit
-selection records composition and physical equipment, including alternative
-profiles and nonattacking items. `make_unit` constructs complete model data;
-core assigns runtime identities before abilities are registered.
-
-Core enforces shared copy counts, Character/Epic Hero and option limits,
-Warlord requirements and attachment roles. Catalog-specific recipient/loadout
-requirements are supplied by the army. An accepted enhancement records its
-original recipient, which is not replaced with the current combined unit ID.
-
-Current user policy permits at most three detachments and excludes army points
-and detachment-price calculations. Battle CP costs remain fully represented.
-Missing catalog/provider support rejects the unsupported selection explicitly;
-an empty implementation must not silently certify an incomplete army.
-
-## 2. Abilities
-
-```text
-get_abilities(read_context, entity, output_descriptions)
-```
-
-Enumerate the abilities actually conferred by the supplied entity's printed
-data, equipment, selected options or army configuration. This is a pure
-description query. Core scans entities across all banks and reconciles the
-result with registered instances; the army does not implement separate reserve
-and passenger registration paths.
-
-Every description specifies whether its conferring entity is a particular
-bearer, an original component or the army. It also distinguishes bearer-only
-effects from effects conferred to a combined attached unit. Requirements such
-as having started attached and remaining a live/retained source are explicit
-policy interpreted by common lifecycle code.
-
-Continuous effects and activated lasting effects have different policies.
-A continuous grant can depend on its source remaining active. An accepted
-lasting effect persists independently until its stated expiry unless its rule
-explicitly requires a continuing source. Neither bank transfer nor model death
-automatically implies both kinds end.
-
-No ability is inferred from a display name or faction keyword.
-Legacy/direct test fixtures must explicitly supply their ability metadata.
-
-## 3. Passive effects
-
-There is one typed overload per mechanical domain, rather than one Boolean
-callback per named rule:
-
-```text
-get_passive_effects(read_context, ability_instance, model_context, output)
-get_passive_effects(read_context, ability_instance, unit_context, output)
-get_passive_effects(read_context, ability_instance, movement_context, output)
-get_passive_effects(read_context, ability_instance, attack_context, output)
-get_passive_effects(read_context, ability_instance, allocation_context, output)
-get_passive_effects(read_context, ability_instance, roll_context, output)
-get_passive_effects(read_context, ability_instance, objective_context, output)
-get_passive_effects(read_context, ability_instance, stratagem_context, output)
-```
-
-| Context | Essential inputs | Permitted output |
+| Mechanism | Army implementation | Core responsibility |
 | --- | --- | --- |
-| Model/unit | Actual model/component, intrinsic data, current retained/live membership and established grants | Characteristic modifiers, scoped keyword/standard ability grants and removals, save permissions |
-| Movement | Actor, selected kind, ordinary/reactive/prebattle mode, selection snapshot and relevant target | Distance/roll modifiers, independent permissions, traversal/setup policy |
-| Attack | Attacker, actual bearer, physical weapon/profile, target, step, shooting mode, declaration snapshots and current facts | Weapon-rule instances, characteristic/roll modifiers, reroll/ignore permissions, cover and targeting policy |
-| Allocation | Actual recipient model, incoming attack, damage cause and current allocation context | Save/prevention permissions and recipient-specific incoming modifiers |
-| Roll | Roll kind, roller/subject, identified dice/attempts, reroll state and current raw/final-unmodified stage | Roll modifiers, reroll/ignore permissions and eligibility for explicit replacement choices |
-| Objective | Queried objective identity, scoring player, contributing model/unit and current cargo/control facts | Scoped OC contributions and objective permissions for that marker |
-| Stratagem | Card, payer, source/target, selected mode and use context | Cost modifiers, access and separately identified target restrictions/permissions |
+| Passive ability | An ordinary function tests the ability's conditions and adds standard effects to the supplied calculation. | Supply the exact context, aggregate effects, apply ordinary arithmetic/permissions and return the effective game result. |
+| Triggered ability | An ordinary function queues an activation at its specified event; an action function performs that activation's decisions and effects. | Emit events once, retain pending activations, order controllers, enforce required work and run the shared game procedures. |
 
-All outputs carry the originating instance/effect identity. No applicable
-effect appends nothing. The output starts with earlier contributions; preserve
-them. Reapplying an appender to the same output is not an idempotent query.
-No query pays, rolls, registers effects or changes the Board.
+A unit/model constructor or existing selection action writes its ability,
+equipment and selected-option data as it already does. The army implementation
+reads that data in its passive/triggered functions. No extra public process asks
+the army to enumerate the rules its constructors just installed.
 
-Each term has one evaluation path. An installed standard grant must not also
-be emitted as the same extra passive term by its provider. Preserve the parent
-instance/effect identity and term identity so duplicate production can be
-detected within one query. Identical terms from different instances/effects
-remain separate; this does not replace the game's duplicate-ability selection.
+Named conditions and ability-specific control flow belong in army code.
+Core understands modifiers, weapon rules, permissions, effect lifetime, costs,
+movement, damage and other common procedures. It must not check a named army
+status, private rule number or faction-specific Model field to decide an effect.
 
-Core evaluates the resulting common mechanics: modifier order/caps, duplicate
-weapon-rule selection, per-die ignore choices, save priority and final legality.
-Save grants establish a usable save before arithmetic; they are not just a
-modifier to a missing save. Weapon rule parameters remain explicit.
+## Common references and scope
 
-Permissions name the restriction they waive. Permission to charge after Advance
-does not waive a distinct prohibition on charging. Engaged-target shooting and
-escape-hazard bypass are separate permissions. No general `allowed = true`
-result bypasses all core conditions, and no invented universal conflict policy
-replaces a specific rule's precedence.
+The mechanism uses typed, serializable values and adequate bounded storage.
+No callback pointers, generated rule strings, opaque state or additional rule
+interpreter is introduced. Ordinary Rulebook functions/actions remain the code
+that implements abilities; generated initialization/destruction remains in use.
 
-Contexts distinguish frozen facts from live facts. Read dependencies are
-ordered: intrinsic/established state, model properties, unit aggregation, then
-action/attack-specific evaluation. An implementation must not recursively
-request the same effective property it is currently defining. A needed cyclic
-dependency must be diagnosed and given an explicit supported interpretation.
-
-## 4. Available abilities
-
-```text
-get_available_abilities(read_context, window, controller, output)
-ability_available(read_context, available_ability) -> Bool
-```
-
-Core opens named mechanical windows: phase/step boundaries, unit selection,
-movement-kind selection, declaration completion, attack target/group steps,
-roll boundaries, completed movement/setup, Battle-shock and destruction/removal.
-Committed events describe what happened; windows describe where an ability can
-intervene. An effect cannot rewrite an already committed fact by pretending it
-ran at an earlier boundary.
-
-The first query lists available activations for this window/controller. The
-second revalidates one before acceptance. Both are pure. A returned activation
-must have a legal resolution path; a mandatory ability with no eligible target
-must follow its actual no-target rule rather than strand the game.
-
-The ability instance, event/window identity and captured conditions distinguish
-one trigger from repeated polling. Core owns pending/resolved/declined status.
-Trigger-time qualification must not be silently replaced with use-time checks:
-the description identifies what remains live and what was already established.
-Invalidated targets receive the core's required replacement-target handling;
-already resolved effects are not replayed.
-
-Core gives the current player's simultaneous effects their chosen order, then
-the opponent's. Optional effects may be declined; unresolved compulsory work
-blocks completion. Turn owner, controller, payer, subject and chance owner are
-explicit. Source ownership alone does not decide all of them.
-
-General reroll windows distinguish a rolled attempt, reroll decision, final
-unmodified result and modified result. A rerolled die is another roll attempt
-but not another permission to reroll the same die. Command Re-roll's stated
-single-die/full-charge exception remains a core rule.
-
-## 5. Use ability
-
-```text
-start_ability(board, available_ability) -> AbilityUse
-use_ability(board, army_state, ability_use, last_operation_result)
-    -> UseAbilityStep frame
-```
-
-`start_ability` is a core acceptance operation: revalidate the selected window/
-instance, allocate its activation identity and reject invalid acceptance without
-payment or gameplay mutation. It does not universally pay immediately; the
-compiled ability action commits its required costs at the rule's acceptance
-point. Common cost/use services make that commit atomic and prevent paying
-again on rerolls or later stages. Declining before commitment spends nothing;
-cancellation after commitment follows the rule and does not imply a refund.
-
-`use_ability` is an interactive Rulebook action selected through static
-composition. It performs the army's target choices, ability-specific dice and
-control flow. It may change its own typed progress/private army data and request
-common operations. Battlefield state changes use core services; an adapter does
-not copy the movement/damage/attack engines.
-
-Each completed step returns either:
-
-- **Finished**, with its accepted/declined/cancelled outcome; or
-- **Operation requested**, with a typed core operation and retained continuation.
-
-Core completes the requested operation, then calls the next step with its typed
-result (`NoOperationResult` for the initial step). Requests/results carry the
-activation identity and step identity so a stale result cannot advance another
-use or apply an operation twice. Required target choices can occur before or
-after a test as the actual ability specifies. Core must not impose one fixed target/pay/roll order on every
-ability. Querying availability does not construct these interactive children.
-
-The continuation retains choices and stage in explicit typed state. It does not
-retain another Board or recursively enter an already active shared action frame.
-The ordinary step frame completes before reuse. Unhandled definition IDs are
-rejected explicitly; they must not silently consume an activation as a no-op.
-
-### Core operations available to abilities
-
-| Operation | Core responsibility/result |
+| Record | Required fields and meaning |
 | --- | --- |
-| Grant effects | Install an `EffectBundle` with separate grant instances, stable recipients and one explicit lifetime; return its identity |
-| Change resource / commit cost | Apply authorized CP/resource changes and required use accounting atomically |
-| Move / set up / charge | Execute ordinary paths, distance, placement, coherency and selection restrictions; return completion and resulting identities |
-| Embark / disembark | Check permissions/capacity and perform the real bank transfer with persistent identity/effects |
-| Attack | Execute declarations, grouping, hit/wound/save/damage and restrictions; return completed attack facts |
-| Inflict damage | Execute allocation, prevention and destruction with damage kind and attack/psychic/source provenance |
-| Destroy | Apply direct destruction without treating it as preventable wound damage, then use common destruction timing |
-| Heal / return model | Restore the permitted living member/original casualty with identity, physical equipment and use history; report placement/capacity outcome |
-| Create replacement | Construct a new unit from its permitted template with fresh identities and explicit remapping |
-| Adjust pending roll/results | Apply authorized replacements, rerolls or cancellations to the identified unresolved result, preserving already committed facts |
-| Adjust pending destruction | Supply mechanically named demise/removal directives and additional common damage jobs |
+| `AbilityOrigin` | Finite globally qualified ability identity; owning player; actual conferring model, original unit/component or army; optional physical item/copy identity. Equal effects from different origins remain different. |
+| `AbilityScope` | Bearer-only, original component, combined unit or army; source-life requirement; whether leading-at-start qualifies; any explicitly permitted retained-source window. Recipient scope and source lifetime are distinct. |
+| `SelectedEnhancement` | Selected catalog entry, original recipient identity and bearer/component scope. Existing selection actions write this generic provenance. |
+| `EffectOrigin` | Ability origin plus the particular accepted effect identity and term identity. Identifies one contribution for expiry, ignore choices and duplicate detection. |
 
-These are typed requests to common procedures, not bytecode or a second rule
-language. Named conditions and branching stay in compiled army actions.
-Results distinguish completed, declined, ineligible and failed placement where
-those outcomes are meaningful; a valid slot index is never used as a Boolean.
+Persistent references use entity identities, not bank slots. Public inputs may
+still use UnitID/ModelID; resolve them to the correct entity when accepted.
+An ordinary transfer or revival keeps identity. A replacement has an explicit
+old/new component/model map; applying it to the new copy must not retarget the
+original unit's effects or use history.
 
-An interrupting reaction must finish before its suspended parent proceeds when
-the game requires that order. Core retains the parent's typed operation progress
-and resumes it after the child result. After-attack reactions can use the existing
-flat runner; genuine mid-operation interruptions need explicit continuations.
-Deferring every reaction until attack/phase end would violate the contract.
-Scheduling is core-owned and must pass the shared-frame non-re-entry audit.
+Attached-unit checks distinguish model keywords, the combined unit's keywords
+and the original component conferring an ability. A bodyguard upgrade does not
+automatically become the surviving Leader's upgrade. Source conferral retained
+through the attacking unit's attacks is not equivalent to its bearer being alive.
+[Core pp.66–67/88; supplied original-recipient and Fight on Death definitions.]
 
-## 6. Army state
+The concrete origin key is `(ability_id, conferring_entity, physical_copy)`;
+`physical_copy` is absent for a non-item ability. Installed effects additionally
+have a unique `effect_id`; each bundle term has its own `term_id`. Reusing the
+same definition on another model does not merge the two origins. Labels are
+presentation metadata, never identity or dispatch keys.
+
+## Passive abilities
+
+### Function contract
 
 ```text
-make_army_state(army_configuration) -> ArmyState
-validate_army_state(read_context, army_state) -> Bool
-remap_army_state(army_state, entity_remap)
+apply_passive_abilities(read_context, calculation_context, effects)
 ```
 
-Use shared effect, selected-option, resource and usage records for common state.
-Genuine additional army state has a composition-owned finite tagged type whose
-fields remain visible to generated serialization/ML layout. An army with no
-additional state uses an empty alternative. Core passes it to its provider and
-does not inspect that army's private values. No strings, opaque byte storage or
-custom `init`/`drop` are introduced.
+This is a family of typed overloads, one per common calculation domain.
+Composition calls the relevant army functions; the army can organize its own
+ordinary helpers as convenient. There is no callback for a particular named
+army rule and no callback that asks for an already computed final stat.
 
-`make_army_state` is an ordinary construction function using generated field
-lifecycle. Validation is pure and accepts valid retained history even when an
-ability cannot currently activate. `entity_remap` distinguishes a newly created
-replacement from ordinary transfer/revival and supplies old/new component/model
-identities. Never replace all provenance with the current combined unit ID.
-Apply replacement remapping to the new copy's metadata; it must not retarget
-the original unit's active effects, historical references or spent-use records.
+1. Core starts from printed/intrinsic data and established common effects.
+2. Core supplies the calculation context and its current effect accumulator.
+3. The army function checks each applicable passive and appends its effects.
+4. Core finishes aggregation, required player choices and mechanical evaluation.
 
-Core owns effect expiry, source-activity refresh, returning-member inheritance,
-bank transfer, generic usage periods and common identity remapping. Additional
-army lifecycle behavior uses these services and the normal available/use-ability
-protocol where it is an actual game effect.
+Only `effects` may be mutated. Reading the Board or validating legal actions
+must not spend, roll, create sources or change models. No applicable passive
+does nothing. Preserve earlier contributions. The same contribution must have
+one evaluation path; an installed grant must not also be added again by its
+army function. Different origins with identical effects remain independent.
 
-## Migration from the current implementation
+### Contexts core must provide
 
-This specification replaces army-specific policy channels with common mechanics;
-it does not require renaming every existing shared primitive.
+| Context | Required information | Standard effects the function may add |
+| --- | --- | --- |
+| Model properties | Actual model, original component, printed/equipped facts, established effects and live/retained-source context | Characteristic modifiers, keyword changes, standard abilities, invulnerable-save grants |
+| Unit properties | Actual combined membership, component identities and live/retained conferral | Unit-scoped modifiers and abilities, with bearer/component restrictions preserved |
+| Weapon | Actual attacking bearer, physical weapon/copy, selected profile, original equipment owner when borrowed | Weapon-rule instances, numeric rule increments and weapon-characteristic modifiers |
+| Movement/setup | Actor, selected move kind, ordinary/reactive/prebattle purpose, relevant carrier/targets and captured selection facts | Distance modifiers, independent move/charge/action permissions, traversal/setup policy |
+| Attack | Attacker, bearer, weapon/profile, target, attack step/mode, selected declarations and current facts | Hit/wound/weapon modifiers, reroll/ignore permissions, target/cover policy |
+| Allocation | Actual recipient model, incoming attack, damage kind and source/psychic/attack provenance | Save permissions, incoming AP/D modifiers and wound-prevention permissions |
+| Roll | Roll kind, roller/subject, identified dice and attempts, current reroll/unmodified/modified stage | Roll modifiers, supported reroll/ignore permissions and permission for explicit replacement choices |
+| Objective | The particular objective being scored, player, contributing model/unit, cargo and current control facts | OC contributions and objective-specific permissions |
+| Stratagem | Card, payer, source/target, selected mode and usage context | Access restrictions, cost modifiers and distinct targeting permissions |
 
-1. Implement shared identities, typed contexts, contribution packets, effect
-   bundles and activation/result state. Reuse existing modifier, weapon-rule,
-   source/effect, damage-job and reaction-request primitives where their
-   semantics match. Add source-independent contract tests.
-2. Implement catalog/ability descriptions and core reconciliation. Move Model's
-   eight named fields into abilities, nonattacking equipment, shared selected
-   options and effect data; generalize captured component conferral metadata.
-3. Implement passive-effect overloads and change core consumers. Retire fixed
-   Sustained Hits1/Boolean+1 channels, split bundled engagement permissions,
-   consolidate selected-move permissions and pass the queried objective to OC.
-4. Implement precise windows and available/use-ability handling, with common
-   cost/use services and multiple scoped effects per activation. Introduce
-   continuation support before enabling any genuinely interrupting nested rule.
-5. Migrate Orks actions, then extract legacy factions' remaining behavior from
-   core. Remove superseded hooks only after their consumers are migrated and
-   covered; do not keep forwarding layers as the finished abstraction.
-6. Rebuild matching bindings/schemas, validate native semantics and sanitizer/
-   replay/fuzzer behavior, and broaden boundary audits to every army provider.
+An argument absent from a context cannot be guessed from a faction-specific
+global. In particular, objective effects receive the queried marker, and weapon
+effects receive the actual profile and physical owner for Firing Deck.
 
-Each concern belongs in a focused commit. Existing public Godot inputs should
-retain compatibility where possible; necessary action/layout changes require
-explicit schema updates and matching generated clients. No rendered integration
-or valid-action-discovery optimization is added to this work.
+### Effects have mechanical meaning
 
-## Acceptance checks for the implemented API
+| Effect | Explicit data | Core interpretation |
+| --- | --- | --- |
+| Characteristic modifier | Characteristic, operation, signed amount and affected model/weapon scope | Apply replacement, multiplication, addition, division, subtraction and final rounding/limits |
+| Roll modifier | Roll kind/stage, operation, amount, origin and ignore eligibility | Preserve individually selectable terms; rerolls occur first and ordinary caps apply |
+| Keyword/ability grant or removal | Keyword or standard ability, recipient scope and explicit exception semantics | Apply at the proper model/unit scope without spreading a bearer-only property |
+| Invulnerable-save grant | Save target and any attack/recipient condition | Establish a usable base permission before arithmetic; retain a better existing save |
+| Weapon-rule grant | Kind, parameter, condition, physical/profile scope and origin | Include the actual instance in weapon selection; choose duplicates under core rules |
+| Permission/restriction | The particular mechanical gate, granted/forbidden operation and scope | Change that gate only; preserve every independent requirement |
+| Geometry/setup policy | Allowed traversal, distance/setup constraint or explicit mode permission | Change that part of the common procedure; retain its other endpoint/coherency checks |
+| Resource/cost modifier | Resource/card context, operation and amount | Use common cost limits and payment; do not spend in the passive function |
 
-- A small independent test army implements all six families using shared core
-  mechanics; it is a test fixture, not invented official faction data.
-- Passive/availability queries can be repeated without changing state; invalid
-  acceptance/payment is atomic and no nonterminal mandatory window stalls.
-- Opposing armies' effects apply through their real source/provider, including
-  cross-army targets and different payer/controller/subject roles.
-- Overlapping equal grants expire independently. Offboard transfers preserve
-  duration/use without granting external measurement or visibility.
-- Component/bearer loss, retained conferral, Fight on Death, revival and new
-  replacements follow distinct lifecycle and identity contracts.
-- Target/selection snapshots stay frozen where required; live targeting can
-  change and unresolved effects can select replacements when permitted.
-- Two-objective cargo OC, separate engagement permissions, modifier provenance,
-  physical-weapon profiles and multi-die rerolls have native regressions.
-- Required interruptions finish before parent continuation, without recursively
-  entering a live shared frame. Operation results survive shared-frame reuse.
-- Core functions/actions contain no named faction-condition/effect branches;
-  negative controls prove the broadened audit detects such dependencies.
+This vocabulary contains common mechanics, not entries such as a named army's
+“hit bonus” or a named vehicle's “special destruction.” A new mechanical effect
+needs a documented common meaning, not a new army-specific branch in core.
 
-The [roadmap](../ROADMAP.md) tracks implementation separately from this completed
-specification. Current dispatch contracts and older runtime validation remain
-descriptions/evidence for the existing implementation until migration occurs.
+The effect variants must have explicit payloads, not overloaded generic
+`kind/amount` fields whose meaning changes by army:
+
+```text
+ModifyCharacteristic(characteristic, operation, amount, recipient, weapon_scope)
+ModifyRoll(roll_kind, operation, amount, ignore_policy)
+ChangeKeyword(keyword, add_or_remove, recipient_scope)
+GrantAbility(standard_ability, parameters, recipient_scope)
+GrantInvulnerableSave(threshold, attack_condition, recipient_scope)
+GrantWeaponRule(kind, parameter, target_condition, physical_or_profile_scope)
+ImproveWeaponRule(kind, increment, physical_or_profile_scope)
+Permit(action_kind, waived_restriction, recipient_scope)
+Prohibit(action_kind, recipient_scope)
+AdjustMovement(traversal_or_setup_policy)
+ModifyCost(resource_kind, operation, amount)
+```
+
+Every variant carries `EffectOrigin`. `action_kind` identifies the operation
+and mode (for example Charge or a particular shooting mode), while
+`waived_restriction` identifies its specific Advance, Fall Back, engagement,
+disembarkation or other supported gate. Improving a numeric weapon rule retains
+the original instance's conditions and the increment's separate provenance;
+it is not necessarily a competing instance of that ability.
+
+Roll policies also have typed forms:
+
+```text
+PermitReroll(roll_kind, eligible_dice, eligible_results, scope)
+PermitIgnoringModifiers(affected_roll_or_characteristic, eligible_terms, scope)
+GrantAutomaticSuccess(roll_kind, condition, scope)
+AddRolls(roll_kind, count, batch_policy)
+```
+
+These affect the common roll plan; applying a passive never rolls the dice.
+Additional escape-hazard rolls are a count, not automatic wounds. Prevention
+uses the corresponding standard ability with its threshold and damage-kind
+conditions. An optional replacement is executed by a triggered action; the
+passive may permit that choice but cannot silently make it.
+
+Permission to charge after Advance waives only the Advance restriction.
+A separate no-charge effect can still prohibit charging. Engaged-target
+shooting permission and escape-hazard bypass are separate effects. An ability
+cannot return a blanket `allowed = true` that bypasses all other checks.
+Conflicting exceptions follow their supplied rule semantics; there is no
+invented universal precedence rule.
+
+Movement policy carries an explicit allowance, either `effective M + addition`
+or an absolute distance, plus traversal/vertical costs, permitted endpoint
+exceptions and post-move restrictions. Core executes this plan; it must not
+recognize a faction's special-move enum to invent its distance or consequences.
+Any exception is limited to its stated part of the plan; remaining boundary,
+overlap, coherency and engagement checks still run.
+
+Contexts label which facts are frozen and which are current. Blast uses target
+selection's model count; an ordinary later range check uses the required current
+position. Effective-property dependencies have an explicit order. A passive
+must not recursively ask for the same effective property it is defining.
+[Core pp.16–19/67/78–85; supplied Modifiers, Ignore Modifiers and reroll rules.]
+
+## Triggered abilities
+
+### Event and pending activation
+
+| Record | Required information |
+| --- | --- |
+| `AbilityEvent` | Unique event/window identity; exact mechanical kind and before/after stage; cause and parent operation; actor/affected identities; relevant immutable snapshots; current turn/decision roles. |
+| `PendingAbility` | Origin; triggering event; controller and payer policy; compulsory/optional status; established trigger-time facts; conditions still required at use; usage scope and cost; pending/accepted/declined/completed state. |
+
+A window can permit a player's voluntary ability even without an earlier
+committed event. For example, “in your Movement phase” is a legal player-action
+window, while “after this unit ends a move” refers to that actual completed move.
+Remaining stationary does not invent a move-start/end event.
+
+### Event boundaries
+
+Core supplies these mechanical boundary families with precise payloads:
+
+- Battle/round/turn/phase start and end, and particular steps such as the start
+  of Battle-shock before eligibility/recovery is frozen.
+- Unit selected to move/shoot/fight/charge; movement kind selected; Advance
+  preparation and final roll; weapon and target declarations completed.
+- Attack target/group selected, roll attempts and rerolls, hit/wound result
+  classification, allocation, pending wound loss and completed attacks.
+- Committed movement/setup, embark/disembark boundaries and reserve transfers.
+- Battle-shock test results and transition into Battle-shocked state.
+- Model/unit destruction, required retained destruction processing and removal.
+
+When a model is destroyed, core emits the appropriate event before removal and
+retains it for required pending processing. Actual last-model loss emits a
+unit-destruction event once. Army code queues its matching effects; core must
+not predict them through a special named-faction “has death trigger” flag.
+
+Each boundary identifies **when** it is allowed to change a pending result.
+An after-event cannot rewrite a completed move or resolved attack. Original
+rolled hits, generated hits, actual wounds lost and destruction are distinct
+facts. Rerolled attempts are identifiable rolls without reopening spent rerolls.
+[Core pp.16–24/28–42/54–58/64–67/87; supplied appendix definitions.]
+
+### Queue, validate and execute
+
+```text
+queue_triggered_abilities(read_context, event, pending)
+triggered_ability_valid(read_context, pending_ability) -> Bool
+execute_triggered_ability(board, pending_ability) -> TriggeredAbility action
+```
+
+These are the triggered-ability protocol, not three new provider/catalog layers.
+Existing constructors and selection actions already determine which abilities
+exist. The queue function checks those abilities at this event and appends
+actual triggered work. The action implements that work in ordinary Rulebook.
+
+**Queue.** Core emits the event once and calls composition once for it. Army
+functions append matching activations to `pending`, without mutating Board,
+paying or rolling. Preserve earlier entries. An origin/event/activation identity
+prevents duplicate queuing; separately permitted instances stay separate.
+Record trigger-time qualification now. Core owns the queue and its lifetime.
+
+**Validate.** Before offering or accepting an activation, revalidate its pending
+identity, unresolved state, required current source/use conditions and legal
+completion path. Preserve facts already established at the trigger. Losing a
+source cancels an activation only where its rule requires that source to remain.
+An invalid target follows the actual replacement/no-target rule, not a blanket
+discard of every already-triggered effect. This predicate changes nothing.
+
+**Execute.** After acceptance, run the ability's normal action function. It may
+choose targets, ask for dice, branch and delegate common procedures. A rule can
+select targets before or after its roll as stated. Commit required CP/resources
+and usage at its specified acceptance point using shared services, before the
+corresponding effect; a reroll never pays again. A free use still consumes any
+specified use limit. Invalid acceptance is atomic. Declining before acceptance
+spends nothing; later cancellation does not imply a refund.
+
+On completion, mark that activation completed or declined exactly once. Preserve
+other pending entries. Required decisions and effects finish before core moves
+past the window; an optional action must have a legal decline path. A compulsory
+ability with no valid target follows its rule without leaving a stalled window.
+
+The lifecycle is `pending -> accepted -> completed`, or `pending -> declined`.
+A rule-specific cancellation after acceptance is a completed activation with
+that outcome and its actual cost/use consequences. An invalidated entry is
+retired only under its specified eligibility policy. A stale event identity or
+source-slot generation cannot activate a different source occupying that slot.
+
+Queue construction and event snapshots are not repeated merely because the
+player inspects valid actions. Separate legitimate activations get separate
+identities even if their ability and target are equal. A roll/retry inside an
+activation retains that activation's identity and committed-use record.
+
+### Sequencing and action ownership
+
+Core gives the current player their simultaneous effects in their chosen order,
+then the opponent theirs, under the supplied sequencing ruling. Pending entries
+record the controller explicitly: source owner, turn owner, payer, affected
+unit and chance owner are not interchangeable. Core owns compulsory finish
+gates and combines common and army effects in the same window.
+
+Within the selected ability, normal action/subaction functions own the sequence
+of choices. There is no additional public availability-list object, generic
+ability-step interpreter or army-state protocol. Where peer menus remain in
+use, construction must not change Board before input; the chosen child finishes
+before another peer is offered.
+
+Use common movement, placement, dice, attack, damage, healing, return and
+replacement procedures. Do not duplicate them in an army. Do not re-enter an
+already active shared frame: death effects return ordinary damage jobs; reaction
+attacks use typed requests and the flat runner when appropriate. A genuine
+mid-operation interruption must complete before its parent continues, using
+core-owned retained progress. Deferring it until phase end is not equivalent.
+
+Results that core must consume have mechanically named types. Hit cancellation
+identifies the unresolved rolled-result batch and count, preserving generated
+hits separately; its window precedes conversion of surviving critical hits into
+automatic wounds. A destruction result can suppress/replace ordinary demise
+and append standard damage jobs, rather than returning one named ability's
+target and mortal count. Multiple attack-scoped effect identities are cleaned
+up together at the actual attack boundary. Normal actions keep their own
+choice/roll sequence; these result records do not encode that sequence.
+
+## Lasting effects and use records
+
+An accepted trigger may install an `EffectBundle`: mechanically typed grants,
+recipient/scope, origin, explicit expiry and whether continued source activity
+is required. Its grants enter the same passive-effect evaluation as continuous
+abilities. A continuous aura depends on current source/range conditions;
+an accepted “until next turn” effect does not become an aura by accident.
+
+```text
+EffectBundle:
+    origin + effect_identity
+    recipient_identity + recipient_scope
+    terms: typed passive effects
+    lifetime:
+        while_source_active
+        or until_boundary(kind, phase_if_needed, reference_player, occurrence)
+        or until_operation_ends(operation_identity)
+        or battle
+    continued_source_requirement
+```
+
+A boundary deadline is fixed when the effect is accepted. It identifies the
+actual start/end, phase and player occurrence; “next own Movement” and “end of
+this phase” are not interchangeable. An operation lifetime can cover several
+declared targets/groups. Expire it after that operation's required resolution,
+not merely after the first group or the whole phase. Multiple bundle identities
+can share the same deadline without sharing removal ownership.
+
+Core owns exact-key installation/removal, expiry boundaries and shared usage
+records keyed by the required army/unit/model/item scope. Equal effects from
+different origins expire independently. Bank transfers preserve identities,
+durations and spending; offboard own-unit effects do not grant external range
+or visibility. Returned members inherit eligible current unit grants without
+duplicates. Archived casualties cannot revive an expired grant.
+[Core pp.66–67/88; appendix01.02.02–04.]
+
+There is no separate Army state API. Use records, budgets, selected-option
+provenance and ability/action progress use the existing shared typed state.
+Extra state required by an actual ability is explicit and documented at that
+ability's implementation, without named fields interpreted by core Model code.
+
+## Mapping existing cases to these mechanisms
+
+| Existing case | Passive/triggered implementation | What disappears from core |
+| --- | --- | --- |
+| A detachment grants melee Sustained Hits 1 | Passive weapon function appends an ordinary parameterized weapon-rule instance with its origin. | A special Boolean hook that causes core to manufacture this particular grant |
+| An army activation grants a save, ranged Assault and charging after Advance | Triggered action uses its ordinary choice/counter, then installs one source-owned bundle of three standard grants. | Model flags/named status checks deciding those three benefits |
+| A nearby ally grants +1 to charge rolls | Passive movement/roll function checks actual source range and appends one ordinary charge modifier. | A special aura-bonus channel for a named unit |
+| Models intercept rolled hits | Triggered action runs at the pre-conversion hit boundary, cancels identified unresolved rolled hits and applies required damage through common procedures. | A named shielding-unit branch controlling Lethal Hits order |
+| Passengers contribute OC only at a particular home marker | Passive objective function receives the scored marker and evaluates this carrier/cargo contribution for that marker only. | Guessing the queried objective from a scan for any qualifying marker |
+
+Named abilities remain documented with their source citations in army code.
+The passive/trigger contracts above describe the reusable mechanism, not the
+eligibility of any particular faction's datasheet.
+
+## Implementation work and validation
+
+1. Define common passive contexts/effects and precise event/pending records,
+   reusing existing modifier, source/effect, dice and damage-job primitives.
+2. Wire passive evaluation into core calculations and replace the narrow
+   fixed-bonus/permission hooks; pass the actual objective to cargo OC.
+3. Unify triggered queuing, validation, ordering and normal action execution,
+   keeping common and army effects in the same windows.
+4. Migrate existing named model/component data to generic abilities, equipment,
+   option provenance and common grants; remove superseded hooks and extract
+   legacy faction behavior from core.
+5. Validate with native regressions and an independent test-only implementation,
+   broadened boundary checks, matching bindings/layouts and sanitized replays/
+   fuzzing. Preserve all-bank behavior, source lifetime and shared-frame safety.
+
+Required regression cases include pure repeated passive/queue validation,
+cross-army targets, compulsory/optional sequencing, once-only cost/use,
+overlapping expiry, offboard persistence, retained component abilities,
+revival versus replacement, selection snapshots/retargeting, rolled versus
+generated hits, two-marker cargo OC and genuine interruption order.
+
+The [roadmap](../ROADMAP.md) tracks this implementation separately from the
+completed definition. Current runtime and schemas remain unchanged by writing
+this specification. Adequate bounds are permitted; valid-action discovery and
+rendering remain outside this refactor.

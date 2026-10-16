@@ -886,21 +886,25 @@ replace them with strings, opaque state or a universal rule interpreter. Further
 runtime extraction remains pending in ROADMAP; documentation review alone does
 not authorize or certify those changes.
 
-## Approved army API design and names —2026-10-16
+## Passive and triggered abilities —2026-10-16 correction
 
-Use [doc/army-api.md](doc/army-api.md) as the concrete replacement specification.
-The user approved these six names: **Army catalog, Abilities, Passive effects,
-Available abilities, Use ability, Army state**. Do not restore Rule sources,
-Rule contributions, Opportunities or Resolution as API-family names. Existing
-source/effect primitives can retain their names where their mechanics match.
+Use [doc/army-api.md](doc/army-api.md) as the corrected mechanism specification.
+The user rejected the six-family provider architecture: army/unit/equipment/
+detachment/option selection already belongs to ordinary action functions and
+constructors. Do not add catalog, ability-discovery or army-state provider APIs,
+and do not turn this work into a collection of getting/listing interfaces.
 
-The specification defines typed contexts/outputs, instance and original-recipient
-identities, pure queries, exact windows, common cost/use services, operation
-requests/results and activation continuations. Armies provide their actual rule
-conditions/choices; core owns the shared procedures. Implementations must retire
-superseded policy channels, not merely add renamed wrappers around every hook.
+Define two mechanisms: passive functions add standard effects to core-supplied
+calculation contexts; triggered functions queue actual event activations and
+ordinary action functions execute their choices through shared procedures.
+Core owns event identity, compulsory/optional sequencing, cost/use records,
+mechanical effect evaluation, source/expiry and shared-frame lifetime. Army
+code owns actual named conditions and ability-specific choices.
 
-The specification's signatures are contract notation, not current callable
-Rulebook declarations. Keep specification completion distinct from runtime
-implementation in ROADMAP. Preserve explicit typed state, bank/retained-source
-semantics and the shared-frame non-re-entry audit during migration.
+The specification's signatures are contract notation, not callable runtime
+additions. Runtime migration is pending in ROADMAP. Retire superseded ad hoc
+channels as consumers move, preserve original-recipient/source identities and
+all-bank semantics, and use adequate typed bounded state. Do not introduce an
+ability-step interpreter, opaque state, strings for rule identity, another Board
+copy or custom init/drop. Document each common mechanism independently of Orks;
+keep named tabletop rule citations beside their army implementations.

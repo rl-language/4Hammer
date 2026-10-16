@@ -5,8 +5,9 @@ Dispatch contract documentation is complete; the runtime follow-ups listed at
 the end of this roadmap remain pending. Their objective is removal of faction
 rule interpretation from core, using whatever adequate bounded storage is needed.
 
-Approved replacement: [army API specification](doc/army-api.md). All six API
-families and their contracts are specified; runtime implementation is pending.
+Corrected replacement: [passive and triggered abilities](doc/army-api.md).
+Selection stays in existing actions; the six-family provider proposal is
+superseded. Mechanism definition is complete; runtime migration is pending.
 
 [The Rulebook design and architecture guide](doc/rulebook-architecture.md) documents the current engine structure and execution paths. The guide is completed documentation work; this roadmap owns implementation status and validation.
 
@@ -1966,39 +1967,38 @@ hook-comment coverage, the scoped source-boundary audit, local Markdown links
 and diff checks. No compilation, full rules suite or fuzzer run is required for
 these documentation-only edits; earlier runtime validation remains historical.
 
-## Army API specification —2026-10-16
+## Passive and triggered abilities —2026-10-16 correction
 
-The user approved the design and the names **Army catalog, Abilities, Passive
-effects, Available abilities, Use ability, Army state**. The concrete
-[specification](doc/army-api.md) defines each family's methods, input/output
-types, ownership, pure-query requirements, neutral behavior and shared-core
-responsibilities. It is the design for the runtime work below, not another
-description of the current Orks forwarding functions.
+The user rejected the six-family provider proposal. Army/unit/equipment/
+detachment/option selection remains in ordinary actions and constructors.
+No catalog, ability-discovery or army-state provider layer is to be added.
+The [corrected specification](doc/army-api.md) defines passive functions and
+triggered actions, with explicit common effects, events and lifecycle contracts.
 
-- [x] Specify the six API families with the approved names.
-- [x] Tie the contracts to attack snapshots, modifiers/rerolls, sequencing,
-  attachment/source lifetime, persisting/offboard effects and destruction rules.
-- [x] Specify typed effect/permission contexts, original-option provenance,
-  availability/acceptance, atomic cost/use and operation request/result steps.
-- [x] Specify genuine interruption/parent continuation without recursive entry
-  into a live shared frame; distinguish it from ordinary after-attack reactions.
-- [x] Link the design from the current architecture/faction guides and record
-  the implementation rules in AGENTS.md.
-- [ ] Implement shared identities, typed contexts/outputs, effect bundles and
-  activation/operation-result state with native contract regressions.
-- [ ] Implement catalog/ability descriptions and core reconciliation; migrate
-  Model/component metadata and selected-option provenance.
-- [ ] Implement Passive effects and migrate consumers, including the interface
-  corrections recorded by the preceding contract review.
-- [ ] Implement Available abilities/Use ability, exact windows, common cost/use
-  services, scoped effects and required interruption continuations.
-- [ ] Migrate Orks, extract legacy factions' core behavior and remove superseded
-  hooks. Add an independent test-army provider and broaden boundary audits.
-- [ ] Complete matching-schema/binding, native, frame/layout and sanitized
-  replay/fuzzer validation for the combined runtime migration.
+- [x] Remove the rejected catalog, discovery and state-provider API definitions.
+- [x] Define passive application to typed core contexts, standard effect payloads,
+  per-term/source identity, independent permissions and pure evaluation.
+- [x] Define event payloads, pending activations, queue/validation/action execution,
+  compulsory/optional ordering and once-only cost/use handling.
+- [x] Define common effect lifetime, offboard/retained-source handling and normal
+  action/shared-procedure ownership without another ability-step interpreter.
+- [x] Correct the architecture/faction guides and AGENTS instructions so future
+  work does not follow the superseded six-family proposal.
+- [ ] Implement the common passive contexts/effects and precise event/pending
+  records with native regressions, reusing current shared primitives.
+- [ ] Migrate passive consumers and remove fixed-bonus/bundled-permission hooks;
+  pass the actual scored objective to cargo OC and test overlapping markers.
+- [ ] Unify triggered queuing, validation, sequencing and ordinary action execution
+  with shared cost/use/effect lifecycle. Preserve true interruption order and
+  prevent shared-frame re-entry.
+- [ ] Replace named Model/component data with generic abilities, equipment,
+  option provenance and grants; migrate Orks/legacy behavior out of core and
+  retire superseded hooks. No selection-provider refactor is included.
+- [ ] Complete independent native mechanism tests, broadened boundary checks,
+  matching bindings/layouts and sanitized replay/fuzzer validation.
 
-This delivery is the concrete API specification in Markdown. Its signatures are
-explicitly interface notation; no unimplemented runtime stubs or unused API
-modules are added. Current runtime code, state/observation46, action27 and
-next-state47 remain unchanged. Documentation validation checks local links,
-method/family coverage and diff hygiene; no full rules build/tests are needed.
+This correction changes Markdown only. No runtime provider, declarations or
+unused stub modules are added. Current runtime schemas remain state/observation46,
+action27 and next-state47. Mechanism/signature coverage, removal of rejected
+APIs, guidance consistency,115 local Markdown links and `git diff --check` pass.
+No runtime tests were run for this Markdown-only correction.
