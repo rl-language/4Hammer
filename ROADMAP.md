@@ -1,5 +1,10 @@
 # 11th-edition rules migration roadmap
 
+Latest architecture review: [core-facing faction contracts](doc/faction-contract-review.md).
+Dispatch contract documentation is complete; the runtime follow-ups listed at
+the end of this roadmap remain pending. Their objective is removal of faction
+rule interpretation from core, using whatever adequate bounded storage is needed.
+
 [The Rulebook design and architecture guide](doc/rulebook-architecture.md) documents the current engine structure and execution paths. The guide is completed documentation work; this roadmap owns implementation status and validation.
 
 This roadmap tracks planning and implementation separately. Tasks 1–5 and 7–16 are complete within their documented scopes. Task6 attachment implementation remains unfinished; the Orks audit now supplies its Orks permission lists, while other factions still require data. Task17 implementation is pending, with its Orks source/requirements audit complete. Task8 retains the user-approved area-only visibility abstraction. Update status and record evidence as work is completed; do not mark a task complete merely because it compiles.
@@ -1922,3 +1927,38 @@ of action-graph imports resolves that issue; the intermediate source tree also
 passes type checking. No compiler change, custom init/drop, rendering work or
 valid-action discovery optimization was added. Artifacts and logs:
 `/workspace/4hammer-validation/shared-hook-mechanics`.
+
+## Core-facing contract review —2026-10-16
+
+User priority is that core does not interpret faction-specific rules; adequate
+bounded storage is permitted. Read [the contract review](doc/faction-contract-review.md)
+for evidence, actual interface limitations and implementation order.
+
+- [x] Review all134 dispatch declarations against their core consumers.
+- [x] Rewrite comments as requirements for any implementation: timing, inputs,
+  results, neutral behavior, mutation, source ownership and continuation.
+- [x] Put named-rule implementation details outside dispatch contracts, align
+  the faction README and record the documentation rule in AGENTS.md.
+- [ ] Replace Model's eight named fields with shared ability/equipment/selected-
+  option/effect data; retain original-recipient provenance and independent keys.
+- [ ] Generalize captured component army-rule metadata with its retention rules.
+- [ ] Fold fixed Sustained Hits1, Boolean+1 hit and duplicate selected-move
+  permission hooks into general contribution/permission mechanisms.
+- [ ] Separate engaged-target shooting permission from escape-hazard bypass.
+- [ ] Pass the queried objective to passenger OC. Add overlapping-marker
+  regression coverage and fix any contribution to a nonqualifying marker.
+- [ ] Replace legacy-named destruction results and the single scoped-effect
+  result with mechanically general results, preserving core damage order.
+- [ ] Review composition-owned frame/progress contracts without opaque state,
+  extra Board copies or recursive shared-frame entry.
+- [ ] Extract remaining legacy non-Orks rule interpretation from core and extend
+  the boundary audit/negative controls. Current audit only certifies its stated
+  Orks boundary, not independence from every faction.
+- [ ] Implement/fix the identified runtime dependencies in focused commits with
+  native regressions and combined matching-binding/layout/sanitized validation.
+
+This batch changes comments and Markdown only. State/observation46, action27 and
+next-state47 are unchanged. Validation is source-level executable-line equality,
+hook-comment coverage, the scoped source-boundary audit, local Markdown links
+and diff checks. No compilation, full rules suite or fuzzer run is required for
+these documentation-only edits; earlier runtime validation remains historical.

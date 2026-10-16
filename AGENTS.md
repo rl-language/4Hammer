@@ -863,3 +863,25 @@ and the final sanitized checks recorded in ROADMAP.md. A985-action game reaches
 terminal and restores its save. Orks sources shrink423 lines; total runtime
 source grows185 lines. Read ROADMAP.md for measured evidence and remaining
 second-faction identity/legacy-adapter limits.
+
+## Core-facing faction contracts —2026-10-16
+
+User priority: core rules must not interpret faction-specific rules. Use the
+adequate bounded storage required by the mechanics; memory/bound reduction is
+not a prerequisite for separation. Shared catalogs may contain faction entries.
+Read [the contract review](doc/faction-contract-review.md) and ROADMAP for the
+remaining Model/component, hook-result and legacy-faction work.
+
+Document dispatch hooks from their **core callers**, specifying call timing,
+input preconditions, result meaning, permitted mutations, neutral behavior and
+ownership/continuation obligations for any faction implementation. Do not define
+a contract by describing the current Orks ability. Keep named rule eligibility,
+effects and tabletop citations in the implementing adapter. When the current
+signature cannot express a general mechanism, state its actual limit and record
+the required refactor; comments do not make a narrow interface general.
+
+The current source-boundary audit is Orks-specific and does not certify the
+legacy factions. Preserve explicit typed composition/shared frames; do not
+replace them with strings, opaque state or a universal rule interpreter. Further
+runtime extraction remains pending in ROADMAP; documentation review alone does
+not authorize or certify those changes.
