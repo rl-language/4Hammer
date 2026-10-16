@@ -360,7 +360,7 @@ The optimized sanitized `task17g-fuzzer-final` passes preserved lifetime/zero/fr
 
 ## Current Orks data and loadouts (batch17.H1)
 
-Current CTest is `/workspace/4hammer-validation/task17h1-tests`:709/709 pass,707 assertions plus two fixtures. The25 `test_orks17h1_*` cases cover current profiles, composition/equipment checks, Hunter/conditional combat consumers, shared physical weapons, attachment/saves and explicit oval guards. The unoptimized ASAN/UBSAN/leak driver `task17h1-sanitized/driver-final` passes all25. [The data report](../doc/factions/orks/orks-current-unit-data.md) distinguishes current data from pending special abilities, oval support and roster promotion.
+Current CTest is `/workspace/4hammer-validation/task17h1-tests`:709/709 pass,707 assertions plus two fixtures. The25 `test_orks17h1_*` cases cover current profiles, composition/equipment checks, Hunter/conditional combat consumers, shared physical weapons, attachment/saves and explicit oval guards. The unoptimized ASAN/UBSAN/leak driver `task17h1-sanitized/driver-final` passes all25. [The data report](../doc/factions/orks/orks-datasheets.md) distinguishes current data from pending special abilities, oval support and roster promotion.
 
 Cross-check compiled statistics against the cached original HTML, without recompilation:
 
@@ -376,7 +376,7 @@ The optimized sanitized `task17h1-fuzzer` passes preserved lifetime, zero and co
 
 ## Combined current Orks abilities and circle proxies (17.H2/H3)
 
-Current discovery has738 assertions/740 entries in `/workspace/4hammer-validation/task17h23-tests`. Initial full execution passes739/740; the updated circle-placement fixture incorrectly used an opposing deployment zone. After correcting its anchor, all58 affected entries pass (57 assertions plus compilation). These results cover every registered assertion across the two runs; no full740/740 rerun is claimed. The31 new `test_orks17h23_*` cases cover source windows/limits/targets, actual move/charge hooks, hit/damage/shock consumers, FNP/spill, owner restoration, saves and proxy edges/overlap/rotation/movement. [The report](../doc/factions/orks/orks-current-unit-rules.md) records printed rules and user-approved approximation limits.
+Current discovery has738 assertions/740 entries in `/workspace/4hammer-validation/task17h23-tests`. Initial full execution passes739/740; the updated circle-placement fixture incorrectly used an opposing deployment zone. After correcting its anchor, all58 affected entries pass (57 assertions plus compilation). These results cover every registered assertion across the two runs; no full740/740 rerun is claimed. The31 new `test_orks17h23_*` cases cover source windows/limits/targets, actual move/charge hooks, hit/damage/shock consumers, FNP/spill, owner restoration, saves and proxy edges/overlap/rotation/movement. [The report](../doc/factions/orks/orks-datasheets.md) records printed rules and user-approved approximation limits.
 
 The unoptimized ASAN/UBSAN/leak driver `task17h23-sanitized/driver-final` passes all56 current-data/ability cases with leak detection. If sandbox process inspection blocks LeakSanitizer, run the same binary through the permitted outside-sandbox execution flow; do not disable leak detection. Matching pure native/header/C++ bindings are `task17h23-godot`:
 
@@ -524,3 +524,15 @@ build-failure blocking and filtered-fixture inclusion. They intentionally fail
 where required to verify the runner's contracts; these are not game test failures.
 The three old Python test runners have been removed. Host/ML integration and
 source-audit tools remain separate from the pure Rulebook CTest execution path.
+
+## Orks responsibility cleanup —2026-10-16
+
+The matching final build is `/workspace/4hammer-validation/orks-ownership/tests`:
+1,193 native assertions plus its compile fixture pass. Three new assertions
+exercise shared use-specification scopes/owners, combined interval limits and
+model identity across bank transfer. No Python enters the native test path.
+Fresh host artifacts are under `orks-ownership/godot`; the former batch scripts
+are now `godot_orks_datasheets.gd` (all54 previews and detailed runtime choices)
+and `godot_orks_recovery.gd` (recovery/support choices). Use matching
+state/observation41 and action26. ROADMAP.md records the exact constructor/layout
+comparisons, source audits, focused Godot scripts and sanitizer evidence.

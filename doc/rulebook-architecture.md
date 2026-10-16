@@ -72,9 +72,9 @@ Shared mechanics remain at the root of `src/`. Current Orks adapters live in
 [`src/factions/orks/`](../src/factions/orks/README.md), with their reports and
 source inventories under [`doc/factions/orks/`](factions/orks/README.md).
 Compile the existing roots with `-i src`; faction imports use dotted paths such
-as `factions.orks.orks_army_rules`. The move preserves public declaration names
+as `factions.orks.army`. The move preserves public declaration names
 and existing core/faction hooks. See the [organization review](file-organization-review.md)
-for proposed responsibility and naming changes beyond this relocation.
+for completed faction cleanup and the remaining shared-engine proposals.
 
 | Responsibility | Modules | Principal contents |
 | --- | --- | --- |
@@ -97,9 +97,8 @@ for proposed responsibility and naming changes beyond this relocation.
 | Terrain and objectives | [terrain_rules.rl](../src/terrain_rules.rl) | Visibility abstraction, area membership, cover, target conditions and objective/action eligibility |
 | Core stratagems and actions | [core_stratagem_rules.rl](../src/core_stratagem_rules.rl) | Core effect eligibility and phase-local action permissions; shared CP payment is on `Board` |
 | Transport and borrowed weapons | [transport_rules.rl](../src/transport_rules.rl), [firing_deck_rules.rl](../src/firing_deck_rules.rl) | Carrier/passenger links, embark/disembark setup, capacity, emergency setup and Firing Deck selections |
-| Current Orks data | [orks_unit_data.rl](../src/factions/orks/orks_unit_data.rl), [orks_infantry_data.rl](../src/factions/orks/orks_infantry_data.rl), [orks_elite_data.rl](../src/factions/orks/orks_elite_data.rl) | Source profiles/equipment/count validators, named physical alternatives, ability metadata and user-authorized oval proxies |
-| Current Orks unit abilities | [orks_unit_rules.rl](../src/factions/orks/orks_unit_rules.rl), [orks_datasheet_rules.rl](../src/factions/orks/orks_datasheet_rules.rl), [orks_elite_rules.rl](../src/factions/orks/orks_elite_rules.rl) | Identity-backed source registration and usage, ammo/Rokkit selections, declaration/gathering modifiers and live aura queries; rules.rl owns dispatch |
-| Orks army mechanics | [orks_army_rules.rl](../src/factions/orks/orks_army_rules.rl) | Explicit Waaagh!/Da Boss metadata, riled grants, War Cry start-window choices and pre-formation Warlord selection |
+| Orks datasheets | [datasheets.rl](../src/factions/orks/datasheets.rl) | All54 current factories, checked composition/equipment, printed metadata and attachment permissions |
+| Orks runtime domains | [module map](../src/factions/orks/README.md) | Army/roster, detachments/enhancements, source/effect lifecycle, combat, movement, recovery, transports, psychic and morale adapters |
 | Source lifecycle | [source_effect_types.rl](../src/source_effect_types.rl), [source_effects.rl](../src/source_effects.rl) | Source/event/use/effect records, eligibility, typed grants, expiry, aura refresh and restore validation |
 
 Most interactive sequences live in `rules.rl`. The smaller modules expose calculations, predicates and explicit mutation helpers. Some domain modules also own a small interactive frame, such as `choose_weapon_abilities` or `select_firing_deck`. Keep reusable mechanics in those modules and let the orchestration frame decide when to invoke them.
@@ -357,7 +356,7 @@ The Advance charge exception is retained in bounded `UnitHistory.advance_allows_
 
 `resolve_timing_window` offers a separate one-enum Orks rule choice inside the existing controller groups. Optional War Cry is at either Command start, once per army per battle. A disabled source record owns its grants to eligible units in all banks; accepted effects survive the originating unit’s death and last to the end of the next turn (`SourceDuration.end_next_turn`). They expire after that turn’s end-window effects, not at its start. Da Boss is mandatory at round start for the selected live Warlord with explicit metadata, and grants literal1CP separately from Command Core CP. It does not use the inherited extra-CP flag as an unstated ceiling.
 
-Godot supplies explicit reserve Warlord unit/model buttons and Orks timing labels. Those selectors are excluded from battlefield clicks. Source flags/current profiles, mandatory datasheet requirements and reactive riled grants remain their actual unit adapters; these engine fixtures are not complete Orks datasheets.
+Godot supplies explicit reserve Warlord unit/model buttons and Orks timing labels. Those selectors are excluded from battlefield clicks. Source flags/current profiles, mandatory datasheet requirements and reactive riled grants remain their actual unit adapters; the complete current factories live in the single datasheet module.
 
 ## Effective characteristics and predicates
 
@@ -373,23 +372,37 @@ Source-installed numerical records use the same effective M/T/Sv/InSv/Ld/OC and 
 
 `modifier_choices.rl` keeps each authored skill operation and each core contribution separate. Cover and Plunging Fire are BS operations; Heavy, Damaged, ordinary/profile hit bonuses and the two engagement penalties are hit-roll contributions. For every ordinary hit die, after re-rolls, the bearer’s controller may apply or ignore each relevant item, including beneficial items. Selected operations then use the same ordered arithmetic, rounding, characteristic limits and cumulative hit cap. Natural 1/6 and other unmodified gates remain intact. The no-permission path retains aggregate classification.
 
-`ChooseAttackModifiers` persists its bounded list, index and result. A one-Bool `apply_attack_modifier` input represents every subset without enumerating an exponential mask. Board exposes the current modifier/kind for labels; the child restores the previous decision owner and UI context. Group identity compares permissions and the original selectable lists, since equal all-applied totals can offer different subsets. A typed source grant can install a permission, with source-owned expiry and archive cleanup. Current Orks adapters use these same provenance and selection mechanisms; remaining cards are tracked in ROADMAP.
+`ChooseAttackModifiers` persists its bounded list, index and result. A one-Bool `apply_attack_modifier` input represents every subset without enumerating an exponential mask. Board exposes the current modifier/kind for labels; the child restores the previous decision owner and UI context. Group identity compares permissions and the original selectable lists, since equal all-applied totals can offer different subsets. A typed source grant can install a permission, with source-owned expiry and archive cleanup. Current Orks adapters use these same provenance and selection mechanisms; current card coverage and validation are recorded in ROADMAP.
 
 ## Current Orks data adapters
 
-The twelve-card17.P1 adapter batch is described in [the infantry, walker and monster guide](factions/orks/orks-infantry-walkers.md). Its separate data module builds checked loadouts; `orks_datasheet_rules.rl` feeds selection decisions, declarations, gathered characteristics, individual hit contributions and live auras into the existing kernels. ROADMAP.md records validation status.
+All54 included standard cards share [datasheets.rl](../src/factions/orks/datasheets.rl).
+The [datasheet guide](factions/orks/orks-datasheets.md) explains construction,
+physical weapons, use limits, geometry and runtime consumers. Each concrete
+factory owns its printed metadata/loadout; `make_orks_model` supplies common
+Orks metadata and `finalize_orks_unit` supplies permissions/starting strength.
+There is no implementation-batch hierarchy or separate Infantry wrapper.
 
-[Current Orks profiles/loadouts](factions/orks/orks-current-unit-data.md) describes17.H1's five model profiles and12 unique weapon profiles, literal composition ranges, optional Thump Guns and named physical profile alternatives. Constructors configure actual keyword/datasheet/Army Rules/attachment metadata. Raw HTML supplies separate InSv boxes and the Hunter keyword header omitted by the text extracts. An independent tool checks the compiled values against those tables.
+Runtime modules follow responsibilities in the [module map](../src/factions/orks/README.md).
+One registration function and one source-availability hook serve all cards.
+The three datasheet combat hooks combine weapon rules, characteristic modifiers
+and attack effects without separate batch dispatch. Movement/destruction
+sequencing, stable identities, live conferral and original use limits remain
+shared with the ordinary engine. `make_source_usage` and `source_use_limits`
+construct explicit specifications; `commit_source_usage` alone spends uses.
 
-These constructors now carry current ability metadata. [The ability report](factions/orks/orks-current-unit-rules.md) describes17.H2's actual consumers. `orks_unit_rules.rl` registers identity-backed Keep Huntin' and Bomb Squig sources after identity assignment; movement-start/end dispatch combines them with ordinary grants in controller groups. Keep Huntin' has two source windows but one army-round use key. Bomb Squig has one original-unit token and resolves through ordinary mortal allocation/destruction. Movement source dispatch is separate from generic destruction dispatch, avoiding recursive action-frame ownership. Distinct `choose_movement_source` and targeted one-UnitID actions preserve Godot discovery; actual dice retain the `roll`/`quantity` chance contract.
-
-Dodge Dis! is a separate hit contribution in each attack snapshot, preserving pre-cap arithmetic and optional ignoring provenance. Brutal Impact adds a damage operation to every declared profile when the actual source unit has charged this turn. Mobbed runs all engaged enemy Monster/Vehicle shock tests after completed charge movement, with source-controller ordering and target-owned shock choices. Unit/component conferral reuses the existing attachment lifecycle.
-
-Squighog profiles retain original oval axes and `profile_has_oval_base`, while the user's updated policy permits75/90mm long-axis circle proxies through the common distance/overlap/setup/path/rendering consumers. Rotation leaves the proxy unchanged. Exact ovals are deferred; unknown hull/multipart geometry remains unsupported. Anchors stay on whole quads. The public Orks starter now uses these current adapters with real Warlord and attachment decisions. Existing profile/weapon IDs remain historical fixtures. The starter promotion first used schemas31/19/31. Current17.P1 schemas are33/21/33, next34; regenerate matching bindings after structural changes.
+Orks army queries and faction actions live with their domains instead of in
+`units.rl`/`rules.rl`. Core phases still call them and own phase orchestration.
+The generic whole-unit Hidden query lives with `model_is_hidden` in terrain
+rules; the riled-up grant constructor lives in the faction effects module.
+Shared healing/model return, granted moves, damage and source counters remain
+in common modules. Persisted internal frame fields use responsibility names;
+state/observation41 protects saves, while the public action catalog is checked
+separately. ROADMAP.md records actual validation and compatibility evidence.
 
 ## Attached units
 
-Read [the attachment report](attachments.md) for source citations, the17 included Orks lists and validation boundaries. `attachment_rules.rl` separates exact prebattle permissions from the structural `Unit.attach_to` transfer. Two bounded component records preserve Leader/Support identity, count and unit-rule source scope; models retain original component and wargear/use identity. The bodyguard keeps the combined unit's identity and starting strength even after every bodyguard dies. Model keywords stay local; unit queries union them. Declared attacks query highest bodyguard T while any remain, then highest remaining Leader/Support T.
+Read [the attachment report](attachments.md) for source citations, the17 included Orks lists and validation boundaries. `datasheets.rl` owns Orks permission lists; `attachment_rules.rl` applies shared prebattle eligibility and the structural `Unit.attach_to` transfer. Two bounded component records preserve Leader/Support identity, count and unit-rule source scope; models retain original component and wargear/use identity. The bodyguard keeps the combined unit's identity and starting strength even after every bodyguard dies. Model keywords stay local; unit queries union them. Declared attacks query highest bodyguard T while any remain, then highest remaining Leader/Support T.
 
 Typed `Unit.unit_abilities` applies through the original component's lifetime. Model-only modifiers stay on the bearer. Register live conditional sources before formation; activation still requires the condition. `SourceInstance.requires_leading` tracks started-attached permission, while `model_specific_rule` restricts activation to the live model. `source_alive` and `source_confers_rules` differ during p67's attack interval: a destroyed bearer may confer a unit rule until that attacker finishes all attacks, without becoming a live recipient. Damage cleanup releases only the matching attacker, then resolves callbacks/removal.
 
@@ -545,21 +558,22 @@ War Horde Get Stuck In enters normal weapon declaration snapshots and
 duplicate-ability selection. See [the public roster guide](factions/orks/orks-custom-roster.md)
 and ROADMAP.md for current integration status.
 
-## Ordinary Orks package integration
+## Orks integration by responsibility
 
-Read [the detachment design](factions/orks/orks-detachments.md) for the four package modules, staged option choices, source generations, explicit cargo dependencies, offboard processing, healing/replacement identity and flat reaction wrappers. These modules connect to the existing core pipelines; they do not replace combat, source expiry or transport storage with independent implementations. Its schema32/20/33 figures describe the historical17.O batch; current versions are listed above and in ROADMAP.md.
+[The detachment design](factions/orks/orks-detachments.md) explains option
+selection, source generations, cargo dependencies and reaction wrappers.
+The [module map](../src/factions/orks/README.md) places their predicates,
+effects and interactive decisions with the mechanic they serve. These adapters
+use the shared combat, source-expiry and transport pipelines.
 
-## Elite, Mek and Gretchin adapters
-
-[The fourteen-card guide](factions/orks/orks-elites-meks-gretchin.md) describes17.P2. Its
-Command-healing sources dispatch through the ordinary controller-ordered timing
-window. Shared `UnitHealing` and `ModelReturn` frames in `healing_rules.rl` serve
-battlefield and offboard abilities without a detachment wrapper. Battlefield returns
+Command healing uses controller-ordered timing windows. Shared `UnitHealing`
+and `ModelReturn` frames serve battlefield and offboard abilities; the Orks
+adapter supplies source eligibility, amount and use limits. Battlefield returns
 use original casualty identities and legal whole-quad placement; offboard
-returns check carrier capacity without external range measurements. Returning
-models retain physical weapon use and persisting effects and clear death-only
-flags. Gretchin seats round each unit's Gretchin count up in pairs, then add
-ordinary seats for attached models.
+returns check real carrier capacity without external range measurements.
+Returned models retain physical weapon usage and persisting effects, while
+clearing death-only flags. Gretchin seats round each unit's Gretchin count up
+in pairs, then add ordinary seats for attached models.
 
 Mek move-start/end sources measure from the actual bearer to the actual vehicle
 model. Repeated repairs reuse a recipient-model grant prototype but retain
@@ -568,32 +582,19 @@ at the start of next own Movement, after next Command. Ranged-only force-field
 saves enter allocation groups rather than permanent model InSv. Pulsa records
 one target identity for the phase; Barrage uses the successful-hit ledger.
 Shokk-boosta adds optional Advance choices and mandatory per-model move-end
-hazards. Runtherd correction owns a single shared frame and uses destruction
-without damage prevention. New single-owner frames stay with their callers.
+hazards. Runtherd correction uses destruction without damage prevention.
 
-The hit-contribution/selection/result bounds include sixteen possible per-model
-grants plus four unit contributions and thirty other modifier choices. Schema
-34/22/34 requires matching state/action/observation clients. The implementation
-adds no continuous positions, custom lifecycle hooks or public roster picker.
-ROADMAP.md owns the executed checks and remaining17.P/17.Q obligations.
-
-
-### Final standard-card integration (17.P3)
-
-[The remaining-card guide](factions/orks/orks-remaining-units.md) describes the final25
-adapters. `orks_remaining_data.rl` owns their source tables/equipment;
-`orks_remaining_rules.rl` adapts them to existing kernels. The new
 `ModelGeometry.proxy_diameter_mm` is a bounded, explicitly approximate hull
-input; every distance uses the shared model radius. Printed M-/OC- stay locked.
+input; distances use the shared model radius. Printed M-/OC- stay locked.
 Pulse Jet is a finite movement kind using normal path/placement validation,
-with its own horizontal D6+18 budget and source-owned post-move restrictions.
+with its horizontal D6+18 budget and source-owned post-move restrictions.
 
-Ordinary/reactive disembarkation now has one context-owned frame. Tactical
+Ordinary/reactive disembarkation has one context-owned frame. Tactical
 follow-up Movement happens in MovementPhase after copying small exit results;
 Disembark never owns Movement. This prevents nested shared-frame re-entry when
-a Movement triggers Trukk Pilin' Out. The new psychic roll frame is also
-context-owned and shared across the three datasheet callers. Other added
-frames have one owner. Run the action-storage audit against fresh metadata.
+a Movement triggers Trukk Pilin' Out. The psychic roll frame is also shared
+across its datasheet callers. Run the action-storage audit against fresh
+metadata when changing these lifetimes.
 
 Source events retain the current-player-then-opponent sequence for bombs,
 withdrawals, Shadows ingress, engines and Race. `next_own_command` is a distinct
@@ -602,10 +603,11 @@ unit identities. Hit records separately track Squig Launchas provenance; attack
 grouping cannot merge it with otherwise identical attacks from another weapon.
 Home-objective ownership is explicit mission metadata, not inferred geometry.
 
-All54 included standard cards now have adapters and public roster selection;
-ROADMAP.md owns their final integration evidence. The user excludes rendered
-journeys and assigns valid-action discovery optimization to the compiler. No
-point system, Forge World/Legends data or exact oval/hull geometry is added.
+All54 included standard cards use [one datasheet guide](factions/orks/orks-datasheets.md)
+and public roster selection. ROADMAP.md owns validation and scope limits.
+Internal frame names describe Command healing, datasheet windows and hit
+effects; state/observation41 requires matching clients. Public action payloads
+remain at schema26. No custom lifecycle hook is introduced.
 
 ### Shared rules across storage banks
 

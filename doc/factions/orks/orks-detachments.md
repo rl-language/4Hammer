@@ -6,7 +6,14 @@ The user permits up to three selected detachments. Ordinary enhancements are uni
 
 ## Design
 
-`orks_detachment_types.rl` defines the finite option, effect, attack-record and psychic-budget types. `orks_detachment_rules.rl` implements eligibility, passives, characteristic/weapon consumers, source installation and transport dependencies. `orks_detachment_actions.rl` handles cards selected at attack/move declaration, defence, Dread Mob's dice and original-hit interception. `orks_detachment_support.rl` handles phase windows, healing/return, psychic actions, post-attack reactions, reserve entry and prebattle redeployment. `rules.rl` connects these helpers to the existing core action, damage and timing pipelines.
+`types.rl` defines finite option, effect, attack-record and psychic-budget types.
+`detachments.rl` and `enhancements.rl` own package/recipient eligibility;
+`effects.rl` and `sources.rl` own grants, installation and source dependencies.
+`combat.rl` handles attack consumers, defence, Dread Mob's dice and hit reactions;
+`movement.rl`, `recovery.rl`, `psychic.rl`, `transports.rl` and `stratagems.rl`
+own their respective decisions. The [module map](../../../src/factions/orks/README.md)
+links each owner. Core `rules.rl` connects these adapters to the existing action,
+damage and timing pipelines.
 
 Every accepted lasting effect has a source key and duration. Printed native characteristics remain available to the normal replacement/multiplication/addition/division/subtraction pipeline. Separate Hazardous and Supa-hazardous sources retain independent tests; a numeric Rapid/Cleave improvement is added to the existing magnitude and removed on expiry. Declaration snapshots include actual physical weapon/profile identity and the shooter's selected-unit objective condition. Generated Sustained hits remain distinct from the original rolled hits intercepted by Grot Shields. Hit and wound records distinguish successful hits from actual wounds lost after prevention.
 

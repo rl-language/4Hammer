@@ -144,7 +144,7 @@ The user requested shared validation with distinct commits. Final RLC0.4.17 pass
 
 ## 17.H1 current profile/loadout data
 
-[Current unit data](orks-current-unit-data.md) supplies Beastboss, Beast Snagga Boyz and Squighog Boyz constructors, five current model profiles and12 unique weapon profiles. The raw HTML supplies InSv5+/6+ and the Hunter keyword header missing from the audit text extracts. Literal independent composition ranges, additional Thump Guns, shared physical Choppa/Stikka alternatives, exact keywords/Army Rules/attachment metadata and source target predicates are implemented. Current Squighog ovals are explicitly unavailable for placement until17.H3; no circular substitute is installed. These are data-stage APIs; production roster promotion and complete-card status wait for17.H2–H4. All54 standard cards remain planned, excluding every Forge World/Legends unit. ROADMAP.md owns executed evidence and the next subtask.
+[Current unit data](orks-datasheets.md) supplies Beastboss, Beast Snagga Boyz and Squighog Boyz constructors, five current model profiles and12 unique weapon profiles. The raw HTML supplies InSv5+/6+ and the Hunter keyword header missing from the audit text extracts. Literal independent composition ranges, additional Thump Guns, shared physical Choppa/Stikka alternatives, exact keywords/Army Rules/attachment metadata and source target predicates are implemented. Current Squighog ovals are explicitly unavailable for placement until17.H3; no circular substitute is installed. These are data-stage APIs; production roster promotion and complete-card status wait for17.H2–H4. All54 standard cards remain planned, excluding every Forge World/Legends unit. ROADMAP.md owns executed evidence and the next subtask.
 
 
 ## User geometry/workflow update —17.H2/H3
@@ -154,7 +154,7 @@ Ovals retain original axis/shape metadata but use the source long axis as a temp
 
 ## 17.H2/H3 completed adapter overlay
 
-[The ability report](orks-current-unit-rules.md) adds the five current source abilities and long-axis oval proxies, with real move/charge windows, shared army/unit limits, targets, hit/D/shock/mortal consumers and lifecycle/saves. All738 assertions have passing results across full/corrected runs;56 native sanitizer/leak cases, HTML comparison, five Godot controls, ML, completed legacy-root replays and20 mutation runs pass. Exact oval geometry is deferred under user policy; unknown hull/multipart dimensions remain unavailable.17.H4 production roster promotion remains next. Current complete-card gameplay and all remaining54-card work retain their roadmap owners.
+[The ability report](orks-datasheets.md) adds the five current source abilities and long-axis oval proxies, with real move/charge windows, shared army/unit limits, targets, hit/D/shock/mortal consumers and lifecycle/saves. All738 assertions have passing results across full/corrected runs;56 native sanitizer/leak cases, HTML comparison, five Godot controls, ML, completed legacy-root replays and20 mutation runs pass. Exact oval geometry is deferred under user policy; unknown hull/multipart dimensions remain unavailable.17.H4 production roster promotion remains next. Current complete-card gameplay and all remaining54-card work retain their roadmap owners.
 
 
 ##17.H4/17.I1 production integration

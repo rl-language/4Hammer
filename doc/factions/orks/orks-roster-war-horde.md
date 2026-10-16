@@ -9,7 +9,7 @@ labels its choice **Orks (current units)**. Historical factories remain explicit
 core-test scaffolds and are not called by this public choice.
 
 Sources are the cached2026-10-12 current Beastboss, Beast Snagga Boyz and Squighog
-Boyz cards, linked in `orks-current-unit-data.md` and `orks-current-unit-rules.md`.
+Boyz cards, linked in `orks-datasheets.md` and `orks-datasheets.md`.
 Oval bases retain both source axes and use the user-approved long-axis circle
 proxy on whole-inch quad anchors. Points and detachment prices are omitted by
 user instruction; actual CP costs and limits remain enforced.

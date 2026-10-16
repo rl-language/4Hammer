@@ -19,8 +19,7 @@ faction code lives and which responsibilities remain shared.
 | Configuration and eligibility | [Army configuration](orks-configuration.md), [keyword predicates](orks-keyword-predicates.md) |
 | Army rules | [Waaagh!, War Cry, riled-up and Warlord](orks-army-rules.md) |
 | Detachments and CP | [Detachment implementation](orks-detachments.md), [source inventory](orks-detachment-source-inventory.tsv), [CP inventory](orks-stratagem-costs.tsv) |
-| Initial current cards | [Profiles/loadouts](orks-current-unit-data.md), [abilities](orks-current-unit-rules.md) |
-| Datasheet families | [Infantry, walkers and monsters](orks-infantry-walkers.md), [elites, Meks and Gretchin](orks-elites-meks-gretchin.md), [remaining standard cards](orks-remaining-units.md) |
+| Datasheets and abilities | [All54 cards, construction, limits and runtime integration](orks-datasheets.md) |
 | Public roster | [Starter roster and War Horde](orks-roster-war-horde.md), [custom roster and bank integration](orks-custom-roster.md) |
 
 These reports include historical migration checkpoints. Use their source and

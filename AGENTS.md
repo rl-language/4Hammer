@@ -3,14 +3,19 @@
 Your task is to modify the game rules requested by the user and validate their behavior with regression tests and the buildable rules fuzzer. Implement the requested mechanics in the Rulebook Language sources; preserve compatibility with the Godot editor's action discovery and generated bindings. Do not silently change unrelated mechanics.
 
 Current Orks adapters live in `src/factions/orks/`; import them with full dotted
-paths such as `factions.orks.orks_army_rules`, using the existing `src` include
+paths such as `factions.orks.army`, using the existing `src` include
 root. Keep reusable mechanics in common modules. Faction reports and source
 inventories live in `doc/factions/orks/`; start with its
 [index](doc/factions/orks/README.md) and the
 [module map](src/factions/orks/README.md). Source audits must recurse through
 `src/`, not assume every module is at its root. The
-[organization review](doc/file-organization-review.md) lists proposed function
-moves and naming improvements; those proposals are not completed refactors.
+[organization review](doc/file-organization-review.md) records completed faction refactoring and remaining shared-engine proposals.
+Keep all current Orks datasheets in one `src/factions/orks/datasheets.rl` file.
+Organize runtime mechanics by responsibility; never use implementation-order
+categories such as Elite/Remaining. Use `make_orks_model`, one
+`finalize_orks_unit`, and the shared explicit `make_source_usage`/
+`source_use_limits` constructors instead of category wrappers. Preserve each
+rule's identities, limits and live-conferral checks when consolidating helpers.
 
 Use the existing isolated checkout; do not create a Git worktree unless requested. Inspect existing changes before editing. Unlike environment onboarding, a rule-change task permits the necessary source and test changes.
 
@@ -437,7 +442,7 @@ Final682 assertions /684 CTests,34 unoptimized native sanitizer/leak cases, inde
 
 ## Current Orks profile/loadout data —17.H1
 
-Read [the current data report](doc/factions/orks/orks-current-unit-data.md) and updated architecture.17.H1 adds source-backed data constructors for Beastboss, Beast Snagga Boyz and Squighog Boyz; next17.H2 implements Dodge Dis!, Keep Huntin', Mobbed, Bomb Squig and Brutal Impact. Proper oval geometry17.H3 and production roster promotion17.H4 remain mandatory before marking17.H/cards complete. All54 standard Orks units are planned. Exclude Forge World/Legends and points/detachment prices, while retaining CP rules.
+Read [the current data report](doc/factions/orks/orks-datasheets.md) and updated architecture.17.H1 adds source-backed data constructors for Beastboss, Beast Snagga Boyz and Squighog Boyz; next17.H2 implements Dodge Dis!, Keep Huntin', Mobbed, Bomb Squig and Brutal Impact. Proper oval geometry17.H3 and production roster promotion17.H4 remain mandatory before marking17.H/cards complete. All54 standard Orks units are planned. Exclude Forge World/Legends and points/detachment prices, while retaining CP rules.
 
 Use the current raw HTML, not just the audit text: separate InSv boxes supply Beastboss5+, Snagga/Squighog6+, and the Hunter keyword header supplies MONSTER/VEHICLE. The constructors carry exact profile/weapon/keyword/Army Rules/attachment data, literal composition ranges and optional loadout checks. Thump Guns augment Boys' Choppa/Slugga. Choppa Standard/Hunter and Stikka ranged/melee share physical weapon identity. Current Big Choppa has Cleave2/S7; melee Stikka has no inherited Lance. New current data never inherits Morgrim/Beast Snagga/FNP grants from old factories.
 
@@ -455,7 +460,7 @@ Work on two related roadmap tasks in one implementation/validation batch when pr
 
 ## Current Orks unit abilities and circular proxies —17.H2/H3
 
-Read [the current ability report](doc/factions/orks/orks-current-unit-rules.md) and ROADMAP.md.17.H2/H3 are complete within the user's temporary long-axis circle policy. Next17.H4 promotes the three current constructors into the production roster; parent17.H/full current-card gameplay remains incomplete. All54 standard cards stay planned; Forge World/Legends and price accounting remain excluded, CP retained.
+Read [the current ability report](doc/factions/orks/orks-datasheets.md) and ROADMAP.md.17.H2/H3 are complete within the user's temporary long-axis circle policy. Next17.H4 promotes the three current constructors into the production roster; parent17.H/full current-card gameplay remains incomplete. All54 standard cards stay planned; Forge World/Legends and price accounting remain excluded, CP retained.
 
 Keep explicit source/component metadata: Keep Huntin' rule110 has two windows sharing one army-round counter; future Squigosaur adapters must reuse110. Bomb Squig rule111 is one original-unit battle token, spent when a target is accepted, including failed rolls. Idempotent registration must preserve these counters across formation, transfers/return and saves. Accepted riled grants survive source death and expire at next own turn through the common source framework. External target ranges/LOS require live battlefield units. Preserve Waaagh's selected-Advance permission snapshot; later Keep Huntin' cannot retroactively change an Advance selection.
 
@@ -537,7 +542,7 @@ serial frames or custom lifecycle hooks while adding the remaining units.
 
 ## Twelve current Orks adapters —17.P1
 
-Read [the adapter guide](doc/factions/orks/orks-infantry-walkers.md) and the latest ROADMAP
+Read [the adapter guide](doc/factions/orks/orks-datasheets.md) and the latest ROADMAP
 section. Boyz, Nobz, Warboss, Bigboss, Bannernob, Stormboyz, Warbikers, Deff Dread,
 Killa Kans, Big Mek Dakkarig, Beastboss on Squigosaur and Mozrog now have checked
 profiles/loadouts and source consumers.15/54 standard cards are implemented;
@@ -568,7 +573,7 @@ getters; normalize expected UI labels with GlobalRules.strip_symbols.
 
 ## Fourteen elite, Mek and Gretchin adapters —17.P2
 
-Read [the adapter guide](doc/factions/orks/orks-elites-meks-gretchin.md) and the latest
+Read [the adapter guide](doc/factions/orks/orks-datasheets.md) and the latest
 ROADMAP section. Implement all fourteen related cards as one broad batch,
 then validate the final combined state. The three Python migration commits
 have been reverted at the user's request; keep native Rulebook assertions and
@@ -611,9 +616,9 @@ mutation/replay scope and the remaining17.P/17.Q fixes.
 
 ## Final25 standard Orks adapters —17.P3
 
-Read [the final-card guide](doc/factions/orks/orks-remaining-units.md) and ROADMAP.md. All54
+Read [the final-card guide](doc/factions/orks/orks-datasheets.md) and ROADMAP.md. All54
 included standard cards now have profile/loadout/source adapters. The final25
-use `orks_remaining_data.rl` and `orks_remaining_rules.rl`; their111 new native
+use `datasheets.rl` and the runtime domains in the module map; their111 new native
 regressions bring the suite to1,105 passing assertions. Source metadata still
 includes excluded identities for stable catalogs/permission audits, not playable
 Forge World/Legends factories. Arbitrary public roster selection and the known
@@ -732,3 +737,22 @@ the still-tested `single_attack`, documented external `deployment_position_valid
 and compiler-invoked `gen_methods`/`fuzz`. Do not infer dead code from textual
 reference counts alone, or remove active Orks hooks before replacing their
 grant/source consumers. Original coverage inventories remain historical records.
+
+## Orks responsibility cleanup —2026-10-16
+
+The final module layout and construction/usage conventions are described at the
+start of this file and in the Orks module map. Do not restore runtime categories
+based on implementation order. Keep all54 current datasheets together; organize
+abilities by their actual mechanic and share counters/procedures with other
+armies. `make_source_usage` builds a specification only; owner, stable identities,
+scope and phase/turn/round/battle limits must be explicit. Preserve live-conferral
+rules and registration/contribution order when merging adapters.
+
+Current state/observation41, action26 and next-state42 supersede the historical
+versions above. Renamed internal frame fields require matching clients; public
+action payload layout remains identical. Latest validation is1,193 native
+assertions plus the compile fixture, exact54-default/184-variant constructor
+comparisons, full frame/layout/source audits, focused Godot checks and sanitized
+semantic/replay/mutation runs. Read the latest ROADMAP section for exact evidence
+and limits. This cleanup removes17 batch helpers and317 runtime lines; further
+shared-engine file proposals are pending, not authorization to implement them.

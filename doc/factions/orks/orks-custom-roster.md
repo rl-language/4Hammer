@@ -8,7 +8,7 @@ and choose the Warlord before the existing formation/deployment sequence.
 
 ## Roster design
 
-`orks_roster.rl` owns a small `OrksMusterDraft`: card, composition, selected model
+`roster.rl` owns a small `OrksMusterDraft`: card, composition, selected model
 and bounded equipment choices. It does not store another Board or provisional
 Unit in every draft frame. Field choices expose only the selected card/model's
 source-supported alternatives. A changed composition resets equipment to a legal

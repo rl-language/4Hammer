@@ -1067,7 +1067,7 @@ Board owns their lifetime.
 | `Objective.secured_by` | `ObjectiveController` | Securing state retained according to the objective-control rules |
 
 Sources: [units.rl](../src/units.rl), [board.rl](../src/board.rl) and
-[orks_detachment_types.rl](../src/factions/orks/orks_detachment_types.rl). Use
+[types.rl](../src/factions/orks/types.rl). Use
 `objective_range_definition`/`model_in_objective_range` for a query against the
 configured/default marker or linked area. Reading a raw position alone omits
 that policy. Both terrain collections use lower/upper `StoredTerrainPoint`
