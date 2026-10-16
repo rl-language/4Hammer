@@ -35,49 +35,6 @@ fun register_orks_option_passives(Board board):
                 if !orks_unit_source_registered(board, instance):
                     let handle = register_source_instance(board, instance)
 
-# Cargo-derived rules cease when the specified passenger leaves/dies, even
-# though the carrier still lives (Blitzboss/Boss Boomer). No offboard distance.
-fun orks_source_transport_dependency(Board board, SourceInstance instance) -> Bool:
-    if instance.required_embarked_model.value == 0:
-        return true
-    let location = locate_source(board, invalid_entity_identity(), instance.required_embarked_model)
-    if !location.found or location.bank.value != SourceBank::embarked.value:
-        return false
-    ref passenger = board.embarked_units[location.unit.value]
-    let model = passenger.find_model(instance.required_embarked_model)
-    return model >= 0 and passenger[model].is_alive() and passenger.embarked_transport == instance.required_carrier_model
-
-# Dynamic replacement units may outlive old source slots. Reuse only a dead
-# source with no active effect; generation snapshots reject every stale pending
-# reference. This preserves finite source/action domains without artificial CP
-# or unit-creation limits (Infested War Zone; implementation infrastructure).
-fun reusable_orks_source_slot(Board board) -> Int:
-    if board.source_instances.has_capacity():
-        return -1
-    for source_index in range(board.source_instances.size()):
-        ref instance = board.source_instances[source_index]
-        if source_confers_rules(board, instance):
-            continue
-        let referenced = false
-        for effect in range(board.source_effects.size()):
-            referenced = referenced or board.source_effects[effect].source.value == source_index
-        if !referenced:
-            return source_index
-    return -1
-
-# Fight on Death explicitly keeps models on the battlefield for their unit's
-# attack, including targeting by stratagems (user-supplied appendix). This
-# permission never makes an ordinary corpse a live source or attack target.
-fun orks_retained_source_present(Board board, SourceInstance instance) -> Bool:
-    let location = locate_source(board, instance.source_unit, instance.source_model)
-    if !location.found:
-        return false
-    ref unit = source_bank_unit(board, location.bank, location.unit.value)
-    for member in range(unit.models.size()):
-        if unit[member].state == ModelState::fight_on_death:
-            return true
-    return false
-
 # Save integrity covers the new bounded activation ledger and modifier stacks;
 # these are implementation invariants, not additional tabletop restrictions.
 fun valid_orks_detachment_foundations(Board board) -> Bool:

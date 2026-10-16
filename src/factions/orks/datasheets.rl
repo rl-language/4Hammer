@@ -273,7 +273,7 @@ fun make_orks_beastboss_on_squigosaur(Bool thump_gun) -> Unit:
     let primary_profile_12 = model.weapons.size() + 1
     equip_weapon(model, Weapon::orks_beastchoppa_standard, 0)
     equip_weapon(model, Weapon::orks_beastchoppa_hunter, primary_profile_12)
-    model.hunter_profile_conditions[2] = orks_monster_vehicle_rule(WeaponRuleKind::anti, 0)
+    model.hunter_profile_conditions[2] = monster_vehicle_weapon_rule(WeaponRuleKind::anti, 0)
     equip_weapon(model, Weapon::orks_squigosaur_jaws, 0)
     if thump_gun:
         equip_weapon(model, Weapon::orks_thump_gun, 0)
@@ -523,7 +523,7 @@ fun make_orks_breaka_boyz(Bool nob_pistols, Int knuckles, Int tankhammer) -> Uni
                 if index > 0 or !nob_pistols:
                     let primary_profile_22 = model.weapons.size() + 1
                     equip_weapon(model, Weapon::orks_breaka_boyz_smash_hammer_standard, 0)
-                    equip_weapon(model, Weapon::orks_breaka_boyz_smash_hammer_hunter, primary_profile_22, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
+                    equip_weapon(model, Weapon::orks_breaka_boyz_smash_hammer_hunter, primary_profile_22, monster_vehicle_weapon_rule(WeaponRuleKind::anti, 0))
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::breaka_boyz)
     return unit
@@ -1087,7 +1087,7 @@ fun make_orks_mozrog_skragbad() -> Unit:
     let primary_profile_86 = model.weapons.size() + 1
     equip_weapon(model, Weapon::orks_gutrippa_standard, 0)
     equip_weapon(model, Weapon::orks_gutrippa_hunter, primary_profile_86)
-    model.hunter_profile_conditions[3] = orks_monster_vehicle_rule(WeaponRuleKind::anti, 0)
+    model.hunter_profile_conditions[3] = monster_vehicle_weapon_rule(WeaponRuleKind::anti, 0)
     unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::mozrog_skragbad)
     return unit
@@ -1311,19 +1311,19 @@ fun make_orks_tankbustas(Bool nob_hammer, Weapon extra, Int extra_member) -> Uni
             if nob_hammer:
                 let primary_profile_97 = model.weapons.size() + 1
                 equip_weapon(model, Weapon::orks_tankbustas_smash_hammer_standard, 0)
-                equip_weapon(model, Weapon::orks_tankbustas_smash_hammer_hunter, primary_profile_97, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
+                equip_weapon(model, Weapon::orks_tankbustas_smash_hammer_hunter, primary_profile_97, monster_vehicle_weapon_rule(WeaponRuleKind::anti, 0))
             else:
                 equip_weapon(model, Weapon::orks_tankbustas_rokkit_pistol, 0)
         else:
             equip_weapon(model, Weapon::orks_tankbustas_gitstikka, 0)
             let primary_profile_98 = model.weapons.size() + 1
             equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_standard, 0)
-            equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_hunter, primary_profile_98, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
+            equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_hunter, primary_profile_98, monster_vehicle_weapon_rule(WeaponRuleKind::anti, 0))
             if index - 1 == extra_member:
                 if extra.value == Weapon::orks_tankbustas_busta_rokkit_launcha_standard.value:
                     let primary_profile_99 = model.weapons.size() + 1
                     equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_standard, 0)
-                    equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_hunter, primary_profile_99, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
+                    equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_hunter, primary_profile_99, monster_vehicle_weapon_rule(WeaponRuleKind::anti, 0))
                 if extra.value == Weapon::orks_pulsa_rokkit.value:
                     equip_weapon(model, extra, 0)
                     model.abilities.append(AbilityKind::pulsa_rokkit)
@@ -1760,7 +1760,7 @@ fun orks_snagga_model(Bool nob, Bool thump_gun) -> Model:
         let primary_profile_125 = model.weapons.size() + 1
         equip_weapon(model, Weapon::orks_choppa_standard, 0)
         equip_weapon(model, Weapon::orks_choppa_hunter, primary_profile_125)
-        model.hunter_profile_conditions[2] = orks_monster_vehicle_rule(WeaponRuleKind::anti, 0)
+        model.hunter_profile_conditions[2] = monster_vehicle_weapon_rule(WeaponRuleKind::anti, 0)
         if thump_gun:
             equip_weapon(model, Weapon::orks_thump_gun, 0)
     return model

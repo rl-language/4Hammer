@@ -183,7 +183,7 @@ fun weapon_rules(WeaponRule rule, WeaponRule rule2, WeaponRule rule3, WeaponRule
 # Literal slash/exclusion rules from these three Orks weapon tables.
 # MONSTER/VEHICLE means either; non-MONSTER/VEHICLE excludes both (02.05.01).
 # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
-fun orks_monster_vehicle_rule(WeaponRuleKind kind, Int amount) -> WeaponRule:
+fun monster_vehicle_weapon_rule(WeaponRuleKind kind, Int amount) -> WeaponRule:
     let rule = weapon_rule(kind, amount)
     let keyword : Keyword
     assert(rule.target_condition.append(KeywordClause::any, Keyword::monster.value, max(keyword)), "keyword capacity")
@@ -192,7 +192,7 @@ fun orks_monster_vehicle_rule(WeaponRuleKind kind, Int amount) -> WeaponRule:
 
 # Shoota/Slugga Lethal Hits exclude every unit with either listed keyword.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz
-fun orks_non_monster_vehicle_rule(WeaponRuleKind kind, Int amount) -> WeaponRule:
+fun non_monster_vehicle_weapon_rule(WeaponRuleKind kind, Int amount) -> WeaponRule:
     let rule = weapon_rule(kind, amount)
     let keyword : Keyword
     assert(rule.target_condition.append(KeywordClause::none, Keyword::monster.value, max(keyword)), "keyword capacity")
@@ -930,7 +930,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
     orks_beastboss_klaw_and_beastchoppa:
         Int family_id = Weapon::orks_beastboss_klaw_and_beastchoppa.value
         StringLiteral label = "Beast Snagga Klaw and Beastchoppa"
@@ -940,7 +940,7 @@ enum Weapon:
         Int strenght = 12
         Int penetration = -2
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::sustained_hit, 2))
+        WeaponRules rules = weapon_rules(monster_vehicle_weapon_rule(WeaponRuleKind::sustained_hit, 2))
     orks_slugga:
         Int family_id = Weapon::orks_slugga.value
         StringLiteral label = "Slugga"
@@ -950,7 +950,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
     orks_thump_gun:
         Int family_id = Weapon::orks_thump_gun.value
         StringLiteral label = "Thump Gun"
@@ -960,7 +960,7 @@ enum Weapon:
         Int strenght = 6
         Int penetration = 0
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+        WeaponRules rules = weapon_rules(monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4))
     orks_choppa_standard:
         Int family_id = Weapon::orks_choppa_standard.value
         StringLiteral label = "Choppa - Standard"
@@ -990,7 +990,7 @@ enum Weapon:
         Int strenght = 8
         Int penetration = -2
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+        WeaponRules rules = weapon_rules(monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4))
     orks_saddlegit_shiv:
         Int family_id = Weapon::orks_saddlegit_shiv.value
         StringLiteral label = "Saddlegit’s Shiv"
@@ -1010,7 +1010,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = -1
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4))
     orks_big_choppa:
         Int family_id = Weapon::orks_big_choppa.value
         StringLiteral label = "Big Choppa"
@@ -1020,7 +1020,7 @@ enum Weapon:
         Int strenght = 7
         Int penetration = -1
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::cleave, 2), orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::cleave, 2), monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4))
     orks_squig_jaws:
         Int family_id = Weapon::orks_squig_jaws.value
         StringLiteral label = "Squig’s Jaws"
@@ -1040,7 +1040,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = -1
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+        WeaponRules rules = weapon_rules(monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4))
 
     # Additional enhancement weapons use the literal Orks source rows. Prices
     # are omitted; each is a separate physical weapon (Brute Bosses/Wurrband).
@@ -1053,7 +1053,7 @@ enum Weapon:
         Int strenght = 7
         Int penetration = -2
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0), weapon_rule(WeaponRuleKind::rapid_fire, 6))
+        WeaponRules rules = weapon_rules(non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0), weapon_rule(WeaponRuleKind::rapid_fire, 6))
     orks_da_krunch:
         Int family_id = Weapon::orks_da_krunch.value
         StringLiteral label = "Da Krunch"
@@ -1085,7 +1085,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Boyz
     orks_burna:
@@ -1121,7 +1121,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Warboss
     orks_kombi_skorcha_shoota:
@@ -1133,7 +1133,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Warboss
     orks_kombi_skorcha_skorcha:
@@ -1157,7 +1157,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread
     orks_rokkit_launcha_blasta:
@@ -1193,7 +1193,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
     orks_infantry_big_choppa:
@@ -1253,7 +1253,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
     orks_kustom_krumpa:
@@ -1313,7 +1313,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Warbikers
     orks_dual_kombi_rokkit_busta:
@@ -1337,7 +1337,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread
     orks_dread_big_shoota:
@@ -1349,7 +1349,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread
     orks_kustom_mega_blasta:
@@ -1457,7 +1457,7 @@ enum Weapon:
         Int strenght = 7
         Int penetration = -2
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::ignore_cover), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::ignore_cover), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-Dakkarig
     orks_multi_busta_launcha:
@@ -1517,7 +1517,7 @@ enum Weapon:
         Int strenght = 7
         Int penetration = -2
         Stat damage = raw_stat(3)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::extra_attacks), orks_monster_vehicle_rule(WeaponRuleKind::anti, 3))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::extra_attacks), monster_vehicle_weapon_rule(WeaponRuleKind::anti, 3))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Mozrog-Skragbad
     orks_big_chompa_jaws:
@@ -1529,7 +1529,7 @@ enum Weapon:
         Int strenght = 7
         Int penetration = -2
         Stat damage = raw_stat(4)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::extra_attacks), orks_monster_vehicle_rule(WeaponRuleKind::anti, 3))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::extra_attacks), monster_vehicle_weapon_rule(WeaponRuleKind::anti, 3))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Mozrog-Skragbad
     orks_gutrippa_standard:
@@ -1577,7 +1577,7 @@ enum Weapon:
         Int strenght = 6
         Int penetration = -1
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Flash-Gitz
     orks_flash_gitz_snazzgun_kill_shot:
@@ -1613,7 +1613,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Meganobz
     orks_meganobz_kombi_weapon_kill_shot:
@@ -1649,7 +1649,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Meganobz
     orks_meganobz_kustom_shoota_point_blank:
@@ -1781,7 +1781,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
     orks_big_mek_in_mega_armour_kombi_weapon_kill_shot:
@@ -1829,7 +1829,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
     orks_big_mek_in_mega_armour_kustom_shoota_point_blank:
@@ -1937,7 +1937,7 @@ enum Weapon:
         Int strenght = 10
         Int penetration = -2
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+        WeaponRules rules = weapon_rules(monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
     orks_breaka_boyz_rokkit_pistol:
@@ -1997,7 +1997,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = -2
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+        WeaponRules rules = weapon_rules(monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
     orks_breaka_boyz_tankhammer:
@@ -2105,7 +2105,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Warboss-In-Mega-Armour
     orks_warboss_in_mega_armour_uge_choppa:
@@ -2153,7 +2153,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Runtherd
     orks_runtherd_runtherd_s_toolz:
@@ -2177,7 +2177,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), orks_monster_vehicle_rule(WeaponRuleKind::anti, 4), orks_monster_vehicle_rule(WeaponRuleKind::devastating_wounds, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4), monster_vehicle_weapon_rule(WeaponRuleKind::devastating_wounds, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Zodgrod-Wortsnagga
     orks_zodgrod_wortsnagga_da_grabzappa:
@@ -2201,7 +2201,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Battlewagon
     orks_battlewagon_crushin_bulk:
@@ -2249,7 +2249,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Big-ed-Bossbunka
     orks_big_ed_bossbunka_gaze_of_gork_glare:
@@ -2285,7 +2285,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Blitza-bommer
     orks_blitza_bommer_dual_supa_shoota:
@@ -2297,7 +2297,7 @@ enum Weapon:
         Int strenght = 6
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Blitza-bommer
     orks_blitza_bommer_armoured_impact:
@@ -2321,7 +2321,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), weapon_rule(WeaponRuleKind::precision), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), weapon_rule(WeaponRuleKind::precision), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Boss-Snikrot
     orks_boss_snikrot_mork_s_teef:
@@ -2345,7 +2345,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Burna-bommer
     orks_burna_bommer_dual_supa_shoota:
@@ -2357,7 +2357,7 @@ enum Weapon:
         Int strenght = 6
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), weapon_rule(WeaponRuleKind::sustained_hit, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), weapon_rule(WeaponRuleKind::sustained_hit, 1), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Burna-bommer
     orks_burna_bommer_skorcha_missile_rack:
@@ -2393,7 +2393,7 @@ enum Weapon:
         Int strenght = 6
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Dakkajet
     orks_dakkajet_armoured_impact:
@@ -2417,7 +2417,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Deffkilla-Wartrike
     orks_deffkilla_wartrike_snagga_klaw_ranged:
@@ -2513,7 +2513,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Deffkoptas
     orks_deffkoptas_choppa:
@@ -2549,7 +2549,7 @@ enum Weapon:
         Int strenght = 6
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka
     orks_ghazghkull_thraka_mork_s_roar_point_blank:
@@ -2597,7 +2597,7 @@ enum Weapon:
         Int strenght = 6
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Gorkanaut
     orks_gorkanaut_deffstorm_mega_shoota_point_blank:
@@ -2621,7 +2621,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Gorkanaut
     orks_gorkanaut_rokkit_launcha_blasta:
@@ -2681,7 +2681,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Gunwagon
     orks_gunwagon_kannon_frag:
@@ -2741,7 +2741,7 @@ enum Weapon:
         Int strenght = 8
         Int penetration = -2
         Stat damage = raw_stat(4)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), weapon_rule(WeaponRuleKind::sustained_hit, 2), orks_monster_vehicle_rule(WeaponRuleKind::anti, 4), orks_monster_vehicle_rule(WeaponRuleKind::devastating_wounds, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), weapon_rule(WeaponRuleKind::sustained_hit, 2), monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4), monster_vehicle_weapon_rule(WeaponRuleKind::devastating_wounds, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Gunwagon
     orks_gunwagon_crushin_bulk:
@@ -2801,7 +2801,7 @@ enum Weapon:
         Int strenght = 12
         Int penetration = -2
         Stat damage = raw_stat(3)
-        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 2))
+        WeaponRules rules = weapon_rules(monster_vehicle_weapon_rule(WeaponRuleKind::anti, 2))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig
     orks_hunta_rig_butcha_boyz:
@@ -2813,7 +2813,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+        WeaponRules rules = weapon_rules(monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig
     orks_hunta_rig_savage_horns_and_hooves:
@@ -2861,7 +2861,7 @@ enum Weapon:
         Int strenght = 12
         Int penetration = -2
         Stat damage = raw_stat(3)
-        WeaponRules rules = weapon_rules(orks_monster_vehicle_rule(WeaponRuleKind::anti, 2))
+        WeaponRules rules = weapon_rules(monster_vehicle_weapon_rule(WeaponRuleKind::anti, 2))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Kill-Rig
     orks_kill_rig_wurrtower:
@@ -2885,7 +2885,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::extra_attacks), orks_monster_vehicle_rule(WeaponRuleKind::anti, 4))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::extra_attacks), monster_vehicle_weapon_rule(WeaponRuleKind::anti, 4))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Kill-Rig
     orks_kill_rig_savage_horns_and_hooves:
@@ -2933,7 +2933,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos
     orks_kommandos_rokkit_launcha_blasta:
@@ -2969,7 +2969,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::close_quarters), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos
     orks_kommandos_big_choppa:
@@ -3089,7 +3089,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Morkanaut
     orks_morkanaut_kustom_mega_blasta:
@@ -3173,7 +3173,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg
     orks_nazdreg_kustom_blasta_x_skorcha:
@@ -3221,7 +3221,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Rukkatrukk-Squigbuggies
     orks_rukkatrukk_squigbuggies_squig_launchas:
@@ -3257,7 +3257,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Stompa
     orks_stompa_deffkannon_and_supa_rokkits:
@@ -3293,7 +3293,7 @@ enum Weapon:
         Int strenght = 7
         Int penetration = -2
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Stompa
     orks_stompa_supa_gatler_point_blank:
@@ -3329,7 +3329,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Trukk
     orks_trukk_rokkit_launcha_blasta:
@@ -3401,7 +3401,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), weapon_rule(WeaponRuleKind::assault), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), weapon_rule(WeaponRuleKind::assault), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Warbuggies
     orks_warbuggies_rivet_kannon_aimed:
@@ -3437,7 +3437,7 @@ enum Weapon:
         Int strenght = 5
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), weapon_rule(WeaponRuleKind::assault), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), weapon_rule(WeaponRuleKind::assault), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Warbuggies
     orks_warbuggies_mek_speshul_point_blank:
@@ -3473,7 +3473,7 @@ enum Weapon:
         Int strenght = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Wartrakks
     orks_wartrakks_multi_busta_launcha:
@@ -3509,7 +3509,7 @@ enum Weapon:
         Int strenght = 6
         Int penetration = -1
         Stat damage = raw_stat(1)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), weapon_rule(WeaponRuleKind::ignore_cover), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 4), weapon_rule(WeaponRuleKind::ignore_cover), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Wazbom-Blastajet
     orks_wazbom_blastajet_dual_tellyport_mega_blasta:
@@ -3581,7 +3581,7 @@ enum Weapon:
         Int strenght = 6
         Int penetration = -2
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), weapon_rule(WeaponRuleKind::assault), orks_non_monster_vehicle_rule(WeaponRuleKind::letal_hits, 0))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1), weapon_rule(WeaponRuleKind::assault), non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
 
     # https://wahapedia.ru/wh40k11ed/factions/orks/Wazdakka-Gutsmek
     orks_wazdakka_gutsmek_speeding_bulk_and_flaming_exhaust:

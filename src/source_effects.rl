@@ -69,7 +69,7 @@ fun source_started_leading(Unit unit, SourceInstance instance) -> Bool:
 # Own destruction triggers are separately authorised by their event (p.87).
 fun source_alive(Board board, SourceInstance instance) -> Bool:
     let location = locate_source(board, instance.source_unit, instance.source_model)
-    if instance.disabled or !location.found or !orks_source_transport_dependency(board, instance):
+    if instance.disabled or !location.found or !source_transport_dependency(board, instance):
         return false
     ref unit = source_bank_unit(board, location.bank, location.unit.value)
     if instance.source_model.value == 0:
@@ -86,7 +86,7 @@ fun source_confers_rules(Board board, SourceInstance instance) -> Bool:
     if instance.model_specific_rule:
         return source_alive(board, instance)
     let location = locate_source(board, instance.source_unit, instance.source_model)
-    if instance.disabled or !location.found or !orks_source_transport_dependency(board, instance):
+    if instance.disabled or !location.found or !source_transport_dependency(board, instance):
         return false
     ref unit = source_bank_unit(board, location.bank, location.unit.value)
     if instance.source_model.value == 0:
@@ -154,9 +154,9 @@ fun register_source_instance(Board board, SourceInstance instance) -> SourceInst
     # source_alive/conferral still enforce that condition during activation.
     let physical_source = instance
     physical_source.requires_leading = false
-    assert(source_alive(board, physical_source) or (instance.allow_retained_source and orks_retained_source_present(board, instance)), "source must exist when registered")
+    assert(source_alive(board, physical_source) or (instance.allow_retained_source and retained_source_present(board, instance)), "source must exist when registered")
     let candidate = board.source_instances.size()
-    let reusable = reusable_orks_source_slot(board)
+    let reusable = reusable_source_slot(board)
     if reusable >= 0:
         candidate = reusable
     assert(candidate >= 0 and candidate < MAX_SOURCE_INSTANCES, "source instance capacity exceeded")
@@ -811,3 +811,45 @@ fun commit_source_effect_to_unit(Board board, SourceInstance instance, Int sourc
             effect.recipients.append(unit[model_index].identity)
     board.source_effects.append(effect)
     commit_source_usage(board, instance)
+
+# Shared source lifetime and pool infrastructure (core pp66-67/87; supplied
+# Fight on Death appendix). These checks do not grant any faction permission.
+# Required cargo is a generic source-lifetime dependency; no offboard distance
+# is measured (core p64; concrete cargo permissions remain source data).
+fun source_transport_dependency(Board board, SourceInstance instance) -> Bool:
+    if instance.required_embarked_model.value == 0:
+        return true
+    let location = locate_source(board, invalid_entity_identity(), instance.required_embarked_model)
+    if !location.found or location.bank.value != SourceBank::embarked.value:
+        return false
+    ref passenger = board.embarked_units[location.unit.value]
+    let model = passenger.find_model(instance.required_embarked_model)
+    return model >= 0 and passenger[model].is_alive() and passenger.embarked_transport == instance.required_carrier_model
+
+# Reuse only a nonconferring source with no active effects; generation snapshots
+# reject stale handles. Finite-pool infrastructure, not a tabletop restriction.
+fun reusable_source_slot(Board board) -> Int:
+    if board.source_instances.has_capacity():
+        return -1
+    for source_index in range(board.source_instances.size()):
+        ref instance = board.source_instances[source_index]
+        if source_confers_rules(board, instance):
+            continue
+        let referenced = false
+        for effect in range(board.source_effects.size()):
+            referenced = referenced or board.source_effects[effect].source.value == source_index
+        if !referenced:
+            return source_index
+    return -1
+
+# Supplied Fight on Death retains the model until its unit fights/phase end.
+# This presence check never makes an ordinary corpse an eligible living target.
+fun retained_source_present(Board board, SourceInstance instance) -> Bool:
+    let location = locate_source(board, instance.source_unit, instance.source_model)
+    if !location.found:
+        return false
+    ref unit = source_bank_unit(board, location.bank, location.unit.value)
+    for member in range(unit.models.size()):
+        if unit[member].state == ModelState::fight_on_death:
+            return true
+    return false
