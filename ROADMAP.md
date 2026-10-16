@@ -1717,3 +1717,60 @@ including the actual enum-backed source label and choice button. Existing
 runtime glue/Godot C++ dependencies are reused. All852 Markdown local links,
 heading anchors and fences pass. The full broad/rendered walkthrough was not
 rerun; no action-discovery or rule-mechanic changes are included.
+
+## Single weapon catalog and equipped primary links —complete
+
+User direction2026-10-16: merge Orks equipment-choice enums, NamedWeapon,
+NamedWeaponProfile and Weapon into one actual weapon catalog. Constructors
+install the correct entries; an integer identifies alternate profiles.
+
+- [x] Replace naming catalogs and12 equipment enums with actual Weapon choices.
+- [x] Equip concrete profiles with a bounded same-model primary reference;
+  remove Model's parallel name/profile/group/simultaneous arrays. Preserve
+  separate physical copies, use sharing and Nazdreg's printed exception.
+- [x] Translate existing small roster inputs through allowed equipment lists;
+  use two actual weapons for paired selections and explicit factory defaults.
+- [x] Finish source/native/host fixture migration and targeted regressions.
+- [x] Complete native CTest, exact source/data checks, Godot and sanitized
+  replay/mutation checks; update documentation and create focused commits.
+
+Working artifacts are under `/workspace/4hammer-validation/weapon-unification`.
+Final state/observation43, next-state44; action26 remains unchanged. All351
+reachable AnyGameAction layout types are identical to schema42's client (24-byte
+action union). Matching rebuilt native/Godot clients are required for the changed
+equipment/save/observation representation.
+
+The full unoptimized native CTest passes1,198 assertions plus its compilation
+fixture (1,199/1,199 entries;253.71s,248.41s compilation), RLC/core0.4.18 with
+four workers. The initial full run exposed four selector fixtures still assuming
+legacy surrogate stats/independent identity tags; those fixtures now exercise
+the actual selected profiles. No assertion was dropped. Three new regressions
+cover independent physical copies/One Shot/save restoration, invalid parent
+links/atomic save rejection and nonattacking equipment selection.
+
+All293 pre-existing profiles retain identical gameplay characteristics/rules;
+the single catalog has297 entries including None, KFF, Pulsa and Paired Krumpas.
+The independent HTML audit passes54 cards/63 model profiles/253 weapon rows.
+All54 default and184 equipment-variant rosters match every field after explicit
+normalization of the changed equipment representation: root links replace old
+groups, paired equipment becomes its actual profile and KFF/Pulsa entries retain
+the existing corresponding abilities. This is semantic comparison, not identical
+save text. Runtime Rulebook sources shrink26,732→26,164 lines (-568); native
+test source grows65 lines. No Python test runner or build cache was added.
+
+Fresh unoptimized Godot C++ bindings pass ten scripts: named identities,
+weapons/sources, infantry, recovery, datasheets, custom roster, shared banks,
+weapon/model characteristics and incoming modifiers (9.88–14.55s each).
+The only production script edit unwraps an equipped profile for its Firing Deck
+label. Rules.gd/TraceManager.gd and valid-action discovery remain untouched.
+The frame audit passes121 actions/66 shared slots with no duplicates/re-entry.
+Model shrinks3,032→2,696 bytes; Board31,808→31,136; Game34,016→33,344.
+Twenty Gym steps pass with30,072 candidates and16,253,791 finite observations.
+
+The rebuilt optimized ASAN/UBSAN fuzzer passes266 selected semantic regressions
+plus empty input (267 runs/82.63s), both preserved memory inputs (6.05s), the
+previously completed-game replay (70.69s), and fresh action mutation (34runs/
+32.93s), with leak detection enabled and no failure/artifact. Debug builds remain
+unoptimized. Full rendered integration and discovery optimization remain excluded.
+All runtime bodies match the sanitized build inputs; later edits were comments
+and blank lines only. Markdown links/anchors/fences also pass.

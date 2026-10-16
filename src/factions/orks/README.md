@@ -31,8 +31,10 @@ namespaces. Do not add categories named after implementation batches.
 `make_orks_model` initializes common Orks model metadata. Each concrete factory
 adds its actual printed keywords/equipment. `finalize_orks_unit` configures
 attachment permissions and captures starting strength after composition is
-complete; it serves single- and multi-model units. One `equip_orks_profile`
-family handles physical groups and an explicit optional Hunter condition.
+complete; it serves single- and multi-model units. Shared `equip_weapon` installs actual catalog profiles, a bounded reference to
+an earlier primary slot for alternates and an optional Hunter condition.
+Allowed per-unit lists contain actual Weapon values; there are no separate
+Orks equipment-choice or named-weapon/profile enums.
 
 Use the shared `make_source_usage`/`source_use_limits` helpers for use
 specifications; identities, scope and interval limits are explicit. Only
@@ -41,6 +43,6 @@ healing and model return remain in common modules. No custom init/drop is used.
 
 The engine is jointly compiled: core phases call these adapters and shared
 state still contains faction catalog/storage types. This folder is not a
-standalone library. State/observation42 protects renamed internal frame fields;
+standalone library. State/observation43 protects renamed internal frame fields;
 public action payload compatibility is checked separately. Source display names
 are hidden enum values; the UI derives text only when presenting a choice.

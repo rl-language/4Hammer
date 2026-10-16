@@ -65,7 +65,7 @@ the existing common mechanics and provide its own actual permissions and data.
 | A unit participating in the battle | `Unit` | Bodyguards and attached Leader/Support models can be one combined unit |
 | A particular miniature | `Model` | Has its own wounds suffered, equipment, keywords and identity |
 | Printed characteristics | `Profile` and `Weapon` | A model profile supplies T and W; a weapon profile supplies S, AP and D |
-| One physical weapon with alternative firing modes | Model equipment slot/group plus profile identities | Selecting supercharge does not create a second physical plasma gun |
+| One physical weapon with alternative firing modes | EquippedWeapon profile plus a parent-slot integer | Selecting supercharge does not create a second physical plasma gun |
 | A declared use of a weapon | `DeclaredWeapon` | Remembers the bearer, selected profile and declared target shares |
 | The attacks currently being resolved | `AttackSequenceInfo` | Gathered strength, modifiers, rules and target toughness |
 | An ability that can trigger | `SourceInstance` | A registered source with conditions and use limits |
@@ -76,6 +76,9 @@ the existing common mechanics and provide its own actual permissions and data.
 resources. Two models can use the same printed profile while retaining
 different wounds, weapons, effects and identities. Effective characteristics
 come from queries which combine that printed data with applicable modifiers.
+Each `EquippedWeapon` stores its actual `Weapon` and a bounded alternate-profile
+parent; family/profile labels are derived from the same catalog. Two physical
+copies have different primary slots, so their One Shot uses remain separate.
 
 ## How the Godot scene relates to the rules
 

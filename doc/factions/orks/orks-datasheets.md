@@ -22,12 +22,15 @@ datasheet identity, ORKS keyword and Waaagh! metadata. Concrete factories add
 Infantry, Character and other keywords explicitly from their cards. No generic
 Orks model becomes Infantry merely because another constructor needs it.
 
-Equipment passes through `equip_orks_profile`. Alternate profiles share a
-nonzero physical group; independent copies receive independent groups. An
-optional explicit Hunter condition (`WeaponRule`) is stored on the equipped slot. The two
-old batch dispatch tables have been removed: model metadata and selected
-weapon profiles now sit directly with their owning factories. Nazdreg's
-simultaneous ranged profiles retain their explicit exception.
+Equipment passes through shared `equip_weapon` with actual `Weapon` entries.
+Alternate profiles carry a1-based reference to an earlier primary slot;
+independent copies are separate primaries. There are no Orks equipment-choice,
+named-weapon or named-profile enums: allowed lists contain actual catalog
+entries, while Meganob selections pair two actual weapons. Hunter conditions
+remain explicit per-slot rules. Factories install their chosen profiles and
+companions directly. Nazdreg's simultaneous ranged profiles retain their
+printed exception while sharing one physical copy. Kustom Force Field and Pulsa
+Rokkit are nonattacking equipment entries; Paired Krumpas is an actual profile.
 
 `finalize_orks_unit` supplies printed attachment permissions and captures
 starting strength after every model/equipment choice is present. Both single-
@@ -47,7 +50,7 @@ profile is equipped simultaneously.
 | Family | Important construction properties |
 | --- | --- |
 | Beastboss, Snagga Boyz, Squighogs | Snaggas allow1–2 Nobs and9–18 Boys, with an additional Thump Gun per ten total models. Squighogs allow1–2 Nobs and3–6 Boys. Independent printed ranges permit intermediate totals. Thump Guns augment Boy equipment; Stikka ranged/melee and Choppa Standard/Hunter preserve physical identity. |
-| Boyz, Nobz, Stormboyz, Warbikers | Checked per-model replacement lists retain quotas and bearer equipment. Ammo Runts belong to the unit or bearer as printed. Paired Krumpas is bearer metadata affecting only Kustom Krumpa. |
+| Boyz, Nobz, Stormboyz, Warbikers | Checked per-model replacement lists retain quotas and bearer equipment. Ammo Runts belong to the unit or bearer as printed. Paired Krumpas is its actual equipped profile, with the sourced reroll behavior. |
 | Deff Dread, Killa Kans | Arms are independent physical choices, Extra Klaws stay separate, and Kan Blasta profiles remain alternatives. Incoming reduction, demise and target-T conditions use shared combat consumers. |
 | Meks, Painboy, Painboss, Runtherd, Gretchin | Factories supply their actual attachment roles, support metadata, healing/repair permissions and equipment. Crew tokens do not become extra models. |
 | Flash Gitz, Meganobz, Breaka Boyz, Tankbustas | Profile-specific upgrades, Hunter alternatives, Pulsa and Barrage metadata remain explicit. Breaka/Tankbusta Bomb Squigs have two battle uses with a turn limit, unlike the Squighog single token. |
@@ -105,7 +108,7 @@ positive bounded diameters override the defaults.
 Specialized editor choices retain their real reserve/passenger/formation banks
 and the existing enum, Bool, UnitID, ModelID and BoardPosition contracts.
 Public action names are preserved; internal Command-healing, timing-window and
-post-shoot frames use responsibility names. State/observation42 rejects older
+post-shoot frames use responsibility names. State/observation43 rejects older
 serialized frame-field names. Matching generated native/Godot bindings are
 required after storage changes. Sources store a finite hidden label enum;
 display strings are derived only when requested. ROADMAP.md owns compatibility

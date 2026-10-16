@@ -397,7 +397,7 @@ The generic whole-unit Hidden query lives with `model_is_hidden` in terrain
 rules; the riled-up grant constructor lives in the faction effects module.
 Shared healing/model return, granted moves, damage and source counters remain
 in common modules. Persisted internal frame fields use responsibility names;
-state/observation42 protects saves, while the public action catalog is checked
+state/observation43 protects saves, while the public action catalog is checked
 separately. ROADMAP.md records actual validation and compatibility evidence.
 
 ## Attached units
@@ -606,7 +606,7 @@ Home-objective ownership is explicit mission metadata, not inferred geometry.
 All54 included standard cards use [one datasheet guide](factions/orks/orks-datasheets.md)
 and public roster selection. ROADMAP.md owns validation and scope limits.
 Internal frame names describe Command healing, datasheet windows and hit
-effects; state/observation42 requires matching clients. Public action payloads
+effects; state/observation43 requires matching clients. Public action payloads
 remain at schema26. No custom lifecycle hook is introduced.
 
 ### Shared rules across storage banks
@@ -621,3 +621,21 @@ all real banks. `Board.damage_bank` is temporary editor selector context, restor
 by the resolver. Only battlefield deaths may measure external retaliation/demise
 or require emergency battlefield setup. Phase-end retained fighters are released
 across all banks before common destruction processing.
+
+## One weapon catalog and equipped copies
+
+`Weapon` is the sole profile/equipment catalog. `Model.weapons` holds
+`EquippedWeapon { profile, secondary_profile_of }`; a positive parent is the
+1-based index of an earlier primary in that same model, and zero is independent.
+No parallel name, named-profile, physical-group or simultaneous-permission
+arrays remain. Snapshot physical IDs derive from the primary slot+1; family
+and exact-profile selectors both use `WeaponCode`, with different matching
+semantics. Constructors install actual profiles and explicit parent links.
+
+The single catalog includes two nonattacking equipment tokens and a distinct
+Paired Krumpas profile. Equipment validators reject invalid/backward-chain and
+cross-family links. Fixed allowed lists translate the existing small roster
+ordinals; paired choices are two Weapon values, not a bundle enum. Catalog
+labels/family IDs are computed static metadata. Nazdreg's printed simultaneous
+exception remains explicit on its profiles. See the
+[state reference](game-state-reference.md#equippedweapon-and-the-single-weapon-catalog).

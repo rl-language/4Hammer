@@ -71,7 +71,7 @@ the normal ML observation, not from the opponent through a fog-of-war system.
 | `RuleModifiers`, `CharacteristicModifiers` | Up to 16 arithmetic operations/characteristic records in each collection |
 | `IncomingAttackModifiers`, `AttackModifierPermissions` | Up to eight recipient reductions/ignore-permission records respectively |
 | `SourceInstances`, `SourceUseRecords`, `PendingSourceEvents`, `SourceEffects` | Up to 512 entries in each corresponding collection |
-| `DatasheetCode`, `WeaponNameCode`, `WeaponProfileCode` | Codes 0–67, 0–139, 0–176; zero is unknown/unrestricted where the owning field specifies it |
+| `DatasheetCode`, `WeaponCode` | Datasheet codes0–67; actual Weapon IDs0–296. Weapon::none is0, also the unfiltered selector sentinel. Family selectors use a representative actual Weapon ID. |
 
 For exact aliases and capacities see [state_types.rl](../src/state_types.rl),
 [units.rl](../src/units.rl) and [geometry.rl](../src/geometry.rl). Do not interpret
@@ -273,7 +273,6 @@ does not make this model a Character.
 
 | Property | Type | Meaning and lifecycle |
 | --- | --- | --- |
-| `paired_krumpas` | `Bool` | Nobz equipment flag consumed by Kustom Krumpa rules; not a second independent weapon profile. |
 | `orks_enhancement` | `OrksEnhancement` | Chosen source-backed enhancement/Upgrade option; none by default. |
 | `orks_upgrade_origin` | `EntityIdentity` | Original selection/unit identity for Upgrade accounting through attachments and casualty changes. |
 | `orks_effects` | `OrksEffectGrants` | Current typed Orks grants on this recipient; source ownership/expiry removes the corresponding entries. |
@@ -295,8 +294,6 @@ does not make this model a Character.
 | `geometry` | `ModelGeometry` | Elevation, rotation, explicit circular proxy and unsupported-footprint gate. |
 | `profile` | `Profile` | Printed model-characteristic catalog entry; it does not store current wounds remaining. |
 | `datasheet` | `DatasheetCode` | Explicit per-model source identity; can differ between attached members of one unit. |
-| `weapon_names` | `WeaponNameCode[MAX_WEAPONS]` | Named physical weapon-family identity for each slot, distinct from its numeric Weapon profile. |
-| `weapon_profile_names` | `WeaponProfileCode[MAX_WEAPONS]` | Named profile identity for each slot; standard/supercharge are distinct profiles of a potentially shared weapon. |
 | `characteristic_modifiers` | `CharacteristicModifiers` | Source-tagged changes to the model or its weapons; effective queries apply order and limits. |
 | `incoming_attack_modifiers` | `IncomingAttackModifiers` | Recipient-specific incoming AP/D changes; apply to the allocated model, not every weapon on that model. |
 | `attack_modifier_permissions` | `AttackModifierPermissions` | Source-scoped permission to ignore supported skill/hit modifiers; choices retain individual provenance. |
@@ -310,7 +307,7 @@ does not make this model a Character.
 | `suffered_wounds` | `Wounds` | Cumulative wounds lost, initially 0. Damage increases it; healing reduces it. It is not wounds remaining. |
 | `has_damaged` | `Bool` | Whether an explicit Damaged threshold was supplied by this datasheet. |
 | `damaged_threshold` | `Wounds` | Remaining-wounds threshold; use is_damaged, not suffered_wounds >= threshold. |
-| `weapons` | `WeaponsVector` | Equipped profile entries, at most 13; per-slot identity/group arrays refer to this collection. |
+| `weapons` | `WeaponsVector` | At most13 EquippedWeapon records, each containing the actual profile and its alternate-profile parent reference; no parallel identity/group arrays. |
 | `additional_weapon_rules` | `CheckedVector<WeaponRule, 8>[MAX_WEAPONS]` | Extra source-owned rules for each equipped slot; selected/gathered rules use effective queries. |
 | `abilities` | `Abilities` | Model's ability kinds from data/source handling; presence is distinct from current activation eligibility. |
 | `keywords` | `Keywords` | Model's own stored keywords; effective has_keyword can account for sourced exceptions. |
@@ -331,10 +328,36 @@ does not make this model a Character.
 | `destroying_unit_identity` | `EntityIdentity` | Stable killer provenance when later slot movement/replacement would make an index ambiguous. |
 | `destruction_fight_roll` | `Dice` | Source-supplied threshold for the retained legacy destruction-fight roll; meaningful only with that pending rule. |
 | `history` | `ModelHistory` | Movement path totals/setup and Epic Challenge state for this model. |
-| `weapon_profile_groups` | `LinearlyDistributedInt<0, MAX_WEAPON_SCOPES>[MAX_WEAPONS]` | Zero leaves a slot independent; equal nonzero values associate alternative profiles with one physical copy. |
-| `simultaneous_ranged_profiles` | `Bool[MAX_WEAPONS]` | Explicit per-slot exception to choosing only one profile of a physical weapon; not a general rule for all models. |
 | `hunter_profile_conditions` | `WeaponRule[MAX_WEAPONS]` | Per-profile target-keyword condition checked when that profile is declared. |
 | `used_once_per_battle_weapon` | `Bool[MAX_WEAPONS]` | Per-slot One Shot expenditure; grouping logic shares use across profiles of the same physical copy and revival preserves it. |
+
+## EquippedWeapon and the single weapon catalog
+
+`Weapon` contains actual attack profiles and the two nonattacking equipment
+entries Kustom Force Field and Pulsa Rokkit. Constructors install actual catalog
+entries into `Model.weapons`; nonattacking equipment never offers an attack.
+The separate named-family, named-profile and Orks equipment-choice enums are gone.
+Allowed equipment lists still restrict each unit's small ordinal roster choices.
+Meganob paired selections hold two actual Weapon values in `WeaponPair`.
+
+| Field | Stored type | Meaning |
+| --- | --- | --- |
+| `profile` | `Weapon` | The actual equipped catalog entry, including its printed characteristics. Active equipment cannot be Weapon::none. |
+| `secondary_profile_of` | `LinearlyDistributedInt<0, MAX_WEAPONS>` | Zero means an independent primary. Positive N references the earlier primary slot N−1 in this same model. Range0–12; chains, self/future links and cross-family links are invalid. |
+
+For example, `[standard/0, supercharge/1, standard/0, supercharge/3]`
+represents two independent plasma guns with two profiles apiece. The primary
+slot+1 supplies the physical snapshot ID, so One Shot, Hazardous and declaration
+selection share usage within a copy while keeping the two copies independent.
+Nazdreg's three printed simultaneous profiles have an explicit catalog exception;
+it changes selection permission without creating three physical copies.
+
+`Weapon.family_id()` computes a representative actual Weapon ID;
+`weapon_family_label` supplies its physical name and `Weapon.label()` supplies
+its profile name. These are static catalog queries, not separately stored
+identity tags or owning model strings. Family grants normalize through that
+representative; exact-profile grants use the actual selected ID. Paired Krumpas
+has its own actual profile instead of an extra bearer flag.
 
 ## AttachmentComponent
 
@@ -541,8 +564,8 @@ resolving model_identity.
 | `slot` | `BInt<0, MAX_WEAPONS>` | Equipped profile slot, 0–12; not a global Weapon enum ordinal. |
 | `weapon` | `Weapon` | Chosen printed numeric Weapon profile; selecting it commits that profile for this declaration. |
 | `borrowed_weapon` | `Bool` | True for a borrowed profile such as Firing Deck; carrier slot-specific grants must not leak onto it. |
-| `weapon_name` | `WeaponNameCode` | Physical weapon-family code used by named-family predicates. |
-| `profile_name` | `WeaponProfileCode` | Named profile code used by profile-specific predicates. |
+| `weapon_name` | `WeaponCode` | Physical weapon-family code used by named-family predicates. |
+| `profile_name` | `WeaponCode` | Actual Weapon ID used by exact-profile predicates; derived from the equipped profile. |
 | `hunter_condition` | `WeaponRule` | Selected Hunter profile's target-keyword condition. |
 | `selected_rules` | `WeaponAbilitySet` | Effective/selectable rules captured for the selected weapon. |
 | `current_target_rules` | `WeaponAbilitySet` | Rule choice set for the target currently being resolved; target-conditioned duplicate choices may differ. |
@@ -678,8 +701,8 @@ removes only the entries associated with that effect.
 | `characteristic` | `ModifiedCharacteristic` | Which model/weapon characteristic changes; distinct from changing a dice result. |
 | `modifier` | `RuleModifier` | Operation, magnitude and sign, applied in the common modifier order. |
 | `weapon_scope` | `LinearlyDistributedInt<0, MAX_WEAPON_SCOPES>` | Zero covers the applicable equipped weapons; positive value is representative slot+1. |
-| `weapon_name` | `WeaponNameCode` | Optional physical-family filter; zero means unrestricted by family. |
-| `profile_name` | `WeaponProfileCode` | Optional named-profile filter; zero means unrestricted by named profile. |
+| `weapon_name` | `WeaponCode` | Optional representative Weapon family ID; zero means unrestricted by family. |
+| `profile_name` | `WeaponCode` | Optional exact Weapon ID; zero means unrestricted by profile. |
 | `physical_scope` | `Bool` | When true, the representative slot can cover linked profiles of the same physical weapon. |
 
 ## IncomingAttackModifier
@@ -926,8 +949,8 @@ See [modifiers.rl](../src/modifiers.rl) and
 | `SourceUseLimits.battle` | `FixedStat` | Maximum uses in the battle; zero is unlimited |
 | `SourceWeaponGrant.rule` | `WeaponRule` | Granted weapon ability and any condition/parameter |
 | `SourceWeaponGrant.weapon_scope` | `LinearlyDistributedInt<0, MAX_WEAPON_SCOPES>` | Zero is unrestricted by slot; a positive value identifies representative slot+1 |
-| `SourceWeaponGrant.weapon_name` | `WeaponNameCode` | Optional named-family filter, zero means none |
-| `SourceWeaponGrant.profile_name` | `WeaponProfileCode` | Optional named-profile filter, zero means none |
+| `SourceWeaponGrant.weapon_name` | `WeaponCode` | Optional representative Weapon family ID, zero means no filter |
+| `SourceWeaponGrant.profile_name` | `WeaponCode` | Optional exact Weapon ID, zero means no filter |
 | `SourceWeaponGrant.physical_scope` | `Bool` | Extend the representative slot to linked profiles of that physical copy |
 | `RiledUpGrant.enabled` | `Bool` | Installs the source-owned riled state when enabled; source keys preserve overlapping grants |
 | `OrksEffectGrant.source_effect` | `SourceEffectKey` | Owner key of the installed faction effect; supports keyed expiry |

@@ -547,3 +547,12 @@ host clients must use `get_label()` and matching state/observation42, action26.
 Matching Godot artifacts are under `source-labels/godot`; the source-choice test
 uses an enum and checks the actual displayed button. ROADMAP.md owns the full
 layout, host and sanitizer evidence.
+
+
+The single-weapon-catalog batch uses native Rulebook CTest:1,198 assertions plus
+one compilation fixture, all passing. Equipment-link/One Shot/save and invalid
+parent/nonattacking-token regressions are in `tests/baseline.rl`. State/observation43,
+action26 and next-state44 require matching bindings. Ten focused Godot scripts,
+266 selected sanitized assertions, preserved memory/game replays, mutation and
+source/roster/layout/finite-ML checks pass; see ROADMAP.md for exact scope and
+artifact paths. No Python wrapper is used by the pure rule-test runner.

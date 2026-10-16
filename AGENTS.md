@@ -775,3 +775,24 @@ the compile fixture, source/layout/frame audits, four focused Godot scripts and
 sanitized source/memory/game/mutation checks pass. See the latest ROADMAP section
 for evidence. The representation saves16 bytes per source record and eliminates
 its label allocation/copy ownership without changing public action layouts.
+
+
+## One weapon catalog and future faction behavior boundary —2026-10-16
+
+Use actual `Weapon` entries for both model equipment and legal choice lists.
+`EquippedWeapon` stores only `profile` and bounded `secondary_profile_of`: zero
+is independent; positive N references the earlier same-model primary slot N−1.
+No chains, self/future links or cross-family links. Derive family/exact-profile
+selectors from the single catalog; do not restore NamedWeapon,
+NamedWeaponProfile, Orks equipment-choice enums or parallel Model identity/group
+arrays. Paired equipment holds two actual weapons. Set source-card defaults
+explicitly; generated init/drop owns all fields. Nonattacking KFF/Pulsa tokens
+must never offer attacks. Preserve Nazdreg's sourced simultaneous exception and
+physical-copy One Shot/Hazardous provenance. The13-slot envelope is unchanged.
+
+Latest completed schemas are state/observation43, action26, next-state44.
+Matching clients are required; public action payload layout is identical.
+The final ROADMAP evidence records1,198 native assertions plus compilation,
+ten Godot scripts,54-card/source and238-roster comparisons, frame/finite-ML
+checks and sanitized semantic/memory/game/mutation checks. Runtime sources
+shrink568 lines; pure rule tests remain native with no Python runner/cache.
