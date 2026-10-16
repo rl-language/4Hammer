@@ -185,3 +185,7 @@ cls SourceLocation:
     Bool found
     SourceBank bank
     LinearlyDistributedInt<0, MAX_UNIT_COUNT> unit
+
+# Source-owned effects may share an operation deadline without sharing keys
+# or expiry ownership (appendix01.02.02; core pp16-19).
+using ScopedEffectKeys = CheckedVector<SourceEffectKey, MAX_SOURCE_INSTANCES>

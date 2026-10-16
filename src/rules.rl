@@ -283,8 +283,10 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
         # batch must remain possible without an exponential action domain (p.82).
         frm lethal_wounds : CombatCounter
         frm lethal_remaining : CombatCounter
-        frm shield_lethal_deferred = faction_hit_interceptor(board, target) >= 0
-        if board.attack_info.has_weapon_rule(board, WeaponRuleKind::letal_hits) and !shield_lethal_deferred:
+        frm hit_policy : HitResolutionPolicy
+        append_hit_resolution_policy(board, target, hit_policy)
+        frm defer_critical_hit_conversion = hit_policy.before_critical_conversion
+        if board.attack_info.has_weapon_rule(board, WeaponRuleKind::letal_hits) and !defer_critical_hit_conversion:
             lethal_remaining = hits_pool_snapshot_1.faces[5]
         while lethal_remaining > 0:
             board.current_decision_maker = source_unit.owned_by_player1
@@ -319,16 +321,16 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                     if selected_outcome == AttackRollResult::success:
                         frm ordinary_count : CombatCounter
                         ordinary_count = 1
-                        board.shared_actions.intercept_faction_hits = intercept_faction_hits(board, board.attack_info.target_unit_id, ordinary_count)
-                        subaction*(board) board.shared_actions.intercept_faction_hits
-                        frm ordinary_shield_intercepted_snapshot_4 = board.shared_actions.intercept_faction_hits.intercepted
+                        board.shared_actions.on_hit_rolls_resolved = on_hit_rolls_resolved(board, board.attack_info.target_unit_id, ordinary_count)
+                        subaction*(board) board.shared_actions.on_hit_rolls_resolved
+                        frm ordinary_shield_intercepted_snapshot_4 = board.shared_actions.on_hit_rolls_resolved.intercepted
                         add_attack_count(generated_hits, 1 - ordinary_shield_intercepted_snapshot_4.value)
                         record_attack_hits(board, board.attack_info.target_unit_id, 1 - ordinary_shield_intercepted_snapshot_4.value)
                     ordinary_remaining = ordinary_remaining - 1
                 continue
             frm outcome : AttackRollResult
             outcome = classify_attack_hit(board, board.attack_info, hit_face, get_hit_roll_bonus(board))
-            if outcome == AttackRollResult::critical and shield_lethal_deferred:
+            if outcome == AttackRollResult::critical and defer_critical_hit_conversion:
                 # Resolve each original critical in controller order: optional
                 # Lethal first, then its Grot Shield cancellation. This avoids
                 # choosing a retroactive subset after seeing shield survival.
@@ -342,9 +344,9 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                         automatic = automatically_wound
                     frm one_critical : CombatCounter
                     one_critical = 1
-                    board.shared_actions.intercept_faction_hits = intercept_faction_hits(board, board.attack_info.target_unit_id, one_critical)
-                    subaction*(board) board.shared_actions.intercept_faction_hits
-                    frm critical_shield_intercepted_snapshot_5 = board.shared_actions.intercept_faction_hits.intercepted
+                    board.shared_actions.on_hit_rolls_resolved = on_hit_rolls_resolved(board, board.attack_info.target_unit_id, one_critical)
+                    subaction*(board) board.shared_actions.on_hit_rolls_resolved
+                    frm critical_shield_intercepted_snapshot_5 = board.shared_actions.on_hit_rolls_resolved.intercepted
                     let additional_hits = board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit)
                     add_attack_count(generated_hits, additional_hits)
                     record_attack_hits(board, board.attack_info.target_unit_id, additional_hits)
@@ -359,9 +361,9 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
             if outcome == AttackRollResult::critical or outcome == AttackRollResult::success:
                 frm rolled_count : CombatCounter
                 rolled_count = hits_pool_snapshot_1.faces[hit_face.value - 1]
-                board.shared_actions.intercept_faction_hits = intercept_faction_hits(board, board.attack_info.target_unit_id, rolled_count)
-                subaction*(board) board.shared_actions.intercept_faction_hits
-                frm shielding_intercepted_snapshot_6 = board.shared_actions.intercept_faction_hits.intercepted
+                board.shared_actions.on_hit_rolls_resolved = on_hit_rolls_resolved(board, board.attack_info.target_unit_id, rolled_count)
+                subaction*(board) board.shared_actions.on_hit_rolls_resolved
+                frm shielding_intercepted_snapshot_6 = board.shared_actions.on_hit_rolls_resolved.intercepted
                 frm remaining_hits : CombatCounter
                 remaining_hits = rolled_count.value - shielding_intercepted_snapshot_6.value
                 record_attack_hits(board, board.attack_info.target_unit_id, remaining_hits.value)
@@ -459,10 +461,11 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             destroying_identity = 0
             if casualty.destroying_unit_known:
                 destroying_identity = casualty.destroying_unit_identity
-            subaction*(board, casualty) faction_death = faction_before_destruction(board, casualty, event)
-            frm suppress_demise = faction_death.suppress_demise
-            frm faction_death_recipient = faction_death.headbutt_recipient
-            frm faction_death_mortals = faction_death.crash_mortals
+            frm death_effects : DestructionAbilityEffects
+            if casualty.destroyed_whole_unit:
+                subaction*(board, casualty) unit_death_abilities = on_unit_destroyed(board, casualty, event)
+                death_effects = unit_death_abilities.effects
+            frm suppress_demise = death_effects.suppress_demise
             board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::model_destroyed, source_bank_unit(board, event.bank, event.unit.get()).identity, destroying_identity, casualty.identity), casualty.destroyed_whole_unit)
             subaction*(board) board.shared_actions.resolve_source_event
             source_bank_unit(board, event.bank, event.unit.get())[event.model].destruction_pending = false
@@ -484,10 +487,12 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
                 let removal = damage_job(DamageKind::remove_destroyed, event.unit, casualty.destroying_unit, casualty.destroying_unit_known, false, 0, casualty.identity)
                 removal.bank = event.bank
                 jobs.append(removal)
-            # Headbutt says before removal. This LIFO work stack must put the
-            # chosen mortals ABOVE removal, just like other death retaliation.
-            if faction_death_mortals > 0:
-                jobs.append(damage_job(DamageKind::mortal, faction_death_recipient, event.unit, true, false, faction_death_mortals.value, invalid_entity_identity()))
+            # Ability jobs execute before removal, without recursively entering
+            # this resolver. Reverse insertion preserves their declared order.
+            let ability_job = death_effects.damage_jobs.size()
+            while ability_job > 0:
+                ability_job = ability_job - 1
+                jobs.append(death_effects.damage_jobs[ability_job])
             if casualty.destroying_unit_known and retaliation > 0:
                 jobs.append(damage_job(DamageKind::mortal, casualty.destroying_unit, event.unit, true, false, retaliation.value, invalid_entity_identity()))
             # p.65 requires passenger hazards/setup before carrier Deadly
@@ -758,37 +763,6 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
     count = 1
     subaction*(board, target, source_unit) dice = resolve_attack_dice(board, target, source_unit, count)
     subaction*(board, target, source_unit) damage = resolve_attack_damage(board, target, source_unit, dice.generated_wounds, dice.generated_critical_wounds)
-
-# Dispatch existing on-destruction abilities/stratagems after a casualty (core p.19).
-# Feeder Tendrils checks the destroyed model, not the attacker; its faction
-# definition is not in the supplied core book and still requires faction-source review.
-act on_model_destroyed(ctx Board board, 
-                       ctx Unit source, 
-                       ctx Model destroyed) -> OnModelDestroyed:
-    frm generated_mortal : CombatCounter
-    if destroyed.is_character() and source.has_ability(AbilityKind::feeder_tendrils):
-        board.add_extra_cp(int(source.owned_by_player1))
-
-    frm previous_owner = board.current_decision_maker
-    if !source.empty() and destroyed.has_keyword(Keyword::master_of_possession) and board.can_use_strat(!source.owned_by_player1, Stratagem::violent_unbidding):
-        board.current_decision_maker = !source.owned_by_player1
-        actions:
-            act skip()
-            # master of possessions can use violent unbidding
-            act use_violent_unbidding() 
-                board.commit_stratagem(!source.owned_by_player1, Stratagem::violent_unbidding)
-                # roll the dice to select the amount of mortal wounds inflicted
-                act roll(frm Dice dice)
-                if dice == 1:
-                    board.current_decision_maker = previous_owner
-                    return
-                if dice == 6:
-                    generated_mortal = 3
-                if dice == 5:
-                    act roll(frm Dice damage)
-                    generated_mortal = damage.value / 2
-
-    board.current_decision_maker = previous_owner
 
 # Configure the selected target before its declared groups and timing effects
 # (pp.16–18). Faction consumers remain explicit legacy fixtures for task 17.
@@ -1212,11 +1186,11 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
             act roll(Dice grant_face)
             board[source][grant_model.value].destruction_attack_suppressed = grant_face.value < board[source][grant_model.value].destruction_fight_roll.value
         grant_model = grant_model + 1
-    subaction*(board) faction_selection = faction_attack_selection_options(board, source, melee)
+    subaction*(board) faction_selection = attack_activation_abilities(board, source, melee)
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::attack_selection, board[source].identity, board[target].identity, invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
     if !melee and board.timing.phase == BattlePhase::shooting and board[source].owned_by_player1 == board.current_player:
-        subaction*(board) declaration_options = faction_pre_declaration_options(board, source)
+        subaction*(board) declaration_options = before_weapon_declarations(board, source)
     frm declarations : DeclaredWeapons
     frm model : ModelIterator
     frm hazardous_uses : HazardousUses
@@ -1232,8 +1206,8 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
         subaction*(board) targets = declare_weapon_targets(board, declarations[declaration_index.value], source, melee)
         declarations.set(declaration_index.value, targets.weapon)
         declaration_index = declaration_index + 1
-    subaction*(board, declarations) declaration_effects = faction_declarations_complete(board, declarations, source, melee)
-    frm declaration_effect = declaration_effects.effect
+    subaction*(board, declarations) declaration_effects = on_targets_declared(board, declarations, source, melee)
+    frm declaration_effect_keys = declaration_effects.effects
     while has_unresolved_attacks(declarations):
         board.current_decision_maker = board[source].owned_by_player1
         board.shared_actions.revalidate_attack_targets = revalidate_attack_targets(board, declarations, source, melee)
@@ -1244,7 +1218,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
         target = unit
         board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::attack_targeted, board[source].identity, board[target].identity, invalid_entity_identity()))
         subaction*(board) board.shared_actions.resolve_source_event
-        subaction*(board) detachment_defence = faction_attack_targeted(board, source, target, melee)
+        subaction*(board) detachment_defence = on_attack_target_selected(board, source, target, melee)
         configure_attack_info(board, source.get(), target.get(), overwatch, melee)
         subaction*(board) strats = use_attack_stratagems(board, source, target, melee)
         frm target_info = board.attack_info
@@ -1271,16 +1245,18 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     frm cleanup_jobs : DamageJobs
     board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, cleanup_jobs, true, source)
     subaction*(board) board.shared_actions.resolve_damage_jobs
-    remove_scoped_source_effect(board, declaration_effect)
+    remove_scoped_source_effects(board, declaration_effect_keys)
     if !melee and board.timing.phase == BattlePhase::shooting and board[source].owned_by_player1 == board.current_player:
-        subaction*(board) hit_effects = faction_hit_results(board, source)
-        subaction*(board) options_end = faction_shooting_finished(board, source)
+        subaction*(board) hit_effects = on_successful_attacks_finished(board, source)
+        subaction*(board) options_end = on_shooting_attacks_finished(board, source)
     hazardous_uses = declared_hazardous_uses(declarations)
     board.shared_actions.resolve_hazards = resolve_hazards(board, source, hazardous_uses)
     subaction*(board) board.shared_actions.resolve_hazards
-    if faction_extra_attack_hazards(board, board[source]) > 0:
+    frm extra_hazards : HazardousRollEffects
+    append_hazardous_roll_effects(board, board[source], extra_hazards)
+    if extra_hazards.additional_uses > 0:
         frm button_test : HazardousUses
-        button_test = faction_extra_attack_hazards(board, board[source])
+        button_test = extra_hazards.additional_uses.value
         board.shared_actions.resolve_hazards = resolve_hazards(board, source, button_test)
         subaction*(board) board.shared_actions.resolve_hazards
 
@@ -1615,10 +1591,10 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
         board.timing.controller = player
         if count == 1:
             board.timing.stage = TimingStage::opposing_player_rules
-        while timing_rules_remaining(board, window, player, core_progress.resolved) or source_events_remaining(board, pending, player, false) or faction_timing_options_remaining(board, window, player, faction_progress, false):
+        while timing_rules_remaining(board, window, player, core_progress.resolved) or source_events_remaining(board, pending, player, false) or timing_abilities_pending(board, window, player, faction_progress, false):
             board.active_source_events = pending
             frm core_choice = core_timing_choice(board, core_progress, faction_progress, pending, window, player)
-            frm faction_choice = faction_timing_choice(board, core_progress, faction_progress, pending, window, player)
+            frm faction_choice = timing_ability_choice(board, core_progress, faction_progress, pending, window, player)
             subaction(board, core_progress, faction_progress, pending) core_choice, faction_choice
             if core_choice.started:
                 subaction*(board, core_progress, faction_progress, pending) core_choice
@@ -1653,7 +1629,9 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::shock_start, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
     frm shocked_before = unit.battle_socked
-    frm auto_pass = faction_automatic_shock_success(board, unit)
+    frm shock_effects : BattleShockRollEffects
+    append_battle_shock_roll_effects(board, unit, shock_effects)
+    frm auto_pass = shock_effects.automatic_success
     if !auto_pass and command_step and board.timing.phase == BattlePhase::command and unit.owned_by_player1 == board.current_player and !board.has_used_insane_bravery[int(unit.owned_by_player1)] and board.can_target_strat(unit.owned_by_player1, Stratagem::insane_bravery, unit):
         act insane_bravery(Bool do_it)
         if do_it:
@@ -1663,7 +1641,10 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         # Leadership/Battle-shock is absent from Command Re-roll's list (p.56).
         board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, false, unit.owned_by_player1)
         subaction*(board) board.current_pair_roll
-        if !unit.leadership_roll_succeeds(max(1, board.current_pair_roll.result.value + board.current_pair_roll.result2.value - penalty.value - faction_leadership_roll_penalty(board, unit))):
+        shock_effects.modifiers.clear()
+        append_battle_shock_roll_effects(board, unit, shock_effects)
+        shock_effects.modifiers.append(rule_modifier(ModifierOperation::subtract, penalty.value))
+        if !unit.leadership_roll_succeeds(modified_dice_result(board.current_pair_roll.result.value + board.current_pair_roll.result2.value, shock_effects.modifiers, false, false)):
             unit.battle_socked = true
         else:
             if command_step and recover_shock:
@@ -1672,8 +1653,8 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         if command_step and recover_shock:
             unit.battle_socked = false
     if !shocked_before and unit.battle_socked:
-        board.shared_actions.faction_became_shocked = faction_became_shocked(board, unit.identity)
-        subaction*(board) board.shared_actions.faction_became_shocked
+        board.shared_actions.on_unit_became_battle_shocked = on_unit_became_battle_shocked(board, unit.identity)
+        subaction*(board) board.shared_actions.on_unit_became_battle_shocked
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::shock_end, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
     board.current_decision_maker = previous_owner
@@ -1689,7 +1670,7 @@ fun battle_shock_test(Board board, Unit unit, Bool command_step, Bool recover_sh
 # (p.30). Snapshot shock at the step's start for the printed recovery condition;
 # never clear the opponent's shock or automatically expire a friendly effect.
 act battle_shock_step(ctx Board board) -> BattleShockStep:
-    subaction*(board) mob_mentality = faction_before_battle_shock(board)
+    subaction*(board) mob_mentality = on_battle_shock_step_start(board)
     # Freeze recovery eligibility at the step's start for EVERY bank (p30;
     # appendix01.02.04). Storage location must not change the printed test.
     frm shocked_at_start : Bool[MAX_UNIT_COUNT][3]
@@ -1896,7 +1877,7 @@ act cleanup_phase_retained(ctx Board board) -> PhaseRetainedCleanup:
     let source : UnitID
     board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, source)
     subaction*(board) board.shared_actions.resolve_damage_jobs
-    subaction*(board) returns = faction_pending_returns(board)
+    subaction*(board) returns = on_retained_casualty_returns(board)
 
 # Pile In/consolidation are optional staged per-model moves, separate from
 # attack selection (pp.38/42). No partial path changes live positions; closest
@@ -1904,7 +1885,7 @@ act cleanup_phase_retained(ctx Board board) -> PhaseRetainedCleanup:
 act melee_move(ctx Board board, frm UnitID source, frm Bool consolidate, frm Bool overrun) -> MeleeMove:
     if !melee_move_eligible(board, source, consolidate, overrun):
         return
-    board.shared_actions.faction_move_selection = faction_move_selection(board, source, true)
+    board.shared_actions.faction_move_selection = before_charge_declaration(board, source)
     subaction*(board) board.shared_actions.faction_move_selection
     frm previous_owner = board.current_decision_maker
     frm previous_active = board.timing.active_player
@@ -2021,8 +2002,8 @@ act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
     board[source].history.fight_eligible_phase = board.phase_serial.value + 1
     board[source].history.consolidation_fight_pending = 0
     board.current_decision_maker = board[source].owned_by_player1
-    subaction*(board) datasheet_psychic_fight = faction_datasheet_fight_selection(board, source)
-    subaction*(board) melee_options = faction_melee_weapon_selection(board, source)
+    subaction*(board) datasheet_psychic_fight = on_unit_selected_to_fight(board, source)
+    subaction*(board) melee_options = before_fight_weapon_selection(board, source)
     if epic_source_valid(board, source):
         actions:
             act decline_epic_challenge()
@@ -2218,18 +2199,18 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
         record_charge_move(board, source)
         # Mobbed and Crushing Impact share the charge-end controller group;
         # the charging player chooses their order (user Rules Sequencing).
-        frm faction_progress = faction_charge_progress(board, source)
+        frm faction_progress = capture_charge_triggers(board, source)
         frm crushing_pending = crushing_source_valid(board, source)
-        while faction_charge_effects_remaining(faction_progress) or crushing_pending:
+        while charge_abilities_pending(faction_progress) or crushing_pending:
             frm core_choice = core_charge_choice(board, faction_progress, crushing_pending, source)
-            frm faction_choice = faction_charge_choice(board, faction_progress, crushing_pending, source)
+            frm faction_choice = on_charge_finished(board, faction_progress, crushing_pending, source)
             subaction(board, faction_progress, crushing_pending) core_choice, faction_choice
             if core_choice.started:
                 subaction*(board, faction_progress, crushing_pending) core_choice
             else:
                 subaction*(board, faction_progress, crushing_pending) faction_choice
-        board.shared_actions.faction_charge_finished = faction_charge_finished(board, source)
-        subaction*(board) board.shared_actions.faction_charge_finished
+        board.shared_actions.after_charge_effects = after_charge_effects(board, source)
+        subaction*(board) board.shared_actions.after_charge_effects
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
@@ -2258,29 +2239,27 @@ act charge_phase(ctx Board board) -> ChargePhase:
 # Desperate Escape rolls one complete hazard batch per model, then applies
 # ordinary mortal allocation/FNP/destruction instead of deleting models (pp.24/33).
 act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
-    # Orks/Big-ed-Bossbunka Fortification automatically passes these hazards.
-    if !board[id].battle_socked and permits_escape_without_hazards(board, board[id]):
+    frm escape_effects : EscapeRollEffects
+    append_escape_roll_effects(board, board[id], escape_effects)
+    if escape_effects.ignore_rolls:
         return
     frm count : CombatCounter
     count = live_attachment_strength(board[id])
-    frm penalty : FixedStat
-    penalty = faction_escape_penalty(board, board[id])
     frm extra_count : CombatCounter
-    extra_count = faction_extra_escape_hazards(board, board[id])
-    frm shocked = board[id].battle_socked
+    extra_count = escape_effects.additional_rolls.value
     board.shared_actions.collect_attack_dice = collect_attack_dice(board, count, false, false, true, board[id].owned_by_player1, id)
     subaction*(board) board.shared_actions.collect_attack_dice
     frm hazards_pool_snapshot_1 = board.shared_actions.collect_attack_dice.pool
     frm failures : CombatCounter
     for face in range(6):
-        if face + 1 - penalty.value <= 2:
+        if modified_dice_result(face + 1, escape_effects.ordinary_modifiers, false, false) <= 2:
             add_attack_count(failures, hazards_pool_snapshot_1.faces[face].value)
     if extra_count > 0:
         board.shared_actions.collect_attack_dice = collect_attack_dice(board, extra_count, false, false, true, board[id].owned_by_player1, id)
         subaction*(board) board.shared_actions.collect_attack_dice
         frm additional_pool_snapshot_2 = board.shared_actions.collect_attack_dice.pool
         for extra_face in range(6):
-            if extra_face + 1 - penalty.value - int(shocked) <= 2:
+            if modified_dice_result(extra_face + 1, escape_effects.additional_modifiers, false, false) <= 2:
                 add_attack_count(failures, additional_pool_snapshot_2.faces[extra_face].value)
     failures = failures.value * hazard_mortal_multiplier(board[id])
     board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, id, id, false, failures)
@@ -2290,9 +2269,9 @@ act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
 # when selected; advance roll and fall-back hazards precede paths (p.33;
 # supplied appendix 02.02.03). A failed staged move can be retried (p.12).
 act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> Movement:
-    board.shared_actions.faction_movement_abilities = faction_movement_abilities(board, id)
-    subaction*(board) board.shared_actions.faction_movement_abilities
-    board.shared_actions.faction_move_selection = faction_move_selection(board, id, false)
+    board.shared_actions.on_unit_selected_to_move = on_unit_selected_to_move(board, id)
+    subaction*(board) board.shared_actions.on_unit_selected_to_move
+    board.shared_actions.faction_move_selection = before_move_kind_selection(board, id)
     subaction*(board) board.shared_actions.faction_move_selection
     frm selected = false
     frm kind : MovementKind
@@ -2312,7 +2291,7 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
         board[id].movement_override = max(1, random_m_result_snapshot_3.value) + 1
     while !selected:
         frm core_choice = core_move_kind_choice(board, id, use_the_gilded_spear)
-        frm faction_choice = faction_special_move_choice(board, id)
+        frm faction_choice = choose_special_move(board, id)
         subaction(board) core_choice, faction_choice
         if core_choice.started:
             subaction*(board) core_choice
@@ -2324,13 +2303,13 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
             extra = faction_choice.extra
         selected = true
     if kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape:
-        board.shared_actions.faction_move_mode = faction_move_mode(board, id, kind)
-        subaction*(board) board.shared_actions.faction_move_mode
-        board.shared_actions.faction_fallback_selection = faction_fallback_selection(board, id)
-        subaction*(board) board.shared_actions.faction_fallback_selection
+        board.shared_actions.on_move_kind_selected = on_move_kind_selected(board, id, kind)
+        subaction*(board) board.shared_actions.on_move_kind_selected
+        board.shared_actions.before_fall_back = before_fall_back(board, id)
+        subaction*(board) board.shared_actions.before_fall_back
         if faction_forces_escape(board, board[id]):
             kind = MovementKind::desperate_escape
-        capture_faction_selected_move(board, id, kind)
+        on_move_permissions_selected(board, id, kind)
         if kind == MovementKind::desperate_escape:
             board.shared_actions.desperate_escape = desperate_escape(board, id)
             subaction*(board) board.shared_actions.desperate_escape
@@ -2374,9 +2353,9 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
             # The move failed and returns all positions. Selection still has a
             # legal stationary/retry path through the phase loop (pp.12/32).
             board[id].history.move_kind = MovementKind::stationary
-    finish_faction_move_selection(board, id)
+    on_move_attempt_finished(board, id)
     if board[id].history.last_move_phase == board.phase_serial.value + 1 and !(board[id].history.move_kind == MovementKind::stationary) and has_live_model(board[id]):
-        subaction*(board) faction_reactions = faction_after_move(board, id)
+        subaction*(board) faction_reactions = on_move_finished(board, id)
     board.shared_actions.post_move_embark = post_move_embark(board, id)
     subaction*(board) board.shared_actions.post_move_embark
     if !has_live_model(board[id]):
@@ -2414,7 +2393,7 @@ act disembark(ctx Board board, frm UnitID passenger_bank, frm Bool reactive) -> 
     frm mode = required_disembark_mode(board, board.embarked_units[passenger_bank.get()], carrier_location)
     if reactive:
         mode = DisembarkMode::rapid
-    subaction*(board) selected_passenger = faction_disembark_selection(board, passenger_bank, carrier_location)
+    subaction*(board) selected_passenger = before_disembark(board, passenger_bank, carrier_location)
     if mode == DisembarkMode::assault:
         act choose_assault_disembark(Bool use_assault)
         if !use_assault:
@@ -2469,7 +2448,7 @@ act movement_phase(ctx Board board) -> MovementPhase:
     board.current_decision_maker = board.current_player
     while true:
         frm core_choice = core_movement_phase_choice(board)
-        frm faction_choice = faction_movement_phase_choice(board)
+        frm faction_choice = during_movement_phase(board)
         subaction(board) core_choice, faction_choice
         if core_choice.started:
             subaction*(board) core_choice
@@ -2485,8 +2464,8 @@ act movement_phase(ctx Board board) -> MovementPhase:
 
 
 act selected_shooting(ctx Board board, frm UnitID source, frm UnitID initial_target) -> SelectedShooting:
-    board.shared_actions.faction_shooting_support = faction_shooting_support(board, source)
-    subaction*(board) board.shared_actions.faction_shooting_support
+    board.shared_actions.on_unit_selected_to_shoot = on_unit_selected_to_shoot(board, source)
+    subaction*(board) board.shared_actions.on_unit_selected_to_shoot
     board[source].has_shoot = true
     board[source].history.shot_this_phase = true
     act choose_shooting_kind(ShootingKind kind) {shooting_kind_valid(board, source, kind)}
@@ -2500,7 +2479,7 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
     board.current_decision_maker = board.current_player
     while true:
         frm core_choice = core_shooting_phase_choice(board)
-        frm faction_choice = faction_shooting_phase_choice(board)
+        frm faction_choice = during_shooting_phase(board)
         subaction(board) core_choice, faction_choice
         if core_choice.started:
             subaction*(board) core_choice
@@ -2816,12 +2795,12 @@ act core_timing_choice(ctx Board board, ctx CoreTimingProgress core_progress, ct
     frm started = false
     frm finished = false
     actions:
-        act finish_timing_rules() {(!(window == TimingWindow::turn_end) or !has_incoherent_units(board, player)) and !source_events_remaining(board, pending, player, true) and !faction_timing_options_remaining(board, window, player, progress, true)}
+        act finish_timing_rules() {(!(window == TimingWindow::turn_end) or !has_incoherent_units(board, player)) and !source_events_remaining(board, pending, player, true) and !timing_abilities_pending(board, window, player, progress, true)}
             started = true
             finished = true
         act choose_window_source(frm SourceEventID event) {pending_source_valid(board, pending, event, player)}
             started = true
-            subaction*(board, pending) chosen_window_effect = faction_resolve_timing_source(board, pending, event, player)
+            subaction*(board, pending) chosen_window_effect = resolve_timing_source_ability(board, pending, event, player)
         act choose_timing_rule(frm TimingRule rule) {
             !core_progress.resolved[int(rule.value)],
             timing_rule_available(board, window, player, rule)
@@ -2959,24 +2938,103 @@ act core_move_kind_choice(ctx Board board, frm UnitID id, frm Bool use_the_gilde
             extra = 2 * int(use_the_gilded_spear)
             if do_it:
                 kind = MovementKind::advance
-                board.shared_actions.faction_move_mode = faction_move_mode(board, id, kind)
-                subaction*(board) board.shared_actions.faction_move_mode
+                board.shared_actions.on_move_kind_selected = on_move_kind_selected(board, id, kind)
+                subaction*(board) board.shared_actions.on_move_kind_selected
                 capture_advance_charge_permission(board, id)
-                subaction*(board) advance_selection = faction_prepare_advance(board, id)
+                subaction*(board) advance_selection = before_advance_roll(board, id)
                 frm advance_roll_effects : AdvanceRollEffects
                 append_advance_roll_effects(board, board[id], advance_roll_effects)
                 board.current_roll = rerollable_dice_roll(board, advance_roll_effects.reroll, false, true, board[id].owned_by_player1, id)
                 subaction*(board) board.current_roll
-                subaction*(board) advance_result = faction_modify_advance_roll(board, id)
+                subaction*(board) advance_result = after_advance_roll(board, id)
                 advance_roll_effects.modifiers.clear()
                 append_advance_roll_effects(board, board[id], advance_roll_effects)
                 extra = modified_dice_result(board.current_roll.result.value, advance_roll_effects.modifiers, false, false)
-                capture_faction_selected_move(board, id, kind)
+                on_move_permissions_selected(board, id, kind)
         act ordered_retreat() {battlefield_move_eligible(board, id, MovementKind::ordered_retreat)}
             started = true
             kind = MovementKind::ordered_retreat
-            capture_faction_selected_move(board, id, kind)
+            on_move_permissions_selected(board, id, kind)
         act desperate_escape() {battlefield_move_eligible(board, id, MovementKind::desperate_escape)}
             started = true
             kind = MovementKind::desperate_escape
-            capture_faction_selected_move(board, id, kind)
+            on_move_permissions_selected(board, id, kind)
+
+# Shared core controller routes its finite timing state to concrete boundary
+# hooks. This is engine sequencing, not a generic army event/ability API.
+fun timing_ability_choice(Board board, CoreTimingProgress core_progress, FactionTimingProgress progress, PendingSourceEvents pending, TimingWindow window, Bool player) -> OrksTimingChoice:
+    if window == TimingWindow::round_start:
+        return on_round_start(board, core_progress, progress, pending, player)
+    if window == TimingWindow::round_end:
+        return on_round_end(board, core_progress, progress, pending, player)
+    if window == TimingWindow::turn_start:
+        return on_turn_start(board, core_progress, progress, pending, player)
+    if window == TimingWindow::turn_end:
+        return on_turn_end(board, core_progress, progress, pending, player)
+    if window == TimingWindow::command_start:
+        return on_command_phase_start(board, core_progress, progress, pending, player)
+    if window == TimingWindow::command_abilities:
+        return on_command_abilities_step(board, core_progress, progress, pending, player)
+    if window == TimingWindow::command_end:
+        return on_command_phase_end(board, core_progress, progress, pending, player)
+    if window == TimingWindow::movement_start:
+        return on_movement_phase_start(board, core_progress, progress, pending, player)
+    if window == TimingWindow::movement_end:
+        return on_movement_phase_end(board, core_progress, progress, pending, player)
+    if window == TimingWindow::shooting_start:
+        return on_shooting_phase_start(board, core_progress, progress, pending, player)
+    if window == TimingWindow::shooting_end:
+        return on_shooting_phase_end(board, core_progress, progress, pending, player)
+    if window == TimingWindow::charge_start:
+        return on_charge_phase_start(board, core_progress, progress, pending, player)
+    if window == TimingWindow::charge_end:
+        return on_charge_phase_end(board, core_progress, progress, pending, player)
+    if window == TimingWindow::fight_start:
+        return on_fight_phase_start(board, core_progress, progress, pending, player)
+    if window == TimingWindow::fight_end:
+        return on_fight_phase_end(board, core_progress, progress, pending, player)
+    assert(false, "no ability action for a closed timing window")
+    return on_turn_end(board, core_progress, progress, pending, player)
+
+# Pure mandatory/optional finish check for the same concrete timing window.
+# The core loop preserves controller order and cannot skip required abilities.
+fun timing_abilities_pending(Board board, TimingWindow window, Bool player, FactionTimingProgress progress, Bool mandatory_only) -> Bool:
+    if window == TimingWindow::round_start:
+        return round_start_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::round_end:
+        return round_end_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::turn_start:
+        return turn_start_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::turn_end:
+        return turn_end_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::command_start:
+        return command_phase_start_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::command_abilities:
+        return command_abilities_step_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::command_end:
+        return command_phase_end_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::movement_start:
+        return movement_phase_start_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::movement_end:
+        return movement_phase_end_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::shooting_start:
+        return shooting_phase_start_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::shooting_end:
+        return shooting_phase_end_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::charge_start:
+        return charge_phase_start_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::charge_end:
+        return charge_phase_end_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::fight_start:
+        return fight_phase_start_abilities_pending(board, player, progress, mandatory_only)
+    if window == TimingWindow::fight_end:
+        return fight_phase_end_abilities_pending(board, player, progress, mandatory_only)
+    return false
+
+
+# Ordinary controller selects the concrete attack boundary. No faction must
+# decode a generic event: each hook has its own fixed mode/timing (pp16/38).
+fun attack_activation_abilities(Board board, UnitID source, Bool melee) -> OrksAttackSelectionOptions:
+    if melee:
+        return on_fight_attack_start(board, source)
+    return on_shooting_attack_start(board, source)

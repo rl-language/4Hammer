@@ -917,3 +917,9 @@ fun source_instance_registered(Board board, SourceInstance instance) -> Bool:
         ref existing = board.source_instances[index]
         found = found or (existing.rule == instance.rule and existing.source_unit == instance.source_unit and existing.source_model == instance.source_model and existing.trigger.value == instance.trigger.value)
     return found
+
+# End the actual operation after every declared group, removing each exact key
+# independently. No unrelated phase/battle effect expires here (01.02.02).
+fun remove_scoped_source_effects(Board board, ScopedEffectKeys effects):
+    for index in range(effects.size()):
+        remove_scoped_source_effect(board, effects[index])

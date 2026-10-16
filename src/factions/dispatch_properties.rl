@@ -1,12 +1,10 @@
 import factions.orks.queries
 
-
-# Property contract between core and faction composition. Queries are pure and
-# may be evaluated repeatedly. Model/Unit-only queries use the supplied object
-# and installed metadata, without external range measurements. Appenders mutate
-# only their result; the attachment preparation command explicitly mutates model.
-# Implementations own applicability and source provenance; core owns arithmetic,
-# ability aggregation and destruction retention. See README.md for conventions.
+# Calculation/event-specific contracts for any army implementation. Queries
+# are pure; appenders mutate only their initialized output. Actions borrow
+# original contexts, finish accepted work atomically and restore controller
+# ownership. Core owns common mechanics, sequencing and frame lifetime.
+# See README.md and doc/army-api.md; named rule citations belong in adapters.
 
 # Model.has_keyword expects a tri-state override: negative suppresses its
 # intrinsic lookup, zero defers to it, positive grants keyword. Shared keyword
@@ -22,17 +20,6 @@ fun faction_keyword_override(Model model, Keyword keyword) -> Int:
 fun faction_model_grants_intrinsic_ability(Model model, AbilityKind kind) -> Bool:
     return orks_model_grants_intrinsic_ability(model, kind)
 
-# Return the additive contribution to this model's M characteristic in inches,
-# or zero. Core inserts it into effective_characteristic_value alongside ordered
-# modifiers and characteristic limits. Do not return final M, a roll result or
-# the distance available for a particular movement mode.
-# Return the additive contribution to this model's T characteristic, or zero.
-# Core combines it with stored modifiers and applies characteristic limits.
-# Unit-level selection of which model's toughness to use is a separate step.
-# Return the absolute InSv base for this model, including its printed base;
-# lower is better, above 6 means no usable base save. With no faction grant,
-# return profile.invuln_save(), not zero. Core then chooses the better shared
-# granted save and applies characteristic modifiers/limits.
 # Unit.attach_to calls this on each joining model before copying it into
 # bodyguard. Apply model-local consequences of this permitted attachment;
 # retain original-component provenance. Mutate model only: core owns the
@@ -61,14 +48,10 @@ fun faction_model_confers_army_rules(Model model) -> Bool:
 fun faction_model_has_weapon_rule(Model model, Weapon profile, WeaponRuleKind kind) -> Bool:
     return orks_model_has_weapon_rule(model, profile, kind)
 
-# Append model-local rule instances for weapon to the existing rules snapshot.
-# Keep parameters, conditions and independent source keys; do not select, merge
-# or sum duplicate instances. No contribution is a no-op. Core selects among
-# duplicates later; applying this twice to one snapshot can duplicate grants.
-# Compatibility contract: true makes model_weapon_rules append one distinct
-# Sustained Hits 1 instance for this battlefield source/weapon. Return false
-# unless that exact melee grant applies, including source validity. Core owns
-# duplicate selection; this interface cannot express another rule or parameter.
+# Capture component rule-conferral metadata before attachment, independently
+# of whether an ability is currently activatable. Core retains this snapshot
+# through the destroying attack; live survivors alone are insufficient (p67).
+# No applicable conferral returns false. Do not mutate membership or state.
 fun faction_component_has_army_rule(Unit unit, EntityIdentity component) -> Bool:
     return component_has_waaagh(unit, component)
 

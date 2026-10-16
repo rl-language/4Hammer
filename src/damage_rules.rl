@@ -152,6 +152,13 @@ cls DamageJob:
 
 using DamageJobs = CheckedVector<DamageJob, 1024>
 
+# Results from destruction abilities, not another damage resolver. Core queues
+# these jobs above removal; order in this small list is execution order (p87).
+cls DestructionAbilityEffects:
+    Bool suppress_demise
+    CheckedVector<DamageJob, 16> damage_jobs
+
+
 # Construct explicit provenance for delayed attack-caused triggers (p.87).
 fun damage_job(DamageKind kind, UnitID target, UnitID source, Bool known, Bool attack, Int amount, EntityIdentity recipient) -> DamageJob:
     assert(amount >= 0 and amount < MAX_COMBAT_COUNTER, "damage job capacity exceeded")

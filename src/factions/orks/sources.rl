@@ -408,9 +408,3 @@ fun orks_model_state_valid(Model model) -> Bool:
 # Validate bounded Orks psychic usage on save load; generic Psyker level validation remains core.
 fun orks_unit_state_valid(Unit unit) -> Bool:
     return !(unit.orks_psychic_usage.budget.round_stamp.value < 0 or unit.orks_psychic_usage.budget.round_stamp.value >= MAX_ROUNDS or unit.orks_psychic_usage.budget.spent.value < 0 or unit.orks_psychic_usage.budget.spent.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.roar_phase.value < 0 or unit.orks_psychic_usage.roar_phase.value >= MAX_PHASE_STAMP or unit.orks_psychic_usage.visions_phase.value < 0 or unit.orks_psychic_usage.visions_phase.value >= MAX_PHASE_STAMP)
-
-# Orks typed/riled grants share generic source handles and expiry (Waaagh!/01.02.02).
-# Remove only the matching Orks effect/riled key, including archived models (01.02.02; core p88).
-# Validate faction typed source payloads before loading/dispatch; generic arithmetic validation stays core.
-# Returned members inherit only missing faction-owned grant keys (core p88/01.02.02).
-# Restored faction grants must refer to their real source recipients; preserve existing handle validation.

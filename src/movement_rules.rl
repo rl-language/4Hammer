@@ -154,7 +154,7 @@ fun record_move(Board board, UnitID id, MovementKind kind):
         board[id].interrupt_actions()
         board[id].history.last_move_phase = board.phase_serial.value + 1
         board[id].history.made_move_this_turn = true
-    faction_record_move_effects(board, id, kind)
+    on_move_committed(board, id, kind)
     if kind == MovementKind::advance:
         board[id].history.advanced_this_turn = true
         board[id].has_run = true
@@ -207,7 +207,7 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
         # ingress callers; prebattle deployment/redeployment is not ingress.
         let arrival : UnitID
         arrival = destination
-        faction_after_reserve_arrival(board, arrival)
+        on_reserve_arrival(board, arrival)
     board.reserve_units.erase(reserve.get())
 
 # Repositioning preserves effects/history and retires the battlefield slot

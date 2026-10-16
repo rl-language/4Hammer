@@ -168,3 +168,12 @@ act resolve_orks_mobbed(ctx Board board, frm UnitID source) -> OrksMobbed:
             board.shared_actions.battle_shock_test = battle_shock_test(board, board[shock_target], false, false, penalty)
             subaction*(board, board[shock_target]) board.shared_actions.battle_shock_test
     board.current_decision_maker = previous_owner
+
+# Accepted automatic-success effects and Snotling penalties preserve their
+# own source lifetimes. They do not recover shock outside the core step
+# (Orks cards; core p30; appendix01.02.02).
+fun append_orks_battle_shock_roll_effects(Board board, Unit unit, BattleShockRollEffects effects):
+    effects.automatic_success = effects.automatic_success or orks_automatic_shock_success(board, unit)
+    let penalty = orks_leadership_roll_penalty(board, unit)
+    if penalty != 0:
+        effects.modifiers.append(rule_modifier(ModifierOperation::subtract, penalty))

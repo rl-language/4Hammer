@@ -69,8 +69,8 @@ act orks_psychic_test(ctx Board board, frm EntityIdentity subject) -> OrksPsychi
     location = locate_source(board, subject, invalid_entity_identity())
     if location.found and board.current_roll.result == 1:
         source_bank_unit(board, location.bank, location.unit.value).battle_socked = true
-        board.shared_actions.faction_became_shocked = orks_became_shocked(board, subject)
-        subaction*(board) board.shared_actions.faction_became_shocked
+        board.shared_actions.on_unit_became_battle_shocked = orks_became_shocked(board, subject)
+        subaction*(board) board.shared_actions.on_unit_became_battle_shocked
     board.current_decision_maker = previous_owner
 
 # Wurrband uses one identity-backed psychic frame for all banks. Spend before

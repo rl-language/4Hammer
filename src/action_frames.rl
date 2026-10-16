@@ -24,15 +24,15 @@ cls SharedActionFrames:
     MovementSourceResolution resolve_movement_sources
     NeuralDisruption neural_disruption
     OnModelDestroyed on_model_destroyed
-    OrksBecameShocked faction_became_shocked
-    OrksDreadherderShooting faction_shooting_support
+    OrksBecameShocked on_unit_became_battle_shocked
+    OrksDreadherderShooting on_unit_selected_to_shoot
     OrksEnemyMoveReaction select_orks_enemy_move_reaction
-    OrksFallbackSelection faction_fallback_selection
-    OrksHitInterception intercept_faction_hits
+    OrksFallbackSelection before_fall_back
+    OrksHitInterception on_hit_rolls_resolved
     OrksMobbed faction_after_charge_shock
-    OrksMoveMode faction_move_mode
+    OrksMoveMode on_move_kind_selected
     OrksMoveSelection faction_move_selection
-    OrksMovementAbilities faction_movement_abilities
+    OrksMovementAbilities on_unit_selected_to_move
     OrksOffboardSupportSelection choose_orks_offboard_support
     OrksPackageWindow orks_package_window
     OrksPostAttack resolve_faction_post_attack
@@ -45,7 +45,7 @@ cls SharedActionFrames:
     UnitHealing heal_unit
     ModelReturn return_model
     OrksRuntherdShock orks_runtherd_shock
-    OrksWagonChargeEnd faction_charge_finished
+    OrksWagonChargeEnd after_charge_effects
     OrksWagonMoveEnd orks_wagon_move_end
     PickFaction pick_army
     PostMoveEmbark post_move_embark

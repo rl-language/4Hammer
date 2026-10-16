@@ -1275,18 +1275,14 @@ act orks_rokkit_barrage(ctx Board board, frm UnitID source) -> OrksRokkitBarrage
 
 # Flyin Headbutt decides suppression/target/eight dice; return mortal jobs to the shared destruction stack (Orks/Flyboyz; core p87).
 act orks_before_destruction(ctx Board board, ctx Model casualty, frm PendingDestruction event) -> OrksBeforeDestruction:
-    frm suppress_demise = false
-    frm headbutt_recipient : UnitID
-    frm crash_mortals : CombatCounter
-    crash_mortals = 0
+    frm effects : DestructionAbilityEffects
     if event.bank.value == SourceBank::battlefield.value and casualty.has_keyword(Keyword::aircraft) and casualty.destroyed_whole_unit and board.can_target_strat(source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1, Stratagem::orks_flyin_headbutt, source_bank_unit(board, event.bank, event.unit.get())) and orks_headbutt_has_target(board, event.unit, casualty):
         actions:
             act decline_flyin_headbutt()
             act flyin_headbutt()
                 board.commit_stratagem(source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1, Stratagem::orks_flyin_headbutt, source_bank_unit(board, event.bank, event.unit.get()))
-                suppress_demise = true
+                effects.suppress_demise = true
                 act choose_headbutt_target(frm UnitID crash_target) {orks_headbutt_target(board, event.unit, casualty, crash_target)}
-                headbutt_recipient = crash_target
                 frm headbutt_rolls : BInt<0, 9>
                 frm headbutt_mortals : CombatCounter
                 while headbutt_rolls.value < 8:
@@ -1294,7 +1290,7 @@ act orks_before_destruction(ctx Board board, ctx Model casualty, frm PendingDest
                     headbutt_rolls = headbutt_rolls + 1
                     headbutt_mortals = headbutt_mortals.value + int(crash_face.value >= 4)
                 if headbutt_mortals > 0:
-                    crash_mortals = headbutt_mortals
+                    effects.damage_jobs.append(damage_job(DamageKind::mortal, crash_target, event.unit, true, false, headbutt_mortals.value, invalid_entity_identity()))
 
 # Dreadherder support is an optional Shooting-phase action alongside core shooting (Orks/Dread Mob).
 act orks_shooting_phase_choice(ctx Board board) -> OrksShootingPhaseChoice:
@@ -1302,17 +1298,18 @@ act orks_shooting_phase_choice(ctx Board board) -> OrksShootingPhaseChoice:
     actions:
         act use_dreadherder_support(frm UnitID dreadherder_source) {orks_dreadherder_available(board, dreadherder_source)}
             started = true
-            board.shared_actions.faction_shooting_support = orks_dreadherder_shooting(board, dreadherder_source)
-            subaction*(board) board.shared_actions.faction_shooting_support
+            board.shared_actions.on_unit_selected_to_shoot = orks_dreadherder_shooting(board, dreadherder_source)
+            subaction*(board) board.shared_actions.on_unit_selected_to_shoot
 
 # Unpredictable Genius owns its single-target trigger and effect; common declarations/grouping remain core (Orks/Madcap Meks).
 act orks_declarations_complete(ctx Board board, ctx DeclaredWeapons declarations, frm UnitID source, frm Bool melee) -> OrksDeclarationsComplete:
-    frm effect : SourceEffectKey
+    frm effects : ScopedEffectKeys
     if !melee and single_declared_target(declarations) >= 0:
         frm target : UnitID
         target = single_declared_target(declarations)
         subaction*(board) genius = orks_unpredictable_genius(board, source, target)
-        effect = genius.effect
+        if genius.effect.value != 0:
+            effects.append(genius.effect)
 
 # Mobbed/Impetus remain interleaved with common charge-end effects in the charger-chosen order (Orks cards; user Rules Sequencing).
 act orks_charge_choice(ctx Board board, ctx FactionChargeProgress progress, ctx Bool crushing_pending, frm UnitID source) -> OrksChargeChoice:
@@ -1382,3 +1379,12 @@ fun append_orks_weapon_modifiers(Board board, UnitID source, DeclaredWeapon decl
 fun append_orks_allocation_effects(Unit unit, Model model, AttackSequenceInfo attack, InvulnerableSavePermission permission):
     if attack.source.range() > 0 and unit.has_ability(AbilityKind::kustom_force_field):
         permission.target = min(permission.target.value, 4)
+
+# Grot Shields must intercept original rolled hits before Lethal conversion;
+# Sustained generated hits remain outside that ability (Orks/Runt Swarm).
+fun append_orks_hit_resolution_policy(Board board, Unit target, HitResolutionPolicy policy):
+    policy.before_critical_conversion = policy.before_critical_conversion or orks_grot_shield(board, target) >= 0
+
+# Da Button adds a single check after selected physical weapons (Dread Mob).
+fun append_orks_hazardous_roll_effects(Board board, Unit unit, HazardousRollEffects effects):
+    effects.additional_uses = effects.additional_uses.value + orks_extra_attack_hazards(board, unit)

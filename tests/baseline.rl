@@ -15752,7 +15752,6 @@ fun test_ability_hooks_objective_context_does_not_leak_between_markers() -> Bool
     let unassigned = board.objective_control_level(board.objective_range_definition(1), false)
     return friendly == 10 and enemy_home == 0 and unassigned == 0
 
-
 # A unit ability can supply an arbitrary signed magnitude through the common
 # hit pipeline, with independently ignorable terms and the ordinary cap.
 # No Orks grant is involved; core p18 and appendix02.02.01/02.
@@ -15765,7 +15764,6 @@ fun test_ability_hooks_unit_hit_terms_are_not_boolean_bonuses() -> Bool:
     let choices = attack_hit_choices(board, info)
     return info.total_hit_modifier() == 2 and get_hit_roll_bonus(board) == 1 and choices.size() == 2 and choices[0].modifier.signed_amount() == 3 and choices[1].modifier.signed_amount() == 1
 
-
 # Calculation hooks preserve earlier operations and source distinctness;
 # division happens after all additions (appendix02.02.01).
 # Orks/Bannernob grants the one source-specific term used by this fixture.
@@ -15776,7 +15774,6 @@ fun test_ability_hooks_charge_terms_follow_common_operation_order() -> Bool:
     effects.modifiers.append(rule_modifier(ModifierOperation::divide, 2))
     append_charge_roll_effects(board[0], effects)
     return effects.modifiers.size() == 2 and modified_dice_result(7, effects.modifiers, false, true) == 4 and effects.modifiers[0].operation.value == ModifierOperation::divide.value
-
 
 # Actual instances are supplied by the adapter; core does not manufacture a
 # fixed Sustained Hits value. A preexisting3 and the army's1 remain distinct.
@@ -15797,7 +15794,6 @@ fun test_ability_hooks_weapon_instances_preserve_prior_entries() -> Bool:
     append_weapon_rules(board, unit_id(0), 0, board[0][0].weapons[1].profile, family, repeated)
     return first and repeated.size() == rules.size() and to_string(board) == before
 
-
 # Advance grants are frozen before roll-stage effects. The later selected-
 # movement handler must not rewrite them after their source has expired.
 # Core pp32/36 and Orks/Waaagh! selected-to-Advance timing.
@@ -15807,9 +15803,24 @@ fun test_ability_hooks_advance_permission_is_not_recaptured_after_roll() -> Bool
     capture_advance_charge_permission(board, unit_id(0))
     let selected = board[0].history.advance_allows_charge
     board[0][0].rule_effects.clear()
-    capture_faction_selected_move(board, unit_id(0), MovementKind::advance)
+    on_move_permissions_selected(board, unit_id(0), MovementKind::advance)
     return selected and board[0].history.advance_allows_charge and !unit_is_riled_up(board[0])
 
+# Distinct operation-owned keys expire together without deleting an unrelated
+# source, including when their source prototypes were reused (01.02.02).
+fun test_ability_hooks_operation_cleanup_accepts_multiple_keys() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 511)
+    instance.source_model = 0
+    instance.recipient = SourceTarget::target_unit
+    commit_reusable_unit_grant(board, instance, board[1].identity)
+    commit_reusable_unit_grant(board, instance, board[1].identity)
+    commit_reusable_unit_grant(board, instance, board[1].identity)
+    let keys : ScopedEffectKeys
+    keys.append(board.source_effects[0].identity)
+    keys.append(board.source_effects[1].identity)
+    remove_scoped_source_effects(board, keys)
+    return board[1][0].effective_movement(6) == 8 and board.source_effects.size() == 1
 
 # A generic source-owned status uses the same install/remove/duplicate path
 # as other rule effects. No dedicated army lifecycle hook is needed.
@@ -15830,6 +15841,31 @@ fun test_ability_hooks_status_lifecycle_preserves_other_sources() -> Bool:
     remove_source_grant(board[0][0], first)
     return board[0][0].rule_effects.size() == 1 and board[0][0].rule_effects[0].source_effect == second and model_has_source_grant(board[0][0], second) and !model_has_source_grant(board[0][0], first)
 
+# Constructing an inapplicable destruction ability completes without a choice
+# or shared-state mutation, returning an empty mechanically typed result (p87).
+fun test_ability_hooks_neutral_destruction_result_is_empty() -> Bool:
+    let board = attack_declaration_fixture()
+    let event : PendingDestruction
+    event.found = true
+    let before = to_string(board)
+    let casualty = board[0][0]
+    let ability = on_unit_destroyed(board, casualty, event)
+    return ability.is_done() and !ability.effects.suppress_demise and ability.effects.damage_jobs.empty() and to_string(board) == before
+
+# Concrete timing hooks expose only their own event's inputs. War Cry is a
+# Command-start ability; constructing either peer must preserve Board until an
+# input is accepted (Orks Army Rules; user Rules Sequencing).
+fun test_ability_hooks_timing_actions_are_boundary_specific_and_pure() -> Bool:
+    let board = orks17f_fixture()
+    board.begin_phase(BattlePhase::command)
+    board.open_timing_window(TimingWindow::command_start)
+    let core_progress : CoreTimingProgress
+    let progress : FactionTimingProgress
+    let pending : PendingSourceEvents
+    let before = to_string(board)
+    let start = on_command_phase_start(board, core_progress, progress, pending, false)
+    let end = on_command_phase_end(board, core_progress, progress, pending, false)
+    return can start.choose_orks_timing_rule(board, core_progress, progress, pending, OrksTimingRule::war_cry) and !(can end.choose_orks_timing_rule(board, core_progress, progress, pending, OrksTimingRule::war_cry)) and to_string(board) == before
 
 # Newly generalized modifier terms must pass ordinary save validation too.
 # A forged divide-by-zero is rejected before core evaluates it (02.02.01).
@@ -15839,7 +15875,6 @@ fun test_ability_hooks_reject_invalid_unit_hit_term_on_save() -> Bool:
     term.amount = 0
     board.attack_info.unit_ability_hit_modifiers.append(term)
     return !valid_attack_results(board)
-
 
 # Every supported term must fit simultaneously. Generalizing the old Boolean
 # adds16 independent ability terms, not one slot (core p18; appendix02.02.02).

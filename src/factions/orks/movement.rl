@@ -829,3 +829,15 @@ fun append_orks_selected_move_permissions(Board board, Unit unit, MovementKind k
     let fallback = kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape
     permissions.shoot = permissions.shoot or (fallback and unit_has_orks_enhancement(unit, OrksEnhancement::kunnin_but_brutal))
     permissions.start_action = permissions.start_action or orks_move_action_permission(board, unit, kind)
+
+# Fortification exempts unshocked hazards; Wimp-kickaz modifies both batches;
+# Da Hunt's extra rolls alone suffer its extra shocked penalty (Orks cards).
+fun append_orks_escape_roll_effects(Board board, Unit unit, EscapeRollEffects effects):
+    effects.ignore_rolls = effects.ignore_rolls or (!unit.battle_socked and orks_engaged_only_fortifications(board, unit))
+    let penalty = orks_escape_penalty(board, unit)
+    if penalty != 0:
+        effects.ordinary_modifiers.append(rule_modifier(ModifierOperation::subtract, penalty))
+        effects.additional_modifiers.append(rule_modifier(ModifierOperation::subtract, penalty))
+    effects.additional_rolls = effects.additional_rolls.value + orks_extra_escape_hazards(board, unit)
+    if unit.battle_socked:
+        effects.additional_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))

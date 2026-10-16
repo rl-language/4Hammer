@@ -26,3 +26,26 @@ cls ObjectiveControlEffects:
 # The caller seeds its printed/common target; contributors may improve it.
 cls InvulnerableSavePermission:
     LinearlyDistributedInt<0, MAX_CHARACTERISTIC> target
+
+# Rolled-hit effects may need a window before critical hits turn into automatic
+# wounds. Generated hits are a different batch (core pp18/82; ability timing).
+cls HitResolutionPolicy:
+    Bool before_critical_conversion
+
+# Test success and roll arithmetic are distinct Battle-shock permissions.
+# Core still determines test/recovery eligibility (core p30).
+cls BattleShockRollEffects:
+    Bool automatic_success
+    RuleModifiers modifiers
+
+# Additional Hazardous checks count physical uses; they are not damage (p81).
+cls HazardousRollEffects:
+    FixedStat additional_uses
+
+# Escape's ordinary and additional batches may have different arithmetic.
+# An exception waives hazards only; it never permits shooting (core p33).
+cls EscapeRollEffects:
+    Bool ignore_rolls
+    FixedStat additional_rolls
+    RuleModifiers ordinary_modifiers
+    RuleModifiers additional_modifiers
