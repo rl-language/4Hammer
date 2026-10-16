@@ -1117,7 +1117,7 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
             info.engaged_hit_penalties = info.engaged_hit_penalties + 1
         if board.is_in_melee(board[target]) and (board[target].has_keyword(Keyword::monster) or board[target].has_keyword(Keyword::vehicle)):
             info.engaged_hit_penalties = info.engaged_hit_penalties + 1
-    info.squig_launcha_weapon = weapon.weapon_name.value == NamedWeapon::squig_launchas.value
+    info.squig_launcha_weapon = weapon.weapon_name.value == Weapon::orks_rukkatrukk_squigbuggies_squig_launchas.family_id()
     append_orks_attack_effects(board, source, target, weapon, info)
     return info
 
@@ -3039,7 +3039,7 @@ fun<T> pretty_string(Board b, T obj) -> String:
     if obj is GameSelectWeapon:
         if !(b.get_current_attacking_model().weapons.size() > obj.weapon_id.value):
             return to_string(obj)
-        return to_string(b.get_current_attacking_model().weapons[obj.weapon_id.value])
+        return to_string(b.get_current_attacking_model().weapons[obj.weapon_id.value].profile)
     if obj is GameChooseAttackWeapon:
         if obj.weapon.value < b.attack.declarations.size():
             return to_string(b.attack.declarations[obj.weapon.value].weapon)

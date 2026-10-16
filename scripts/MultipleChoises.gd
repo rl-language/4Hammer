@@ -262,7 +262,7 @@ func on_state_change():
 			var passenger = GlobalRules.library.get(board.get_embarked_units(), board.get_selected_passenger_bank().get_id().get_value())
 			var model = GlobalRules.library.get(passenger.get_models(), board.get_selected_passenger_model().get_id().get_value())
 			var weapon = GlobalRules.library.get(model.get_weapons(), unwrapped.get_member(0).get_value())
-			make_choise("Firing Deck: " + str(GlobalRules.library.as_string_literal(weapon)).replace("_", " "), action)
+			make_choise("Firing Deck: " + str(GlobalRules.library.as_string_literal(weapon.get_profile())).replace("_", " "), action)
 			added += 1
 		if unwrapped is RLCGameChooseDestructionUnit:
 			var dying_id = unwrapped.get_member(0).get_id().get_value()

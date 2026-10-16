@@ -152,8 +152,8 @@ cls CharacteristicModifier:
     # Ordinary bounded storage avoids a separate modifier vector per slot.
     LinearlyDistributedInt<0, MAX_WEAPON_SCOPES> weapon_scope
     # Optional conjunctive name predicates; zero means no named restriction.
-    WeaponNameCode weapon_name
-    WeaponProfileCode profile_name
+    WeaponCode weapon_name
+    WeaponCode profile_name
     # A nonzero representative slot may select every profile of that instance.
     Bool physical_scope
 
@@ -229,7 +229,7 @@ fun valid_characteristic_modifiers(CharacteristicModifiers modifiers) -> Bool:
             return false
         if entry.weapon_scope.value < 0 or entry.weapon_scope.value > MAX_WEAPONS or (entry.weapon_scope.value > 0 and !weapon_characteristic_kind(entry.characteristic)):
             return false
-        if entry.weapon_name.value < 0 or entry.weapon_name.value >= MAX_WEAPONNAMECODE or entry.profile_name.value < 0 or entry.profile_name.value >= MAX_WEAPONPROFILECODE:
+        if entry.weapon_name.value < 0 or entry.weapon_name.value >= MAX_WEAPON_CODE or entry.profile_name.value < 0 or entry.profile_name.value >= MAX_WEAPON_CODE:
             return false
         if (entry.weapon_name.value > 0 or entry.profile_name.value > 0 or entry.physical_scope) and !weapon_characteristic_kind(entry.characteristic):
             return false
@@ -283,15 +283,15 @@ fun valid_rule_modifiers(RuleModifiers modifiers) -> Bool:
 # Named grants affect every equipped copy/profile of that physical family;
 # e.g. Hunta Rig Fully Loaded Butchery names Butcha Boyz specifically:
 # https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig
-fun named_weapon_modifier(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, NamedWeapon name) -> CharacteristicModifier:
-    assert(weapon_characteristic_kind(kind) and name.value > 0 and name.value < MAX_WEAPONNAMECODE, "invalid named weapon grant")
+fun weapon_family_modifier(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, Weapon name) -> CharacteristicModifier:
+    assert(weapon_characteristic_kind(kind) and name.value >= 0 and name.value < MAX_WEAPON_CODE and name.value != Weapon::none.value, "invalid named weapon grant")
     let result = characteristic_modifier(kind, operation, amount)
-    result.weapon_name = name.value
+    result.weapon_name = name.family_id()
     return result
 
 # Profile-only restrictions do not become family-wide grants (04.01.03).
-fun named_profile_modifier(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, NamedWeaponProfile profile) -> CharacteristicModifier:
-    assert(weapon_characteristic_kind(kind) and profile.value > 0 and profile.value < MAX_WEAPONPROFILECODE, "invalid named profile grant")
+fun weapon_profile_modifier(ModifiedCharacteristic kind, ModifierOperation operation, Int amount, Weapon profile) -> CharacteristicModifier:
+    assert(weapon_characteristic_kind(kind) and profile.value >= 0 and profile.value < MAX_WEAPON_CODE and profile.value != Weapon::none.value, "invalid named profile grant")
     let result = characteristic_modifier(kind, operation, amount)
     result.profile_name = profile.value
     return result

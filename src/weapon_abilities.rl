@@ -15,28 +15,28 @@ fun same_weapon_ability(WeaponRuleKind left, WeaponRuleKind right) -> Bool:
 # Bounded rule snapshots allow fixtures/future data without inventing profiles (p.78).
 fun model_weapon_rules(Board board, UnitID source, Int model, Int slot) -> WeaponAbilitySet:
     let result : WeaponAbilitySet
-    let intrinsic = board[source][model].weapons[slot].rules()
+    let intrinsic = board[source][model].weapons[slot].profile.rules()
     for i in range(intrinsic.size()):
         result.append(intrinsic[i])
     for i in range(board[source][model].additional_weapon_rules[slot].size()):
         result.append(board[source][model].additional_weapon_rules[slot][i])
-    append_riled_assault_rules(board[source][model], board[source][model].weapons[slot], result)
+    append_riled_assault_rules(board[source][model], board[source][model].weapons[slot].profile, result)
     # War Horde/Get Stuck In supplies a distinct Sustained Hits1 instance;
     # select duplicate instances through the existing p78 ability choice.
-    if war_horde_melee_rule_applies(board, source, board[source][model].weapons[slot]):
+    if war_horde_melee_rule_applies(board, source, board[source][model].weapons[slot].profile):
         result.append(weapon_rule(WeaponRuleKind::sustained_hit, 1))
     let granted = board[source].get_temporary_weapon_rules()
     for i in range(granted.size()):
         result.append(granted[i])
     append_orks_package_weapon_rules(board, source, model, slot, result)
-    append_orks_datasheet_weapon_rules(board, source, board[source][model].weapons[slot], result)
+    append_orks_datasheet_weapon_rules(board, source, board[source][model].weapons[slot].profile, result)
     return result
 
 # Selection/eligibility uses ability presence before the target is declared (p.78).
 fun model_weapon_has_rule(Model model, Int slot, WeaponRuleKind kind) -> Bool:
-    if kind == WeaponRuleKind::assault and model.weapons[slot].range() > 0 and model.is_riled_up():
+    if kind == WeaponRuleKind::assault and model.weapons[slot].profile.range() > 0 and model.is_riled_up():
         return true
-    if model.weapons[slot].has_rule(kind):
+    if model.weapons[slot].profile.has_rule(kind):
         return true
     for i in range(model.additional_weapon_rules[slot].size()):
         if model.additional_weapon_rules[slot][i].kind == kind:
@@ -162,9 +162,9 @@ fun grant_model_weapon_rule(Board board, UnitID source, ModelID model, BInt<0, M
 # p.83 and supplied appendix 04.01.03: One Shot belongs to the physical
 # weapon; changing its selected profile cannot restore a spent weapon.
 fun consume_one_shot_profile(Model model, Int slot):
-    let group = model.weapon_profile_groups[slot].value
+    let group = weapon_primary_id(model, slot)
     for i in range(model.weapons.size()):
-        if i == slot or (group != 0 and model.weapon_profile_groups[i].value == group):
+        if weapon_primary_id(model, i) == group:
             model.used_once_per_battle_weapon[i] = true
 
 

@@ -548,14 +548,14 @@ fun source_grant_active(Board board, SourceEffectKey key) -> Bool:
 # Named/physical weapon grants keep the same conjunctive selector semantics as
 #17.C2c; a source does not grant every equipped weapon merely through timing.
 fun source_weapon_slot_matches(Model model, SourceWeaponGrant grant, Int slot) -> Bool:
-    if grant.weapon_name.value > 0 and grant.weapon_name != model.weapon_names[slot]:
+    if grant.weapon_name.value > 0 and grant.weapon_name != model.weapons[slot].profile.family_id():
         return false
-    if grant.profile_name.value > 0 and grant.profile_name != model.weapon_profile_names[slot]:
+    if grant.profile_name.value > 0 and grant.profile_name != model.weapons[slot].profile.value:
         return false
     if grant.weapon_scope.value == 0:
         return true
     let representative = grant.weapon_scope.value - 1
-    return representative == slot or (grant.physical_scope and representative < model.weapons.size() and model.weapon_profile_groups[representative].value > 0 and model.weapon_profile_groups[representative] == model.weapon_profile_groups[slot])
+    return representative == slot or (grant.physical_scope and representative < model.weapons.size() and weapon_primary_slot(model, representative) == weapon_primary_slot(model, slot))
 
 # Default source weapon grants cover equipped profiles; callers restrict them
 # by slot/physical instance/name/profile as the printed source requires.
@@ -583,7 +583,7 @@ fun valid_source_grant(SourceGrant grant) -> Bool:
     if grant is RiledUpGrant:
         valid = grant.enabled
     if grant is SourceWeaponGrant:
-        valid = valid_weapon_condition(grant.rule) and grant.rule.source_effect.value == 0 and grant.weapon_scope.value >= 0 and grant.weapon_scope.value < MAX_WEAPON_SCOPES and grant.weapon_name.value >= 0 and grant.weapon_name.value < MAX_WEAPONNAMECODE and grant.profile_name.value >= 0 and grant.profile_name.value < MAX_WEAPONPROFILECODE and (!grant.physical_scope or grant.weapon_scope.value > 0)
+        valid = valid_weapon_condition(grant.rule) and grant.rule.source_effect.value == 0 and grant.weapon_scope.value >= 0 and grant.weapon_scope.value < MAX_WEAPON_SCOPES and grant.weapon_name.value >= 0 and grant.weapon_name.value < MAX_WEAPON_CODE and grant.profile_name.value >= 0 and grant.profile_name.value < MAX_WEAPON_CODE and (!grant.physical_scope or grant.weapon_scope.value > 0)
     return valid
 
 # Persistent metadata is bounded infrastructure, not a license for new rules.

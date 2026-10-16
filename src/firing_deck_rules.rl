@@ -32,7 +32,7 @@ fun deck_weapon_valid(Board board, UnitID source, ModelID carrier, UnitID passen
     if slot < 0 or slot >= board.embarked_units[passenger.get()][model].weapons.size():
         return false
     ref passenger_model = board.embarked_units[passenger.get()][model]
-    ref weapon = passenger_model.weapons[slot]
+    ref weapon = passenger_model.weapons[slot].profile
     if weapon.range() <= 0 or model_weapon_has_rule(passenger_model, slot, WeaponRuleKind::one_shot) or passenger_model.used_once_per_battle_weapon[slot]:
         return false
     let pistol = close_quarters_weapon(weapon)
@@ -57,11 +57,11 @@ fun make_deck_declaration(Board board, UnitID source, ModelID carrier, UnitID pa
     result.borrowed_weapon = true
     result.model_identity = board[source][carrier].identity
     result.weapon_owner = board.embarked_units[passenger.get()][model].identity
-    result.physical_group = board.embarked_units[passenger.get()][model].weapon_profile_groups[slot]
+    result.physical_group = weapon_primary_id(board.embarked_units[passenger.get()][model], slot)
     result.slot = slot
-    result.weapon = board.embarked_units[passenger.get()][model].weapons[slot]
-    result.weapon_name = board.embarked_units[passenger.get()][model].weapon_names[slot]
-    result.profile_name = board.embarked_units[passenger.get()][model].weapon_profile_names[slot]
+    result.weapon = board.embarked_units[passenger.get()][model].weapons[slot].profile
+    result.weapon_name = board.embarked_units[passenger.get()][model].weapons[slot].profile.family_id()
+    result.profile_name = board.embarked_units[passenger.get()][model].weapons[slot].profile.value
     result.hunter_condition = board.embarked_units[passenger.get()][model].hunter_profile_conditions[slot]
     let intrinsic = result.weapon.rules()
     for intrinsic_index in range(intrinsic.size()):
@@ -92,14 +92,14 @@ fun carrier_has_ranged_rule(Board board, UnitID source, WeaponRuleKind kind) -> 
     for bearer in range(board[source].models.size()):
         if board[source][bearer].is_alive():
             for slot in range(board[source][bearer].weapons.size()):
-                found = found or board[source][bearer].weapons[slot].range() > 0 and available_weapon_has_rule(board, source, bearer, slot, kind)
+                found = found or board[source][bearer].weapons[slot].profile.range() > 0 and available_weapon_has_rule(board, source, bearer, slot, kind)
     for carrier_index in range(board[source].models.size()):
         if board[source][carrier_index].firing_deck.value > 0:
             for bank_unit in range(board.embarked_units.size()):
                 if board.embarked_units[bank_unit].embarked_transport == board[source][carrier_index].identity and !board.embarked_units[bank_unit].history.shot_this_phase:
                     for bank_model in range(board.embarked_units[bank_unit].models.size()):
                         for weapon_slot in range(board.embarked_units[bank_unit][bank_model].weapons.size()):
-                            if board.embarked_units[bank_unit][bank_model].weapons[weapon_slot].range() > 0 and !model_weapon_has_rule(board.embarked_units[bank_unit][bank_model], weapon_slot, WeaponRuleKind::one_shot):
+                            if board.embarked_units[bank_unit][bank_model].weapons[weapon_slot].profile.range() > 0 and !model_weapon_has_rule(board.embarked_units[bank_unit][bank_model], weapon_slot, WeaponRuleKind::one_shot):
                                 let carrier : ModelID
                                 carrier = carrier_index
                                 let passenger : UnitID

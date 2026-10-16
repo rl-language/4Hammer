@@ -56,8 +56,8 @@ using SourceRuleCode = LinearlyDistributedInt<0, 513>
 cls SourceWeaponGrant:
     WeaponRule rule
     LinearlyDistributedInt<0, MAX_WEAPON_SCOPES> weapon_scope
-    WeaponNameCode weapon_name
-    WeaponProfileCode profile_name
+    WeaponCode weapon_name
+    WeaponCode profile_name
     Bool physical_scope
 
 # Orks Waaagh! grants riled status as one owned effect, not three unrelated

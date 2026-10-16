@@ -98,45 +98,20 @@ fun finalize_orks_unit(Unit unit, OrksDatasheet tag):
     configure_orks_attachment(unit, tag)
     unit.capture_starting_strength()
 
-# Hunter eligibility is metadata on the equipped slot, not another weapon
-# instance (core p16; supplied appendix04.01.03 Multiple Weapon Profiles).
-fun equip_orks_profile(Model model, Weapon weapon, NamedWeaponProfile name, Int group, WeaponRule hunter_condition):
-    let slot = model.weapons.size()
-    equip_orks_profile(model, weapon, name, group)
-    model.hunter_profile_conditions[slot] = hunter_condition
-
-enum OrksBoyGunChoice:
-    shoota
-    big_shoota
-    rokkit_launcha
-    burna
-
 cls OrksBoyzLoadout:
     Bool nob
-    OrksNobMeleeChoice melee
-    OrksNobGunChoice nob_gun
-    OrksBoyGunChoice boy_gun
+    Weapon melee
+    Weapon nob_gun
+    Weapon boy_gun
 
 using OrksBoyzLoadouts = CheckedVector<OrksBoyzLoadout, MAX_UNIT_MODELS>
-
-enum OrksDreadArmChoice:
-    big_shoota
-    skorcha
-    extra_klaw
-    kustom_mega_blasta
-    rokkit_launcha
-
-enum OrksGunwagonGun:
-    kannon
-    killkannon
-    zzap_gun
 
 # Hull sizes are explicit millimetre circle proxies, never inferred dimensions.
 # User authorizes circular treatment of all noncircles; core p12 measurements.
 using OrksHullDiameter = LinearlyDistributedInt<0, 1001>
 
 cls OrksKommandoEquipment:
-    OrksNobMeleeChoice nob_melee
+    Weapon nob_melee
     Bool burna
     Bool rokkit
     Bool breacha_ram
@@ -144,83 +119,19 @@ cls OrksKommandoEquipment:
 
 using OrksKommandoLoadout = CheckedVector<OrksKommandoEquipment, 10>
 
-enum OrksMegaMekExtra:
-    none
-    tellyport_blasta
-    force_field
-
-# Big Mek in Mega Armour's independent replacement and optional extra slots.
-# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
-enum OrksMegaMekGun:
-    kustom_shoota
-    killsaw
-    kombi_weapon
-    mega_blasta
-
 # Independent replacements versus the combined Twin Killsaws replacement.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Meganobz
-enum OrksMeganobLoadout:
-    shoota_klaw
-    shoota_saw
-    kombi_klaw
-    kombi_saw
-    twin_saws
+using OrksMeganobLoadout = WeaponPair
 
 using OrksMeganobLoadouts = CheckedVector<OrksMeganobLoadout, 6>
 
-enum OrksMekGun:
-    smasha_gun
-    bubblechukka
-    kustom_mega_kannon
-    traktor_kannon
+using OrksMekGuns = CheckedVector<Weapon, 3>
 
-using OrksMekGuns = CheckedVector<OrksMekGun, 3>
+using OrksNobLoadouts = CheckedVector<Weapon, MAX_UNIT_MODELS>
 
-enum OrksNobGunChoice:
-    kombi_skorcha
-    kombi_rokkit
-    kustom_shoota
-    none
-
-enum OrksNobLoadout:
-    standard
-    kombi_rokkit
-    paired_krumpas
-    big_skorcha
-    kustom_big_shoota
-    big_choppa
-
-using OrksNobLoadouts = CheckedVector<OrksNobLoadout, MAX_UNIT_MODELS>
-
-# Finite per-model muster choices encode the printed replacements, not prices.
-# Sources: Orks/Boyz, Nobz, Warboss and Deff-Dread (11th-edition version1.2).
-enum OrksNobMeleeChoice:
-    kustom_choppa
-    power_klaw
-    big_choppa
-
-# The one optional Boy gets another physical launcher OR the Pulsa token.
-# https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
-enum OrksTankbustaExtra:
-    none
-    additional_launcher
-    pulsa
-
-enum OrksTrukkExtra:
-    none
-    buzzsaw
-    grabbin_klaw
-
+# Per-weapon swaps for the current six-profile vehicle envelope; source-card
+# factories validate which physical copies permit replacement.
 using OrksVehicleSwaps = CheckedVector<Bool, 6>
-
-# One owned slot per printed profile, with a stable physical family/name.
-# Multi-profile groups share one weapon (core p16; appendix04.01.03).
-fun equip_orks_profile(Model model, Weapon weapon, NamedWeaponProfile name, Int group):
-    assert(group >= 0 and group < MAX_WEAPON_SCOPES, "invalid physical weapon group")
-    let slot = model.weapons.size()
-    model.weapons.append(weapon)
-    set_named_weapon_profile(model, slot, name)
-    model.weapon_profile_groups[slot] = group
 
 # Source adapters set real faction/datasheet/Army Rules metadata. They do not
 # grant old Beast Snagga/FNP abilities or infer keywords from a factory name.
@@ -236,31 +147,24 @@ fun make_orks_model(Profile profile, OrksDatasheet tag) -> Model:
 # Independent arm replacements preserve physical identity, including two
 # distinct Extra Klaws. Neither swap removes the obligatory Dread Klaws.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread
-fun equip_orks_dread_arm(Model model, OrksDreadArmChoice choice, Int group):
-    if choice.value == OrksDreadArmChoice::big_shoota.value:
-        equip_orks_profile(model, Weapon::orks_dread_big_shoota, NamedWeaponProfile::big_shoota, group)
-    if choice.value == OrksDreadArmChoice::skorcha.value:
-        equip_orks_profile(model, Weapon::orks_skorcha, NamedWeaponProfile::skorcha, group)
-    if choice.value == OrksDreadArmChoice::extra_klaw.value:
-        equip_orks_profile(model, Weapon::orks_extra_klaw, NamedWeaponProfile::extra_klaw, group)
-    if choice.value == OrksDreadArmChoice::kustom_mega_blasta.value:
-        equip_orks_profile(model, Weapon::orks_kustom_mega_blasta, NamedWeaponProfile::kustom_mega_blasta, group)
-    if choice.value == OrksDreadArmChoice::rokkit_launcha.value:
-        equip_orks_profile(model, Weapon::orks_rokkit_launcha_blasta, NamedWeaponProfile::rokkit_launcha_blasta, group)
-        equip_orks_profile(model, Weapon::orks_rokkit_launcha_busta, NamedWeaponProfile::rokkit_launcha_busta, group)
+fun equip_orks_dread_arm(Model model, Weapon choice):
+    assert(weapon_allowed(choice, orks_dread_arm_choices()), "invalid Dread arm")
+    let primary = model.weapons.size() + 1
+    equip_weapon(model, choice, 0)
+    if choice.value == Weapon::orks_rokkit_launcha_blasta.value:
+        equip_weapon(model, Weapon::orks_rokkit_launcha_busta, primary)
 
 # Combi profiles share a physical group and require one selected profile.
 # Boyz/Warboss printed equipment; appendix04.01.03/core p16.
-fun equip_orks_nob_gun(Model model, OrksNobGunChoice choice):
-    assert(choice.value >= 0 and choice.value <= 3, "invalid Nob gun choice")
-    if choice.value == OrksNobGunChoice::kombi_skorcha.value:
-        equip_orks_profile(model, Weapon::orks_kombi_skorcha_shoota, NamedWeaponProfile::kombi_skorcha_shoota, 1)
-        equip_orks_profile(model, Weapon::orks_kombi_skorcha_skorcha, NamedWeaponProfile::kombi_skorcha_skorcha, 1)
-    if choice.value == OrksNobGunChoice::kombi_rokkit.value:
-        equip_orks_profile(model, Weapon::orks_kombi_rokkit_busta, NamedWeaponProfile::kombi_rokkit_busta_rokkit, 1)
-        equip_orks_profile(model, Weapon::orks_kombi_rokkit_shoota, NamedWeaponProfile::kombi_rokkit_shoota, 1)
-    if choice.value == OrksNobGunChoice::kustom_shoota.value:
-        equip_orks_profile(model, Weapon::orks_kustom_shoota, NamedWeaponProfile::kustom_shoota, 0)
+fun equip_orks_nob_gun(Model model, Weapon choice):
+    assert(weapon_allowed(choice, orks_nob_gun_choices()), "invalid Nob gun choice")
+    let primary = model.weapons.size() + 1
+    if choice.value != Weapon::none.value:
+        equip_weapon(model, choice, 0)
+    if choice.value == Weapon::orks_kombi_skorcha_shoota.value:
+        equip_weapon(model, Weapon::orks_kombi_skorcha_skorcha, primary)
+    if choice.value == Weapon::orks_kombi_rokkit_busta.value:
+        equip_weapon(model, Weapon::orks_kombi_rokkit_shoota, primary)
 
 # Waaagh! Banner confers+1 charge through current unit source membership.
 # The separate raw HTML box supplies its5+ InSv, omitted by text extraction.
@@ -272,8 +176,8 @@ fun make_orks_bannernob() -> Unit:
     model.keywords.append(Keyword::infantry)
     model.keywords.append(Keyword::character)
     model.abilities.append(AbilityKind::waaagh_banner)
-    equip_orks_profile(model, Weapon::orks_shoota, NamedWeaponProfile::shoota, 0)
-    equip_orks_profile(model, Weapon::orks_kustom_choppa, NamedWeaponProfile::kustom_choppa, 0)
+    equip_weapon(model, Weapon::orks_shoota, 0)
+    equip_weapon(model, Weapon::orks_kustom_choppa, 0)
     unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::bannernob)
     return unit
@@ -304,16 +208,12 @@ fun make_orks_battlewagon(Int hull_mm, Int big_shootas, Bool ball, Bool klaw) ->
     assert(big_shootas >= 0 and big_shootas <= 4, "invalid extra Big Shootas")
     assert((big_shootas) >= 0 and (big_shootas) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(big_shootas):
-        let weapon_group_1 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_battlewagon_big_shoota, NamedWeaponProfile::big_shoota, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_battlewagon_crushin_bulk, NamedWeaponProfile::crushin_bulk, weapon_group_2)
+        equip_weapon(model, Weapon::orks_battlewagon_big_shoota, 0)
+    equip_weapon(model, Weapon::orks_battlewagon_crushin_bulk, 0)
     if ball:
-        let weapon_group_3 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_battlewagon_wreckin_ball, NamedWeaponProfile::wreckin_ball, weapon_group_3)
+        equip_weapon(model, Weapon::orks_battlewagon_wreckin_ball, 0)
     if klaw:
-        let weapon_group_4 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_battlewagon_grabbin_klaw, NamedWeaponProfile::grabbin_klaw, weapon_group_4)
+        equip_weapon(model, Weapon::orks_battlewagon_grabbin_klaw, 0)
     let unit : Unit
     unit.name = "Battlewagon"s
     unit.models.append(model)
@@ -348,8 +248,8 @@ fun make_orks_beastboss() -> Unit:
     model.has_da_boss = true
     model.abilities.append(AbilityKind::dodge_dis)
     model.abilities.append(AbilityKind::keep_huntin)
-    equip_orks_profile(model, Weapon::orks_beastboss_shoota, NamedWeaponProfile::shoota, 0)
-    equip_orks_profile(model, Weapon::orks_beastboss_klaw_and_beastchoppa, NamedWeaponProfile::beast_snagga_klaw_and_beastchoppa, 0)
+    equip_weapon(model, Weapon::orks_beastboss_shoota, 0)
+    equip_weapon(model, Weapon::orks_beastboss_klaw_and_beastchoppa, 0)
     unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::beastboss)
     return unit
@@ -369,13 +269,14 @@ fun make_orks_beastboss_on_squigosaur(Bool thump_gun) -> Unit:
     model.abilities.append(AbilityKind::keep_huntin)
     model.abilities.append(AbilityKind::thundering_stampede)
     model.abilities.append(AbilityKind::boss_of_da_hunt)
-    equip_orks_profile(model, Weapon::orks_slugga, NamedWeaponProfile::slugga, 0)
-    equip_orks_profile(model, Weapon::orks_beastchoppa_standard, NamedWeaponProfile::beastchoppa_standard, 1)
-    equip_orks_profile(model, Weapon::orks_beastchoppa_hunter, NamedWeaponProfile::beastchoppa_hunter, 1)
+    equip_weapon(model, Weapon::orks_slugga, 0)
+    let primary_profile_12 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_beastchoppa_standard, 0)
+    equip_weapon(model, Weapon::orks_beastchoppa_hunter, primary_profile_12)
     model.hunter_profile_conditions[2] = orks_monster_vehicle_rule(WeaponRuleKind::anti, 0)
-    equip_orks_profile(model, Weapon::orks_squigosaur_jaws, NamedWeaponProfile::squigosaur_s_jaws, 0)
+    equip_weapon(model, Weapon::orks_squigosaur_jaws, 0)
     if thump_gun:
-        equip_orks_profile(model, Weapon::orks_thump_gun, NamedWeaponProfile::thump_gun, 0)
+        equip_weapon(model, Weapon::orks_thump_gun, 0)
     unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::beastboss_on_squigosaur)
     return unit
@@ -407,11 +308,10 @@ fun make_orks_big_ed_bossbunka(Int hull_mm, Int big_shootas) -> Unit:
     assert(big_shootas >= 0 and big_shootas <= 3, "invalid extra Big Shootas")
     assert((big_shootas + 1) >= 0 and (big_shootas + 1) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(big_shootas + 1):
-        let weapon_group_1 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_big_ed_bossbunka_big_shoota, NamedWeaponProfile::big_shoota, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_big_ed_bossbunka_gaze_of_gork_glare, NamedWeaponProfile::gaze_of_gork_glare, weapon_group_2)
-    equip_orks_profile(model, Weapon::orks_big_ed_bossbunka_gaze_of_gork_squint, NamedWeaponProfile::gaze_of_gork_squint, weapon_group_2)
+        equip_weapon(model, Weapon::orks_big_ed_bossbunka_big_shoota, 0)
+    let primary_profile_14 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_big_ed_bossbunka_gaze_of_gork_glare, 0)
+    equip_weapon(model, Weapon::orks_big_ed_bossbunka_gaze_of_gork_squint, primary_profile_14)
     let unit : Unit
     unit.name = "Big ed Bossbunka"s
     unit.models.append(model)
@@ -427,13 +327,13 @@ fun make_orks_big_mek(Bool drilla, Bool traktor) -> Unit:
     model.abilities.append(AbilityKind::more_dakka)
     model.abilities.append(AbilityKind::shokk_boosta)
     if drilla:
-        equip_orks_profile(model, Weapon::orks_big_mek_drilla, NamedWeaponProfile::drilla, 0)
+        equip_weapon(model, Weapon::orks_big_mek_drilla, 0)
     else:
-        equip_orks_profile(model, Weapon::orks_big_mek_power_klaw, NamedWeaponProfile::power_klaw, 0)
+        equip_weapon(model, Weapon::orks_big_mek_power_klaw, 0)
     if traktor:
-        equip_orks_profile(model, Weapon::orks_big_mek_traktor_blasta, NamedWeaponProfile::traktor_blasta, 0)
+        equip_weapon(model, Weapon::orks_big_mek_traktor_blasta, 0)
     else:
-        equip_orks_profile(model, Weapon::orks_big_mek_kustom_mega_blasta, NamedWeaponProfile::kustom_mega_blasta, 0)
+        equip_weapon(model, Weapon::orks_big_mek_kustom_mega_blasta, 0)
     let unit : Unit
     unit.name = "Big Mek"s
     unit.models.append(model)
@@ -455,15 +355,15 @@ fun make_orks_big_mek_dakkarig() -> Unit:
     model.deadly_demise = raw_stat(1)
     model.abilities.append(AbilityKind::even_more_dakka)
     model.abilities.append(AbilityKind::blitz_dem_gitz)
-    equip_orks_profile(model, Weapon::orks_blitzkannon, NamedWeaponProfile::blitzkannon, 0)
-    equip_orks_profile(model, Weapon::orks_multi_busta_launcha, NamedWeaponProfile::multi_busta_launcha, 0)
-    equip_orks_profile(model, Weapon::orks_stompy_feet, NamedWeaponProfile::stompy_feet, 0)
+    equip_weapon(model, Weapon::orks_blitzkannon, 0)
+    equip_weapon(model, Weapon::orks_multi_busta_launcha, 0)
+    equip_weapon(model, Weapon::orks_stompy_feet, 0)
     unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::big_mek_dakkarig)
     return unit
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
-fun make_orks_big_mek_in_mega_armour(OrksMegaMekGun gun, OrksMegaMekExtra extra) -> Unit:
+fun make_orks_big_mek_in_mega_armour(Weapon gun, Weapon extra) -> Unit:
     let model = make_orks_model(Profile::orks_big_mek_in_mega_armour, OrksDatasheet::big_mek_in_mega_armour)
     model.keywords.append(Keyword::infantry)
     model.keywords.append(Keyword::character)
@@ -473,22 +373,19 @@ fun make_orks_big_mek_in_mega_armour(OrksMegaMekGun gun, OrksMegaMekExtra extra)
     model.transport_space = 2
     model.abilities.append(AbilityKind::more_dakka)
     model.abilities.append(AbilityKind::fix_dat_armour_up)
-    assert(gun.value >= 0 and gun.value <= 3 and extra.value >= 0 and extra.value <= 2, "invalid Mega Mek equipment")
-    equip_orks_profile(model, Weapon::orks_big_mek_in_mega_armour_power_klaw, NamedWeaponProfile::power_klaw, 0)
-    if gun.value == OrksMegaMekGun::kustom_shoota.value:
-        equip_orks_profile(model, Weapon::orks_big_mek_in_mega_armour_kustom_shoota_aimed, NamedWeaponProfile::kustom_shoota_aimed, 1)
-        equip_orks_profile(model, Weapon::orks_big_mek_in_mega_armour_kustom_shoota_point_blank, NamedWeaponProfile::kustom_shoota_point_blank, 1)
-    if gun.value == OrksMegaMekGun::kombi_weapon.value:
-        equip_orks_profile(model, Weapon::orks_big_mek_in_mega_armour_kombi_weapon_shoota, NamedWeaponProfile::kombi_weapon_shoota, 1)
-        equip_orks_profile(model, Weapon::orks_big_mek_in_mega_armour_kombi_weapon_kill_shot, NamedWeaponProfile::kombi_weapon_kill_shot, 1)
-        equip_orks_profile(model, Weapon::orks_big_mek_in_mega_armour_kombi_weapon_point_blank, NamedWeaponProfile::kombi_weapon_point_blank, 1)
-    if gun.value == OrksMegaMekGun::killsaw.value:
-        equip_orks_profile(model, Weapon::orks_big_mek_in_mega_armour_killsaw, NamedWeaponProfile::killsaw, 0)
-    if gun.value == OrksMegaMekGun::mega_blasta.value:
-        equip_orks_profile(model, Weapon::orks_big_mek_in_mega_armour_kustom_mega_blasta, NamedWeaponProfile::kustom_mega_blasta, 0)
-    if extra.value == OrksMegaMekExtra::tellyport_blasta.value:
-        equip_orks_profile(model, Weapon::orks_big_mek_in_mega_armour_tellyport_blasta, NamedWeaponProfile::tellyport_blasta, 0)
-    if extra.value == OrksMegaMekExtra::force_field.value:
+    assert(weapon_allowed(gun, orks_mega_mek_gun_choices()) and weapon_allowed(extra, orks_mega_mek_extra_choices()), "invalid Mega Mek equipment")
+    equip_weapon(model, Weapon::orks_big_mek_in_mega_armour_power_klaw, 0)
+    let primary = model.weapons.size() + 1
+    equip_weapon(model, gun, 0)
+    if gun.value == Weapon::orks_big_mek_in_mega_armour_kustom_shoota_aimed.value:
+        equip_weapon(model, Weapon::orks_big_mek_in_mega_armour_kustom_shoota_point_blank, primary)
+    if gun.value == Weapon::orks_big_mek_in_mega_armour_kombi_weapon_shoota.value:
+        equip_weapon(model, Weapon::orks_big_mek_in_mega_armour_kombi_weapon_kill_shot, primary)
+        equip_weapon(model, Weapon::orks_big_mek_in_mega_armour_kombi_weapon_point_blank, primary)
+    if extra.value == Weapon::orks_big_mek_in_mega_armour_tellyport_blasta.value:
+        equip_weapon(model, Weapon::orks_big_mek_in_mega_armour_tellyport_blasta, 0)
+    if extra.value == Weapon::orks_kustom_force_field.value:
+        equip_weapon(model, extra, 0)
         model.abilities.append(AbilityKind::kustom_force_field)
     let unit : Unit
     unit.name = "Big Mek In Mega Armour"s
@@ -505,8 +402,8 @@ fun make_orks_big_mek_with_shokk_attack_gun() -> Unit:
     model.keywords.append(Keyword::explosives)
     model.abilities.append(AbilityKind::more_dakka)
     model.abilities.append(AbilityKind::support_shokka)
-    equip_orks_profile(model, Weapon::orks_big_mek_with_shokk_attack_gun_shokk_attack_gun, NamedWeaponProfile::shokk_attack_gun, 0)
-    equip_orks_profile(model, Weapon::orks_big_mek_with_shokk_attack_gun_big_mek_s_toolz, NamedWeaponProfile::big_mek_s_toolz, 0)
+    equip_weapon(model, Weapon::orks_big_mek_with_shokk_attack_gun_shokk_attack_gun, 0)
+    equip_weapon(model, Weapon::orks_big_mek_with_shokk_attack_gun_big_mek_s_toolz, 0)
     let unit : Unit
     unit.name = "Big Mek With Shokk Attack Gun"s
     unit.models.append(model)
@@ -522,8 +419,8 @@ fun make_orks_bigboss() -> Unit:
     model.keywords.append(Keyword::infantry)
     model.keywords.append(Keyword::character)
     model.abilities.append(AbilityKind::sumfin_to_prove)
-    equip_orks_profile(model, Weapon::orks_slugga, NamedWeaponProfile::slugga, 0)
-    equip_orks_profile(model, Weapon::orks_bigboss_big_choppa, NamedWeaponProfile::big_choppa, 0)
+    equip_weapon(model, Weapon::orks_slugga, 0)
+    equip_weapon(model, Weapon::orks_bigboss_big_choppa, 0)
     unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::bigboss)
     return unit
@@ -542,12 +439,9 @@ fun make_orks_blitza_bommer() -> Unit:
     model.has_deadly_demise = true
     model.deadly_demise = dice_stat(3)
 
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_blitza_bommer_big_shoota, NamedWeaponProfile::big_shoota, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_blitza_bommer_dual_supa_shoota, NamedWeaponProfile::dual_supa_shoota, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_blitza_bommer_armoured_impact, NamedWeaponProfile::armoured_impact, weapon_group_3)
+    equip_weapon(model, Weapon::orks_blitza_bommer_big_shoota, 0)
+    equip_weapon(model, Weapon::orks_blitza_bommer_dual_supa_shoota, 0)
+    equip_weapon(model, Weapon::orks_blitza_bommer_armoured_impact, 0)
     let unit : Unit
     unit.name = "Blitza bommer"s
     unit.models.append(model)
@@ -569,10 +463,8 @@ fun make_orks_boss_snikrot() -> Unit:
     model.abilities.append(AbilityKind::lone_operative)
     model.abilities.append(AbilityKind::stealth)
 
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_boss_snikrot_slugga, NamedWeaponProfile::slugga, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_boss_snikrot_mork_s_teef, NamedWeaponProfile::mork_s_teef, weapon_group_2)
+    equip_weapon(model, Weapon::orks_boss_snikrot_slugga, 0)
+    equip_weapon(model, Weapon::orks_boss_snikrot_mork_s_teef, 0)
     let unit : Unit
     unit.name = "Boss Snikrot"s
     unit.models.append(model)
@@ -597,7 +489,7 @@ fun make_orks_boyz(Int nobs, Int boys) -> Unit:
     assert(nobs >= 1 and nobs <= 2 and boys >= 9 and boys <= 18, "illegal Boyz counts")
     let equipment : OrksBoyzLoadouts
     for index in range(nobs + boys):
-        let item : OrksBoyzLoadout
+        let item = orks_boy_loadout()
         item.nob = index < nobs
         equipment.append(item)
     return make_orks_boyz(equipment)
@@ -618,19 +510,20 @@ fun make_orks_breaka_boyz(Bool nob_pistols, Int knuckles, Int tankhammer) -> Uni
         model.abilities.append(AbilityKind::bomb_squig)
         model.abilities.append(AbilityKind::trophy_hunters)
         if index == 0:
-            equip_orks_profile(model, Weapon::orks_breaka_boyz_choppa, NamedWeaponProfile::choppa, 0)
-            equip_orks_profile(model, Weapon::orks_breaka_boyz_rokkit_pistol, NamedWeaponProfile::rokkit_pistol, 0)
+            equip_weapon(model, Weapon::orks_breaka_boyz_choppa, 0)
+            equip_weapon(model, Weapon::orks_breaka_boyz_rokkit_pistol, 0)
             if nob_pistols:
-                equip_orks_profile(model, Weapon::orks_breaka_boyz_rokkit_pistol, NamedWeaponProfile::rokkit_pistol, 0)
+                equip_weapon(model, Weapon::orks_breaka_boyz_rokkit_pistol, 0)
         if index > 0 and knuckles == index - 1:
-            equip_orks_profile(model, Weapon::orks_breaka_boyz_knucklebustas, NamedWeaponProfile::knucklebustas, 0)
+            equip_weapon(model, Weapon::orks_breaka_boyz_knucklebustas, 0)
         else:
             if index > 0 and tankhammer == index - 1:
-                equip_orks_profile(model, Weapon::orks_breaka_boyz_tankhammer, NamedWeaponProfile::tankhammer, 0)
+                equip_weapon(model, Weapon::orks_breaka_boyz_tankhammer, 0)
             else:
                 if index > 0 or !nob_pistols:
-                    equip_orks_profile(model, Weapon::orks_breaka_boyz_smash_hammer_standard, NamedWeaponProfile::smash_hammer_standard, 1)
-                    equip_orks_profile(model, Weapon::orks_breaka_boyz_smash_hammer_hunter, NamedWeaponProfile::smash_hammer_hunter, 1, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
+                    let primary_profile_22 = model.weapons.size() + 1
+                    equip_weapon(model, Weapon::orks_breaka_boyz_smash_hammer_standard, 0)
+                    equip_weapon(model, Weapon::orks_breaka_boyz_smash_hammer_hunter, primary_profile_22, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::breaka_boyz)
     return unit
@@ -649,15 +542,11 @@ fun make_orks_burna_bommer(Bool missile_rack) -> Unit:
     model.has_deadly_demise = true
     model.deadly_demise = dice_stat(3)
 
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_burna_bommer_dual_big_shoota, NamedWeaponProfile::dual_big_shoota, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_burna_bommer_dual_supa_shoota, NamedWeaponProfile::dual_supa_shoota, weapon_group_2)
+    equip_weapon(model, Weapon::orks_burna_bommer_dual_big_shoota, 0)
+    equip_weapon(model, Weapon::orks_burna_bommer_dual_supa_shoota, 0)
     if missile_rack:
-        let weapon_group_3 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_burna_bommer_skorcha_missile_rack, NamedWeaponProfile::skorcha_missile_rack, weapon_group_3)
-    let weapon_group_4 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_burna_bommer_armoured_impact, NamedWeaponProfile::armoured_impact, weapon_group_4)
+        equip_weapon(model, Weapon::orks_burna_bommer_skorcha_missile_rack, 0)
+    equip_weapon(model, Weapon::orks_burna_bommer_armoured_impact, 0)
     let unit : Unit
     unit.name = "Burna bommer"s
     unit.models.append(model)
@@ -680,10 +569,8 @@ fun make_orks_dakkajet(Bool third_gun) -> Unit:
 
     assert((2 + int(third_gun)) >= 0 and (2 + int(third_gun)) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(2 + int(third_gun)):
-        let weapon_group_1 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_dakkajet_dual_supa_shoota, NamedWeaponProfile::dual_supa_shoota, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_dakkajet_armoured_impact, NamedWeaponProfile::armoured_impact, weapon_group_2)
+        equip_weapon(model, Weapon::orks_dakkajet_dual_supa_shoota, 0)
+    equip_weapon(model, Weapon::orks_dakkajet_armoured_impact, 0)
     let unit : Unit
     unit.name = "Dakkajet"s
     unit.models.append(model)
@@ -693,8 +580,8 @@ fun make_orks_dakkajet(Bool third_gun) -> Unit:
 # The Big Shoota arm cannot take Skorcha; the Skorcha arm can take Big Shoota.
 # Dread 'Ard enters incoming D arithmetic (both attack types); demise is fixed1.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread
-fun make_orks_deff_dread(OrksDreadArmChoice first, OrksDreadArmChoice second) -> Unit:
-    assert(first.value >= 0 and first.value < 5 and first.value != OrksDreadArmChoice::skorcha.value and second.value >= 0 and second.value < 5, "illegal Deff Dread arms")
+fun make_orks_deff_dread(Weapon first, Weapon second) -> Unit:
+    assert(weapon_allowed(first, orks_dread_arm_choices()) and first.value != Weapon::orks_skorcha.value and weapon_allowed(second, orks_dread_arm_choices()), "illegal Deff Dread arms")
     let unit : Unit
     unit.name = "Deff Dread"s
     let model = make_orks_model(Profile::orks_deff_dread, OrksDatasheet::deff_dread)
@@ -703,9 +590,9 @@ fun make_orks_deff_dread(OrksDreadArmChoice first, OrksDreadArmChoice second) ->
     model.has_deadly_demise = true
     model.deadly_demise = raw_stat(1)
     model.incoming_attack_modifiers.append(incoming_attack_modifier(ModifiedCharacteristic::damage, ModifierOperation::add, -1, IncomingAttackScope::any_attack))
-    equip_orks_profile(model, Weapon::orks_dread_klaws, NamedWeaponProfile::dread_klaws, 0)
-    equip_orks_dread_arm(model, first, 1)
-    equip_orks_dread_arm(model, second, 2)
+    equip_weapon(model, Weapon::orks_dread_klaws, 0)
+    equip_orks_dread_arm(model, first)
+    equip_orks_dread_arm(model, second)
     unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::deff_dread)
     return unit
@@ -713,7 +600,7 @@ fun make_orks_deff_dread(OrksDreadArmChoice first, OrksDreadArmChoice second) ->
 # Standard printed Dread: one Big Shoota, one Skorcha and Dread Klaws.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread
 fun make_orks_deff_dread() -> Unit:
-    return make_orks_deff_dread(OrksDreadArmChoice::big_shoota, OrksDreadArmChoice::skorcha)
+    return make_orks_deff_dread(Weapon::orks_dread_big_shoota, Weapon::orks_skorcha)
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Deffkilla-Wartrike: equipment/composition.
 fun make_orks_deffkilla_wartrike() -> Unit:
@@ -729,14 +616,13 @@ fun make_orks_deffkilla_wartrike() -> Unit:
     model.has_deadly_demise = true
     model.deadly_demise = raw_stat(1)
 
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_deffkilla_wartrike_boomstikks, NamedWeaponProfile::boomstikks, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_deffkilla_wartrike_snagga_klaw_ranged, NamedWeaponProfile::snagga_klaw_ranged, weapon_group_2)
-    equip_orks_profile(model, Weapon::orks_deffkilla_wartrike_snagga_klaw_melee, NamedWeaponProfile::snagga_klaw_melee, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_deffkilla_wartrike_killa_jet_burna, NamedWeaponProfile::killa_jet_burna, weapon_group_3)
-    equip_orks_profile(model, Weapon::orks_deffkilla_wartrike_killa_jet_cutta, NamedWeaponProfile::killa_jet_cutta, weapon_group_3)
+    equip_weapon(model, Weapon::orks_deffkilla_wartrike_boomstikks, 0)
+    let primary_profile_30 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_deffkilla_wartrike_snagga_klaw_ranged, 0)
+    equip_weapon(model, Weapon::orks_deffkilla_wartrike_snagga_klaw_melee, primary_profile_30)
+    let primary_profile_31 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_deffkilla_wartrike_killa_jet_burna, 0)
+    equip_weapon(model, Weapon::orks_deffkilla_wartrike_killa_jet_cutta, primary_profile_31)
     let unit : Unit
     unit.name = "Deffkilla Wartrike"s
     unit.models.append(model)
@@ -765,18 +651,14 @@ fun make_orks_deffkoptas(OrksVehicleSwaps swaps) -> Unit:
         model.abilities.append(AbilityKind::deep_strike)
 
         if swaps[item_index]:
-            let weapon_group_1 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_deffkoptas_kustom_mega_blasta, NamedWeaponProfile::kustom_mega_blasta, weapon_group_1)
+            equip_weapon(model, Weapon::orks_deffkoptas_kustom_mega_blasta, 0)
         else:
-            let weapon_group_2 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_deffkoptas_rokkit_launcha_blasta, NamedWeaponProfile::rokkit_launcha_blasta, weapon_group_2)
-            equip_orks_profile(model, Weapon::orks_deffkoptas_rokkit_launcha_busta, NamedWeaponProfile::rokkit_launcha_busta, weapon_group_2)
-        let weapon_group_3 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_deffkoptas_slugga, NamedWeaponProfile::slugga, weapon_group_3)
-        let weapon_group_4 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_deffkoptas_choppa, NamedWeaponProfile::choppa, weapon_group_4)
-        let weapon_group_5 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_deffkoptas_spinnin_blades, NamedWeaponProfile::spinnin_blades, weapon_group_5)
+            let primary_profile_33 = model.weapons.size() + 1
+            equip_weapon(model, Weapon::orks_deffkoptas_rokkit_launcha_blasta, 0)
+            equip_weapon(model, Weapon::orks_deffkoptas_rokkit_launcha_busta, primary_profile_33)
+        equip_weapon(model, Weapon::orks_deffkoptas_slugga, 0)
+        equip_weapon(model, Weapon::orks_deffkoptas_choppa, 0)
+        equip_weapon(model, Weapon::orks_deffkoptas_spinnin_blades, 0)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::deffkoptas)
     return unit
@@ -796,10 +678,11 @@ fun make_orks_flash_gitz(Int gitz) -> Unit:
         model.keywords.append(Keyword::infantry)
         model.keywords.append(Keyword::explosives)
         model.abilities.append(AbilityKind::finderz_keeperz)
-        equip_orks_profile(model, Weapon::orks_flash_gitz_snazzgun_cutta, NamedWeaponProfile::snazzgun_cutta, 1)
-        equip_orks_profile(model, Weapon::orks_flash_gitz_snazzgun_dakka, NamedWeaponProfile::snazzgun_dakka, 1)
-        equip_orks_profile(model, Weapon::orks_flash_gitz_snazzgun_kill_shot, NamedWeaponProfile::snazzgun_kill_shot, 1)
-        equip_orks_profile(model, Weapon::orks_flash_gitz_choppa, NamedWeaponProfile::choppa, 0)
+        let primary_profile_37 = model.weapons.size() + 1
+        equip_weapon(model, Weapon::orks_flash_gitz_snazzgun_cutta, 0)
+        equip_weapon(model, Weapon::orks_flash_gitz_snazzgun_dakka, primary_profile_37)
+        equip_weapon(model, Weapon::orks_flash_gitz_snazzgun_kill_shot, primary_profile_37)
+        equip_weapon(model, Weapon::orks_flash_gitz_choppa, 0)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::flash_gitz)
     return unit
@@ -820,13 +703,11 @@ fun make_orks_ghazghkull_thraka() -> Unit:
 
     model.must_be_warlord = true
     model.transport_space = 4
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_ghazghkull_thraka_mork_s_roar_aimed, NamedWeaponProfile::mork_s_roar_aimed, weapon_group_1)
-    equip_orks_profile(model, Weapon::orks_ghazghkull_thraka_mork_s_roar_point_blank, NamedWeaponProfile::mork_s_roar_point_blank, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_ghazghkull_thraka_adamantine_eadbutt, NamedWeaponProfile::adamantine_eadbutt, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_ghazghkull_thraka_gork_s_klaw, NamedWeaponProfile::gork_s_klaw, weapon_group_3)
+    let primary_profile_38 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_ghazghkull_thraka_mork_s_roar_aimed, 0)
+    equip_weapon(model, Weapon::orks_ghazghkull_thraka_mork_s_roar_point_blank, primary_profile_38)
+    equip_weapon(model, Weapon::orks_ghazghkull_thraka_adamantine_eadbutt, 0)
+    equip_weapon(model, Weapon::orks_ghazghkull_thraka_gork_s_klaw, 0)
     let unit : Unit
     unit.name = "Ghazghkull Thraka"s
     unit.models.append(model)
@@ -855,22 +736,19 @@ fun make_orks_gorkanaut() -> Unit:
     model.permitted_passenger_keywords.append(Keyword::infantry)
     model.orks_transport_permissions = true
     model.forbid_ghaz_passenger = true
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_gorkanaut_deffstorm_mega_shoota_aimed, NamedWeaponProfile::deffstorm_mega_shoota_aimed, weapon_group_1)
-    equip_orks_profile(model, Weapon::orks_gorkanaut_deffstorm_mega_shoota_point_blank, NamedWeaponProfile::deffstorm_mega_shoota_point_blank, weapon_group_1)
+    let primary_profile_41 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_gorkanaut_deffstorm_mega_shoota_aimed, 0)
+    equip_weapon(model, Weapon::orks_gorkanaut_deffstorm_mega_shoota_point_blank, primary_profile_41)
     assert((2) >= 0 and (2) <= 5, "invalid physical weapon count")
     for weapon_copy_2 in range(2):
-        let weapon_group_2 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_gorkanaut_dual_big_shoota, NamedWeaponProfile::dual_big_shoota, weapon_group_2)
+        equip_weapon(model, Weapon::orks_gorkanaut_dual_big_shoota, 0)
     assert((2) >= 0 and (2) <= 5, "invalid physical weapon count")
     for weapon_copy_3 in range(2):
-        let weapon_group_3 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_gorkanaut_rokkit_launcha_blasta, NamedWeaponProfile::rokkit_launcha_blasta, weapon_group_3)
-        equip_orks_profile(model, Weapon::orks_gorkanaut_rokkit_launcha_busta, NamedWeaponProfile::rokkit_launcha_busta, weapon_group_3)
-    let weapon_group_4 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_gorkanaut_skorcha, NamedWeaponProfile::skorcha, weapon_group_4)
-    let weapon_group_5 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_gorkanaut_klaw_of_gork, NamedWeaponProfile::klaw_of_gork, weapon_group_5)
+        let primary_profile_43 = model.weapons.size() + 1
+        equip_weapon(model, Weapon::orks_gorkanaut_rokkit_launcha_blasta, 0)
+        equip_weapon(model, Weapon::orks_gorkanaut_rokkit_launcha_busta, primary_profile_43)
+    equip_weapon(model, Weapon::orks_gorkanaut_skorcha, 0)
+    equip_weapon(model, Weapon::orks_gorkanaut_klaw_of_gork, 0)
     let unit : Unit
     unit.name = "Gorkanaut"s
     unit.models.append(model)
@@ -889,14 +767,14 @@ fun make_orks_gretchin(Int count) -> Unit:
         model.keywords.append(Keyword::infantry)
         model.keywords.append(Keyword::grots)
         model.abilities.append(AbilityKind::thievin_scavengers)
-        equip_orks_profile(model, Weapon::orks_gretchin_grot_blasta, NamedWeaponProfile::grot_blasta, 0)
-        equip_orks_profile(model, Weapon::orks_gretchin_scavenged_shivs, NamedWeaponProfile::scavenged_shivs, 0)
+        equip_weapon(model, Weapon::orks_gretchin_grot_blasta, 0)
+        equip_weapon(model, Weapon::orks_gretchin_scavenged_shivs, 0)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::gretchin)
     return unit
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Gunwagon: equipment/composition.
-fun make_orks_gunwagon(Int hull_mm, Int big_shootas, Bool ball, Bool klaw, Bool lobba, OrksGunwagonGun gun) -> Unit:
+fun make_orks_gunwagon(Int hull_mm, Int big_shootas, Bool ball, Bool klaw, Bool lobba, Weapon gun) -> Unit:
     # Printed metadata: https://wahapedia.ru/wh40k11ed/factions/orks/ (this datasheet).
     let model = make_orks_model(Profile::orks_gunwagon, OrksDatasheet::gunwagon)
     model.keywords.append(Keyword::vehicle)
@@ -920,30 +798,19 @@ fun make_orks_gunwagon(Int hull_mm, Int big_shootas, Bool ball, Bool klaw, Bool 
     assert(big_shootas >= 0 and big_shootas <= 4, "invalid extra Big Shootas")
     assert((big_shootas) >= 0 and (big_shootas) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(big_shootas):
-        let weapon_group_1 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_gunwagon_big_shoota, NamedWeaponProfile::big_shoota, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_gunwagon_crushin_bulk, NamedWeaponProfile::crushin_bulk, weapon_group_2)
+        equip_weapon(model, Weapon::orks_gunwagon_big_shoota, 0)
+    equip_weapon(model, Weapon::orks_gunwagon_crushin_bulk, 0)
     if ball:
-        let weapon_group_3 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_gunwagon_wreckin_ball, NamedWeaponProfile::wreckin_ball, weapon_group_3)
+        equip_weapon(model, Weapon::orks_gunwagon_wreckin_ball, 0)
     if klaw:
-        let weapon_group_4 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_gunwagon_grabbin_klaw, NamedWeaponProfile::grabbin_klaw, weapon_group_4)
-    assert(gun.value >= 0 and gun.value < 3, "invalid Gunwagon replacement")
-    if gun.value == 0:
-        let weapon_group_5 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_gunwagon_kannon_frag, NamedWeaponProfile::kannon_frag, weapon_group_5)
-        equip_orks_profile(model, Weapon::orks_gunwagon_kannon_shell, NamedWeaponProfile::kannon_shell, weapon_group_5)
-    if gun.value == 1:
-        let weapon_group_6 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_gunwagon_killkannon, NamedWeaponProfile::killkannon, weapon_group_6)
-    if gun.value == 2:
-        let weapon_group_7 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_gunwagon_zzap_gun, NamedWeaponProfile::zzap_gun, weapon_group_7)
+        equip_weapon(model, Weapon::orks_gunwagon_grabbin_klaw, 0)
+    assert(weapon_allowed(gun, orks_gunwagon_gun_choices()), "invalid Gunwagon replacement")
+    let primary = model.weapons.size() + 1
+    equip_weapon(model, gun, 0)
+    if gun.value == Weapon::orks_gunwagon_kannon_frag.value:
+        equip_weapon(model, Weapon::orks_gunwagon_kannon_shell, primary)
     if lobba:
-        let weapon_group_8 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_gunwagon_lobba, NamedWeaponProfile::lobba, weapon_group_8)
+        equip_weapon(model, Weapon::orks_gunwagon_lobba, 0)
     let unit : Unit
     unit.name = "Gunwagon"s
     unit.models.append(model)
@@ -971,16 +838,11 @@ fun make_orks_hunta_rig() -> Unit:
     model.permitted_passenger_keywords.append(Keyword::infantry)
     model.orks_transport_permissions = true
     model.beast_snagga_passengers_only = true
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_hunta_rig_eavy_lobba, NamedWeaponProfile::eavy_lobba, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_hunta_rig_stikka_kannon, NamedWeaponProfile::stikka_kannon, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_hunta_rig_butcha_boyz, NamedWeaponProfile::butcha_boyz, weapon_group_3)
-    let weapon_group_4 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_hunta_rig_savage_horns_and_hooves, NamedWeaponProfile::savage_horns_and_hooves, weapon_group_4)
-    let weapon_group_5 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_hunta_rig_saw_blades, NamedWeaponProfile::saw_blades, weapon_group_5)
+    equip_weapon(model, Weapon::orks_hunta_rig_eavy_lobba, 0)
+    equip_weapon(model, Weapon::orks_hunta_rig_stikka_kannon, 0)
+    equip_weapon(model, Weapon::orks_hunta_rig_butcha_boyz, 0)
+    equip_weapon(model, Weapon::orks_hunta_rig_savage_horns_and_hooves, 0)
+    equip_weapon(model, Weapon::orks_hunta_rig_saw_blades, 0)
     let unit : Unit
     unit.name = "Hunta Rig"s
     unit.models.append(model)
@@ -1008,18 +870,12 @@ fun make_orks_kill_rig() -> Unit:
     model.permitted_passenger_keywords.append(Keyword::infantry)
     model.orks_transport_permissions = true
     model.beast_snagga_passengers_only = true
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_kill_rig_eavy_lobba, NamedWeaponProfile::eavy_lobba, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_kill_rig_stikka_kannon, NamedWeaponProfile::stikka_kannon, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_kill_rig_wurrtower, NamedWeaponProfile::wurrtower, weapon_group_3)
-    let weapon_group_4 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_kill_rig_butcha_boyz, NamedWeaponProfile::butcha_boyz, weapon_group_4)
-    let weapon_group_5 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_kill_rig_savage_horns_and_hooves, NamedWeaponProfile::savage_horns_and_hooves, weapon_group_5)
-    let weapon_group_6 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_kill_rig_saw_blades, NamedWeaponProfile::saw_blades, weapon_group_6)
+    equip_weapon(model, Weapon::orks_kill_rig_eavy_lobba, 0)
+    equip_weapon(model, Weapon::orks_kill_rig_stikka_kannon, 0)
+    equip_weapon(model, Weapon::orks_kill_rig_wurrtower, 0)
+    equip_weapon(model, Weapon::orks_kill_rig_butcha_boyz, 0)
+    equip_weapon(model, Weapon::orks_kill_rig_savage_horns_and_hooves, 0)
+    equip_weapon(model, Weapon::orks_kill_rig_saw_blades, 0)
     let unit : Unit
     unit.name = "Kill Rig"s
     unit.models.append(model)
@@ -1041,10 +897,11 @@ fun make_orks_killa_kans(Int count) -> Unit:
         model.keywords.append(Keyword::grots)
         model.has_deadly_demise = true
         model.deadly_demise = raw_stat(1)
-        equip_orks_profile(model, Weapon::orks_kan_blasta_dakka, NamedWeaponProfile::kan_blasta_dakka, 1)
-        equip_orks_profile(model, Weapon::orks_kan_blasta_kill_shot, NamedWeaponProfile::kan_blasta_kill_shot, 1)
-        equip_orks_profile(model, Weapon::orks_kan_blasta_point_blank, NamedWeaponProfile::kan_blasta_point_blank, 1)
-        equip_orks_profile(model, Weapon::orks_kan_klaw, NamedWeaponProfile::kan_klaw, 0)
+        let primary_profile_65 = model.weapons.size() + 1
+        equip_weapon(model, Weapon::orks_kan_blasta_dakka, 0)
+        equip_weapon(model, Weapon::orks_kan_blasta_kill_shot, primary_profile_65)
+        equip_weapon(model, Weapon::orks_kan_blasta_point_blank, primary_profile_65)
+        equip_weapon(model, Weapon::orks_kan_klaw, 0)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::killa_kans)
     return unit
@@ -1072,32 +929,25 @@ fun make_orks_kommandos(OrksKommandoLoadout equipment) -> Unit:
 
         if item_index == 0:
             model.profile = Profile::orks_kommando_nob
-        let weapon_group_1 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_kommandos_slugga, NamedWeaponProfile::slugga, weapon_group_1)
-        if item_index == 0 and item.nob_melee.value == OrksNobMeleeChoice::big_choppa.value:
-            let weapon_group_2 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_kommandos_big_choppa, NamedWeaponProfile::big_choppa, weapon_group_2)
+        equip_weapon(model, Weapon::orks_kommandos_slugga, 0)
+        if item_index == 0 and item.nob_melee.value == Weapon::orks_infantry_big_choppa.value:
+            equip_weapon(model, Weapon::orks_kommandos_big_choppa, 0)
         else:
-            if item_index == 0 and item.nob_melee.value == OrksNobMeleeChoice::power_klaw.value:
-                let weapon_group_3 = model.weapons.size() + 1
-                equip_orks_profile(model, Weapon::orks_kommandos_power_klaw, NamedWeaponProfile::power_klaw, weapon_group_3)
+            if item_index == 0 and item.nob_melee.value == Weapon::orks_power_klaw.value:
+                equip_weapon(model, Weapon::orks_kommandos_power_klaw, 0)
             else:
                 if item.breacha_ram:
-                    let weapon_group_4 = model.weapons.size() + 1
-                    equip_orks_profile(model, Weapon::orks_kommandos_breacha_ram, NamedWeaponProfile::breacha_ram, weapon_group_4)
+                    equip_weapon(model, Weapon::orks_kommandos_breacha_ram, 0)
                 else:
-                    let weapon_group_5 = model.weapons.size() + 1
-                    equip_orks_profile(model, Weapon::orks_kommandos_choppa, NamedWeaponProfile::choppa, weapon_group_5)
+                    equip_weapon(model, Weapon::orks_kommandos_choppa, 0)
         if item.burna:
-            let weapon_group_6 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_kommandos_burna, NamedWeaponProfile::burna, weapon_group_6)
+            equip_weapon(model, Weapon::orks_kommandos_burna, 0)
         if item.rokkit:
-            let weapon_group_7 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_kommandos_rokkit_launcha_blasta, NamedWeaponProfile::rokkit_launcha_blasta, weapon_group_7)
-            equip_orks_profile(model, Weapon::orks_kommandos_rokkit_launcha_busta, NamedWeaponProfile::rokkit_launcha_busta, weapon_group_7)
+            let primary_profile_72 = model.weapons.size() + 1
+            equip_weapon(model, Weapon::orks_kommandos_rokkit_launcha_blasta, 0)
+            equip_weapon(model, Weapon::orks_kommandos_rokkit_launcha_busta, primary_profile_72)
         if item.kustom_shoota:
-            let weapon_group_8 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_kommandos_kustom_shoota, NamedWeaponProfile::kustom_shoota, weapon_group_8)
+            equip_weapon(model, Weapon::orks_kommandos_kustom_shoota, 0)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::kommandos)
     return unit
@@ -1117,20 +967,15 @@ fun make_orks_meganobz(OrksMeganobLoadouts equipment) -> Unit:
         model.transport_space = 2
         model.abilities.append(AbilityKind::arrogant_invulnerability)
         model.abilities.append(AbilityKind::krumpin_time)
-        if equipment[index].value == OrksMeganobLoadout::twin_saws.value:
-            equip_orks_profile(model, Weapon::orks_meganobz_twin_killsaws, NamedWeaponProfile::twin_killsaws, 0)
-        else:
-            if equipment[index].value % 2 == 0:
-                equip_orks_profile(model, Weapon::orks_meganobz_power_klaw, NamedWeaponProfile::power_klaw, 0)
+        equip_weapon(model, equipment[index].melee, 0)
+        if equipment[index].gun.value != Weapon::none.value:
+            let primary = model.weapons.size() + 1
+            equip_weapon(model, equipment[index].gun, 0)
+            if equipment[index].gun.value == Weapon::orks_meganobz_kustom_shoota_aimed.value:
+                equip_weapon(model, Weapon::orks_meganobz_kustom_shoota_point_blank, primary)
             else:
-                equip_orks_profile(model, Weapon::orks_meganobz_killsaw, NamedWeaponProfile::killsaw, 0)
-            if equipment[index].value < 2:
-                equip_orks_profile(model, Weapon::orks_meganobz_kustom_shoota_aimed, NamedWeaponProfile::kustom_shoota_aimed, 1)
-                equip_orks_profile(model, Weapon::orks_meganobz_kustom_shoota_point_blank, NamedWeaponProfile::kustom_shoota_point_blank, 1)
-            else:
-                equip_orks_profile(model, Weapon::orks_meganobz_kombi_weapon_shoota, NamedWeaponProfile::kombi_weapon_shoota, 1)
-                equip_orks_profile(model, Weapon::orks_meganobz_kombi_weapon_kill_shot, NamedWeaponProfile::kombi_weapon_kill_shot, 1)
-                equip_orks_profile(model, Weapon::orks_meganobz_kombi_weapon_point_blank, NamedWeaponProfile::kombi_weapon_point_blank, 1)
+                equip_weapon(model, Weapon::orks_meganobz_kombi_weapon_kill_shot, primary)
+                equip_weapon(model, Weapon::orks_meganobz_kombi_weapon_point_blank, primary)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::meganobz)
     return unit
@@ -1140,7 +985,8 @@ fun make_orks_meganobz(OrksMeganobLoadouts equipment) -> Unit:
 fun make_orks_meganobz(Int count) -> Unit:
     assert(count >= 2 and count <= 6, "invalid Meganob count")
     let equipment : OrksMeganobLoadouts
-    equipment.resize(count)
+    for member in range(count):
+        equipment.append(orks_meganob_loadout_choice(0))
     return make_orks_meganobz(equipment)
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Mek
@@ -1151,8 +997,8 @@ fun make_orks_mek() -> Unit:
     model.keywords.append(Keyword::explosives)
     model.abilities.append(AbilityKind::kustom_dakka)
     model.abilities.append(AbilityKind::clever_know_wotz)
-    equip_orks_profile(model, Weapon::orks_mek_kustom_mega_slugga, NamedWeaponProfile::kustom_mega_slugga, 0)
-    equip_orks_profile(model, Weapon::orks_mek_mek_s_toolz, NamedWeaponProfile::mek_s_toolz, 0)
+    equip_weapon(model, Weapon::orks_mek_kustom_mega_slugga, 0)
+    equip_weapon(model, Weapon::orks_mek_mek_s_toolz, 0)
     let unit : Unit
     unit.name = "Mek"s
     unit.models.append(model)
@@ -1165,7 +1011,7 @@ fun make_orks_mek_gunz(OrksMekGuns guns, Int hull_mm) -> Unit:
     let unit : Unit
     unit.name = "Mek Gunz"s
     for item_index in range(guns.size()):
-        assert(guns[item_index].value >= 0 and guns[item_index].value < 4, "invalid Mek Gun replacement")
+        assert(weapon_allowed(guns[item_index], orks_mek_gun_choices()), "invalid Mek Gun replacement")
         # Printed metadata: https://wahapedia.ru/wh40k11ed/factions/orks/ (this datasheet).
         let model = make_orks_model(Profile::orks_mek_gunz, OrksDatasheet::mek_gunz)
         model.keywords.append(Keyword::vehicle)
@@ -1177,20 +1023,8 @@ fun make_orks_mek_gunz(OrksMekGuns guns, Int hull_mm) -> Unit:
         # Intentional imprecision, user-authorized temporary large circle.
         if hull_mm == 0:
             model.geometry.proxy_diameter_mm = orks_temporary_hull_diameter(OrksDatasheet::mek_gunz)
-        if guns[item_index].value == 0:
-            let weapon_group_1 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_mek_gunz_smasha_gun, NamedWeaponProfile::smasha_gun, weapon_group_1)
-        if guns[item_index].value == 1:
-            let weapon_group_2 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_mek_gunz_bubblechukka, NamedWeaponProfile::bubblechukka, weapon_group_2)
-        if guns[item_index].value == 2:
-            let weapon_group_3 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_mek_gunz_kustom_mega_kannon, NamedWeaponProfile::kustom_mega_kannon, weapon_group_3)
-        if guns[item_index].value == 3:
-            let weapon_group_4 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_mek_gunz_traktor_kannon, NamedWeaponProfile::traktor_kannon, weapon_group_4)
-        let weapon_group_5 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_mek_gunz_scavenged_shivs, NamedWeaponProfile::scavenged_shivs, weapon_group_5)
+        equip_weapon(model, guns[item_index], 0)
+        equip_weapon(model, Weapon::orks_mek_gunz_scavenged_shivs, 0)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::mek_gunz)
     return unit
@@ -1219,19 +1053,15 @@ fun make_orks_morkanaut() -> Unit:
     model.forbid_ghaz_passenger = true
     assert((2) >= 0 and (2) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(2):
-        let weapon_group_1 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_morkanaut_dual_big_shoota, NamedWeaponProfile::dual_big_shoota, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_morkanaut_kustom_mega_blasta, NamedWeaponProfile::kustom_mega_blasta, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_morkanaut_kustom_mega_zappa, NamedWeaponProfile::kustom_mega_zappa, weapon_group_3)
+        equip_weapon(model, Weapon::orks_morkanaut_dual_big_shoota, 0)
+    equip_weapon(model, Weapon::orks_morkanaut_kustom_mega_blasta, 0)
+    equip_weapon(model, Weapon::orks_morkanaut_kustom_mega_zappa, 0)
     assert((2) >= 0 and (2) <= 5, "invalid physical weapon count")
     for weapon_copy_4 in range(2):
-        let weapon_group_4 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_morkanaut_rokkit_launcha_blasta, NamedWeaponProfile::rokkit_launcha_blasta, weapon_group_4)
-        equip_orks_profile(model, Weapon::orks_morkanaut_rokkit_launcha_busta, NamedWeaponProfile::rokkit_launcha_busta, weapon_group_4)
-    let weapon_group_5 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_morkanaut_klaw_of_mork, NamedWeaponProfile::klaw_of_mork, weapon_group_5)
+        let primary_profile_84 = model.weapons.size() + 1
+        equip_weapon(model, Weapon::orks_morkanaut_rokkit_launcha_blasta, 0)
+        equip_weapon(model, Weapon::orks_morkanaut_rokkit_launcha_busta, primary_profile_84)
+    equip_weapon(model, Weapon::orks_morkanaut_klaw_of_mork, 0)
     let unit : Unit
     unit.name = "Morkanaut"s
     unit.models.append(model)
@@ -1252,10 +1082,11 @@ fun make_orks_mozrog_skragbad() -> Unit:
     model.abilities.append(AbilityKind::boss_of_da_hunt)
     model.abilities.append(AbilityKind::one_last_kill)
     model.abilities.append(AbilityKind::da_bigger_dey_iz)
-    equip_orks_profile(model, Weapon::orks_thump_gun, NamedWeaponProfile::thump_gun, 0)
-    equip_orks_profile(model, Weapon::orks_big_chompa_jaws, NamedWeaponProfile::big_chompa_s_jaws, 0)
-    equip_orks_profile(model, Weapon::orks_gutrippa_standard, NamedWeaponProfile::gutrippa_standard, 1)
-    equip_orks_profile(model, Weapon::orks_gutrippa_hunter, NamedWeaponProfile::gutrippa_hunter, 1)
+    equip_weapon(model, Weapon::orks_thump_gun, 0)
+    equip_weapon(model, Weapon::orks_big_chompa_jaws, 0)
+    let primary_profile_86 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_gutrippa_standard, 0)
+    equip_weapon(model, Weapon::orks_gutrippa_hunter, primary_profile_86)
     model.hunter_profile_conditions[3] = orks_monster_vehicle_rule(WeaponRuleKind::anti, 0)
     unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::mozrog_skragbad)
@@ -1277,16 +1108,12 @@ fun make_orks_nazdreg() -> Unit:
     model.has_da_boss = true
 
     model.transport_space = 2
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_nazdreg_kustom_blasta_x_gatler, NamedWeaponProfile::kustom_blasta_x_gatler, weapon_group_1)
-    model.simultaneous_ranged_profiles[model.weapons.size() - 1] = true
-    equip_orks_profile(model, Weapon::orks_nazdreg_kustom_blasta_x_shoota, NamedWeaponProfile::kustom_blasta_x_shoota, weapon_group_1)
-    model.simultaneous_ranged_profiles[model.weapons.size() - 1] = true
-    equip_orks_profile(model, Weapon::orks_nazdreg_kustom_blasta_x_skorcha, NamedWeaponProfile::kustom_blasta_x_skorcha, weapon_group_1)
-    model.simultaneous_ranged_profiles[model.weapons.size() - 1] = true
-    equip_orks_profile(model, Weapon::orks_nazdreg_kustom_blasta_x, NamedWeaponProfile::kustom_blasta_x, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_nazdreg_moonchewa, NamedWeaponProfile::moonchewa, weapon_group_2)
+    let primary_profile_87 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_nazdreg_kustom_blasta_x_gatler, 0)
+    equip_weapon(model, Weapon::orks_nazdreg_kustom_blasta_x_shoota, primary_profile_87)
+    equip_weapon(model, Weapon::orks_nazdreg_kustom_blasta_x_skorcha, primary_profile_87)
+    equip_weapon(model, Weapon::orks_nazdreg_kustom_blasta_x, primary_profile_87)
+    equip_weapon(model, Weapon::orks_nazdreg_moonchewa, 0)
     let unit : Unit
     unit.name = "Nazdreg"s
     unit.models.append(model)
@@ -1310,7 +1137,7 @@ fun make_orks_nobz(Int count) -> Unit:
     assert(count >= 5 and count <= 10, "illegal Nobz count")
     let equipment : OrksNobLoadouts
     for index in range(count):
-        equipment.append(OrksNobLoadout::standard)
+        equipment.append(Weapon::orks_kustom_shoota)
     return make_orks_nobz(equipment)
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Painboss
@@ -1321,7 +1148,7 @@ fun make_orks_painboss() -> Unit:
     model.keywords.append(Keyword::beast_snagga)
     model.abilities.append(AbilityKind::push_dat_bit_back_in)
     model.abilities.append(AbilityKind::hardy_bioniks)
-    equip_orks_profile(model, Weapon::orks_painboss_beast_snagga_klaw, NamedWeaponProfile::beast_snagga_klaw, 0)
+    equip_weapon(model, Weapon::orks_painboss_beast_snagga_klaw, 0)
     let unit : Unit
     unit.name = "Painboss"s
     unit.models.append(model)
@@ -1335,8 +1162,8 @@ fun make_orks_painboy() -> Unit:
     model.keywords.append(Keyword::character)
     model.abilities.append(AbilityKind::crude_surgery)
     model.abilities.append(AbilityKind::catch_dat_red_bit)
-    equip_orks_profile(model, Weapon::orks_painboy_urty_syringe, NamedWeaponProfile::urty_syringe, 0)
-    equip_orks_profile(model, Weapon::orks_painboy_dok_s_toolz, NamedWeaponProfile::dok_s_toolz, 0)
+    equip_weapon(model, Weapon::orks_painboy_urty_syringe, 0)
+    equip_weapon(model, Weapon::orks_painboy_dok_s_toolz, 0)
     let unit : Unit
     unit.name = "Painboy"s
     unit.models.append(model)
@@ -1354,12 +1181,9 @@ fun make_orks_rukkatrukk_squigbuggies(Int count) -> Unit:
     model.has_deadly_demise = true
     model.deadly_demise = raw_stat(1)
 
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_rukkatrukk_squigbuggies_sawn_off_shotgun, NamedWeaponProfile::sawn_off_shotgun, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_rukkatrukk_squigbuggies_squig_launchas, NamedWeaponProfile::squig_launchas, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_rukkatrukk_squigbuggies_saw_blades, NamedWeaponProfile::saw_blades, weapon_group_3)
+    equip_weapon(model, Weapon::orks_rukkatrukk_squigbuggies_sawn_off_shotgun, 0)
+    equip_weapon(model, Weapon::orks_rukkatrukk_squigbuggies_squig_launchas, 0)
+    equip_weapon(model, Weapon::orks_rukkatrukk_squigbuggies_saw_blades, 0)
     assert(count >= 1 and count <= 2, "composition requires1-2 models")
     let unit : Unit
     unit.name = "Rukkatrukk Squigbuggies"s
@@ -1374,8 +1198,8 @@ fun make_orks_runtherd() -> Unit:
     model.keywords.append(Keyword::infantry)
     model.keywords.append(Keyword::character)
     model.abilities.append(AbilityKind::thatll_learn_ya)
-    equip_orks_profile(model, Weapon::orks_runtherd_slugga, NamedWeaponProfile::slugga, 0)
-    equip_orks_profile(model, Weapon::orks_runtherd_runtherd_s_toolz, NamedWeaponProfile::runtherd_s_toolz, 0)
+    equip_weapon(model, Weapon::orks_runtherd_slugga, 0)
+    equip_weapon(model, Weapon::orks_runtherd_runtherd_s_toolz, 0)
     let unit : Unit
     unit.name = "Runtherd"s
     unit.models.append(model)
@@ -1424,17 +1248,13 @@ fun make_orks_stompa(Int hull_mm) -> Unit:
     model.orks_transport_permissions = true
     assert((5) >= 0 and (5) <= 5, "invalid physical weapon count")
     for weapon_copy_1 in range(5):
-        let weapon_group_1 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_stompa_big_shoota, NamedWeaponProfile::big_shoota, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_stompa_deffkannon_and_supa_rokkits, NamedWeaponProfile::deffkannon_and_supa_rokkits, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_stompa_skorcha, NamedWeaponProfile::skorcha, weapon_group_3)
-    let weapon_group_4 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_stompa_supa_gatler_aimed, NamedWeaponProfile::supa_gatler_aimed, weapon_group_4)
-    equip_orks_profile(model, Weapon::orks_stompa_supa_gatler_point_blank, NamedWeaponProfile::supa_gatler_point_blank, weapon_group_4)
-    let weapon_group_5 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_stompa_mega_choppa, NamedWeaponProfile::mega_choppa, weapon_group_5)
+        equip_weapon(model, Weapon::orks_stompa_big_shoota, 0)
+    equip_weapon(model, Weapon::orks_stompa_deffkannon_and_supa_rokkits, 0)
+    equip_weapon(model, Weapon::orks_stompa_skorcha, 0)
+    let primary_profile_95 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_stompa_supa_gatler_aimed, 0)
+    equip_weapon(model, Weapon::orks_stompa_supa_gatler_point_blank, primary_profile_95)
+    equip_weapon(model, Weapon::orks_stompa_mega_choppa, 0)
     let unit : Unit
     unit.name = "Stompa"s
     unit.models.append(model)
@@ -1459,24 +1279,21 @@ fun make_orks_stormboyz(Int boys, Bool klaw) -> Unit:
         model.keywords.append(Keyword::jump_pack)
         model.abilities.append(AbilityKind::deep_strike)
         model.abilities.append(AbilityKind::rokkit_charge)
-        equip_orks_profile(model, Weapon::orks_slugga, NamedWeaponProfile::slugga, 0)
+        equip_weapon(model, Weapon::orks_slugga, 0)
         let melee = Weapon::orks_choppa_standard
-        let name = NamedWeaponProfile::choppa
         if index == 0:
             melee = Weapon::orks_kustom_choppa
-            name = NamedWeaponProfile::kustom_choppa
             if klaw:
                 melee = Weapon::orks_power_klaw
-                name = NamedWeaponProfile::power_klaw
-        equip_orks_profile(model, melee, name, 0)
+        equip_weapon(model, melee, 0)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::stormboyz)
     return unit
 
 # A Nob replaces one of his TWO pistols. Pulsa is equipment, not a gun profile.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
-fun make_orks_tankbustas(Bool nob_hammer, OrksTankbustaExtra extra, Int extra_member) -> Unit:
-    assert(extra.value >= 0 and extra.value <= 2 and extra_member >= 0 and extra_member < 5, "invalid Tankbusta equipment")
+fun make_orks_tankbustas(Bool nob_hammer, Weapon extra, Int extra_member) -> Unit:
+    assert(weapon_allowed(extra, orks_tankbusta_extra_choices()) and extra_member >= 0 and extra_member < 5, "invalid Tankbusta equipment")
     let unit : Unit
     unit.name = "Tankbustas"s
     for index in range(6):
@@ -1489,29 +1306,33 @@ fun make_orks_tankbustas(Bool nob_hammer, OrksTankbustaExtra extra, Int extra_me
         model.abilities.append(AbilityKind::bomb_squig)
         model.abilities.append(AbilityKind::rokkit_barrage)
         if index == 0:
-            equip_orks_profile(model, Weapon::orks_tankbustas_choppa, NamedWeaponProfile::choppa, 0)
-            equip_orks_profile(model, Weapon::orks_tankbustas_rokkit_pistol, NamedWeaponProfile::rokkit_pistol, 0)
+            equip_weapon(model, Weapon::orks_tankbustas_choppa, 0)
+            equip_weapon(model, Weapon::orks_tankbustas_rokkit_pistol, 0)
             if nob_hammer:
-                equip_orks_profile(model, Weapon::orks_tankbustas_smash_hammer_standard, NamedWeaponProfile::smash_hammer_standard, 2)
-                equip_orks_profile(model, Weapon::orks_tankbustas_smash_hammer_hunter, NamedWeaponProfile::smash_hammer_hunter, 2, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
+                let primary_profile_97 = model.weapons.size() + 1
+                equip_weapon(model, Weapon::orks_tankbustas_smash_hammer_standard, 0)
+                equip_weapon(model, Weapon::orks_tankbustas_smash_hammer_hunter, primary_profile_97, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
             else:
-                equip_orks_profile(model, Weapon::orks_tankbustas_rokkit_pistol, NamedWeaponProfile::rokkit_pistol, 0)
+                equip_weapon(model, Weapon::orks_tankbustas_rokkit_pistol, 0)
         else:
-            equip_orks_profile(model, Weapon::orks_tankbustas_gitstikka, NamedWeaponProfile::gitstikka, 0)
-            equip_orks_profile(model, Weapon::orks_tankbustas_busta_rokkit_launcha_standard, NamedWeaponProfile::busta_rokkit_launcha_standard, 1)
-            equip_orks_profile(model, Weapon::orks_tankbustas_busta_rokkit_launcha_hunter, NamedWeaponProfile::busta_rokkit_launcha_hunter, 1, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
+            equip_weapon(model, Weapon::orks_tankbustas_gitstikka, 0)
+            let primary_profile_98 = model.weapons.size() + 1
+            equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_standard, 0)
+            equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_hunter, primary_profile_98, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
             if index - 1 == extra_member:
-                if extra.value == OrksTankbustaExtra::additional_launcher.value:
-                    equip_orks_profile(model, Weapon::orks_tankbustas_busta_rokkit_launcha_standard, NamedWeaponProfile::busta_rokkit_launcha_standard, 2)
-                    equip_orks_profile(model, Weapon::orks_tankbustas_busta_rokkit_launcha_hunter, NamedWeaponProfile::busta_rokkit_launcha_hunter, 2, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
-                if extra.value == OrksTankbustaExtra::pulsa.value:
+                if extra.value == Weapon::orks_tankbustas_busta_rokkit_launcha_standard.value:
+                    let primary_profile_99 = model.weapons.size() + 1
+                    equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_standard, 0)
+                    equip_weapon(model, Weapon::orks_tankbustas_busta_rokkit_launcha_hunter, primary_profile_99, orks_monster_vehicle_rule(WeaponRuleKind::anti, 0))
+                if extra.value == Weapon::orks_pulsa_rokkit.value:
+                    equip_weapon(model, extra, 0)
                     model.abilities.append(AbilityKind::pulsa_rokkit)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::tankbustas)
     return unit
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Trukk: equipment/composition.
-fun make_orks_trukk(Int hull_mm, Bool rokkit, OrksTrukkExtra extra) -> Unit:
+fun make_orks_trukk(Int hull_mm, Bool rokkit, Weapon extra) -> Unit:
     # Printed metadata: https://wahapedia.ru/wh40k11ed/factions/orks/ (this datasheet).
     let model = make_orks_model(Profile::orks_trukk, OrksDatasheet::trukk)
     model.keywords.append(Keyword::vehicle)
@@ -1534,22 +1355,18 @@ fun make_orks_trukk(Int hull_mm, Bool rokkit, OrksTrukkExtra extra) -> Unit:
     model.orks_transport_permissions = true
     model.forbid_ghaz_passenger = true
     model.forbidden_passenger_keywords.append(Keyword::jump_pack)
-    assert(extra.value >= 0 and extra.value <= 2, "invalid Trukk extra")
+    assert(weapon_allowed(extra, orks_trukk_extra_choices()), "invalid Trukk extra")
     if rokkit:
-        let weapon_group_1 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_trukk_rokkit_launcha_blasta, NamedWeaponProfile::rokkit_launcha_blasta, weapon_group_1)
-        equip_orks_profile(model, Weapon::orks_trukk_rokkit_launcha_busta, NamedWeaponProfile::rokkit_launcha_busta, weapon_group_1)
+        let primary_profile_100 = model.weapons.size() + 1
+        equip_weapon(model, Weapon::orks_trukk_rokkit_launcha_blasta, 0)
+        equip_weapon(model, Weapon::orks_trukk_rokkit_launcha_busta, primary_profile_100)
     else:
-        let weapon_group_2 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_trukk_dual_big_shoota, NamedWeaponProfile::dual_big_shoota, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_trukk_spiked_ram, NamedWeaponProfile::spiked_ram, weapon_group_3)
-    if extra.value == 1:
-        let weapon_group_4 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_trukk_buzzsaw, NamedWeaponProfile::buzzsaw, weapon_group_4)
-    if extra.value == 2:
-        let weapon_group_5 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_trukk_grabbin_klaw, NamedWeaponProfile::grabbin_klaw, weapon_group_5)
+        equip_weapon(model, Weapon::orks_trukk_dual_big_shoota, 0)
+    equip_weapon(model, Weapon::orks_trukk_spiked_ram, 0)
+    if extra.value == orks_trukk_extra_choice(1).value:
+        equip_weapon(model, Weapon::orks_trukk_buzzsaw, 0)
+    if extra.value == orks_trukk_extra_choice(2).value:
+        equip_weapon(model, Weapon::orks_trukk_grabbin_klaw, 0)
     let unit : Unit
     unit.name = "Trukk"s
     unit.models.append(model)
@@ -1575,12 +1392,13 @@ fun make_orks_warbikers(Int boys) -> Unit:
         # Intentional user-authorized long-axis circle; both axes remain metadata.
         model.geometry.unsupported_footprint = false
         if index == 0:
-            equip_orks_profile(model, Weapon::orks_dual_kombi_rokkit_dakkagun, NamedWeaponProfile::dual_kombi_rokkit_dakkagun, 1)
-            equip_orks_profile(model, Weapon::orks_dual_kombi_rokkit_busta, NamedWeaponProfile::dual_kombi_rokkit_busta_rokkit, 1)
-            equip_orks_profile(model, Weapon::orks_kustom_choppa, NamedWeaponProfile::kustom_choppa, 0)
+            let primary_profile_105 = model.weapons.size() + 1
+            equip_weapon(model, Weapon::orks_dual_kombi_rokkit_dakkagun, 0)
+            equip_weapon(model, Weapon::orks_dual_kombi_rokkit_busta, primary_profile_105)
+            equip_weapon(model, Weapon::orks_kustom_choppa, 0)
         else:
-            equip_orks_profile(model, Weapon::orks_dual_dakkagun, NamedWeaponProfile::dual_dakkagun, 0)
-            equip_orks_profile(model, Weapon::orks_choppa_standard, NamedWeaponProfile::choppa, 0)
+            equip_weapon(model, Weapon::orks_dual_dakkagun, 0)
+            equip_weapon(model, Weapon::orks_choppa_standard, 0)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::warbikers)
     return unit
@@ -1588,8 +1406,8 @@ fun make_orks_warbikers(Int boys) -> Unit:
 # Warboss variants have their own A/WS/S and Cleave; never reuse Nob stats.
 # Boss Ammo Runt applies only to the bearer; Intimidating Motivation uses112.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Warboss
-fun make_orks_warboss(Bool klaw, OrksNobGunChoice gun) -> Unit:
-    assert(gun.value >= 0 and gun.value < 3, "Warboss must retain a permitted gun")
+fun make_orks_warboss(Bool klaw, Weapon gun) -> Unit:
+    assert(weapon_allowed(gun, orks_nob_gun_choices()) and gun.value != Weapon::none.value, "Warboss must retain a permitted gun")
     let unit : Unit
     unit.name = "Warboss"s
     let model = make_orks_model(Profile::orks_warboss, OrksDatasheet::warboss)
@@ -1602,9 +1420,9 @@ fun make_orks_warboss(Bool klaw, OrksNobGunChoice gun) -> Unit:
     model.abilities.append(AbilityKind::might_is_right)
     model.abilities.append(AbilityKind::intimidating_motivation)
     if klaw:
-        equip_orks_profile(model, Weapon::orks_warboss_power_klaw, NamedWeaponProfile::power_klaw, 0)
+        equip_weapon(model, Weapon::orks_warboss_power_klaw, 0)
     else:
-        equip_orks_profile(model, Weapon::orks_warboss_kustom_choppa, NamedWeaponProfile::kustom_choppa, 0)
+        equip_weapon(model, Weapon::orks_warboss_kustom_choppa, 0)
     equip_orks_nob_gun(model, gun)
     unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::warboss)
@@ -1613,7 +1431,7 @@ fun make_orks_warboss(Bool klaw, OrksNobGunChoice gun) -> Unit:
 # Literal default Warboss armament; replacements are the overload above.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Warboss
 fun make_orks_warboss() -> Unit:
-    return make_orks_warboss(false, OrksNobGunChoice::kustom_shoota)
+    return make_orks_warboss(false, Weapon::orks_kustom_shoota)
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Warboss-In-Mega-Armour
 fun make_orks_warboss_in_mega_armour() -> Unit:
@@ -1626,8 +1444,8 @@ fun make_orks_warboss_in_mega_armour() -> Unit:
     model.has_da_boss = true
     model.abilities.append(AbilityKind::krushin_impetus)
     model.abilities.append(AbilityKind::intimidating_motivation)
-    equip_orks_profile(model, Weapon::orks_warboss_in_mega_armour_big_shoota, NamedWeaponProfile::big_shoota, 0)
-    equip_orks_profile(model, Weapon::orks_warboss_in_mega_armour_uge_choppa, NamedWeaponProfile::uge_choppa, 0)
+    equip_weapon(model, Weapon::orks_warboss_in_mega_armour_big_shoota, 0)
+    equip_weapon(model, Weapon::orks_warboss_in_mega_armour_uge_choppa, 0)
     let unit : Unit
     unit.name = "Warboss In Mega Armour"s
     unit.models.append(model)
@@ -1653,17 +1471,15 @@ fun make_orks_warbuggies(OrksVehicleSwaps swaps) -> Unit:
         model.deadly_demise = raw_stat(1)
 
         if swaps[item_index]:
-            let weapon_group_1 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_warbuggies_rivet_kannon_aimed, NamedWeaponProfile::rivet_kannon_aimed, weapon_group_1)
-            equip_orks_profile(model, Weapon::orks_warbuggies_rivet_kannon_point_blank, NamedWeaponProfile::rivet_kannon_point_blank, weapon_group_1)
+            let primary_profile_106 = model.weapons.size() + 1
+            equip_weapon(model, Weapon::orks_warbuggies_rivet_kannon_aimed, 0)
+            equip_weapon(model, Weapon::orks_warbuggies_rivet_kannon_point_blank, primary_profile_106)
         else:
-            let weapon_group_2 = model.weapons.size() + 1
-            equip_orks_profile(model, Weapon::orks_warbuggies_mek_speshul_aimed, NamedWeaponProfile::mek_speshul_aimed, weapon_group_2)
-            equip_orks_profile(model, Weapon::orks_warbuggies_mek_speshul_point_blank, NamedWeaponProfile::mek_speshul_point_blank, weapon_group_2)
-        let weapon_group_3 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_warbuggies_extra_dakka, NamedWeaponProfile::extra_dakka, weapon_group_3)
-        let weapon_group_4 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_warbuggies_spiked_ram, NamedWeaponProfile::spiked_ram, weapon_group_4)
+            let primary_profile_107 = model.weapons.size() + 1
+            equip_weapon(model, Weapon::orks_warbuggies_mek_speshul_aimed, 0)
+            equip_weapon(model, Weapon::orks_warbuggies_mek_speshul_point_blank, primary_profile_107)
+        equip_weapon(model, Weapon::orks_warbuggies_extra_dakka, 0)
+        equip_weapon(model, Weapon::orks_warbuggies_spiked_ram, 0)
         unit.models.append(model)
     finalize_orks_unit(unit, OrksDatasheet::warbuggies)
     return unit
@@ -1677,12 +1493,9 @@ fun make_orks_wartrakks(Int count) -> Unit:
     model.abilities.append(AbilityKind::speednob_support)
     model.abilities.append(AbilityKind::bust_em)
 
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_wartrakks_kustom_shoota, NamedWeaponProfile::kustom_shoota, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_wartrakks_multi_busta_launcha, NamedWeaponProfile::multi_busta_launcha, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_wartrakks_kustom_choppa, NamedWeaponProfile::kustom_choppa, weapon_group_3)
+    equip_weapon(model, Weapon::orks_wartrakks_kustom_shoota, 0)
+    equip_weapon(model, Weapon::orks_wartrakks_multi_busta_launcha, 0)
+    equip_weapon(model, Weapon::orks_wartrakks_kustom_choppa, 0)
     assert(count >= 1 and count <= 2, "composition requires1-2 models")
     let unit : Unit
     unit.name = "Wartrakks"s
@@ -1707,18 +1520,13 @@ fun make_orks_wazbom_blastajet(Bool tellyport, Bool field, Bool supa_shoota) -> 
     model.deadly_demise = dice_stat(3)
 
     if supa_shoota:
-        let weapon_group_1 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_wazbom_blastajet_dual_supa_shoota, NamedWeaponProfile::dual_supa_shoota, weapon_group_1)
+        equip_weapon(model, Weapon::orks_wazbom_blastajet_dual_supa_shoota, 0)
     if tellyport:
-        let weapon_group_2 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_wazbom_blastajet_dual_tellyport_mega_blasta, NamedWeaponProfile::dual_tellyport_mega_blasta, weapon_group_2)
+        equip_weapon(model, Weapon::orks_wazbom_blastajet_dual_tellyport_mega_blasta, 0)
     if !tellyport:
-        let weapon_group_3 = model.weapons.size() + 1
-        equip_orks_profile(model, Weapon::orks_wazbom_blastajet_dual_wazbom_mega_kannon, NamedWeaponProfile::dual_wazbom_mega_kannon, weapon_group_3)
-    let weapon_group_4 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_wazbom_blastajet_smasha_gun, NamedWeaponProfile::smasha_gun, weapon_group_4)
-    let weapon_group_5 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_wazbom_blastajet_armoured_impact, NamedWeaponProfile::armoured_impact, weapon_group_5)
+        equip_weapon(model, Weapon::orks_wazbom_blastajet_dual_wazbom_mega_kannon, 0)
+    equip_weapon(model, Weapon::orks_wazbom_blastajet_smasha_gun, 0)
+    equip_weapon(model, Weapon::orks_wazbom_blastajet_armoured_impact, 0)
     model.blastajet_force_field = field
     let unit : Unit
     unit.name = "Wazbom Blastajet"s
@@ -1742,15 +1550,12 @@ fun make_orks_wazdakka_gutsmek() -> Unit:
     model.has_deadly_demise = true
     model.deadly_demise = dice_stat(3)
 
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_wazdakka_gutsmek_grabba_dragga_ranged, NamedWeaponProfile::grabba_dragga_ranged, weapon_group_1)
-    equip_orks_profile(model, Weapon::orks_wazdakka_gutsmek_grabba_dragga_melee, NamedWeaponProfile::grabba_dragga_melee, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_wazdakka_gutsmek_psyko_gatler, NamedWeaponProfile::psyko_gatler, weapon_group_2)
-    let weapon_group_3 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_wazdakka_gutsmek_speeding_bulk_and_flaming_exhaust, NamedWeaponProfile::speeding_bulk_and_flaming_exhaust, weapon_group_3)
-    let weapon_group_4 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_wazdakka_gutsmek_fixit_s_wrench, NamedWeaponProfile::fixit_s_wrench, weapon_group_4)
+    let primary_profile_118 = model.weapons.size() + 1
+    equip_weapon(model, Weapon::orks_wazdakka_gutsmek_grabba_dragga_ranged, 0)
+    equip_weapon(model, Weapon::orks_wazdakka_gutsmek_grabba_dragga_melee, primary_profile_118)
+    equip_weapon(model, Weapon::orks_wazdakka_gutsmek_psyko_gatler, 0)
+    equip_weapon(model, Weapon::orks_wazdakka_gutsmek_speeding_bulk_and_flaming_exhaust, 0)
+    equip_weapon(model, Weapon::orks_wazdakka_gutsmek_fixit_s_wrench, 0)
     let unit : Unit
     unit.name = "Wazdakka Gutsmek"s
     unit.models.append(model)
@@ -1769,10 +1574,8 @@ fun make_orks_weirdboy() -> Unit:
     model.has_deadly_demise = true
     model.deadly_demise = dice_stat(3)
 
-    let weapon_group_1 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_weirdboy_power_vomit, NamedWeaponProfile::power_vomit, weapon_group_1)
-    let weapon_group_2 = model.weapons.size() + 1
-    equip_orks_profile(model, Weapon::orks_weirdboy_copper_staff, NamedWeaponProfile::copper_staff, weapon_group_2)
+    equip_weapon(model, Weapon::orks_weirdboy_power_vomit, 0)
+    equip_weapon(model, Weapon::orks_weirdboy_copper_staff, 0)
     let unit : Unit
     unit.name = "Weirdboy"s
     unit.models.append(model)
@@ -1789,8 +1592,8 @@ fun make_orks_zodgrod_wortsnagga() -> Unit:
     model.keywords.append(Keyword::runtherd)
     model.grants_unit_riled_up = true
     model.abilities.append(AbilityKind::super_runts)
-    equip_orks_profile(model, Weapon::orks_zodgrod_wortsnagga_squigstoppa, NamedWeaponProfile::squigstoppa, 0)
-    equip_orks_profile(model, Weapon::orks_zodgrod_wortsnagga_da_grabzappa, NamedWeaponProfile::da_grabzappa, 0)
+    equip_weapon(model, Weapon::orks_zodgrod_wortsnagga_squigstoppa, 0)
+    equip_weapon(model, Weapon::orks_zodgrod_wortsnagga_da_grabzappa, 0)
     let unit : Unit
     unit.name = "Zodgrod Wortsnagga"s
     unit.models.append(model)
@@ -1809,13 +1612,14 @@ fun orks_boyz_loadout_valid(OrksBoyzLoadouts equipment) -> Bool:
         ref item = equipment[index]
         if item.nob:
             nobs = nobs + 1
-            valid = valid and item.boy_gun.value == 0 and item.melee.value >= 0 and item.melee.value <= 2 and item.nob_gun.value >= 0 and item.nob_gun.value <= 3
-            valid = valid and ((item.melee.value == OrksNobMeleeChoice::big_choppa.value and item.nob_gun.value == OrksNobGunChoice::none.value) or (item.melee.value != OrksNobMeleeChoice::big_choppa.value and item.nob_gun.value != OrksNobGunChoice::none.value))
+            valid = valid and item.boy_gun.value == Weapon::orks_shoota.value and weapon_allowed(item.melee, orks_nob_melee_choices()) and weapon_allowed(item.nob_gun, orks_nob_gun_choices())
+            valid = valid and ((item.melee.value == Weapon::orks_infantry_big_choppa.value and item.nob_gun.value == Weapon::none.value) or (item.melee.value != Weapon::orks_infantry_big_choppa.value and item.nob_gun.value != Weapon::none.value))
         else:
             boys = boys + 1
-            valid = valid and item.melee.value == 0 and item.nob_gun.value == 0 and item.boy_gun.value >= 0 and item.boy_gun.value <= 3
-            if item.boy_gun.value >= 0 and item.boy_gun.value <= 3:
-                specials[item.boy_gun.value] = specials[item.boy_gun.value] + 1
+            let choice = weapon_choice_index(item.boy_gun, orks_boy_gun_choices())
+            valid = valid and item.melee.value == Weapon::orks_kustom_choppa.value and item.nob_gun.value == Weapon::orks_kombi_skorcha_shoota.value and choice >= 0
+            if choice >= 0:
+                specials[choice] = specials[choice] + 1
     valid = valid and nobs >= 1 and nobs <= 2 and boys >= 9 and boys <= 18
     for kind in range(3):
         valid = valid and specials[kind + 1] <= equipment.size() / 10
@@ -1837,28 +1641,15 @@ fun orks_boyz_model(OrksBoyzLoadout item) -> Model:
     model.abilities.append(AbilityKind::tide_of_muscle)
     model.abilities.append(AbilityKind::never_too_busy_to_fight)
     if item.nob:
-        let melee = Weapon::orks_kustom_choppa
-        let name = NamedWeaponProfile::kustom_choppa
-        if item.melee.value == OrksNobMeleeChoice::power_klaw.value:
-            melee = Weapon::orks_power_klaw
-            name = NamedWeaponProfile::power_klaw
-        if item.melee.value == OrksNobMeleeChoice::big_choppa.value:
-            melee = Weapon::orks_infantry_big_choppa
-            name = NamedWeaponProfile::big_choppa
-        equip_orks_profile(model, melee, name, 0)
+        equip_weapon(model, item.melee, 0)
         equip_orks_nob_gun(model, item.nob_gun)
     else:
-        equip_orks_profile(model, Weapon::orks_choppa_standard, NamedWeaponProfile::choppa, 0)
-        equip_orks_profile(model, Weapon::orks_slugga, NamedWeaponProfile::slugga, 0)
-        if item.boy_gun.value == OrksBoyGunChoice::shoota.value:
-            equip_orks_profile(model, Weapon::orks_shoota, NamedWeaponProfile::shoota, 0)
-        if item.boy_gun.value == OrksBoyGunChoice::big_shoota.value:
-            equip_orks_profile(model, Weapon::orks_infantry_big_shoota, NamedWeaponProfile::big_shoota, 0)
-        if item.boy_gun.value == OrksBoyGunChoice::burna.value:
-            equip_orks_profile(model, Weapon::orks_burna, NamedWeaponProfile::burna, 0)
-        if item.boy_gun.value == OrksBoyGunChoice::rokkit_launcha.value:
-            equip_orks_profile(model, Weapon::orks_rokkit_launcha_blasta, NamedWeaponProfile::rokkit_launcha_blasta, 1)
-            equip_orks_profile(model, Weapon::orks_rokkit_launcha_busta, NamedWeaponProfile::rokkit_launcha_busta, 1)
+        equip_weapon(model, Weapon::orks_choppa_standard, 0)
+        equip_weapon(model, Weapon::orks_slugga, 0)
+        let primary = model.weapons.size() + 1
+        equip_weapon(model, item.boy_gun, 0)
+        if item.boy_gun.value == Weapon::orks_rokkit_launcha_blasta.value:
+            equip_weapon(model, Weapon::orks_rokkit_launcha_busta, primary)
     return model
 
 # Indices0-4 name actual Boy models;5 means that replacement was not taken.
@@ -1880,9 +1671,9 @@ fun orks_kommando_loadout_valid(OrksKommandoLoadout equipment) -> Bool:
     for item_index in range(10):
         ref item = equipment[item_index]
         if item_index == 0:
-            valid = valid and !item.burna and !item.rokkit and !item.breacha_ram and !item.kustom_shoota and item.nob_melee.value >= 0 and item.nob_melee.value <= 2
+            valid = valid and !item.burna and !item.rokkit and !item.breacha_ram and !item.kustom_shoota and weapon_allowed(item.nob_melee, orks_nob_melee_choices())
         else:
-            valid = valid and item.nob_melee.value == 0
+            valid = valid and item.nob_melee.value == Weapon::orks_kustom_choppa.value
             burnas = burnas + int(item.burna)
             rokkits = rokkits + int(item.rokkit)
             rams = rams + int(item.breacha_ram)
@@ -1894,36 +1685,37 @@ fun orks_kommando_loadout_valid(OrksKommandoLoadout equipment) -> Bool:
 fun orks_meganob_loadout_valid(OrksMeganobLoadouts equipment) -> Bool:
     let valid = equipment.size() >= 2 and equipment.size() <= 6
     for index in range(equipment.size()):
-        valid = valid and equipment[index].value >= 0 and equipment[index].value <= 4
+        ref pair = equipment[index]
+        let twin = pair.melee.value == Weapon::orks_meganobz_twin_killsaws.value
+        let ordinary = (pair.melee.value == Weapon::orks_meganobz_power_klaw.value or pair.melee.value == Weapon::orks_meganobz_killsaw.value) and (pair.gun.value == Weapon::orks_meganobz_kustom_shoota_aimed.value or pair.gun.value == Weapon::orks_meganobz_kombi_weapon_shoota.value)
+        valid = valid and ((twin and pair.gun.value == Weapon::none.value) or (!twin and ordinary))
     return valid
 
 # Paired Krumpas is equipment granting rerolls to Kustom Krumpa, not another
 # melee profile. Heavy replacements remove both standard weapon slots.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
-fun orks_nob_model(OrksNobLoadout equipment) -> Model:
+fun orks_nob_model(Weapon equipment) -> Model:
     let model = make_orks_model(Profile::orks_nob, OrksDatasheet::nobz)
     model.keywords.append(Keyword::infantry)
     model.keywords.append(Keyword::explosives)
     model.abilities.append(AbilityKind::ammo_runts)
     model.abilities.append(AbilityKind::get_out_da_way)
-    model.paired_krumpas = equipment.value == OrksNobLoadout::paired_krumpas.value
     let melee = Weapon::orks_kustom_krumpa
-    let name = NamedWeaponProfile::kustom_krumpa
-    if equipment.value == OrksNobLoadout::big_skorcha.value or equipment.value == OrksNobLoadout::kustom_big_shoota.value:
+    if equipment.value == Weapon::orks_paired_krumpas.value:
+        melee = equipment
+    if equipment.value == Weapon::orks_big_skorcha.value or equipment.value == Weapon::orks_kustom_big_shoota.value:
         melee = Weapon::orks_kustom_choppa
-        name = NamedWeaponProfile::kustom_choppa
-    if equipment.value == OrksNobLoadout::big_choppa.value:
+    if equipment.value == Weapon::orks_infantry_big_choppa.value:
         melee = Weapon::orks_infantry_big_choppa
-        name = NamedWeaponProfile::big_choppa
-    equip_orks_profile(model, melee, name, 0)
-    if equipment.value == OrksNobLoadout::standard.value:
-        equip_orks_profile(model, Weapon::orks_kustom_shoota, NamedWeaponProfile::kustom_shoota, 0)
-    if equipment.value == OrksNobLoadout::kombi_rokkit.value:
-        equip_orks_nob_gun(model, OrksNobGunChoice::kombi_rokkit)
-    if equipment.value == OrksNobLoadout::big_skorcha.value:
-        equip_orks_profile(model, Weapon::orks_big_skorcha, NamedWeaponProfile::big_skorcha, 0)
-    if equipment.value == OrksNobLoadout::kustom_big_shoota.value:
-        equip_orks_profile(model, Weapon::orks_kustom_big_shoota, NamedWeaponProfile::kustom_big_shoota, 0)
+    equip_weapon(model, melee, 0)
+    if equipment.value == Weapon::orks_kustom_shoota.value:
+        equip_weapon(model, Weapon::orks_kustom_shoota, 0)
+    if equipment.value == Weapon::orks_kombi_rokkit_busta.value:
+        equip_orks_nob_gun(model, Weapon::orks_kombi_rokkit_busta)
+    if equipment.value == Weapon::orks_big_skorcha.value:
+        equip_weapon(model, Weapon::orks_big_skorcha, 0)
+    if equipment.value == Weapon::orks_kustom_big_shoota.value:
+        equip_weapon(model, Weapon::orks_kustom_big_shoota, 0)
     return model
 
 # Paired Krumpas/each heavy replacement has its own quota per five models;
@@ -1933,10 +1725,10 @@ fun orks_nobz_loadout_valid(OrksNobLoadouts equipment) -> Bool:
     let valid = equipment.size() >= 5 and equipment.size() <= 10
     let counts : Int[6]
     for index in range(equipment.size()):
-        let kind = equipment[index].value
-        valid = valid and kind >= 0 and kind < 6
-        if kind >= 0 and kind < 6:
-            counts[kind] = counts[kind] + 1
+        let choice = weapon_choice_index(equipment[index], orks_nob_loadout_choices())
+        valid = valid and choice >= 0
+        if choice >= 0:
+            counts[choice] = counts[choice] + 1
     for restricted in range(4):
         valid = valid and counts[restricted + 2] <= equipment.size() / 5
     return valid
@@ -1960,16 +1752,17 @@ fun orks_snagga_model(Bool nob, Bool thump_gun) -> Model:
     model.keywords.append(Keyword::beast_snagga)
     model.keywords.append(Keyword::mob)
     model.abilities.append(AbilityKind::mobbed)
-    equip_orks_profile(model, Weapon::orks_slugga, NamedWeaponProfile::slugga, 0)
+    equip_weapon(model, Weapon::orks_slugga, 0)
     if nob:
         assert(!thump_gun, "Thump Gun belongs to a Boy, not a Nob")
-        equip_orks_profile(model, Weapon::orks_power_snappa, NamedWeaponProfile::power_snappa, 0)
+        equip_weapon(model, Weapon::orks_power_snappa, 0)
     else:
-        equip_orks_profile(model, Weapon::orks_choppa_standard, NamedWeaponProfile::choppa_standard, 1)
-        equip_orks_profile(model, Weapon::orks_choppa_hunter, NamedWeaponProfile::choppa_hunter, 1)
+        let primary_profile_125 = model.weapons.size() + 1
+        equip_weapon(model, Weapon::orks_choppa_standard, 0)
+        equip_weapon(model, Weapon::orks_choppa_hunter, primary_profile_125)
         model.hunter_profile_conditions[2] = orks_monster_vehicle_rule(WeaponRuleKind::anti, 0)
         if thump_gun:
-            equip_orks_profile(model, Weapon::orks_thump_gun, NamedWeaponProfile::thump_gun, 0)
+            equip_weapon(model, Weapon::orks_thump_gun, 0)
     return model
 
 # The printed ranges, not the priced4/8 rows, define legal model counts.
@@ -1996,13 +1789,14 @@ fun orks_squighog_model(Bool nob) -> Model:
     model.abilities.append(AbilityKind::bomb_squig)
     model.abilities.append(AbilityKind::brutal_impact)
     if nob:
-        equip_orks_profile(model, Weapon::orks_slugga, NamedWeaponProfile::slugga, 0)
-        equip_orks_profile(model, Weapon::orks_big_choppa, NamedWeaponProfile::big_choppa, 0)
+        equip_weapon(model, Weapon::orks_slugga, 0)
+        equip_weapon(model, Weapon::orks_big_choppa, 0)
     else:
-        equip_orks_profile(model, Weapon::orks_saddlegit_shiv, NamedWeaponProfile::saddlegit_s_shiv, 0)
-        equip_orks_profile(model, Weapon::orks_stikka_ranged, NamedWeaponProfile::stikka_ranged, 1)
-        equip_orks_profile(model, Weapon::orks_stikka_melee, NamedWeaponProfile::stikka_melee, 1)
-    equip_orks_profile(model, Weapon::orks_squig_jaws, NamedWeaponProfile::squig_s_jaws, 0)
+        equip_weapon(model, Weapon::orks_saddlegit_shiv, 0)
+        let primary_profile_126 = model.weapons.size() + 1
+        equip_weapon(model, Weapon::orks_stikka_ranged, 0)
+        equip_weapon(model, Weapon::orks_stikka_melee, primary_profile_126)
+    equip_weapon(model, Weapon::orks_squig_jaws, 0)
     return model
 
 # Intentional imprecision authorized by the user on2026-10-15. These large
@@ -2016,3 +1810,146 @@ fun orks_temporary_hull_diameter(OrksDatasheet sheet) -> Int:
     if sheet.value == OrksDatasheet::trukk.value:
         return 140
     return 160
+
+# These are printed per-slot alternatives, all drawn from the single Weapon
+# catalog. Sources: the corresponding Orks card URLs on the factories below.
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Boyz
+fun orks_boy_gun_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::orks_shoota, Weapon::orks_infantry_big_shoota, Weapon::orks_rokkit_launcha_blasta, Weapon::orks_burna)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Boyz
+fun orks_boy_gun_choice(Int index) -> Weapon:
+    return weapon_choice(orks_boy_gun_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread
+fun orks_dread_arm_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::orks_dread_big_shoota, Weapon::orks_skorcha, Weapon::orks_extra_klaw, Weapon::orks_kustom_mega_blasta, Weapon::orks_rokkit_launcha_blasta)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Deff-Dread
+fun orks_dread_arm_choice(Int index) -> Weapon:
+    return weapon_choice(orks_dread_arm_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Gunwagon
+fun orks_gunwagon_gun_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::orks_gunwagon_kannon_frag, Weapon::orks_gunwagon_killkannon, Weapon::orks_gunwagon_zzap_gun)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Gunwagon
+fun orks_gunwagon_gun_choice(Int index) -> Weapon:
+    return weapon_choice(orks_gunwagon_gun_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
+fun orks_mega_mek_extra_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::none, Weapon::orks_big_mek_in_mega_armour_tellyport_blasta, Weapon::orks_kustom_force_field)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
+fun orks_mega_mek_extra_choice(Int index) -> Weapon:
+    return weapon_choice(orks_mega_mek_extra_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
+fun orks_mega_mek_gun_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::orks_big_mek_in_mega_armour_kustom_shoota_aimed, Weapon::orks_big_mek_in_mega_armour_killsaw, Weapon::orks_big_mek_in_mega_armour_kombi_weapon_shoota, Weapon::orks_big_mek_in_mega_armour_kustom_mega_blasta)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
+fun orks_mega_mek_gun_choice(Int index) -> Weapon:
+    return weapon_choice(orks_mega_mek_gun_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Mek-Gunz
+fun orks_mek_gun_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::orks_mek_gunz_smasha_gun, Weapon::orks_mek_gunz_bubblechukka, Weapon::orks_mek_gunz_kustom_mega_kannon, Weapon::orks_mek_gunz_traktor_kannon)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Mek-Gunz
+fun orks_mek_gun_choice(Int index) -> Weapon:
+    return weapon_choice(orks_mek_gun_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warboss
+fun orks_nob_gun_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::orks_kombi_skorcha_shoota, Weapon::orks_kombi_rokkit_busta, Weapon::orks_kustom_shoota, Weapon::none)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Warboss
+fun orks_nob_gun_choice(Int index) -> Weapon:
+    return weapon_choice(orks_nob_gun_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
+fun orks_nob_loadout_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::orks_kustom_shoota, Weapon::orks_kombi_rokkit_busta, Weapon::orks_paired_krumpas, Weapon::orks_big_skorcha, Weapon::orks_kustom_big_shoota, Weapon::orks_infantry_big_choppa)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
+fun orks_nob_loadout_choice(Int index) -> Weapon:
+    return weapon_choice(orks_nob_loadout_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Boyz
+fun orks_nob_melee_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::orks_kustom_choppa, Weapon::orks_power_klaw, Weapon::orks_infantry_big_choppa)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Boyz
+fun orks_nob_melee_choice(Int index) -> Weapon:
+    return weapon_choice(orks_nob_melee_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
+fun orks_tankbusta_extra_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::none, Weapon::orks_tankbustas_busta_rokkit_launcha_standard, Weapon::orks_pulsa_rokkit)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
+fun orks_tankbusta_extra_choice(Int index) -> Weapon:
+    return weapon_choice(orks_tankbusta_extra_choices(), index)
+
+# Allowed actual profiles replace the old subset enum; printed Wargear Options.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Trukk
+fun orks_trukk_extra_choices() -> WeaponChoices:
+    return weapon_choices(Weapon::none, Weapon::orks_trukk_buzzsaw, Weapon::orks_trukk_grabbin_klaw)
+
+# Preserve the finite roster ordinal while constructing actual catalog equipment.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Trukk
+fun orks_trukk_extra_choice(Int index) -> Weapon:
+    return weapon_choice(orks_trukk_extra_choices(), index)
+
+# Meganobz replace two independent slots or both with Twin Killsaws.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Meganobz
+fun orks_meganob_loadout_choice(Int index) -> WeaponPair:
+    assert(index >= 0 and index < 5, "invalid Meganob equipment choice")
+    let gun = Weapon::orks_meganobz_kustom_shoota_aimed
+    let melee = Weapon::orks_meganobz_power_klaw
+    if index == 1 or index == 3:
+        melee = Weapon::orks_meganobz_killsaw
+    if index >= 2:
+        gun = Weapon::orks_meganobz_kombi_weapon_shoota
+    if index == 4:
+        gun = Weapon::none
+        melee = Weapon::orks_meganobz_twin_killsaws
+    return weapon_pair(gun, melee)
+
+# Generated lifecycle leaves Weapon enums at their catalog default, which is
+# not a datasheet default. Set each slot explicitly instead of custom init.
+fun orks_boy_loadout() -> OrksBoyzLoadout:
+    let item : OrksBoyzLoadout
+    item.melee = Weapon::orks_kustom_choppa
+    item.nob_gun = Weapon::orks_kombi_skorcha_shoota
+    item.boy_gun = Weapon::orks_shoota
+    return item
+
+# Explicit default Nob melee equipment; generated enum defaults do not infer
+# the Kommandos card's loadout (Orks/Kommandos, Unit Composition).
+fun orks_kommando_equipment() -> OrksKommandoEquipment:
+    let item : OrksKommandoEquipment
+    item.nob_melee = Weapon::orks_kustom_choppa
+    return item

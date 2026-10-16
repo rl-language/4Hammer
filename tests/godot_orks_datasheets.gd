@@ -21,8 +21,8 @@ func panel_for(rules, library, action):
 func check_units():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 42)
-	assert(library.get_observation_schema_version() == 42)
+	assert(library.get_state_schema_version() == 43)
+	assert(library.get_observation_schema_version() == 43)
 	assert(library.get_action_schema_version() == 26)
 	# All included cards are constructed through the public roster factory.
 	# Use-model sizes intentionally use user-authorized circular proxies.
@@ -40,8 +40,8 @@ func check_units():
 		assert(model.get_has_waaagh())
 		checked_cards += 1
 	assert(checked_cards == 54)
-	var gun = RLCOrksGunwagonGun.make()
-	var extra = RLCOrksTrukkExtra.make()
+	var gun = library.orks_gunwagon_gun_choice(0)
+	var extra = library.orks_trukk_extra_choice(0)
 	var units = [library.make_orks_battlewagon(0, 4, true, true), library.make_orks_big_ed_bossbunka(0, 3), library.make_orks_blitza_bommer(), library.make_orks_boss_snikrot(), library.make_orks_burna_bommer(true), library.make_orks_dakkajet(true), library.make_orks_deffkilla_wartrike(), library.make_orks_ghazghkull_thraka(), library.make_orks_gorkanaut(), library.make_orks_gunwagon(0, 4, true, true, true, gun), library.make_orks_hunta_rig(), library.make_orks_kill_rig(), library.make_orks_morkanaut(), library.make_orks_nazdreg(), library.make_orks_rukkatrukk_squigbuggies(2), library.make_orks_stompa(0), library.make_orks_trukk(0, true, extra), library.make_orks_wartrakks(2), library.make_orks_wazbom_blastajet(true, true, true), library.make_orks_wazdakka_gutsmek(), library.make_orks_weirdboy()]
 	for unit in units:
 		library.append(board.get_reserve_units(), unit)

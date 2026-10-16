@@ -4,9 +4,9 @@ import bounded_arg
 
 # These are storage schemas, not edition or mission identifiers. Finite action
 # domains remain separate from bounded storage and persistent identities.
-const STATE_SCHEMA_VERSION = 42
+const STATE_SCHEMA_VERSION = 43
 const ACTION_SCHEMA_VERSION = 26
-const OBSERVATION_SCHEMA_VERSION = 42
+const OBSERVATION_SCHEMA_VERSION = 43
 
 # Compatibility metadata for save/replay/ML callers; no tabletop rule defines this version.
 fun get_state_schema_version() -> Int:
@@ -33,6 +33,10 @@ const MAX_ATTACK_MODIFIER_INDEX = 57
 # families need at most4. Excluded Kill Tank is not a playable-data obligation.
 # Review actual copies/quotas in each remaining included54-card adapter.
 const MAX_WEAPONS = 13
+
+# One linear Weapon catalog ID; None/zero means no selector.
+const MAX_WEAPON_CODE = 297
+using WeaponCode = LinearlyDistributedInt<0, MAX_WEAPON_CODE>
 
 # RLC const declarations require literals; keep this at MAX_WEAPONS+1.
 const MAX_WEAPON_SCOPES = 14
@@ -136,7 +140,7 @@ fun<T, Int capacity> size_as_observation_tensor(CheckedVector<T, capacity> obj) 
 # Nonnegative bounds keep generated Python/Godot names valid in RLC 0.4.14.
 const MAX_ENTITY_IDENTITIES = 16384
 const MAX_IDENTITY_SEQUENCE = 16385
-const NEXT_STATE_SCHEMA_VERSION = 43
+const NEXT_STATE_SCHEMA_VERSION = 44
 const MAX_PHASE_SERIAL = 64
 const MAX_TURN_SERIAL = 16
 const MAX_PHASE_STAMP = 65

@@ -18,8 +18,8 @@ cls DeclaredWeapon:
     Weapon weapon
     # Borrowed profiles receive carrier-wide grants, not carrier slot grants (p.81).
     Bool borrowed_weapon
-    WeaponNameCode weapon_name
-    WeaponProfileCode profile_name
+    WeaponCode weapon_name
+    WeaponCode profile_name
     WeaponRule hunter_condition
     WeaponAbilitySet selected_rules
     WeaponAbilitySet current_target_rules
@@ -39,11 +39,11 @@ fun make_declared_weapon(Board board, UnitID source, Int model, Int slot) -> Dec
     result.model = model
     result.model_identity = board[source][model].identity
     result.weapon_owner = result.model_identity
-    result.physical_group = board[source][model].weapon_profile_groups[slot]
+    result.physical_group = weapon_primary_id(board[source][model], slot)
     result.slot = slot
-    result.weapon = board[source][model].weapons[slot]
-    result.weapon_name = board[source][model].weapon_names[slot]
-    result.profile_name = board[source][model].weapon_profile_names[slot]
+    result.weapon = board[source][model].weapons[slot].profile
+    result.weapon_name = board[source][model].weapons[slot].profile.family_id()
+    result.profile_name = board[source][model].weapons[slot].profile.value
     result.hunter_condition = board[source][model].hunter_profile_conditions[slot]
     result.selected_rules = model_weapon_rules(board, source, model, slot)
     # Epic Challenge grants Precision only to the selected CHARACTER
@@ -154,12 +154,12 @@ fun weapon_selection_valid(Board board, UnitID source, Int model, Int slot, Bool
     if slot < 0 or slot >= board[source][model].weapons.size() or selected[slot]:
         return false
     # Appendix 04.01.03: choose one profile per physical weapon per model.
-    let group = board[source][model].weapon_profile_groups[slot].value
+    let group = weapon_primary_id(board[source][model], slot)
     for i in range(board[source][model].weapons.size()):
-        if group != 0 and board[source][model].weapon_profile_groups[i].value == group and selected[i] and !( !melee and board[source][model].simultaneous_ranged_profiles[slot] and board[source][model].simultaneous_ranged_profiles[i]):
+        if group != 0 and weapon_primary_id(board[source][model], i) == group and selected[i] and !( !melee and permits_simultaneous_profile(board[source][model], slot) and permits_simultaneous_profile(board[source][model], i)):
             return false
-    ref weapon = board[source][model].weapons[slot]
-    if board[source][model].used_once_per_battle_weapon[slot]:
+    ref weapon = board[source][model].weapons[slot].profile
+    if nonattacking_equipment(weapon) or board[source][model].used_once_per_battle_weapon[slot]:
         return false
     if melee:
         return weapon.range() == 0 and (!main_selected or model_weapon_has_rule(board[source][model], slot, WeaponRuleKind::extra_attacks))
@@ -183,7 +183,7 @@ fun may_finish_weapon_selection(Board board, UnitID source, Int model, Bool mele
     if !melee or main_selected:
         return true
     for i in range(board[source][model].weapons.size()):
-        if board[source][model].weapons[i].range() == 0 and !model_weapon_has_rule(board[source][model], i, WeaponRuleKind::extra_attacks):
+        if board[source][model].weapons[i].profile.range() == 0 and !nonattacking_equipment(board[source][model].weapons[i].profile) and !model_weapon_has_rule(board[source][model], i, WeaponRuleKind::extra_attacks):
             return false
     return true
 
@@ -275,7 +275,7 @@ fun may_finish_all_weapon_selection(Board board, UnitID source, Int model, Bool 
         return false
     if melee:
         for i in range(board[source][model].weapons.size()):
-            if board[source][model].weapons[i].range() == 0 and model_weapon_has_rule(board[source][model], i, WeaponRuleKind::extra_attacks) and !selected[i]:
+            if board[source][model].weapons[i].profile.range() == 0 and model_weapon_has_rule(board[source][model], i, WeaponRuleKind::extra_attacks) and !selected[i]:
                 return false
     return true
 

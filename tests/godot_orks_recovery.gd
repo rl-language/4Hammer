@@ -22,14 +22,12 @@ func panel_for(rules, library, action):
 func check_units():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 42)
-	assert(library.get_observation_schema_version() == 42)
+	assert(library.get_state_schema_version() == 43)
+	assert(library.get_observation_schema_version() == 43)
 	assert(library.get_action_schema_version() == 26)
-	var gun = RLCOrksMegaMekGun.make()
-	var extra = RLCOrksMegaMekExtra.make()
-	extra.set_value(2) # force_field
-	var pulsa = RLCOrksTankbustaExtra.make()
-	pulsa.set_value(2)
+	var gun = library.orks_mega_mek_gun_choice(0)
+	var extra = library.orks_mega_mek_extra_choice(2)
+	var pulsa = library.orks_tankbusta_extra_choice(2)
 	var units = [library.make_orks_flash_gitz(4), library.make_orks_meganobz(2), library.make_orks_mek(), library.make_orks_big_mek(false, false), library.make_orks_big_mek_in_mega_armour(gun, extra), library.make_orks_big_mek_with_shokk_attack_gun(), library.make_orks_painboy(), library.make_orks_painboss(), library.make_orks_breaka_boyz(false, 5, 5), library.make_orks_tankbustas(false, pulsa, 0), library.make_orks_warboss_in_mega_armour(), library.make_orks_gretchin(10), library.make_orks_runtherd(), library.make_orks_zodgrod_wortsnagga()]
 	var counts = [5, 2, 1, 1, 1, 1, 1, 1, 6, 6, 1, 10, 1, 1]
 	var board = RLCBoard.make()

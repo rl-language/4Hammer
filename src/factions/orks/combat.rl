@@ -4,14 +4,14 @@ import source_effects
 # Green Tide, Bully Boyz and Throat-slittas add separate ability instances;
 # p78's duplicate chooser still decides between sources without summing them.
 fun append_orks_package_weapon_rules(Board board, UnitID source, Int bearer, Int slot, WeaponAbilitySet result):
-    let name : WeaponNameCode
-    name = equipped_named_weapon(board[source][bearer], slot).value
-    append_orks_package_weapon_rules(board, source, bearer, board[source][bearer].weapons[slot], name, result)
+    let name : WeaponCode
+    name = equipped_weapon_family(board[source][bearer], slot).value
+    append_orks_package_weapon_rules(board, source, bearer, board[source][bearer].weapons[slot].profile, name, result)
 
 # Borrowed Firing Deck weapons receive carrier-model/unit package rules using
 # their own named profile, never the carrier's coincidentally matching slot.
 # Orks detachment cards and core Firing Deck p81.
-fun append_orks_package_weapon_rules(Board board, UnitID source, Int bearer, Weapon selected, WeaponNameCode name, WeaponAbilitySet result):
+fun append_orks_package_weapon_rules(Board board, UnitID source, Int bearer, Weapon selected, WeaponCode name, WeaponAbilitySet result):
     ref unit = board[source]
     ref model = unit[bearer]
     let melee = selected.range() == 0
@@ -44,12 +44,12 @@ fun append_orks_package_weapon_rules(Board board, UnitID source, Int bearer, Wea
         result.append(weapon_rule(WeaponRuleKind::ignore_cover))
         if unit_is_riled_up(unit):
             result.append(weapon_rule(WeaponRuleKind::sustained_hit, 1))
-    if !melee and name.value == NamedWeapon::shokk_attack_gun.value:
+    if !melee and name.value == Weapon::orks_big_mek_with_shokk_attack_gun_shokk_attack_gun.value:
         append_orks_effect_ability(board, model, OrksEffectKind::shokka_torrent, WeaponRuleKind::torrent, 0, result)
         append_orks_effect_ability(board, model, OrksEffectKind::shokka_sustained, WeaponRuleKind::sustained_hit, 2, result)
     # Source wording increases existing numeric instances instead of creating
     # a competing instance; apply increments to each before duplicate selection.
-    if !melee and unit_has_orks_enhancement(unit, OrksEnhancement::supa_snazz_dakka) and name.value == NamedWeapon::snazzgun.value:
+    if !melee and unit_has_orks_enhancement(unit, OrksEnhancement::supa_snazz_dakka) and name.value == Weapon::orks_flash_gitz_snazzgun_cutta.value:
         result.append(weapon_rule(WeaponRuleKind::rapid_fire, 1))
     for effect_index in range(model.orks_effects.size()):
         ref effect = model.orks_effects[effect_index]
@@ -103,7 +103,7 @@ fun append_orks_declaration_modifiers(Board board, UnitID source, DeclaredWeapon
         if melee:
             addition = addition + unit_orks_effect(board, unit, OrksEffectKind::unbridled_attacks)
         addition = addition + unit_orks_effect(board, unit, OrksEffectKind::button_attacks)
-        if !melee and declaration.weapon_name.value == NamedWeapon::shokk_attack_gun.value:
+        if !melee and declaration.weapon_name.value == Weapon::orks_big_mek_with_shokk_attack_gun_shokk_attack_gun.family_id():
             addition = addition + model_orks_effect(board, model, OrksEffectKind::shokka_attacks)
     if kind.value == ModifiedCharacteristic::strength.value:
         addition = addition + 2 * unit_orks_effect(board, unit, OrksEffectKind::button_strength)
@@ -678,11 +678,11 @@ fun orks_matching_mek_guns(Unit unit) -> Int:
         if !unit[member_index].is_alive() or !model_matches_datasheet(unit[member_index], OrksDatasheet::mek_gunz):
             continue
         for slot in range(unit[member_index].weapons.size()):
-            if unit[member_index].weapons[slot].range() == 0:
+            if unit[member_index].weapons[slot].profile.range() == 0:
                 continue
-            if family >= 0 and family != unit[member_index].weapon_names[slot].value:
+            if family >= 0 and family != unit[member_index].weapons[slot].profile.family_id():
                 return -1
-            family = unit[member_index].weapon_names[slot].value
+            family = unit[member_index].weapons[slot].profile.family_id()
     return family
 
 # The attack owns this frame; normal target choice precedes weapon Hazardous
@@ -706,15 +706,15 @@ act orks_resolve_hit_effects(ctx Board board, frm UnitID source) -> OrksHitEffec
     if board[source].has_ability(AbilityKind::bust_em):
         grant_orks_effect(board, source, victim, 157, OrksEffectKind::busted, 1, SourceDuration::turn, invalid_entity_identity())
     if board[source].has_ability(AbilityKind::madcap_artillery):
-        frm gun : WeaponNameCode
+        frm gun : WeaponCode
         gun = orks_matching_mek_guns(board[source])
-        if gun.value == NamedWeapon::bubblechukka.value:
+        if gun.value == Weapon::orks_mek_gunz_bubblechukka.value:
             grant_orks_effect(board, source, victim, 158, OrksEffectKind::wobbled, 1, SourceDuration::next_own_turn, invalid_entity_identity())
-        if gun.value == NamedWeapon::traktor_kannon.value:
+        if gun.value == Weapon::orks_mek_gunz_traktor_kannon.value:
             grant_orks_effect(board, source, victim, 159, OrksEffectKind::grounded, 1, SourceDuration::next_own_turn, invalid_entity_identity())
-        if gun.value == NamedWeapon::smasha_gun.value:
+        if gun.value == Weapon::orks_mek_gunz_smasha_gun.value:
             grant_orks_payload(board, source, victim, 160, characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::subtract, 2), SourceDuration::next_own_turn)
-        if gun.value == NamedWeapon::kustom_mega_kannon.value:
+        if gun.value == Weapon::orks_mek_gunz_kustom_mega_kannon.value:
             grant_orks_payload(board, source, victim, 161, characteristic_modifier(ModifiedCharacteristic::leadership, ModifierOperation::add, 1), SourceDuration::next_own_turn)
 
 # Warpath is chosen at SelectedFight BEFORE Pile In/Overrun. The shared roll
@@ -857,7 +857,7 @@ fun append_orks_datasheet_modifiers(Board board, UnitID source, DeclaredWeapon d
     # direction of WS. Its riled permission is registered by the existing passive
     # source engine and is lost/restored with the actual Zodgrod source.
     # https://wahapedia.ru/wh40k11ed/factions/orks/Zodgrod-Wortsnagga
-    if unit.has_ability(AbilityKind::super_runts) and declaration.weapon_name.value == NamedWeapon::scavenged_shivs.value:
+    if unit.has_ability(AbilityKind::super_runts) and declaration.weapon_name.value == Weapon::orks_gretchin_scavenged_shivs.family_id():
         if kind.value == ModifiedCharacteristic::attacks.value or kind.value == ModifiedCharacteristic::strength.value:
             result.append(rule_modifier(ModifierOperation::add, 1))
         if kind.value == ModifiedCharacteristic::weapon_skill.value:
@@ -865,7 +865,7 @@ fun append_orks_datasheet_modifiers(Board board, UnitID source, DeclaredWeapon d
     # Butchery counts actual embarked models, not transport seats, caps at+22,
     # and changes only the Butcha Boyz weapon (not its two Extra Attacks weapons).
     # https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig
-    if kind.value == ModifiedCharacteristic::attacks.value and board[source].has_ability(AbilityKind::fully_loaded_butchery) and declaration.weapon_name.value == NamedWeapon::butcha_boyz.value:
+    if kind.value == ModifiedCharacteristic::attacks.value and board[source].has_ability(AbilityKind::fully_loaded_butchery) and declaration.weapon_name.value == Weapon::orks_hunta_rig_butcha_boyz.family_id():
         let passenger_count = 0
         for passenger_bearer_index in range(board[source].models.size()):
             if board[source][passenger_bearer_index].is_alive():
@@ -883,7 +883,7 @@ fun append_orks_datasheet_modifiers(Board board, UnitID source, DeclaredWeapon d
         if unit_orks_effect(board, unit, OrksEffectKind::rokkit_charge) > 0 and (kind.value == ModifiedCharacteristic::attacks.value or kind.value == ModifiedCharacteristic::strength.value):
             addition = addition + 1
     else:
-        if kind.value == ModifiedCharacteristic::attacks.value and declaration.weapon_name.value == NamedWeapon::blitzkannon.value and model.has_ability(AbilityKind::blitz_dem_gitz) and board.timing.phase == BattlePhase::shooting and unit.owned_by_player1 == board.current_player:
+        if kind.value == ModifiedCharacteristic::attacks.value and declaration.weapon_name.value == Weapon::orks_blitzkannon.family_id() and model.has_ability(AbilityKind::blitz_dem_gitz) and board.timing.phase == BattlePhase::shooting and unit.owned_by_player1 == board.current_player:
             for target in range(board.units.size()):
                 if declaration.targeted[target] and !board[target].has_keyword(Keyword::monster) and !board[target].has_keyword(Keyword::vehicle):
                     addition = 6
@@ -968,7 +968,7 @@ fun append_orks_datasheet_attack_effects(Board board, UnitID source, UnitID targ
     if declaration.weapon.range() == 0:
         if unit.has_ability(AbilityKind::sumfin_to_prove):
             info.orks_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
-        if model.paired_krumpas and declaration.weapon_name.value == NamedWeapon::kustom_krumpa.value:
+        if declaration.weapon.value == Weapon::orks_paired_krumpas.value:
             info.reroll_hits = true
             info.reroll_wounds = true
         if unit.has_ability(AbilityKind::da_bigger_dey_iz) and (board[target].has_keyword(Keyword::monster) or board[target].has_keyword(Keyword::vehicle)):

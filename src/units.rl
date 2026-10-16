@@ -9,7 +9,7 @@ import geometry
 import modifiers
 
 using Wounds = LinearlyDistributedInt<0, MAX_WOUNDS>
-using WeaponsVector = CheckedVector<Weapon, MAX_WEAPONS>
+using WeaponsVector = CheckedVector<EquippedWeapon, MAX_WEAPONS>
 using Abilities = CheckedVector<AbilityKind, 16>
 using Keywords = CheckedVector<Keyword, 32>
 
@@ -27,7 +27,6 @@ cls Model:
     # Generated lifecycle and bounded values preserve the inferred ML layout.
     # Nobz wargear, not a weapon profile: only Kustom Krumpa gains its rerolls.
     # https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
-    Bool paired_krumpas
     OrksEnhancement orks_enhancement
     EntityIdentity orks_upgrade_origin
     OrksEffectGrants orks_effects
@@ -54,8 +53,6 @@ cls Model:
     Profile profile
     # Explicit source identity; legacy uncertified factories remain unknown.
     DatasheetCode datasheet
-    WeaponNameCode[MAX_WEAPONS] weapon_names
-    WeaponProfileCode[MAX_WEAPONS] weapon_profile_names
     # Model-scoped arithmetic, not implicit unit-wide grants (appendix02.02.01).
     CharacteristicModifiers characteristic_modifiers
     # Incoming AP/D grants belong to the actual allocated recipient, not its weapons.
@@ -107,12 +104,7 @@ cls Model:
     EntityIdentity destroying_unit_identity
     Dice destruction_fight_roll
     ModelHistory history
-    # Appendix 04.01.03: nonzero equal IDs identify profiles of one physical weapon.
-    LinearlyDistributedInt<0, MAX_WEAPON_SCOPES>[MAX_WEAPONS] weapon_profile_groups
-    # Infrastructure: reuse the bounded keyword predicate, not its ability kind/parameter.
-    # Nazdreg explicitly selects all three ranged profiles of Kustom Blasta X;
-    # this permission is per equipped profile, not a blanket model exemption.
-    Bool[MAX_WEAPONS] simultaneous_ranged_profiles
+    # Hunter target permissions and One Shot history remain per equipped slot.
     WeaponRule[MAX_WEAPONS] hunter_profile_conditions
     Bool[MAX_WEAPONS] used_once_per_battle_weapon
 
@@ -154,7 +146,7 @@ cls Model:
     fun has_weapon_rule(WeaponRuleKind rule) -> Bool:
         let i = 0
         while i != self.weapons.size():
-            if self.weapons[i].has_rule(rule):
+            if self.weapons[i].profile.has_rule(rule):
                 return true 
             i = i + 1
         return false
@@ -1081,7 +1073,7 @@ fun model_matches_keywords(Model model, KeywordPredicate predicate) -> Bool:
 # Appendix02.02.01: bearer WS/BS modifies every equipped weapon; specific
 # weapon grants affect only their slot. Firing Deck uses the carrier's grants,
 # not an unrelated equipped slot with the same index (24.14 p.81).
-fun model_weapon_modifiers(Model model, Int slot, ModifiedCharacteristic kind, Bool borrowed, WeaponNameCode name, WeaponProfileCode profile_name) -> RuleModifiers:
+fun model_weapon_modifiers(Model model, Int slot, ModifiedCharacteristic kind, Bool borrowed, WeaponCode name, WeaponCode profile_name) -> RuleModifiers:
     assert(valid_characteristic_modifiers(model.characteristic_modifiers), "invalid weapon characteristic modifiers")
     let result : RuleModifiers
     for i in range(model.characteristic_modifiers.size()):
@@ -1105,10 +1097,10 @@ fun make_tantus() -> Unit:
     model.keywords.append(Keyword::psyker)
     model.keywords.append(Keyword::octavius)
     model.keywords.append(Keyword::librarian_tantus)
-    model.weapons.append(Weapon::librarian_storm_bolter)
-    model.weapons.append(Weapon::smite_witchfire)
-    model.weapons.append(Weapon::smite_focused_witchfire)
-    model.weapons.append(Weapon::force_weapon)
+    model.weapons.append(equipped_weapon(Weapon::librarian_storm_bolter))
+    model.weapons.append(equipped_weapon(Weapon::smite_witchfire))
+    model.weapons.append(equipped_weapon(Weapon::smite_focused_witchfire))
+    model.weapons.append(equipped_weapon(Weapon::force_weapon))
     profile.name = "librarian tantus"s
     profile.models.append(model)
     return profile
@@ -1122,9 +1114,9 @@ fun make_infernus_squad() -> Unit:
     model.keywords.append(Keyword::imperium)
     model.keywords.append(Keyword::tacticus)
     model.keywords.append(Keyword::infernus_squad)
-    model.weapons.append(Weapon::bolt_pistol)
-    model.weapons.append(Weapon::pyreblaster)
-    model.weapons.append(Weapon::close_combact_weapon)
+    model.weapons.append(equipped_weapon(Weapon::bolt_pistol))
+    model.weapons.append(equipped_weapon(Weapon::pyreblaster))
+    model.weapons.append(equipped_weapon(Weapon::close_combact_weapon))
     profile.name = "infernus squad"s
     profile.models.append(model)
     profile.models.append(model)
@@ -1143,21 +1135,21 @@ fun make_terminator_squad() -> Unit:
     model.keywords.append(Keyword::imperium)
     model.keywords.append(Keyword::terminator)
     model.keywords.append(Keyword::terminator_squad)
-    model.weapons.append(Weapon::terminator_storm_bolter)
-    model.weapons.append(Weapon::terminator_power_fist)
+    model.weapons.append(equipped_weapon(Weapon::terminator_storm_bolter))
+    model.weapons.append(equipped_weapon(Weapon::terminator_power_fist))
     profile.name = "terminator squad"s
     profile.models.append(model)
     profile.models.append(model)
     profile.models.append(model)
 
     model.weapons.clear()
-    model.weapons.append(Weapon::terminator_storm_bolter)
-    model.weapons.append(Weapon::terminator_power_weapon)
+    model.weapons.append(equipped_weapon(Weapon::terminator_storm_bolter))
+    model.weapons.append(equipped_weapon(Weapon::terminator_power_weapon))
     profile.models.append(model)
 
     model.weapons.clear()
-    model.weapons.append(Weapon::terminator_power_fist)
-    model.weapons.append(Weapon::assault_cannon)
+    model.weapons.append(equipped_weapon(Weapon::terminator_power_fist))
+    model.weapons.append(equipped_weapon(Weapon::assault_cannon))
     profile.models.append(model)
 
     return profile
@@ -1177,8 +1169,8 @@ fun make_octavius() -> Unit:
     model.keywords.append(Keyword::captain)
     model.keywords.append(Keyword::octavius)
     model.keywords.append(Keyword::adeptus_astartes)
-    model.weapons.append(Weapon::captain_storm_bolter)
-    model.weapons.append(Weapon::relic_weapon)
+    model.weapons.append(equipped_weapon(Weapon::captain_storm_bolter))
+    model.weapons.append(equipped_weapon(Weapon::relic_weapon))
     profile.name = "captain octavious"s
     profile.models.append(model)
     return profile
@@ -1199,7 +1191,7 @@ fun make_death_shadow() -> Unit:
     model.keywords.append(Keyword::vanguard_invader)
     model.keywords.append(Keyword::neurolictor)
     model.keywords.append(Keyword::tyranids)
-    model.weapons.append(Weapon::death_shadow_claws_and_talons)
+    model.weapons.append(equipped_weapon(Weapon::death_shadow_claws_and_talons))
     profile.name = "death's shadow"s
     profile.models.append(model)
     return profile
@@ -1218,7 +1210,7 @@ fun make_lictor() -> Unit:
     model.keywords.append(Keyword::lictor)
     model.keywords.append(Keyword::vanguard_invader)
     model.keywords.append(Keyword::tyranids)
-    model.weapons.append(Weapon::lictor_claws_and_talons)
+    model.weapons.append(equipped_weapon(Weapon::lictor_claws_and_talons))
     profile.name = "lictor"s
     profile.models.append(model)
     return profile
@@ -1236,7 +1228,7 @@ fun make_von_ryan_leaper() -> Unit:
     model.keywords.append(Keyword::great_devourer)
     model.keywords.append(Keyword::vanguard_invader)
     model.keywords.append(Keyword::tyranids)
-    model.weapons.append(Weapon::leapers_talon)
+    model.weapons.append(equipped_weapon(Weapon::leapers_talon))
     profile.name = "von ryan's leaper"s
     profile.models.append(model)
     profile.models.append(model)
@@ -1256,9 +1248,9 @@ fun make_aranis_zarkan() -> Unit:
     model.keywords.append(Keyword::chaos)
     model.keywords.append(Keyword::master_of_possession)
     model.keywords.append(Keyword::aranis_zarkan)
-    model.weapons.append(Weapon::rite_of_possession)
-    model.weapons.append(Weapon::rite_of_possession_focused)
-    model.weapons.append(Weapon::staff_of_possession)
+    model.weapons.append(equipped_weapon(Weapon::rite_of_possession))
+    model.weapons.append(equipped_weapon(Weapon::rite_of_possession_focused))
+    model.weapons.append(equipped_weapon(Weapon::staff_of_possession))
     profile.name = "aranis zarkan"s
     profile.models.append(model)
     return profile
@@ -1276,7 +1268,7 @@ fun make_possessed() -> Unit:
     model.keywords.append(Keyword::daemon)      
     model.keywords.append(Keyword::possessed)   
 
-    model.weapons.append(Weapon::hideous_mutations)
+    model.weapons.append(equipped_weapon(Weapon::hideous_mutations))
     
     profile.name = "Possessed"s
     for i in range(5):
@@ -1292,8 +1284,8 @@ fun make_cultist_mob() -> Unit:
     champion.keywords.append(Keyword::chaos)
     champion.keywords.append(Keyword::damned)
     champion.keywords.append(Keyword::cultist_mob) 
-    champion.weapons.append(Weapon::cultist_bolt_pistol)
-    champion.weapons.append(Weapon::brutal_assault_weapon)
+    champion.weapons.append(equipped_weapon(Weapon::cultist_bolt_pistol))
+    champion.weapons.append(equipped_weapon(Weapon::brutal_assault_weapon))
 
     let i = 0
     while i != 9:
@@ -1304,8 +1296,8 @@ fun make_cultist_mob() -> Unit:
         cultist.keywords.append(Keyword::chaos)
         cultist.keywords.append(Keyword::damned)
         cultist.keywords.append(Keyword::cultist_mob)
-        cultist.weapons.append(Weapon::cultist_autopistol)
-        cultist.weapons.append(Weapon::brutal_assault_weapon)
+        cultist.weapons.append(equipped_weapon(Weapon::cultist_autopistol))
+        cultist.weapons.append(equipped_weapon(Weapon::brutal_assault_weapon))
         profile.models.append(cultist)
         i = i + 1
 
@@ -1332,35 +1324,32 @@ fun make_legionaries() -> Unit:
 
     # 1) ASPIRING CHAMPION
     model.weapons.clear()
-    model.weapons.append(Weapon::plasma_pistol_standard)
-    model.weapons.append(Weapon::plasma_pistol_supercharge)
-    model.weapon_profile_groups[0] = 1
-    model.weapon_profile_groups[1] = 1
-    model.weapons.append(Weapon::accursed_weapon)
+    model.weapons.append(equipped_weapon(Weapon::plasma_pistol_standard))
+    model.weapons.append(equipped_weapon(Weapon::plasma_pistol_supercharge))
+    link_weapon_profile(model, 1, 0)
+    model.weapons.append(equipped_weapon(Weapon::accursed_weapon))
     profile.models.append(model)  # This copies champion’s state into the unit
 
     # 2) LEGIONARY with Meltagun
-    model.weapon_profile_groups[0] = 0
-    model.weapon_profile_groups[1] = 0
     model.weapons.clear()
-    model.weapons.append(Weapon::bolt_pistol)
-    model.weapons.append(Weapon::meltagun)
-    model.weapons.append(Weapon::close_combat_weapon)
+    model.weapons.append(equipped_weapon(Weapon::bolt_pistol))
+    model.weapons.append(equipped_weapon(Weapon::meltagun))
+    model.weapons.append(equipped_weapon(Weapon::close_combat_weapon))
     profile.models.append(model)  # Copies meltagun loadout
 
     # 3) LEGIONARY with Heavy Bolter
     model.weapons.clear()
-    model.weapons.append(Weapon::bolt_pistol)
-    model.weapons.append(Weapon::heavy_bolter)
-    model.weapons.append(Weapon::close_combat_weapon)
+    model.weapons.append(equipped_weapon(Weapon::bolt_pistol))
+    model.weapons.append(equipped_weapon(Weapon::heavy_bolter))
+    model.weapons.append(equipped_weapon(Weapon::close_combat_weapon))
     profile.models.append(model)  # Copies heavy bolter loadout
 
     # 4) 7 LEGIONARIES with Boltgun
     for i in range(7):
         model.weapons.clear()
-        model.weapons.append(Weapon::bolt_pistol)
-        model.weapons.append(Weapon::boltgun)
-        model.weapons.append(Weapon::close_combat_weapon)
+        model.weapons.append(equipped_weapon(Weapon::bolt_pistol))
+        model.weapons.append(equipped_weapon(Weapon::boltgun))
+        model.weapons.append(equipped_weapon(Weapon::close_combat_weapon))
         profile.models.append(model)  # Copies boltgun loadout each time
 
     return profile
@@ -1381,11 +1370,11 @@ fun make_beastboss_morgrim() -> Unit:
     boss_model.keywords.append(Keyword::character)
     boss_model.keywords.append(Keyword::beastboss)
 
-    boss_model.weapons.append(Weapon::beat_boss_shoota)
+    boss_model.weapons.append(equipped_weapon(Weapon::beat_boss_shoota))
 
-    boss_model.weapons.append(Weapon::beast_snagga_klaw)
+    boss_model.weapons.append(equipped_weapon(Weapon::beast_snagga_klaw))
 
-    boss_model.weapons.append(Weapon::beastchoppa)
+    boss_model.weapons.append(equipped_weapon(Weapon::beastchoppa))
 
     boss_unit.models.append(boss_model)
     boss_unit.name = "Beastboss Morgrim"s
@@ -1400,8 +1389,8 @@ fun make_beast_snagga_boyz() -> Unit:
     nob_model.keywords.append(Keyword::infantry)
     nob_model.keywords.append(Keyword::mob)
     nob_model.keywords.append(Keyword::monster_hunters)
-    nob_model.weapons.append(Weapon::slugga)
-    nob_model.weapons.append(Weapon::power_snappa)
+    nob_model.weapons.append(equipped_weapon(Weapon::slugga))
+    nob_model.weapons.append(equipped_weapon(Weapon::power_snappa))
     unit.models.append(nob_model)
     let thumpgun_boy : Model
     thumpgun_boy.profile = Profile::beast_snagga_boy
@@ -1410,8 +1399,8 @@ fun make_beast_snagga_boyz() -> Unit:
     thumpgun_boy.keywords.append(Keyword::mob)
     thumpgun_boy.keywords.append(Keyword::monster_hunters)
 
-    thumpgun_boy.weapons.append(Weapon::thump_gun)
-    thumpgun_boy.weapons.append(Weapon::close_combat_weapon)
+    thumpgun_boy.weapons.append(equipped_weapon(Weapon::thump_gun))
+    thumpgun_boy.weapons.append(equipped_weapon(Weapon::close_combat_weapon))
 
     unit.models.append(thumpgun_boy)
 
@@ -1422,8 +1411,8 @@ fun make_beast_snagga_boyz() -> Unit:
     boy.keywords.append(Keyword::mob)
     boy.keywords.append(Keyword::monster_hunters)
 
-    boy.weapons.append(Weapon::slugga)
-    boy.weapons.append(Weapon::choppa)
+    boy.weapons.append(equipped_weapon(Weapon::slugga))
+    boy.weapons.append(equipped_weapon(Weapon::choppa))
 
     for i in range(8):
         unit.models.append(boy)
@@ -1442,9 +1431,9 @@ fun make_squighog_boyz() -> Unit:
     nob_model.keywords.append(Keyword::squighog_boyz)
     
     # Weapons: slugga, big choppa, squighog_jaws
-    nob_model.weapons.append(Weapon::slugga)
-    nob_model.weapons.append(Weapon::big_choppa)
-    nob_model.weapons.append(Weapon::squighog_jaws)
+    nob_model.weapons.append(equipped_weapon(Weapon::slugga))
+    nob_model.weapons.append(equipped_weapon(Weapon::big_choppa))
+    nob_model.weapons.append(equipped_weapon(Weapon::squighog_jaws))
     
     unit.models.append(nob_model)
 
@@ -1458,9 +1447,9 @@ fun make_squighog_boyz() -> Unit:
         hog_boy.keywords.append(Keyword::squighog_boyz)
 
         # Weapons: saddlegit_weapons, stikka_ranged, squighog_jaws
-        hog_boy.weapons.append(Weapon::saddlegit_weapons)
-        hog_boy.weapons.append(Weapon::stikka_ranged)
-        hog_boy.weapons.append(Weapon::squighog_jaws)
+        hog_boy.weapons.append(equipped_weapon(Weapon::saddlegit_weapons))
+        hog_boy.weapons.append(equipped_weapon(Weapon::stikka_ranged))
+        hog_boy.weapons.append(equipped_weapon(Weapon::squighog_jaws))
 
         unit.models.append(hog_boy)
 
@@ -1486,9 +1475,9 @@ fun make_tristrean() -> Unit:
     # (No enumerated keyword for “adeptus_custodes” currently, so we skip it.)
 
     # Melee Weapons
-    tristraen_model.weapons.append(Weapon::vaultswords_behemor)
-    tristraen_model.weapons.append(Weapon::vaultswords_hurricanus)
-    tristraen_model.weapons.append(Weapon::vaultswords_victus)
+    tristraen_model.weapons.append(equipped_weapon(Weapon::vaultswords_behemor))
+    tristraen_model.weapons.append(equipped_weapon(Weapon::vaultswords_hurricanus))
+    tristraen_model.weapons.append(equipped_weapon(Weapon::vaultswords_victus))
 
     # Finish building the unit
     tristraen_unit.name = "Tristraen"s
@@ -1515,8 +1504,8 @@ fun make_custodian_guard() -> Unit:
     guard_model.keywords.append(Keyword::custodian_guard)
 
     # Sentinel Blade (ranged + melee):
-    guard_model.weapons.append(Weapon::sentinel_blade_ranged)
-    guard_model.weapons.append(Weapon::sentinel_blade_melee)
+    guard_model.weapons.append(equipped_weapon(Weapon::sentinel_blade_ranged))
+    guard_model.weapons.append(equipped_weapon(Weapon::sentinel_blade_melee))
 
     # Make 3 models:
     for i in range(3):
@@ -1536,8 +1525,8 @@ fun make_custodian_wardens() -> Unit:
     warden_with_axe.keywords.append(Keyword::infantry)
     warden_with_axe.keywords.append(Keyword::imperium)
     warden_with_axe.keywords.append(Keyword::custodian_wardens)
-    warden_with_axe.weapons.append(Weapon::castellan_axe_ranged)
-    warden_with_axe.weapons.append(Weapon::castellan_axe_melee)
+    warden_with_axe.weapons.append(equipped_weapon(Weapon::castellan_axe_ranged))
+    warden_with_axe.weapons.append(equipped_weapon(Weapon::castellan_axe_melee))
 
     # 2) WARDEN with Guardian Spear
     let warden_with_spear : Model
@@ -1545,8 +1534,8 @@ fun make_custodian_wardens() -> Unit:
     warden_with_spear.keywords.append(Keyword::infantry)
     warden_with_spear.keywords.append(Keyword::imperium)
     warden_with_spear.keywords.append(Keyword::custodian_wardens)
-    warden_with_spear.weapons.append(Weapon::guardian_spear_ranged)
-    warden_with_spear.weapons.append(Weapon::guardian_spear_melee)
+    warden_with_spear.weapons.append(equipped_weapon(Weapon::guardian_spear_ranged))
+    warden_with_spear.weapons.append(equipped_weapon(Weapon::guardian_spear_melee))
 
     # Add them to the unit: 1 with axe, 2 with spear
     wardens_unit.models.append(warden_with_axe)
@@ -1568,9 +1557,9 @@ fun make_allarus_custodians() -> Unit:
     allarus_model.keywords.append(Keyword::allarus_custodians)
 
     # Weapons: balistus grenade launcher + guardian spear (both ranged and melee)
-    allarus_model.weapons.append(Weapon::balistus_grenade_launcher)
-    allarus_model.weapons.append(Weapon::guardian_spear_ranged_allarus)
-    allarus_model.weapons.append(Weapon::guardian_spear_melee_allarus)
+    allarus_model.weapons.append(equipped_weapon(Weapon::balistus_grenade_launcher))
+    allarus_model.weapons.append(equipped_weapon(Weapon::guardian_spear_ranged_allarus))
+    allarus_model.weapons.append(equipped_weapon(Weapon::guardian_spear_melee_allarus))
 
     # Add two models
     allarus_unit.models.append(allarus_model)
@@ -1654,9 +1643,9 @@ fun make_master_zacharial() -> Unit:
     # (No “dark_angels” keyword was enumerated, so we skip it.)
 
     # Weapons
-    zach_model.weapons.append(Weapon::boltstorm_gauntlet)
-    zach_model.weapons.append(Weapon::power_fist_zacharial)
-    zach_model.weapons.append(Weapon::relic_chainsword)
+    zach_model.weapons.append(equipped_weapon(Weapon::boltstorm_gauntlet))
+    zach_model.weapons.append(equipped_weapon(Weapon::power_fist_zacharial))
+    zach_model.weapons.append(equipped_weapon(Weapon::relic_chainsword))
 
     zach_unit.name = "Master Zacharial"s
     zach_unit.models.append(zach_model)
@@ -1689,9 +1678,9 @@ fun make_intercessor_squad() -> Unit:
     # Then you could append them here.
 
     # Weapons
-    base_model.weapons.append(Weapon::bolt_pistol)
-    base_model.weapons.append(Weapon::bolt_rifle)
-    base_model.weapons.append(Weapon::close_combat_weapon)
+    base_model.weapons.append(equipped_weapon(Weapon::bolt_pistol))
+    base_model.weapons.append(equipped_weapon(Weapon::bolt_rifle))
+    base_model.weapons.append(equipped_weapon(Weapon::close_combat_weapon))
 
     # Create 10 identical models
     for i in range(10):
@@ -1717,12 +1706,11 @@ fun make_hellblaster_squad() -> Unit:
     # If you wish to add “ADEPTUS_ASTARTES” or “DARK_ANGELS,” define them similarly in enum Keyword first, then append.
 
     # Weapons
-    base_model.weapons.append(Weapon::bolt_pistol)
-    base_model.weapons.append(Weapon::plasma_incinerator_standard)
-    base_model.weapons.append(Weapon::plasma_incinerator_supercharge)
-    base_model.weapon_profile_groups[1] = 1
-    base_model.weapon_profile_groups[2] = 1
-    base_model.weapons.append(Weapon::close_combat_weapon)
+    base_model.weapons.append(equipped_weapon(Weapon::bolt_pistol))
+    base_model.weapons.append(equipped_weapon(Weapon::plasma_incinerator_standard))
+    base_model.weapons.append(equipped_weapon(Weapon::plasma_incinerator_supercharge))
+    link_weapon_profile(base_model, 2, 1)
+    base_model.weapons.append(equipped_weapon(Weapon::close_combat_weapon))
 
     # 5 identical models
     for i in range(5):
@@ -1752,8 +1740,8 @@ fun make_bladeguard_veteran_squad() -> Unit:
     # Optionally add Adeptus Astartes or Dark Angels if you define them in the Keyword enum
 
     # Weapons
-    base_model.weapons.append(Weapon::heavy_bolt_pistol)
-    base_model.weapons.append(Weapon::master_crafted_power_weapon)
+    base_model.weapons.append(equipped_weapon(Weapon::heavy_bolt_pistol))
+    base_model.weapons.append(equipped_weapon(Weapon::master_crafted_power_weapon))
 
     # Add 3 identical models
     for i in range(3):
@@ -1783,14 +1771,14 @@ fun make_vengeful_brethren(UnitVector out, Bool owner) -> Faction:
 # Ordinary equipped profiles obtain their explicit identities; legacy direct
 # borrowed helpers have no passenger identity. Real deck declarations carry it.
 fun model_weapon_modifiers(Model model, Int slot, ModifiedCharacteristic kind, Bool borrowed) -> RuleModifiers:
-    let name : WeaponNameCode
-    let profile_name : WeaponProfileCode
+    let name : WeaponCode
+    let profile_name : WeaponCode
     if !borrowed and slot >= 0 and slot < model.weapons.size():
-        name = model.weapon_names[slot]
-        profile_name = model.weapon_profile_names[slot]
+        name = model.weapons[slot].profile.family_id()
+        profile_name = model.weapons[slot].profile.value
     return model_weapon_modifiers(model, slot, kind, borrowed, name, profile_name)
 
-# Physical group IDs distinguish copies; group0 never matches a neighbour.
+# Primary links distinguish physical copies; unrelated roots never match.
 # Borrowed weapons are not one of the carrier's equipped instances (p.81).
 fun weapon_modifier_slot_matches(Model model, CharacteristicModifier entry, Int slot, Bool borrowed) -> Bool:
     if entry.weapon_scope.value == 0:
@@ -1802,7 +1790,7 @@ fun weapon_modifier_slot_matches(Model model, CharacteristicModifier entry, Int 
         return false
     if selected == slot:
         return true
-    return entry.physical_scope and model.weapon_profile_groups[selected].value > 0 and model.weapon_profile_groups[selected] == model.weapon_profile_groups[slot]
+    return entry.physical_scope and weapon_primary_slot(model, selected) == weapon_primary_slot(model, slot)
 
 # Named unit conditions use constituent identity, not a display-string match.
 # Support Shokka excludes BIG MEK WITH SHOKK ATTACK GUN units:
@@ -1823,16 +1811,8 @@ fun set_model_datasheet(Model model, OrksDatasheet tag):
     assert(tag.value >= 0 and tag.value < MAX_DATASHEETCODE, "invalid datasheet identity")
     model.datasheet = tag.value
 
-# One profile's physical family is catalogued, not inferred from legacy stats.
-fun set_named_weapon_profile(Model model, Int slot, NamedWeaponProfile tag):
-    assert(slot >= 0 and slot < model.weapons.size() and tag.value >= 0 and tag.value < MAX_WEAPONPROFILECODE, "invalid named weapon profile")
-    assert(tag.value == 0 or named_profile_is_melee(tag) == (model.weapons[slot].range() == 0), "profile identity attack kind mismatch")
-    model.weapon_profile_names[slot] = tag.value
-    let family = named_profile_weapon(tag)
-    model.weapon_names[slot] = family.value
-
-# A model-datasheet grant is applied only to those constituents, not every model
-# in a mixed/attached unit. Source timing/expiry remains17.E/17.G.
+# A datasheet-scoped grant affects only its matching constituents, including
+# mixed attachments (core pp66-67; individual source eligibility remains separate).
 fun grant_datasheet_characteristic(Unit unit, OrksDatasheet tag, CharacteristicModifier modifier):
     for i in range(unit.models.size()):
         if model_matches_datasheet(unit[i], tag):
@@ -1846,62 +1826,77 @@ fun named_model_datasheet(Model model) -> OrksDatasheet:
     tag.value = model.datasheet.value
     return tag
 
-# Source name lookup for an actual equipped slot; unknown stays explicit.
-fun equipped_named_weapon(Model model, Int slot) -> NamedWeapon:
-    assert(slot >= 0 and slot < model.weapons.size(), "invalid equipped identity slot")
-    let tag : NamedWeapon
-    tag.value = model.weapon_names[slot].value
-    return tag
+# Resolve a physical copy in its model: a primary is its own root, while all
+# alternate profiles refer to that primary (core p16; appendix04.01.03).
+fun weapon_primary_slot(Model model, Int slot) -> Int:
+    assert(slot >= 0 and slot < model.weapons.size(), "invalid equipped weapon slot")
+    if model.weapons[slot].secondary_profile_of.value > 0:
+        return model.weapons[slot].secondary_profile_of.value - 1
+    return slot
 
-# Alternate profile labels remain distinct from their physical weapon family.
-fun equipped_named_profile(Model model, Int slot) -> NamedWeaponProfile:
-    assert(slot >= 0 and slot < model.weapons.size(), "invalid equipped identity slot")
-    let tag : NamedWeaponProfile
-    tag.value = model.weapon_profile_names[slot].value
-    return tag
+# The stable snapshot uses a1-based root slot so independent copies remain
+# distinct in Hazardous/One Shot bookkeeping (core p81; appendix04.01.03).
+fun weapon_primary_id(Model model, Int slot) -> Int:
+    return weapon_primary_slot(model, slot) + 1
 
-# Named equipped-weapon grants feed the existing per-slot rule consumers
-# (p.78; appendix04.01.03). Source duration/expiry remains17.E.
-fun grant_named_weapon_rule(Model model, NamedWeapon name, WeaponRule rule):
-    assert(name.value > 0 and name.value < MAX_WEAPONNAMECODE, "invalid named weapon rule grant")
+# Identity comes from the actual profile, never a separately supplied name.
+# Family selectors address the catalog representative shared by its profiles.
+fun equipped_weapon_family(Model model, Int slot) -> Weapon:
+    let result : Weapon
+    result.value = model.weapons[slot].profile.family_id()
+    return result
+
+# Exact-profile selectors use the actual equipped catalog entry (04.01.03).
+fun equipped_weapon_profile(Model model, Int slot) -> Weapon:
+    return model.weapons[slot].profile
+
+# Install a primary or explicit alternate; constructors supply the real
+# catalog entry and same-model parent, without duplicated identity tags.
+fun equip_weapon(Model model, Weapon profile, Int primary):
+    assert(profile.value > 0 and profile.value < MAX_WEAPON_CODE, "invalid equipped weapon profile")
+    assert(primary >= 0 and primary <= model.weapons.size(), "primary weapon must already exist")
+    if primary > 0:
+        assert(model.weapons[primary - 1].secondary_profile_of.value == 0 and model.weapons[primary - 1].profile.family_id() == profile.family_id(), "alternate weapon must reference its primary family")
+    model.weapons.append(equipped_weapon(profile, primary))
+
+# Hunter conditions remain equipped metadata separate from weapon abilities;
+# selection checks them against the actual target (core p16/04.01.03).
+fun equip_weapon(Model model, Weapon profile, Int primary, WeaponRule hunter):
+    let slot = model.weapons.size()
+    equip_weapon(model, profile, primary)
+    model.hunter_profile_conditions[slot] = hunter
+
+# Explicit fixture/host bridge uses0-based slot indices and rejects cycles or
+# unrelated weapons; restore validation enforces the same invariant.
+fun link_weapon_profile(Model model, Int slot, Int primary):
+    assert(primary >= 0 and primary < slot and slot < model.weapons.size(), "alternate must follow its primary")
+    assert(model.weapons[primary].secondary_profile_of.value == 0 and model.weapons[primary].profile.family_id() == model.weapons[slot].profile.family_id(), "alternate family mismatch")
+    model.weapons[slot].secondary_profile_of = primary + 1
+
+# A family grant reaches every physical copy/profile of that catalog family
+# (source card restrictions; core p78/appendix04.01.03).
+fun grant_weapon_family_rule(Model model, Weapon family, WeaponRule rule):
     for slot in range(model.weapons.size()):
-        if model.weapon_names[slot].value == name.value:
+        if model.weapons[slot].profile.family_id() == family.family_id():
             assert(model.additional_weapon_rules[slot].has_capacity(), "weapon rule grant capacity exceeded")
             model.additional_weapon_rules[slot].append(rule)
 
-# A profile grant affects only that printed profile, across equipped copies.
-fun grant_named_profile_rule(Model model, NamedWeaponProfile tag, WeaponRule rule):
-    assert(tag.value > 0 and tag.value < MAX_WEAPONPROFILECODE, "invalid named profile rule grant")
+# Exact-profile grants remain narrower than family grants (04.01.03).
+fun grant_weapon_profile_rule(Model model, Weapon profile, WeaponRule rule):
     for slot in range(model.weapons.size()):
-        if model.weapon_profile_names[slot].value == tag.value:
+        if model.weapons[slot].profile.value == profile.value:
             assert(model.additional_weapon_rules[slot].has_capacity(), "weapon rule grant capacity exceeded")
             model.additional_weapon_rules[slot].append(rule)
 
-# A physical-instance grant follows existing profile groups; a second copy
-# of the same named weapon does not inherit it (appendix04.01.03).
+# Physical-instance grants follow the primary link, never another copy of
+# the same catalog weapon (appendix04.01.03).
 fun grant_physical_weapon_rule(Model model, Int slot, WeaponRule rule):
-    assert(slot >= 0 and slot < model.weapons.size(), "invalid physical weapon rule grant")
-    for target_slot in range(model.weapons.size()):
-        if target_slot == slot or (model.weapon_profile_groups[slot].value > 0 and model.weapon_profile_groups[slot] == model.weapon_profile_groups[target_slot]):
-            assert(model.additional_weapon_rules[target_slot].has_capacity(), "weapon rule grant capacity exceeded")
-            model.additional_weapon_rules[target_slot].append(rule)
+    let root = weapon_primary_slot(model, slot)
+    for target in range(model.weapons.size()):
+        if weapon_primary_slot(model, target) == root:
+            assert(model.additional_weapon_rules[target].has_capacity(), "weapon rule grant capacity exceeded")
+            model.additional_weapon_rules[target].append(rule)
 
-# Nazdreg datasheet UNIT COMPOSITION explicitly permits its three separate
-# ranged profiles. Installing actual source profiles remains the unit batch.
-# Source: https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg
-fun permit_simultaneous_ranged_profiles(Model model, Int group):
-    assert(group > 0 and group < MAX_WEAPON_SCOPES, "invalid physical weapon group")
-    for slot in range(model.weapons.size()):
-        if model.weapon_profile_groups[slot].value == group and model.weapons[slot].range() > 0:
-            model.simultaneous_ranged_profiles[slot] = true
-
-# Fixed arrays need typed editor bridges; physical groups encode one equipped
-# copy's alternate profiles (appendix04.01.03), not equal display names.
-fun set_physical_weapon_group(Model model, Int slot, Int group):
-    assert(slot >= 0 and slot < model.weapons.size() and group >= 0 and group < MAX_WEAPON_SCOPES, "invalid physical profile group")
-    model.weapon_profile_groups[slot] = group
-
-# Expose the sourced profile permission to Godot without an unbounded or
-# raw fixed-array selector (Nazdreg UNIT COMPOSITION; appendix04.01.03).
+# Godot reads the printed Nazdreg exception from the actual profile catalog.
 fun permits_simultaneous_profile(Model model, Int slot) -> Bool:
-    return slot >= 0 and slot < model.weapons.size() and model.simultaneous_ranged_profiles[slot]
+    return slot >= 0 and slot < model.weapons.size() and simultaneous_weapon_profile(model.weapons[slot].profile)

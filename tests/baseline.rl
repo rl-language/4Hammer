@@ -12,7 +12,7 @@ fun orks17c2b_info(Board board, Int slot) -> AttackSequenceInfo:
 # A weapon-specific increment affects its slot, not its neighbour or other bearer.
 fun test_orks17c2b_strength_slot_and_bearer_scope() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    board[0][0].weapons.append(equipped_weapon(Weapon::librarian_storm_bolter))
     board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 3, 0))
     let first = orks17c2b_info(board, 0)
     let second = orks17c2b_info(board, 1)
@@ -21,8 +21,8 @@ fun test_orks17c2b_strength_slot_and_bearer_scope() -> Bool:
 # Bearer BS affects all ranged profiles; WS applies to melee instead (02.02.01).
 fun test_orks17c2b_all_weapon_skills_and_melee_scope() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
-    board[0][0].weapons.append(Weapon::close_combat_weapon)
+    board[0][0].weapons.append(equipped_weapon(Weapon::librarian_storm_bolter))
+    board[0][0].weapons.append(equipped_weapon(Weapon::close_combat_weapon))
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::add, 1))
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::weapon_skill, ModifierOperation::subtract, 1))
     let first = orks17c2b_info(board, 0)
@@ -33,7 +33,7 @@ fun test_orks17c2b_all_weapon_skills_and_melee_scope() -> Bool:
 # Cover's BS increment is before division and final rounding, not added later.
 fun test_orks17c2b_cover_uses_modifier_operation_order() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::slugga
+    board[0][0].weapons[0].profile = Weapon::slugga
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::divide, 2))
     board.attack_info.target_has_cover = true
     let info = orks17c2b_info(board, 0)
@@ -42,7 +42,7 @@ fun test_orks17c2b_cover_uses_modifier_operation_order() -> Bool:
 # A later chosen Ignores Cover still cancels the core increment before arithmetic.
 fun test_orks17c2b_late_ignore_cover_recomputes_skill() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::cultist_bolt_pistol
+    board[0][0].weapons[0].profile = Weapon::cultist_bolt_pistol
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::divide, 2))
     board.attack_info.target_has_cover = true
     let info = orks17c2b_info(board, 0)
@@ -77,7 +77,7 @@ fun test_orks17c2b_armour_penetration_changes_save() -> Bool:
 # Legacy explicit AP increments obey the same order; do not subtract after rounding.
 fun test_orks17c2b_ap_increment_precedes_division() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::plasma_pistol_standard
+    board[0][0].weapons[0].profile = Weapon::plasma_pistol_standard
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::armour_penetration, ModifierOperation::divide, 2))
     let info = orks17c2b_info(board, 0)
     info.penetration_bonus = true
@@ -98,7 +98,7 @@ fun test_orks17c2b_ap_zero_lock_and_worsening_limit() -> Bool:
 # Different raw BS profiles may group when their effective characteristics agree.
 fun test_orks17c2b_group_identity_uses_effective_skill() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    board[0][0].weapons.append(equipped_weapon(Weapon::librarian_storm_bolter))
     board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::subtract, 1, 1))
     let left = orks17c2b_info(board, 0)
     let right = orks17c2b_info(board, 1)
@@ -112,7 +112,7 @@ fun test_orks17c2b_group_identity_uses_effective_skill() -> Bool:
 # Same raw profile with different effective S must resolve as separate groups.
 fun test_orks17c2b_group_identity_splits_effective_strength() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::captain_storm_bolter)
+    board[0][0].weapons.append(equipped_weapon(Weapon::captain_storm_bolter))
     board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 1, 1))
     let left = orks17c2b_info(board, 0)
     let right = orks17c2b_info(board, 1)
@@ -152,7 +152,7 @@ fun test_orks17c2b_group_identity_refreshes_target_keyword_subject() -> Bool:
 # Actual target legality and replacement eligibility use effective Range (p.16/04.03.03).
 fun test_orks17c2b_effective_range_changes_target_legality() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::bolt_pistol
+    board[0][0].weapons[0].profile = Weapon::bolt_pistol
     board[1][0].position = board_position(25, 5)
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
     if declaration_target_valid(board, unit_id(0), declaration, unit_id(1), false):
@@ -163,7 +163,7 @@ fun test_orks17c2b_effective_range_changes_target_legality() -> Bool:
 # Rapid Fire/Melta half-range is measured from the effective declaration Range.
 fun test_orks17c2b_half_range_snapshot_uses_effective_range() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::bolt_pistol
+    board[0][0].weapons[0].profile = Weapon::bolt_pistol
     board[1][0].position = board_position(16, 5)
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
     snapshot_weapon_target(board, unit_id(0), declaration, unit_id(1))
@@ -176,12 +176,12 @@ fun test_orks17c2b_half_range_snapshot_uses_effective_range() -> Bool:
 # 'Melee' Range and '-' Torrent skill remain special, regardless of arithmetic.
 fun test_orks17c2b_special_melee_range_and_torrent_skill() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::close_combat_weapon
+    board[0][0].weapons[0].profile = Weapon::close_combat_weapon
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::range, ModifierOperation::add, 20))
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
     if declaration_weapon_range(board, unit_id(0), declaration) != 0:
         return false
-    board[0][0].weapons[0] = Weapon::pyreblaster
+    board[0][0].weapons[0].profile = Weapon::pyreblaster
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::ballistic_skill, ModifierOperation::add, 3))
     let info = orks17c2b_info(board, 0)
     return effective_attack_skill(board, info) == 0
@@ -2733,7 +2733,7 @@ fun attack_declaration_fixture() -> Board:
     board[0][0].position = board_position(5, 5)
     board[1][0].position = board_position(10, 5)
     board[0][0].weapons.clear()
-    board[0][0].weapons.append(Weapon::captain_storm_bolter)
+    board[0][0].weapons.append(equipped_weapon(Weapon::captain_storm_bolter))
     let other = board[1]
     other[0].identity = 0
     other.identity = 0
@@ -2745,7 +2745,7 @@ fun attack_declaration_fixture() -> Board:
 # p.16: all weapons and targets are declared before the first hit roll.
 fun test_attack_declarations_precede_rolls_and_allow_different_targets() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    board[0][0].weapons.append(equipped_weapon(Weapon::librarian_storm_bolter))
     let sequence = attack(board, unit_id(0), unit_id(1), false, false)
     sequence.select_weapon(board, attack_test_slot(0))
     sequence.select_weapon(board, attack_test_slot(1))
@@ -2776,8 +2776,8 @@ fun test_attack_declaration_per_model_range_and_engaged_target() -> Bool:
 # weapons; ending before the required melee selection is illegal.
 fun test_attack_weapon_selection_modes_duplicates_and_required_melee() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::relic_weapon)
-    board[0][0].weapons.append(Weapon::force_weapon)
+    board[0][0].weapons.append(equipped_weapon(Weapon::relic_weapon))
+    board[0][0].weapons.append(equipped_weapon(Weapon::force_weapon))
     let selected : Bool[MAX_WEAPONS]
     if weapon_selection_valid(board, unit_id(0), 0, 0, true, selected, false) or weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false):
         return false
@@ -2789,7 +2789,7 @@ fun test_attack_weapon_selection_modes_duplicates_and_required_melee() -> Bool:
 # p.17: split shares add to A and allocate at least one per selected target.
 fun test_attack_melee_split_budget_and_target_uniqueness() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::relic_weapon
+    board[0][0].weapons[0].profile = Weapon::relic_weapon
     board[1][0].position = board_position(8, 5)
     board[2][0].position = board_position(5, 8)
     let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
@@ -2810,7 +2810,7 @@ fun test_attack_melee_split_budget_and_target_uniqueness() -> Bool:
 # preventing a partial allocation from creating a selector with no choices.
 fun test_attack_melee_single_target_cannot_leave_unallocatable_share() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::relic_weapon
+    board[0][0].weapons[0].profile = Weapon::relic_weapon
     board[1][0].position = board_position(8, 5)
     let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
     let targets = declare_weapon_targets(board, weapon, unit_id(0), true)
@@ -2853,7 +2853,7 @@ fun test_attack_group_identity_includes_characteristics_and_applicable_rules() -
 # weapon at gathering, then combined; neither weapon rolls damage or hits yet.
 fun test_attack_random_attacks_per_weapon_before_group_hits() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::smite_witchfire
+    board[0][0].weapons[0].profile = Weapon::smite_witchfire
     let declarations : DeclaredWeapons
     for i in range(2):
         let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
@@ -3093,7 +3093,7 @@ fun test_attack_random_characteristic_command_reroll_once() -> Bool:
 # choosing another target, and consume each source model's weapon only once.
 fun test_attack_finishes_selected_target_before_next_and_each_weapon_once() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    board[0][0].weapons.append(equipped_weapon(Weapon::librarian_storm_bolter))
     let sequence = attack(board, unit_id(0), unit_id(1), false, false)
     sequence.select_weapon(board, attack_test_slot(0))
     sequence.select_weapon(board, attack_test_slot(1))
@@ -3380,7 +3380,7 @@ fun test_damage_hazard_batch_one_and_two_fail() -> Bool:
 fun test_damage_hazard_selected_but_skipped_weapon() -> Bool:
     let board = damage_test_fixture()
     board[0][0].weapons.clear()
-    board[0][0].weapons.append(Weapon::smite_focused_witchfire)
+    board[0][0].weapons.append(equipped_weapon(Weapon::smite_focused_witchfire))
     let sequence = attack(board, unit_id(0), unit_id(1), false, false)
     sequence.select_weapon(board, attack_test_slot(0))
     sequence.skip(board)
@@ -3456,7 +3456,7 @@ fun test_damage_destruction_current_player_priority() -> Bool:
 # after declaration when a model/target changes its position.
 fun test_damage_melta_declaration_snapshot() -> Bool:
     let board = damage_test_fixture()
-    board[0][0].weapons[0] = Weapon::meltagun
+    board[0][0].weapons[0].profile = Weapon::meltagun
     let weapon = make_declared_weapon(board, unit_id(0), 0, 0)
     let declaration = declare_weapon_targets(board, weapon, unit_id(0), false)
     declaration.declare_target(board, unit_id(0), unit_id(1))
@@ -4258,8 +4258,8 @@ fun test_shooting12_source_restrictions() -> Bool:
 # sidearm categories, while a Monster/Vehicle bearer can select both.
 fun test_shooting12_pistol_alias_exclusive_categories_and_vehicle_exception() -> Bool:
     let board = shooting12_fixture()
-    board[0][0].weapons.append(Weapon::bolt_pistol)
-    board[0][0].weapons.append(Weapon::captain_storm_bolter)
+    board[0][0].weapons.append(equipped_weapon(Weapon::bolt_pistol))
+    board[0][0].weapons.append(equipped_weapon(Weapon::captain_storm_bolter))
     board[0][0].additional_weapon_rules[2].append(weapon_rule(WeaponRuleKind::close_quarters))
     let sequence = attack(board, unit_id(0), unit_id(1), false, false)
     sequence.select_weapon(board, attack_test_slot(1))
@@ -4585,8 +4585,8 @@ fun test_shooting12_opponent_turn_clears_movement_shooting_restrictions() -> Boo
 # declaration engine; finishing after just the ordinary melee weapon is illegal.
 fun test_shooting12_extra_attacks_selection_is_mandatory() -> Bool:
     let board = shooting12_fixture()
-    board[0][0].weapons[0] = Weapon::relic_weapon
-    board[0][0].weapons.append(Weapon::force_weapon)
+    board[0][0].weapons[0].profile = Weapon::relic_weapon
+    board[0][0].weapons.append(equipped_weapon(Weapon::force_weapon))
     board[0][0].additional_weapon_rules[1].append(weapon_rule(WeaponRuleKind::extra_attacks))
     let declarations : DeclaredWeapons
     let sequence = declare_model_weapons(board, declarations, unit_id(0), damage_test_model(0), true)
@@ -4694,9 +4694,9 @@ fun test_shooting12_torrent_automatic_hits_without_critical_effects() -> Bool:
 # Supplied appendix 04.01.03: profiles are exclusive per weapon, not per unit.
 fun test_shooting12_physical_profiles_and_shared_one_shot() -> Bool:
     let board = shooting12_fixture()
-    board[0][0].weapons.append(board[0][0].weapons[0])
-    board[0][0].weapon_profile_groups[0] = 1
-    board[0][0].weapon_profile_groups[1] = 1
+    board[0][0].weapons.append(equipped_weapon(board[0][0].weapons[0].profile))
+    board[0][0].weapons[0].secondary_profile_of = 0
+    board[0][0].weapons[1].secondary_profile_of = 1
     let selected : Bool[MAX_WEAPONS]
     selected[0] = true
     if weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false):
@@ -4721,7 +4721,7 @@ fun test_shooting12_hunter_profile_target_keywords() -> Bool:
 fun test_shooting12_legacy_plasma_profile_groups() -> Bool:
     let legionaries = make_legionaries()
     let hellblasters = make_hellblaster_squad()
-    return legionaries[0].weapon_profile_groups[0].value == 1 and legionaries[0].weapon_profile_groups[1].value == 1 and legionaries[1].weapon_profile_groups[0].value == 0 and hellblasters[0].weapon_profile_groups[1].value == 1 and hellblasters[0].weapon_profile_groups[2].value == 1
+    return weapon_primary_id(legionaries[0], 0) == 1 and weapon_primary_id(legionaries[0], 1) == 1 and legionaries[1].weapons[0].secondary_profile_of.value == 0 and weapon_primary_id(hellblasters[0], 1) == 2 and weapon_primary_id(hellblasters[0], 2) == 2
 
 # pp.17/78/83: spelling aliases require one duplicate choice and cannot split
 # identical attacks, while the selected instance retains its target condition.
@@ -6910,7 +6910,7 @@ fun test_transport16_firing_deck_weapon_provenance() -> Bool:
     if !deck_weapon_valid(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 0, declarations):
         return false
     let weapon = make_deck_declaration(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 0)
-    if weapon.model_identity != board[0][0].identity or weapon.weapon.value != board.embarked_units[0][0].weapons[0].value:
+    if weapon.model_identity != board[0][0].identity or weapon.weapon.value != board.embarked_units[0][0].weapons[0].profile.value:
         return false
     board.embarked_units[0][0].additional_weapon_rules[0].append(weapon_rule(WeaponRuleKind::one_shot))
     return !deck_weapon_valid(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 0, declarations) and !board.embarked_units[0][0].used_once_per_battle_weapon[0]
@@ -6950,7 +6950,7 @@ fun test_transport16_firing_deck_action_selection() -> Bool:
 # declaration and random A/D preserve their original dice until after re-rolls.
 fun test_orks17c2b2_modified_melee_shares() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].weapons[0].profile = Weapon::choppa
     board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::add, 2, 0))
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
     let count = declaration_fixed_attacks(board, unit_id(0), declaration, 0)
@@ -7002,7 +7002,7 @@ fun test_orks17c2b2_zero_damage_replacement_locked() -> Bool:
 # Scoped D is captured from the actual selected bearer, including Firing Deck.
 fun test_orks17c2b2_damage_snapshot_scope() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::librarian_storm_bolter)
+    board[0][0].weapons.append(equipped_weapon(Weapon::librarian_storm_bolter))
     board[0][0].characteristic_modifiers.append(weapon_characteristic_modifier(ModifiedCharacteristic::damage, ModifierOperation::add, 2, 0))
     let first = orks17c2b_info(board, 0)
     let second = orks17c2b_info(board, 1)
@@ -7012,7 +7012,7 @@ fun test_orks17c2b2_damage_snapshot_scope() -> Bool:
 # apply it a second time to each split share.
 fun test_orks17c2b2_melee_share_selector_and_gathering() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].weapons[0].profile = Weapon::choppa
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::multiply, 2))
     board[1][0].position = board[0][0].position
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
@@ -7027,7 +7027,7 @@ fun test_orks17c2b2_melee_share_selector_and_gathering() -> Bool:
 # Random ranged A is modified per weapon at gathering, not at declaration.
 fun test_orks17c2b2_random_attacks_gathering() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::smite_witchfire
+    board[0][0].weapons[0].profile = Weapon::smite_witchfire
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::multiply, 2))
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
     let gathered = gather_weapon_count(board, unit_id(0), unit_id(1), declaration, false)
@@ -7047,7 +7047,7 @@ fun test_orks17c2b2_allocated_damage_uses_modifier() -> Bool:
 # strand the declaration at an input boundary with no legal choices.
 fun test_orks17c2b2_zero_melee_attacks_no_selector() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].weapons[0].profile = Weapon::choppa
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::replace, 0))
     board[1][0].position = board[0][0].position
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
@@ -7057,7 +7057,7 @@ fun test_orks17c2b2_zero_melee_attacks_no_selector() -> Bool:
 # p.17: a multiplied A is split once; both targets keep their declared share.
 fun test_orks17c2b2_modified_melee_split_not_multiplied_twice() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].weapons[0].profile = Weapon::choppa
     board[0][0].characteristic_modifiers.append(characteristic_modifier(ModifiedCharacteristic::attacks, ModifierOperation::multiply, 2))
     board[1][0].position = board[0][0].position
     board[2][0].position = board[0][0].position
@@ -7091,21 +7091,21 @@ fun named17c2c_fixture() -> Board:
     let board = attack_declaration_fixture()
     board[0][0].weapons.clear()
     for slot in range(4):
-        board[0][0].weapons.append(Weapon::captain_storm_bolter)
-    set_named_weapon_profile(board[0][0], 0, NamedWeaponProfile::kustom_shoota_aimed)
-    set_named_weapon_profile(board[0][0], 1, NamedWeaponProfile::kustom_shoota_point_blank)
-    set_named_weapon_profile(board[0][0], 2, NamedWeaponProfile::kustom_shoota_aimed)
-    set_named_weapon_profile(board[0][0], 3, NamedWeaponProfile::slugga)
-    board[0][0].weapon_profile_groups[0] = 1
-    board[0][0].weapon_profile_groups[1] = 1
-    board[0][0].weapon_profile_groups[2] = 2
+        board[0][0].weapons.append(equipped_weapon(Weapon::captain_storm_bolter))
+    board[0][0].weapons[0].profile = Weapon::orks_meganobz_kustom_shoota_aimed
+    board[0][0].weapons[1].profile = Weapon::orks_meganobz_kustom_shoota_point_blank
+    board[0][0].weapons[2].profile = Weapon::orks_meganobz_kustom_shoota_aimed
+    board[0][0].weapons[3].profile = Weapon::orks_slugga
+    board[0][0].weapons[0].secondary_profile_of = 0
+    board[0][0].weapons[1].secondary_profile_of = 1
+    board[0][0].weapons[2].secondary_profile_of = 0
     set_model_datasheet(board[0][0], OrksDatasheet::big_mek_in_mega_armour)
     return board
 
 # Appendix04.01.03: all alternate profiles and copies share the named family.
 fun test_named17c2c_family_grant_all_profiles_and_copies() -> Bool:
     let board = named17c2c_fixture()
-    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    board[0][0].characteristic_modifiers.append(weapon_family_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, Weapon::orks_kustom_shoota))
     let first = orks17c2b_info(board, 0)
     let alternate = orks17c2b_info(board, 1)
     let copy = orks17c2b_info(board, 2)
@@ -7115,7 +7115,7 @@ fun test_named17c2c_family_grant_all_profiles_and_copies() -> Bool:
 # A named profile restriction excludes a different profile of the same family.
 fun test_named17c2c_profile_grant_excludes_alternate() -> Bool:
     let board = named17c2c_fixture()
-    board[0][0].characteristic_modifiers.append(named_profile_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeaponProfile::kustom_shoota_aimed))
+    board[0][0].characteristic_modifiers.append(weapon_profile_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, Weapon::orks_meganobz_kustom_shoota_aimed))
     let first = orks17c2b_info(board, 0)
     let alternate = orks17c2b_info(board, 1)
     let copy = orks17c2b_info(board, 2)
@@ -7133,8 +7133,8 @@ fun test_named17c2c_physical_grant_distinguishes_copy() -> Bool:
 # Group0 means an independent slot, never every other zero-group slot.
 fun test_named17c2c_zero_group_selects_only_its_slot() -> Bool:
     let board = named17c2c_fixture()
-    board[0][0].weapon_profile_groups[0] = 0
-    board[0][0].weapon_profile_groups[1] = 0
+    board[0][0].weapons[0].secondary_profile_of = 0
+    board[0][0].weapons[1].secondary_profile_of = 0
     board[0][0].characteristic_modifiers.append(physical_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, 0))
     let first = orks17c2b_info(board, 0)
     let alternate = orks17c2b_info(board, 1)
@@ -7143,10 +7143,10 @@ fun test_named17c2c_zero_group_selects_only_its_slot() -> Bool:
 # Slot/family/profile predicates are conjunctive, not alternatives.
 fun test_named17c2c_conjunctive_selectors() -> Bool:
     let board = named17c2c_fixture()
-    let grant = named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota)
+    let grant = weapon_family_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, Weapon::orks_kustom_shoota)
     grant.weapon_scope = 1
     grant.physical_scope = true
-    grant.profile_name = NamedWeaponProfile::kustom_shoota_point_blank.value
+    grant.profile_name = Weapon::orks_meganobz_kustom_shoota_point_blank.value
     board[0][0].characteristic_modifiers.append(grant)
     let first = orks17c2b_info(board, 0)
     let alternate = orks17c2b_info(board, 1)
@@ -7156,29 +7156,29 @@ fun test_named17c2c_conjunctive_selectors() -> Bool:
 # Unknown identity does not accidentally grant a named bonus to legacy models.
 fun test_named17c2c_unknown_weapon_never_matches_name() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    board[0][0].characteristic_modifiers.append(weapon_family_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, Weapon::orks_kustom_shoota))
     let info = orks17c2b_info(board, 0)
     return info.attack_strength() == 4 and !model_matches_datasheet(board[0][0], OrksDatasheet::unknown)
 
 # Actual targeting consumes named Range, not only attack-context snapshots.
 fun test_named17c2c_named_range_target_legality() -> Bool:
     let board = named17c2c_fixture()
-    board[1][0].position = board_position(35, 5)
+    board[1][0].position = board_position(30, 5)
     let old = make_declared_weapon(board, unit_id(0), 0, 0)
     if declaration_target_valid(board, unit_id(0), old, unit_id(1), false):
         return false
-    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::range, ModifierOperation::add, 10, NamedWeapon::kustom_shoota))
+    board[0][0].characteristic_modifiers.append(weapon_family_modifier(ModifiedCharacteristic::range, ModifierOperation::add, 10, Weapon::orks_kustom_shoota))
     return declaration_target_valid(board, unit_id(0), old, unit_id(1), false)
 
 # Named A/D reach the previous batch's real gathering and allocated snapshots.
 fun test_named17c2c_named_attacks_and_damage_consumers() -> Bool:
     let board = named17c2c_fixture()
-    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::attacks, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
-    board[0][0].characteristic_modifiers.append(named_profile_modifier(ModifiedCharacteristic::damage, ModifierOperation::add, 1, NamedWeaponProfile::kustom_shoota_aimed))
+    board[0][0].characteristic_modifiers.append(weapon_family_modifier(ModifiedCharacteristic::attacks, ModifierOperation::add, 2, Weapon::orks_kustom_shoota))
+    board[0][0].characteristic_modifiers.append(weapon_profile_modifier(ModifiedCharacteristic::damage, ModifierOperation::add, 1, Weapon::orks_meganobz_kustom_shoota_aimed))
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
     let count = gather_weapon_count(board, unit_id(0), unit_id(1), declaration, false)
     let info = orks17c2b_info(board, 0)
-    return count.is_done() and count.result.value == 4 and info.damage_modifiers.size() == 1
+    return count.is_done() and count.result.value == 6 and info.damage_modifiers.size() == 1
 
 # Appendix02.05.01: mixed unit identity is a union, model identity stays local.
 fun test_named17c2c_unit_and_model_datasheet_scope() -> Bool:
@@ -7198,7 +7198,7 @@ fun test_named17c2c_datasheet_model_grant_is_local() -> Bool:
 # Named rule grants reach actual selected declarations (p.78/04.01.03).
 fun test_named17c2c_named_weapon_rule_consumers() -> Bool:
     let board = named17c2c_fixture()
-    grant_named_weapon_rule(board[0][0], NamedWeapon::kustom_shoota, weapon_rule(WeaponRuleKind::precision))
+    grant_weapon_family_rule(board[0][0], Weapon::orks_kustom_shoota, weapon_rule(WeaponRuleKind::precision))
     let first = make_declared_weapon(board, unit_id(0), 0, 0)
     let alternate = make_declared_weapon(board, unit_id(0), 0, 1)
     let unrelated = make_declared_weapon(board, unit_id(0), 0, 3)
@@ -7207,7 +7207,7 @@ fun test_named17c2c_named_weapon_rule_consumers() -> Bool:
 # Profile and physical rule grants remain narrower than a family grant.
 fun test_named17c2c_profile_and_physical_rules() -> Bool:
     let board = named17c2c_fixture()
-    grant_named_profile_rule(board[0][0], NamedWeaponProfile::kustom_shoota_point_blank, weapon_rule(WeaponRuleKind::ignore_cover))
+    grant_weapon_profile_rule(board[0][0], Weapon::orks_meganobz_kustom_shoota_point_blank, weapon_rule(WeaponRuleKind::ignore_cover))
     grant_physical_weapon_rule(board[0][0], 0, weapon_rule(WeaponRuleKind::precision))
     let first = make_declared_weapon(board, unit_id(0), 0, 0)
     let alternate = make_declared_weapon(board, unit_id(0), 0, 1)
@@ -7219,18 +7219,18 @@ fun test_named17c2c_archive_keeps_datasheet_and_weapon_identity() -> Bool:
     let board = named17c2c_fixture()
     board[0].remove_model(0)
     ref archived = board[0].destroyed_models.value[0]
-    return model_matches_datasheet(archived, OrksDatasheet::big_mek_in_mega_armour) and archived.weapon_names[0].value == NamedWeapon::kustom_shoota.value and valid_model_numeric_history(archived)
+    return model_matches_datasheet(archived, OrksDatasheet::big_mek_in_mega_armour) and archived.weapons[0].profile.family_id() == Weapon::orks_kustom_shoota.value and valid_model_numeric_history(archived)
 
 # Reject conflicting profile/family tags instead of accepting a false selector.
 fun test_named17c2c_invalid_family_profile_metadata_rejected() -> Bool:
     let board = named17c2c_fixture()
-    board[0][0].weapon_names[0] = NamedWeapon::slugga.value
+    board[0][0].weapons[0].profile = Weapon::orks_slugga
     return !valid_model_numeric_history(board[0][0])
 
 # Grouped alternate profiles must share their printed physical family.
 fun test_named17c2c_invalid_group_family_rejected() -> Bool:
     let board = named17c2c_fixture()
-    board[0][0].weapon_profile_groups[3] = 1
+    board[0][0].weapons[3].secondary_profile_of = 1
     return !valid_model_numeric_history(board[0][0])
 
 # Raw values can bypass bounded assignment on restore; reject both catalogs.
@@ -7240,13 +7240,13 @@ fun test_named17c2c_invalid_catalog_codes_rejected() -> Bool:
     if valid_model_numeric_history(board[0][0]):
         return false
     board[0][0].datasheet = 0
-    board[0][0].weapon_profile_names[0].value = -1
+    board[0][0].weapons[0].profile.value = -1
     return !valid_model_numeric_history(board[0][0])
 
 # Named or physical selectors cannot be attached to a model-only statistic.
 fun test_named17c2c_invalid_named_grant_metadata_rejected() -> Bool:
     let grant = characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, 1)
-    grant.weapon_name = NamedWeapon::slugga.value
+    grant.weapon_name = Weapon::orks_slugga.value
     let grants : CharacteristicModifiers
     grants.append(grant)
     return !valid_characteristic_modifiers(grants)
@@ -7265,18 +7265,18 @@ fun test_named17c2c_borrowed_named_grant_uses_passenger_identity() -> Bool:
     let board = named17c2c_fixture()
     let passenger = board[0]
     board.embarked_units.append(passenger)
-    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    board[0][0].characteristic_modifiers.append(weapon_family_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, Weapon::orks_kustom_shoota))
     board[0][0].characteristic_modifiers.append(physical_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 10, 0))
-    board.embarked_units[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 20, NamedWeapon::kustom_shoota))
+    board.embarked_units[0][0].characteristic_modifiers.append(weapon_family_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 20, Weapon::orks_kustom_shoota))
     let declaration = make_deck_declaration(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 1)
     let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
-    return info.attack_strength() == 6 and declaration.weapon_name.value == NamedWeapon::kustom_shoota.value and declaration.profile_name.value == NamedWeaponProfile::kustom_shoota_point_blank.value
+    return info.attack_strength() == 6 and declaration.weapon_name.value == Weapon::orks_kustom_shoota.value and declaration.profile_name.value == Weapon::orks_meganobz_kustom_shoota_point_blank.value
 
 # A carrier's equipped name is not the identity of a borrowed weapon.
 fun test_named17c2c_borrowed_unrelated_name_does_not_match() -> Bool:
     let board = named17c2c_fixture()
     board.embarked_units.append(board[0])
-    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    board[0][0].characteristic_modifiers.append(weapon_family_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, Weapon::orks_kustom_shoota))
     let declaration = make_deck_declaration(board, unit_id(0), damage_test_model(0), unit_id(0), damage_test_model(0), 3)
     let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
     return info.attack_strength() == 4
@@ -7286,10 +7286,10 @@ fun test_named17c2c_borrowed_unrelated_name_does_not_match() -> Bool:
 fun test_named17c2c_declaration_identity_is_snapshot() -> Bool:
     let board = named17c2c_fixture()
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
-    board[0][0].weapon_profile_groups[0] = 0
-    board[0][0].weapon_profile_groups[1] = 0
-    set_named_weapon_profile(board[0][0], 0, NamedWeaponProfile::slugga)
-    board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    board[0][0].weapons[0].secondary_profile_of = 0
+    board[0][0].weapons[1].secondary_profile_of = 0
+    board[0][0].weapons[0].profile = Weapon::orks_slugga
+    board[0][0].characteristic_modifiers.append(weapon_family_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, Weapon::orks_kustom_shoota))
     let info = declared_attack_info(board, unit_id(0), unit_id(1), declaration, board.attack_info)
     return info.attack_strength() == 6
 
@@ -7297,7 +7297,7 @@ fun test_named17c2c_declaration_identity_is_snapshot() -> Bool:
 fun test_named17c2c_saved_name_and_grant_round_trip() -> Bool:
     let state = play()
     state.board = named17c2c_fixture()
-    state.board[0][0].characteristic_modifiers.append(named_weapon_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeapon::kustom_shoota))
+    state.board[0][0].characteristic_modifiers.append(weapon_family_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, Weapon::orks_kustom_shoota))
     let restored = play()
     if !set_state(restored, to_string(state)):
         return false
@@ -7307,32 +7307,36 @@ fun test_named17c2c_saved_name_and_grant_round_trip() -> Bool:
 # Catalog enums are used transiently; stored codes have exactly their domain.
 fun test_named17c2c_catalog_bounds_and_profile_family() -> Bool:
     let datasheet : OrksDatasheet
-    let weapon : NamedWeapon
-    let profile : NamedWeaponProfile
-    let family = named_profile_weapon(NamedWeaponProfile::kustom_shoota_point_blank)
-    return max(datasheet) + 1 == MAX_DATASHEETCODE and max(weapon) + 1 == MAX_WEAPONNAMECODE and max(profile) + 1 == MAX_WEAPONPROFILECODE and family.value == NamedWeapon::kustom_shoota.value
+    let weapon : Weapon
+    let profile : Weapon
+    let family = weapon_family(Weapon::orks_meganobz_kustom_shoota_point_blank)
+    return max(datasheet) + 1 == MAX_DATASHEETCODE and max(weapon) + 1 == MAX_WEAPON_CODE and max(profile) + 1 == MAX_WEAPON_CODE and family.value == Weapon::orks_kustom_shoota.value
 
 # Squighog Boyz Stikka is printed once in each attack table. Same-name
 # ranged/melee profiles require distinct identity (datasheet/04.01.03):
 # https://wahapedia.ru/wh40k11ed/factions/orks/Squighog-Boyz
 fun test_named17c2c_same_printed_name_distinct_attack_profiles() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::choppa)
-    set_named_weapon_profile(board[0][0], 0, NamedWeaponProfile::stikka_ranged)
-    set_named_weapon_profile(board[0][0], 1, NamedWeaponProfile::stikka_melee)
-    board[0][0].characteristic_modifiers.append(named_profile_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, NamedWeaponProfile::stikka_melee))
+    board[0][0].weapons.append(equipped_weapon(Weapon::choppa))
+    board[0][0].weapons[0].profile = Weapon::orks_stikka_ranged
+    board[0][0].weapons[1].profile = Weapon::orks_stikka_melee
+    board[0][0].characteristic_modifiers.append(weapon_profile_modifier(ModifiedCharacteristic::strength, ModifierOperation::add, 2, Weapon::orks_stikka_melee))
     let ranged = orks17c2b_info(board, 0)
     let melee = orks17c2b_info(board, 1)
-    return ranged.attack_strength() == 4 and melee.attack_strength() == 7 and board[0][0].weapon_names[0] == board[0][0].weapon_names[1] and valid_model_numeric_history(board[0][0])
+    return ranged.attack_strength() == 5 and melee.attack_strength() == 7 and board[0][0].weapons[0].profile.family_id() == board[0][0].weapons[1].profile.family_id() and valid_model_numeric_history(board[0][0])
 
-# Restore validation rejects a melee tag attached to an actual ranged profile.
+# One catalog makes mismatched attack-kind tags unrepresentable. Selection
+# must follow the actual installed profile when it changes (core p16).
 fun test_named17c2c_profile_attack_kind_metadata_rejected() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapon_names[0] = NamedWeapon::stikka.value
-    board[0][0].weapon_profile_names[0] = NamedWeaponProfile::stikka_melee.value
-    return !valid_model_numeric_history(board[0][0])
+    let selected : Bool[MAX_WEAPONS]
+    board[0][0].weapons[0].profile = Weapon::orks_stikka_ranged
+    let ranged = weapon_selection_valid(board, unit_id(0), 0, 0, false, selected, false) and !weapon_selection_valid(board, unit_id(0), 0, 0, true, selected, false)
+    board[0][0].weapons[0].profile = Weapon::orks_stikka_melee
+    return ranged and valid_model_numeric_history(board[0][0]) and !weapon_selection_valid(board, unit_id(0), 0, 0, false, selected, false) and weapon_selection_valid(board, unit_id(0), 0, 0, true, selected, false)
 
 # Core24.39 Damaged X: equal-or-less remaining wounds; no implicit grants.
+
 fun test_damaged17c3_threshold_boundary_and_disabled() -> Bool:
     let model = make_infernus_squad()[0]
     model.damaged_threshold = 1
@@ -7443,7 +7447,7 @@ fun test_damaged17c3_saved_threshold_and_group_round_trip() -> Bool:
 # Healing above X removes the penalty at the next group, overriding stale context.
 fun test_damaged17c3_healing_refresh_and_melee_consumer() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::choppa
+    board[0][0].weapons[0].profile = Weapon::choppa
     board[0][0].has_damaged = true
     board[0][0].damaged_threshold = 1
     board[0][0].suffered_wounds = 1
@@ -7469,7 +7473,7 @@ fun test_damaged17c3_hit_batch_consumes_penalty() -> Bool:
 # Torrent still makes no hit roll; Damaged cannot reduce automatic hits (p.85).
 fun test_damaged17c3_torrent_keeps_automatic_hits() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::pyreblaster
+    board[0][0].weapons[0].profile = Weapon::pyreblaster
     board[0][0].has_damaged = true
     board[0][0].damaged_threshold = 1
     board[0][0].suffered_wounds = 1
@@ -7628,7 +7632,7 @@ fun test_physical17d_capacity_and_last_slot() -> Bool:
     unit.models.resize(1)
     unit[0].weapons.clear()
     for slot in range(MAX_WEAPONS):
-        unit[0].weapons.append(Weapon::bolt_pistol)
+        unit[0].weapons.append(equipped_weapon(Weapon::bolt_pistol))
     let selector : BInt<0, MAX_WEAPONS>
     let choices = enumerate(selector)
     let valid = MAX_WEAPONS == 13 and MAX_WEAPON_SCOPES == 14 and MAX_SELECTED_WEAPONS == MAX_UNIT_MODELS * MAX_WEAPONS + MAX_DECK_SELECTIONS and unit[0].weapons.size() == 13 and choices.size() == 13 and choices[12].value == 12
@@ -7639,29 +7643,31 @@ fun test_physical17d_capacity_and_last_slot() -> Bool:
 fun test_physical17d_nazdreg_scoped_profile_exception() -> Bool:
     let board = attack_declaration_fixture()
     board[0][0].weapons.clear()
-    for slot in range(5):
-        board[0][0].weapons.append(Weapon::captain_storm_bolter)
-        board[0][0].weapon_profile_groups[slot] = 1 + int(slot >= 3)
+    equip_weapon(board[0][0], Weapon::orks_nazdreg_kustom_blasta_x_gatler, 0)
+    equip_weapon(board[0][0], Weapon::orks_nazdreg_kustom_blasta_x_shoota, 1)
+    equip_weapon(board[0][0], Weapon::orks_nazdreg_kustom_blasta_x_skorcha, 1)
+    equip_weapon(board[0][0], Weapon::plasma_pistol_standard, 0)
+    equip_weapon(board[0][0], Weapon::plasma_pistol_supercharge, 4)
     let selected : Bool[MAX_WEAPONS]
     selected[0] = true
+    let permitted = weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false) and weapon_selection_valid(board, unit_id(0), 0, 2, false, selected, false)
+    selected[0] = false
     selected[3] = true
-    if weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false):
-        return false
-    permit_simultaneous_ranged_profiles(board[0][0], 1)
-    let permitted = weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false) and weapon_selection_valid(board, unit_id(0), 0, 2, false, selected, false) and !weapon_selection_valid(board, unit_id(0), 0, 4, false, selected, false)
+    let ordinary = !weapon_selection_valid(board, unit_id(0), 0, 4, false, selected, false)
+    selected[3] = false
     while board[0][0].weapons.size() < MAX_WEAPONS:
-        board[0][0].weapons.append(Weapon::captain_storm_bolter)
-    let last_slot = weapon_selection_valid(board, unit_id(0), 0, 12, false, selected, false)
-    let outside = weapon_selection_valid(board, unit_id(0), 0, 13, false, selected, false)
-    return permitted and last_slot and !outside
+        board[0][0].weapons.append(equipped_weapon(Weapon::captain_storm_bolter))
+    return permitted and ordinary and weapon_selection_valid(board, unit_id(0), 0, 12, false, selected, false) and !weapon_selection_valid(board, unit_id(0), 0, 13, false, selected, false)
+
 
 # One Shot usage still belongs to a physical copy, independently of its name.
 fun test_physical17d_one_shot_copies_independent() -> Bool:
     let board = attack_declaration_fixture()
     board[0][0].weapons.clear()
     for slot in range(4):
-        board[0][0].weapons.append(Weapon::bolt_pistol)
-        board[0][0].weapon_profile_groups[slot] = 1 + slot / 2
+        board[0][0].weapons.append(equipped_weapon(Weapon::bolt_pistol))
+        if slot % 2 == 1:
+            board[0][0].weapons[slot].secondary_profile_of = slot
     consume_one_shot_profile(board[0][0], 0)
     return board[0][0].used_once_per_battle_weapon[0] and board[0][0].used_once_per_battle_weapon[1] and !board[0][0].used_once_per_battle_weapon[2] and !board[0][0].used_once_per_battle_weapon[3]
 
@@ -7670,7 +7676,7 @@ fun test_physical17d_one_shot_copies_independent() -> Bool:
 fun test_physical17d_hazardous_physical_identity() -> Bool:
     let board = attack_declaration_fixture()
     board.identify_units()
-    board[0][0].weapon_profile_groups[0] = 1
+    board[0][0].weapons[0].secondary_profile_of = 0
     let first = make_declared_weapon(board, unit_id(0), 0, 0)
     first.selected_rules.append(weapon_rule(WeaponRuleKind::hazardous))
     let second = first
@@ -7686,12 +7692,14 @@ fun test_physical17d_hazardous_physical_identity() -> Bool:
 # Metadata cannot permit a nonexistent/Melee/ungrouped simultaneous profile.
 fun test_physical17d_profile_permission_restore_guard() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].simultaneous_ranged_profiles[12] = true
-    if valid_named_model_identity(board[0][0]):
-        return false
-    board[0][0].simultaneous_ranged_profiles[12] = false
-    board[0][0].simultaneous_ranged_profiles[0] = true
-    return !valid_named_model_identity(board[0][0])
+    board[0][0].weapons[0].secondary_profile_of.value = 1
+    let self_link = !valid_model_equipment(board[0][0])
+    board[0][0].weapons[0].secondary_profile_of = 0
+    board[0][0].weapons.append(equipped_weapon(Weapon::captain_storm_bolter, 1))
+    let linked = valid_model_equipment(board[0][0])
+    board[0][0].weapons[0].secondary_profile_of.value = 2
+    return self_link and linked and !valid_model_equipment(board[0][0]) and !permits_simultaneous_profile(board[0][0], 0)
+
 
 # D3 inputs are actual faces1..3; intrinsic constants survive until modifiers.
 fun test_compound17d_d3_sum_and_intrinsic_constant() -> Bool:
@@ -7708,7 +7716,7 @@ fun test_compound17d_d3_sum_and_intrinsic_constant() -> Bool:
 # Stompa3D6+3 A is generated individually at gathering (02.02.03/source row).
 fun test_compound17d_actual_stompa_attacks_gathering() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons[0] = Weapon::stompa_supa_gatler_point_blank
+    board[0][0].weapons[0].profile = Weapon::stompa_supa_gatler_point_blank
     let declaration = make_declared_weapon(board, unit_id(0), 0, 0)
     let gathering = gather_weapon_count(board, unit_id(0), unit_id(1), declaration, false)
     gathering.quantity(board, attack_test_die(1))
@@ -8145,7 +8153,7 @@ fun test_sources17e_named_physical_weapon_rule_scope() -> Bool:
     let grant = source_weapon_grant(weapon_rule(WeaponRuleKind::precision))
     grant.weapon_scope = 1
     grant.physical_scope = true
-    grant.weapon_name = board[0][0].weapon_names[0]
+    grant.weapon_name = board[0][0].weapons[0].profile.family_id()
     instance.grant = grant
     register_source_instance(board, instance)
     let sequence = resolve_source_event(board, source17e_trigger(board, SourceEventKind::timing_window, 0))
@@ -8368,7 +8376,7 @@ fun test_ignore17c4b_hit_core_provenance_and_cap() -> Bool:
 # characteristic and roll categories (02.02.02; model/unit scope02.05.01).
 fun test_ignore17c4b_permission_bearer_scope_and_kinds() -> Bool:
     let board = attack_declaration_fixture()
-    board[0][0].weapons.append(Weapon::relic_weapon)
+    board[0][0].weapons.append(equipped_weapon(Weapon::relic_weapon))
     board[0][0].attack_modifier_permissions.append(attack_modifier_permission(true, false, IncomingAttackScope::ranged))
     let ranged = orks17c2b_info(board, 0)
     let melee = orks17c2b_info(board, 1)
@@ -8661,7 +8669,7 @@ fun test_orks17f_riled_assault_only_ranged() -> Bool:
     orks17f_intrinsic_riled(board[0][0])
     let ranged = model_weapon_has_rule(board[0][0], 0, WeaponRuleKind::assault)
     let foreign = !model_weapon_has_rule(board[1][0], 0, WeaponRuleKind::assault)
-    board[0][0].weapons.append(Weapon::choppa)
+    board[0][0].weapons.append(equipped_weapon(Weapon::choppa))
     let melee = !model_weapon_has_rule(board[0][0], 1, WeaponRuleKind::assault)
     let modifiers = model_weapon_modifiers(board[0][0], 1, ModifiedCharacteristic::attacks, false)
     return ranged and foreign and melee and modifiers.size() == 0
@@ -9740,12 +9748,12 @@ fun test_orks17h1_squighog_keywords_and_metadata() -> Bool:
 # Beastboss has exactly two weapons, one combined six-attack melee profile.
 fun test_orks17h1_beastboss_equipment() -> Bool:
     let unit = make_orks_beastboss()
-    return unit[0].weapons.size() == 2 and equipped_named_weapon(unit[0], 0).value == NamedWeapon::shoota.value and equipped_named_weapon(unit[0], 1).value == NamedWeapon::beast_snagga_klaw_and_beastchoppa.value and orks17h1_weapon_values(unit[0].weapons[0], 18, 2, 4, 4, 0, 1) and orks17h1_weapon_values(unit[0].weapons[1], 0, 6, 2, 12, -2, 2)
+    return unit[0].weapons.size() == 2 and equipped_weapon_family(unit[0], 0).value == Weapon::orks_beastboss_shoota.value and equipped_weapon_family(unit[0], 1).value == Weapon::orks_beastboss_klaw_and_beastchoppa.value and orks17h1_weapon_values(unit[0].weapons[0].profile, 18, 2, 4, 4, 0, 1) and orks17h1_weapon_values(unit[0].weapons[1].profile, 0, 6, 2, 12, -2, 2)
 
 # Thump Gun augments the Boy's default equipment; a Nob never receives it.
 fun test_orks17h1_thump_adds_without_replacing() -> Bool:
     let unit = make_orks_beast_snagga_boyz(2, 18, 2)
-    return unit[0].weapons.size() == 2 and unit[1].weapons.size() == 2 and unit[2].weapons.size() == 4 and unit[3].weapons.size() == 4 and unit[4].weapons.size() == 3 and equipped_named_weapon(unit[2], 0).value == NamedWeapon::slugga.value and equipped_named_weapon(unit[2], 1).value == NamedWeapon::choppa.value and equipped_named_weapon(unit[2], 3).value == NamedWeapon::thump_gun.value
+    return unit[0].weapons.size() == 2 and unit[1].weapons.size() == 2 and unit[2].weapons.size() == 4 and unit[3].weapons.size() == 4 and unit[4].weapons.size() == 3 and equipped_weapon_family(unit[2], 0).value == Weapon::orks_slugga.value and equipped_weapon_family(unit[2], 1).value == Weapon::orks_choppa_standard.value and equipped_weapon_family(unit[2], 3).value == Weapon::orks_thump_gun.value
 
 # Every current Snagga row is fixed-A, including Thump Gun's3 (not D3/Blast).
 fun test_orks17h1_snagga_weapon_table() -> Bool:
@@ -9757,7 +9765,7 @@ fun test_orks17h1_choppa_physical_profile_selection() -> Bool:
     let selected : Bool[MAX_WEAPONS]
     let first = weapon_selection_valid(board, unit_id(0), 1, 1, true, selected, false)
     selected[1] = true
-    return first and !weapon_selection_valid(board, unit_id(0), 1, 2, true, selected, false) and board[0][1].weapon_profile_groups[1].value == 1 and board[0][1].weapon_profile_groups[2].value == 1 and equipped_named_profile(board[0][1], 2).value == NamedWeaponProfile::choppa_hunter.value
+    return first and !weapon_selection_valid(board, unit_id(0), 1, 2, true, selected, false) and weapon_primary_id(board[0][1], 1) == 2 and weapon_primary_id(board[0][1], 2) == 2 and equipped_weapon_profile(board[0][1], 2).value == Weapon::orks_choppa_hunter.value
 
 # Hunter may target either Monster or Vehicle, never an ordinary infantry unit.
 fun test_orks17h1_hunter_actual_target_legality() -> Bool:
@@ -9808,7 +9816,7 @@ fun test_orks17h1_squighog_weapon_table() -> Bool:
 # Mounted models retain all equipment, including melee Stikka absent before.
 fun test_orks17h1_squighog_equipment_and_profiles() -> Bool:
     let unit = make_orks_squighog_boyz(1, 3)
-    return unit[0].weapons.size() == 3 and unit[1].weapons.size() == 4 and equipped_named_weapon(unit[0], 0).value == NamedWeapon::slugga.value and equipped_named_weapon(unit[0], 1).value == NamedWeapon::big_choppa.value and equipped_named_weapon(unit[0], 2).value == NamedWeapon::squig_s_jaws.value and equipped_named_weapon(unit[1], 0).value == NamedWeapon::saddlegit_s_shiv.value and equipped_named_profile(unit[1], 1).value == NamedWeaponProfile::stikka_ranged.value and equipped_named_profile(unit[1], 2).value == NamedWeaponProfile::stikka_melee.value and unit[1].weapon_profile_groups[1] == unit[1].weapon_profile_groups[2]
+    return unit[0].weapons.size() == 3 and unit[1].weapons.size() == 4 and equipped_weapon_family(unit[0], 0).value == Weapon::orks_slugga.value and equipped_weapon_family(unit[0], 1).value == Weapon::orks_big_choppa.value and equipped_weapon_family(unit[0], 2).value == Weapon::orks_squig_jaws.value and equipped_weapon_family(unit[1], 0).value == Weapon::orks_saddlegit_shiv.value and equipped_weapon_profile(unit[1], 1).value == Weapon::orks_stikka_ranged.value and equipped_weapon_profile(unit[1], 2).value == Weapon::orks_stikka_melee.value and weapon_primary_id(unit[1], 1) == weapon_primary_id(unit[1], 2)
 
 # Each copy has fresh owning storage and per-model physical profile selection.
 fun test_orks17h1_equipment_copies_are_independent() -> Bool:
@@ -9836,7 +9844,7 @@ fun test_orks17h1_current_data_saved_round_trip() -> Bool:
     game.board.reserve_units.append(make_orks_squighog_boyz(2, 6))
     game.board.identify_units()
     let restored = play()
-    return set_state(restored, to_string(game)) and restored.board.reserve_units[1].models.size() == 20 and restored.board.reserve_units[1][2].weapons.size() == 4 and equipped_named_profile(restored.board.reserve_units[1][2], 2).value == NamedWeaponProfile::choppa_hunter.value and !restored.board.reserve_units[2][0].geometry.unsupported_footprint and profile_base_width(restored.board.reserve_units[2][0].profile) == 52.0 and valid_state_foundations(restored.board)
+    return set_state(restored, to_string(game)) and restored.board.reserve_units[1].models.size() == 20 and restored.board.reserve_units[1][2].weapons.size() == 4 and equipped_weapon_profile(restored.board.reserve_units[1][2], 2).value == Weapon::orks_choppa_hunter.value and !restored.board.reserve_units[2][0].geometry.unsupported_footprint and profile_base_width(restored.board.reserve_units[2][0].profile) == 52.0 and valid_state_foundations(restored.board)
 
 # This subtask supplies exact data; no incomplete card/legacy roster is promoted.
 fun test_orks17h1_data_stage_has_no_unsourced_special_grants() -> Bool:
@@ -10426,7 +10434,7 @@ fun test_orks17h4_current_roster_no_legacy_grants() -> Bool:
     for unit_index in range(units.size()):
         for model_index in range(units[unit_index].models.size()):
             clean = clean and units[unit_index].unit_abilities.empty() and units[unit_index].owned_by_player1 == true
-    return clean and units[1][0].weapons[1].value == Weapon::orks_big_choppa.value and units[2][1].weapons[3].value == Weapon::orks_thump_gun.value
+    return clean and units[1][0].weapons[1].profile.value == Weapon::orks_big_choppa.value and units[2][1].weapons[3].profile.value == Weapon::orks_thump_gun.value
 
 # War Horde fixture selects the actual package for source's owner. Source:
 # https://wahapedia.ru/wh40k11ed/factions/orks/#Get-Stuck-In
@@ -10683,7 +10691,7 @@ fun test_orks17all_headwoppa_charge_melee_gate() -> Bool:
     board[0][0].orks_enhancement = OrksEnhancement::headwoppas_killchoppa
     let uncharged = orks17c2b_info(board, 1).attack_penetration()
     board[0].has_charged = true
-    return orks17c2b_info(board, 1).attack_penetration() == uncharged - 1 and orks17c2b_info(board, 0).attack_penetration() == board[0][0].weapons[0].penetration()
+    return orks17c2b_info(board, 1).attack_penetration() == uncharged - 1 and orks17c2b_info(board, 0).attack_penetration() == board[0][0].weapons[0].profile.penetration()
 
 # D addition enters the ordered outgoing characteristic pipeline.
 fun test_orks17all_brutal_but_kunnin_melee_damage() -> Bool:
@@ -10747,7 +10755,7 @@ fun test_orks17all_throat_slittas_target_exclusion() -> Bool:
     let board = orks17all_fixture(OrksDetachment::taktikal_brigade)
     # The actual Slugga already has Lethal Hits; use a neutral ranged weapon
     # to test that the Upgrade itself confers nothing on ranged attacks.
-    board[0][0].weapons[0] = Weapon::bolt_rifle
+    board[0][0].weapons[0].profile = Weapon::bolt_rifle
     board[0][0].orks_enhancement = OrksEnhancement::throat_slittas
     let melee = model_weapon_rules(board, unit_id(0), 0, 1)
     let allowed = chosen_weapon_has_rule(board, unit_id(1), melee, WeaponRuleKind::letal_hits)
@@ -10827,7 +10835,7 @@ fun test_orks17all_button_cumulative_characteristics() -> Bool:
     apply_orks_button(board, unit_id(0), attack_test_die(3))
     apply_orks_button(board, unit_id(0), attack_test_die(5))
     let info = orks17c2b_info(board, 0)
-    return declaration_fixed_attacks(board, unit_id(0), declaration, 0) == base + 2 and info.attack_strength() == board[0][0].weapons[0].strenght() + 2 and info.attack_penetration() == board[0][0].weapons[0].penetration() - 1
+    return declaration_fixed_attacks(board, unit_id(0), declaration, 0) == base + 2 and info.attack_strength() == board[0][0].weapons[0].profile.strenght() + 2 and info.attack_penetration() == board[0][0].weapons[0].profile.penetration() - 1
 
 # Speed Freeks receive real Assault and charge waivers on selected Advance,
 # keeping normal action restrictions when not Gretchin/Mind On Mission.
@@ -10863,7 +10871,7 @@ fun test_orks17all_brute_death_thresholds() -> Bool:
 fun test_orks17all_wurrband_psychic_weapon_strength() -> Bool:
     let board = orks17all_fixture(OrksDetachment::wurrband)
     board[0][0].keywords.append(Keyword::psyker)
-    board[0][0].weapons[0] = Weapon::orks_eadbanger
+    board[0][0].weapons[0].profile = Weapon::orks_eadbanger
     let info = orks17c2b_info(board, 0)
     return info.attack_strength() == 7
 
@@ -10900,7 +10908,7 @@ fun orks17all_selected_card_fixture(Stratagem card, Bool melee) -> Board:
         orks17all_tag(board[0], OrksDatasheet::mek_gunz)
         # Isolate the card's three choices from the fixture Slugga's printed
         # Lethal Hits, which correctly survives the Sustained-only choice.
-        board[0][0].weapons[0] = Weapon::bolt_rifle
+        board[0][0].weapons[0].profile = Weapon::bolt_rifle
     if card == Stratagem::orks_dakkastorm:
         board[0][0].keywords.append(Keyword::speed_freeks)
     if card == Stratagem::orks_long_uncontrolled_bursts:
@@ -11393,7 +11401,7 @@ fun test_orks17all_supa_snazz_named_weapon_gate() -> Bool:
     let board = orks17all_fixture(OrksDetachment::wreckas)
     board[0][0].orks_enhancement = OrksEnhancement::supa_snazz_dakka
     let absent = !available_weapon_has_rule(board, unit_id(0), 0, 0, WeaponRuleKind::rapid_fire)
-    board[0][0].weapon_names[0] = NamedWeapon::snazzgun.value
+    board[0][0].weapons[0].profile = Weapon::orks_flash_gitz_snazzgun_cutta
     let rules = model_weapon_rules(board, unit_id(0), 0, 0)
     return absent and chosen_weapon_parameter(board, unit_id(1), rules, WeaponRuleKind::rapid_fire) == 1
 
@@ -11543,7 +11551,7 @@ fun test_orks17all_madcap_invulnerable_grant_and_expiry() -> Bool:
 fun test_orks17all_shokka_bearer_only_sustained() -> Bool:
     let board = orks17all_fixture(OrksDetachment::madcap_meks)
     board[0][0].orks_enhancement = OrksEnhancement::temperamental_shokka
-    board[0][0].weapon_names[0] = NamedWeapon::shokk_attack_gun.value
+    board[0][0].weapons[0].profile = Weapon::orks_big_mek_with_shokk_attack_gun_shokk_attack_gun
     let other = board[0][0]
     other.identity = 0
     other.orks_enhancement = OrksEnhancement::none
@@ -11561,7 +11569,7 @@ fun test_orks17all_shokka_bearer_only_sustained() -> Bool:
 fun test_orks17all_shokka_destroy_after_shot_identity() -> Bool:
     let board = orks17all_fixture(OrksDetachment::madcap_meks)
     board[0][0].orks_enhancement = OrksEnhancement::temperamental_shokka
-    board[0][0].weapon_names[0] = NamedWeapon::shokk_attack_gun.value
+    board[0][0].weapons[0].profile = Weapon::orks_big_mek_with_shokk_attack_gun_shokk_attack_gun
     let doomed = board[0][0].identity
     let other = board[0][0]
     other.identity = 0
@@ -12071,7 +12079,7 @@ fun orks17p1_fixture(Unit source) -> Board:
 fun orks17p1_boy_equipment(Int nobs, Int boys) -> OrksBoyzLoadouts:
     let equipment : OrksBoyzLoadouts
     for index in range(nobs + boys):
-        let item : OrksBoyzLoadout
+        let item = orks_boy_loadout()
         item.nob = index < nobs
         equipment.append(item)
     return equipment
@@ -12080,7 +12088,7 @@ fun orks17p1_boy_equipment(Int nobs, Int boys) -> OrksBoyzLoadouts:
 fun orks17p1_nob_equipment(Int count) -> OrksNobLoadouts:
     let equipment : OrksNobLoadouts
     for index in range(count):
-        equipment.append(OrksNobLoadout::standard)
+        equipment.append(Weapon::orks_kustom_shoota)
     return equipment
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Boyz: printed profile/InSv/FNP/base.
@@ -12154,19 +12162,19 @@ fun test_orks17p1_boy_count_boundaries() -> Bool:
 # Boyz: all three different replacements coexist at ten models.
 fun test_orks17p1_boy_independent_specials() -> Bool:
     let equipment = orks17p1_boy_equipment(1, 9)
-    equipment[1].boy_gun = OrksBoyGunChoice::big_shoota
-    equipment[2].boy_gun = OrksBoyGunChoice::rokkit_launcha
-    equipment[3].boy_gun = OrksBoyGunChoice::burna
+    equipment[1].boy_gun = Weapon::orks_infantry_big_shoota
+    equipment[2].boy_gun = Weapon::orks_rokkit_launcha_blasta
+    equipment[3].boy_gun = Weapon::orks_burna
     let valid = orks_boyz_loadout_valid(equipment)
     let unit = make_orks_boyz(equipment)
-    equipment[4].boy_gun = OrksBoyGunChoice::burna
-    return valid and !orks_boyz_loadout_valid(equipment) and unit[1].weapons.size() == 3 and unit[2].weapons.size() == 4 and unit[3].weapons.size() == 3 and unit[2].weapon_profile_groups[2] == unit[2].weapon_profile_groups[3]
+    equipment[4].boy_gun = Weapon::orks_burna
+    return valid and !orks_boyz_loadout_valid(equipment) and unit[1].weapons.size() == 3 and unit[2].weapons.size() == 4 and unit[3].weapons.size() == 3 and weapon_primary_id(unit[2], 2) == weapon_primary_id(unit[2], 3)
 
 # Boyz: per-ten TOTAL models means nineteen permits one, twenty permits two.
 fun test_orks17p1_boy_twenty_quota() -> Bool:
     let equipment = orks17p1_boy_equipment(2, 18)
-    equipment[2].boy_gun = OrksBoyGunChoice::big_shoota
-    equipment[3].boy_gun = OrksBoyGunChoice::big_shoota
+    equipment[2].boy_gun = Weapon::orks_infantry_big_shoota
+    equipment[3].boy_gun = Weapon::orks_infantry_big_shoota
     let valid = orks_boyz_loadout_valid(equipment)
     equipment.erase(19)
     return valid and !orks_boyz_loadout_valid(equipment)
@@ -12174,34 +12182,33 @@ fun test_orks17p1_boy_twenty_quota() -> Bool:
 # Boyz: Big Choppa removes both Nob weapons; other swaps retain a gun.
 fun test_orks17p1_mixed_nob_weapons() -> Bool:
     let equipment = orks17p1_boy_equipment(2, 9)
-    equipment[0].melee = OrksNobMeleeChoice::big_choppa
-    equipment[0].nob_gun = OrksNobGunChoice::none
-    equipment[1].melee = OrksNobMeleeChoice::power_klaw
-    equipment[1].nob_gun = OrksNobGunChoice::kombi_rokkit
+    equipment[0].melee = Weapon::orks_infantry_big_choppa
+    equipment[0].nob_gun = Weapon::none
+    equipment[1].melee = Weapon::orks_power_klaw
+    equipment[1].nob_gun = Weapon::orks_kombi_rokkit_busta
     let valid = orks_boyz_loadout_valid(equipment)
     let unit = make_orks_boyz(equipment)
-    equipment[0].nob_gun = OrksNobGunChoice::kustom_shoota
-    return valid and unit[0].weapons.size() == 1 and unit[1].weapons.size() == 3 and unit[1].weapons[0].value == Weapon::orks_power_klaw.value and !orks_boyz_loadout_valid(equipment)
+    equipment[0].nob_gun = Weapon::orks_kustom_shoota
+    return valid and unit[0].weapons.size() == 1 and unit[1].weapons.size() == 3 and unit[1].weapons[0].profile.value == Weapon::orks_power_klaw.value and !orks_boyz_loadout_valid(equipment)
 
 # Nobz: independent Paired/heavy quotas per-five, all replacements exclusive.
 fun test_orks17p1_nob_independent_replacements() -> Bool:
     let equipment = orks17p1_nob_equipment(5)
-    equipment[0] = OrksNobLoadout::paired_krumpas
-    equipment[1] = OrksNobLoadout::big_skorcha
-    equipment[2] = OrksNobLoadout::kustom_big_shoota
-    equipment[3] = OrksNobLoadout::big_choppa
-    equipment[4] = OrksNobLoadout::kombi_rokkit
+    equipment[0] = Weapon::orks_paired_krumpas
+    equipment[1] = Weapon::orks_big_skorcha
+    equipment[2] = Weapon::orks_kustom_big_shoota
+    equipment[3] = Weapon::orks_infantry_big_choppa
+    equipment[4] = Weapon::orks_kombi_rokkit_busta
     let valid = orks_nobz_loadout_valid(equipment)
     let unit = make_orks_nobz(equipment)
-    return valid and unit[0].paired_krumpas and unit[0].weapons.size() == 1 and unit[1].weapons[0].value == Weapon::orks_kustom_choppa.value and unit[2].weapons.size() == 2 and unit[3].weapons.size() == 1 and unit[4].weapons.size() == 3
+    return valid and unit[0].weapons[0].profile.value == Weapon::orks_paired_krumpas.value and unit[0].weapons.size() == 1 and unit[1].weapons[0].profile.value == Weapon::orks_kustom_choppa.value and unit[2].weapons.size() == 2 and unit[3].weapons.size() == 1 and unit[4].weapons.size() == 3
 
 # Nobz: every restricted replacement rejects its second copy below ten.
 fun test_orks17p1_nob_quota_boundaries() -> Bool:
     let valid = true
     for kind in range(4):
         let equipment = orks17p1_nob_equipment(10)
-        let choice : OrksNobLoadout
-        choice.value = kind + 2
+        let choice = orks_nob_loadout_choice(kind + 2)
         equipment[0] = choice
         equipment[1] = choice
         valid = valid and orks_nobz_loadout_valid(equipment)
@@ -12217,21 +12224,19 @@ fun test_orks17p1_dread_all_arm_combinations() -> Bool:
     for first_index in range(5):
         for second_index in range(5):
             if first_index != 1:
-                let first : OrksDreadArmChoice
-                first.value = first_index
-                let second : OrksDreadArmChoice
-                second.value = second_index
+                let first = orks_dread_arm_choice(first_index)
+                let second = orks_dread_arm_choice(second_index)
                 let unit = make_orks_deff_dread(first, second)
-                valid = valid and unit[0].weapons[0].value == Weapon::orks_dread_klaws.value and unit[0].weapon_profile_groups[1].value == 1 and unit[0].weapon_profile_groups[unit[0].weapons.size() - 1].value == 2
+                valid = valid and unit[0].weapons[0].profile.value == Weapon::orks_dread_klaws.value and weapon_primary_id(unit[0], 1) == 2 and weapon_primary_id(unit[0], unit[0].weapons.size() - 1) > 2
     return valid
 
 # Deff-Dread: two Extra Klaws are distinct physical mandatory melee weapons.
 fun test_orks17p1_dread_two_extra_klaws() -> Bool:
-    let board = orks17p1_fixture(make_orks_deff_dread(OrksDreadArmChoice::extra_klaw, OrksDreadArmChoice::extra_klaw))
+    let board = orks17p1_fixture(make_orks_deff_dread(Weapon::orks_extra_klaw, Weapon::orks_extra_klaw))
     let selected : Bool[MAX_WEAPONS]
     selected[1] = true
     let other = weapon_selection_valid(board, unit_id(0), 0, 2, true, selected, false)
-    return other and board[0][0].weapons.size() == 3 and board[0][0].weapon_profile_groups[1] != board[0][0].weapon_profile_groups[2] and board[0][0].weapons[2].has_rule(WeaponRuleKind::extra_attacks)
+    return other and board[0][0].weapons.size() == 3 and weapon_primary_id(board[0][0], 1) != weapon_primary_id(board[0][0], 2) and board[0][0].weapons[2].profile.has_rule(WeaponRuleKind::extra_attacks)
 
 # Deff-Dread: Dread 'Ard affects incoming attack D, never non-attack mortal jobs.
 fun test_orks17p1_dread_incoming_damage() -> Bool:
@@ -12245,12 +12250,12 @@ fun test_orks17p1_mobile_unit_compositions() -> Bool:
     let storm = make_orks_stormboyz(9, true)
     let bikes = make_orks_warbikers(5)
     let kans = make_orks_killa_kans(6)
-    return storm.models.size() == 10 and storm[0].weapons[1].value == Weapon::orks_power_klaw.value and storm.has_ability(AbilityKind::deep_strike) and storm.has_keyword(Keyword::fly) and bikes.models.size() == 6 and bikes.has_keyword(Keyword::speed_freeks) and kans.models.size() == 6 and kans.has_keyword(Keyword::grots) and !kans.has_keyword(Keyword::gretchin)
+    return storm.models.size() == 10 and storm[0].weapons[1].profile.value == Weapon::orks_power_klaw.value and storm.has_ability(AbilityKind::deep_strike) and storm.has_keyword(Keyword::fly) and bikes.models.size() == 6 and bikes.has_keyword(Keyword::speed_freeks) and kans.models.size() == 6 and kans.has_keyword(Keyword::grots) and !kans.has_keyword(Keyword::gretchin)
 
 # Warbikers: documented circular proxy preserves both source axes.
 fun test_orks17p1_biker_circle_proxy() -> Bool:
     let unit = make_orks_warbikers(2)
-    return profile_has_oval_base(unit[0].profile) and profile_base_width(unit[0].profile) == 42.0 and unit[0].profile.base_size() == 75.0 and !unit[0].geometry.unsupported_footprint and unit[1].weapons.size() == 2 and unit[0].weapon_profile_groups[0] == unit[0].weapon_profile_groups[1]
+    return profile_has_oval_base(unit[0].profile) and profile_base_width(unit[0].profile) == 42.0 and unit[0].profile.base_size() == 75.0 and !unit[0].geometry.unsupported_footprint and unit[1].weapons.size() == 2 and weapon_primary_id(unit[0], 0) == weapon_primary_id(unit[0], 1)
 
 # Killa-Kans: all three gun profiles are alternatives of one physical weapon.
 fun test_orks17p1_kan_profile_exclusion() -> Bool:
@@ -12265,7 +12270,7 @@ fun test_orks17p1_boss_attachment_metadata() -> Bool:
     let leader = make_orks_warboss()
     let support = make_orks_bigboss()
     let banner = make_orks_bannernob()
-    return leader.attachment_role.value == AttachmentRole::leader.value and leader[0].has_da_boss and support.attachment_role.value == AttachmentRole::support.value and !support[0].has_da_boss and banner.attachment_role.value == AttachmentRole::support.value and support[0].weapons[1].has_rule(WeaponRuleKind::precision)
+    return leader.attachment_role.value == AttachmentRole::leader.value and leader[0].has_da_boss and support.attachment_role.value == AttachmentRole::support.value and !support[0].has_da_boss and banner.attachment_role.value == AttachmentRole::support.value and support[0].weapons[1].profile.has_rule(WeaponRuleKind::precision)
 
 # Mozrog/Dakkarig/Squigosaur: no invented Leader or Da Boss metadata.
 fun test_orks17p1_monster_and_mek_metadata() -> Bool:
@@ -12350,7 +12355,7 @@ fun test_orks17p1_boy_action_engagement_waiver() -> Bool:
 # Nobz/Paired Krumpas: only the bearer's Kustom Krumpa receives both rerolls.
 fun test_orks17p1_paired_krumpas_bearer_and_weapon() -> Bool:
     let equipment = orks17p1_nob_equipment(5)
-    equipment[0] = OrksNobLoadout::paired_krumpas
+    equipment[0] = Weapon::orks_paired_krumpas
     let board = orks17p1_fixture(make_orks_nobz(equipment))
     let paired = make_declared_weapon(board, unit_id(0), 0, 0)
     let ordinary = make_declared_weapon(board, unit_id(0), 1, 0)
@@ -12553,7 +12558,7 @@ fun test_orks17p1_all_unit_saved_round_trip() -> Bool:
     state.board.identify_units()
     let restored = play()
     let saved = set_state(restored, to_string(state))
-    return saved and restored.board.reserve_units.size() == 12 and restored.board.reserve_units[6][0].weapon_profile_groups[0] == restored.board.reserve_units[6][0].weapon_profile_groups[1] and restored.board.reserve_units[11][0].profile == Profile::orks_mozrog_skragbad and valid_state_foundations(restored.board)
+    return saved and restored.board.reserve_units.size() == 12 and weapon_primary_id(restored.board.reserve_units[6][0], 0) == weapon_primary_id(restored.board.reserve_units[6][0], 1) and restored.board.reserve_units[11][0].profile == Profile::orks_mozrog_skragbad and valid_state_foundations(restored.board)
 
 # Mozrog: FNP is resolved first, then2+ at destruction; retained fighter has
 # already passed its permission roll and does not roll that permission again.
@@ -12718,12 +12723,12 @@ fun orks17p2_units() -> UnitVector:
     units.append(make_orks_meganobz(2))
     units.append(make_orks_mek())
     units.append(make_orks_big_mek(false, false))
-    units.append(make_orks_big_mek_in_mega_armour(OrksMegaMekGun::kustom_shoota, OrksMegaMekExtra::none))
+    units.append(make_orks_big_mek_in_mega_armour(Weapon::orks_big_mek_in_mega_armour_kustom_shoota_aimed, Weapon::none))
     units.append(make_orks_big_mek_with_shokk_attack_gun())
     units.append(make_orks_painboy())
     units.append(make_orks_painboss())
     units.append(make_orks_breaka_boyz(false, 5, 5))
-    units.append(make_orks_tankbustas(false, OrksTankbustaExtra::none, 0))
+    units.append(make_orks_tankbustas(false, Weapon::none, 0))
     units.append(make_orks_warboss_in_mega_armour())
     units.append(make_orks_gretchin(10))
     units.append(make_orks_runtherd())
@@ -12746,67 +12751,75 @@ fun test_orks17p2_all_factories_round_trip() -> Bool:
 fun test_orks17p2_flash_gitz_counts_and_physical_guns() -> Bool:
     let unit = make_orks_flash_gitz(5)
     let valid = unit.models.size() == 6 and unit[0].profile == Profile::orks_kaptin and unit[1].profile == Profile::orks_flash_git and make_orks_flash_gitz(9).models.size() == 10
-    return valid and unit[0].weapons.size() == 4 and unit[0].weapon_profile_groups[0] == 1 and unit[0].weapon_profile_groups[1] == 1 and unit[0].weapon_profile_groups[2] == 1
+    return valid and unit[0].weapons.size() == 4 and weapon_primary_id(unit[0], 0) == 1 and weapon_primary_id(unit[0], 1) == 1 and weapon_primary_id(unit[0], 2) == 1
 
 # Combined replacement removes BOTH original weapons; all five choices coexist.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Meganobz
 fun test_orks17p2_meganob_mixed_replacements() -> Bool:
     let equipment : OrksMeganobLoadouts
-    let choice : OrksMeganobLoadout
+    let choice = orks_meganob_loadout_choice(0)
     for index in range(5):
-        choice.value = index
+        choice = orks_meganob_loadout_choice(index)
         equipment.append(choice)
     let unit = make_orks_meganobz(equipment)
-    return unit.models.size() == 5 and unit[0].weapons.size() == 3 and unit[1].weapons[0].value == Weapon::orks_meganobz_killsaw.value and unit[2].weapons.size() == 4 and unit[3].weapons[0].value == Weapon::orks_meganobz_killsaw.value and unit[4].weapons.size() == 1 and unit[4].weapons[0].has_rule(WeaponRuleKind::twin_linked)
+    return unit.models.size() == 5 and unit[0].weapons.size() == 3 and unit[1].weapons[0].profile.value == Weapon::orks_meganobz_killsaw.value and unit[2].weapons.size() == 4 and unit[3].weapons[0].profile.value == Weapon::orks_meganobz_killsaw.value and unit[4].weapons.size() == 1 and unit[4].weapons[0].profile.has_rule(WeaponRuleKind::twin_linked)
 
 fun test_orks17p2_meganob_composition_and_invalid_enum() -> Bool:
     let equipment : OrksMeganobLoadouts
+    let equipment_previous_1 = equipment.size()
     equipment.resize(1)
+    for equipment_default_1 in range(1):
+        if equipment_default_1 >= equipment_previous_1:
+            equipment[equipment_default_1] = orks_meganob_loadout_choice(0)
     let invalid = !orks_meganob_loadout_valid(equipment)
+    let equipment_previous_2 = equipment.size()
     equipment.resize(6)
+    for equipment_default_2 in range(6):
+        if equipment_default_2 >= equipment_previous_2:
+            equipment[equipment_default_2] = orks_meganob_loadout_choice(0)
     let valid = orks_meganob_loadout_valid(equipment)
-    equipment[0].value = 5
+    equipment[0].gun = Weapon::none
     return invalid and valid and !orks_meganob_loadout_valid(equipment) and make_orks_meganobz(2).models.size() == 2
 
 # Independent Big Mek weapon swaps and all twelve Mega Mek choices.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
 fun test_orks17p2_mega_mek_all_equipment() -> Bool:
-    let gun : OrksMegaMekGun
-    let extra : OrksMegaMekExtra
+    let gun = orks_mega_mek_gun_choice(0)
+    let extra = orks_mega_mek_extra_choice(0)
     let valid = true
     for gun_index in range(4):
-        gun.value = gun_index
+        gun = orks_mega_mek_gun_choice(gun_index)
         for extra_index in range(3):
-            extra.value = extra_index
+            extra = orks_mega_mek_extra_choice(extra_index)
             let unit = make_orks_big_mek_in_mega_armour(gun, extra)
             let expected_slots = 2
             if gun_index == 0:
                 expected_slots = 3
             if gun_index == 2:
                 expected_slots = 4
-            valid = valid and unit[0].weapons.size() == expected_slots + int(extra_index == 1) and unit.has_ability(AbilityKind::kustom_force_field) == (extra_index == 2) and unit[0].transport_space == 2
+            valid = valid and unit[0].weapons.size() == expected_slots + int(extra_index != 0) and unit.has_ability(AbilityKind::kustom_force_field) == (extra_index == 2) and unit[0].transport_space == 2
     return valid
 
 fun test_orks17p2_big_mek_independent_swaps() -> Bool:
     let standard = make_orks_big_mek(false, false)
     let changed = make_orks_big_mek(true, true)
-    return standard[0].weapons[0].value == Weapon::orks_big_mek_power_klaw.value and standard[0].weapons[1].value == Weapon::orks_big_mek_kustom_mega_blasta.value and changed[0].weapons[0].value == Weapon::orks_big_mek_drilla.value and changed[0].weapons[1].has_rule(WeaponRuleKind::anti)
+    return standard[0].weapons[0].profile.value == Weapon::orks_big_mek_power_klaw.value and standard[0].weapons[1].profile.value == Weapon::orks_big_mek_kustom_mega_blasta.value and changed[0].weapons[0].profile.value == Weapon::orks_big_mek_drilla.value and changed[0].weapons[1].profile.has_rule(WeaponRuleKind::anti)
 
 # Two distinct Boy swaps are legal; neither can consume the same Boy.
 # Nob's replacement means two pistols, never two Hammer profiles as well.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Breaka-Boyz
 fun test_orks17p2_breaka_full_replacements() -> Bool:
     let unit = make_orks_breaka_boyz(true, 0, 1)
-    return unit.models.size() == 6 and unit[0].weapons.size() == 3 and unit[0].weapons[1].value == unit[0].weapons[2].value and unit[1].weapons.size() == 1 and unit[1].weapons[0].value == Weapon::orks_breaka_boyz_knucklebustas.value and unit[2].weapons[0].has_rule(WeaponRuleKind::hazardous) and unit[3].hunter_profile_conditions[1].target_condition.size() > 0 and !orks_breaka_loadout_valid(1, 1) and !orks_breaka_loadout_valid(-1, 5) and !orks_breaka_loadout_valid(5, 6)
+    return unit.models.size() == 6 and unit[0].weapons.size() == 3 and unit[0].weapons[1].profile.value == unit[0].weapons[2].profile.value and unit[1].weapons.size() == 1 and unit[1].weapons[0].profile.value == Weapon::orks_breaka_boyz_knucklebustas.value and unit[2].weapons[0].profile.has_rule(WeaponRuleKind::hazardous) and unit[3].hunter_profile_conditions[1].target_condition.size() > 0 and !orks_breaka_loadout_valid(1, 1) and !orks_breaka_loadout_valid(-1, 5) and !orks_breaka_loadout_valid(5, 6)
 
 # Nob keeps one pistol when replacing the other; the extra launcher is a
 # second physical family with independently chosen Standard/Hunter profile.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
 fun test_orks17p2_tankbusta_physical_counts() -> Bool:
-    let standard = make_orks_tankbustas(false, OrksTankbustaExtra::none, 0)
-    let changed = make_orks_tankbustas(true, OrksTankbustaExtra::additional_launcher, 2)
-    let pulsa = make_orks_tankbustas(false, OrksTankbustaExtra::pulsa, 4)
-    return standard[0].weapons.size() == 3 and standard[0].weapons[1].value == standard[0].weapons[2].value and changed[0].weapons.size() == 4 and changed[3].weapons.size() == 5 and changed[3].weapon_profile_groups[1].value != changed[3].weapon_profile_groups[3].value and pulsa[5].has_ability(AbilityKind::pulsa_rokkit) and !pulsa[1].has_ability(AbilityKind::pulsa_rokkit) and pulsa[5].weapons.size() == 3
+    let standard = make_orks_tankbustas(false, Weapon::none, 0)
+    let changed = make_orks_tankbustas(true, Weapon::orks_tankbustas_busta_rokkit_launcha_standard, 2)
+    let pulsa = make_orks_tankbustas(false, Weapon::orks_pulsa_rokkit, 4)
+    return standard[0].weapons.size() == 3 and standard[0].weapons[1].profile.value == standard[0].weapons[2].profile.value and changed[0].weapons.size() == 4 and changed[3].weapons.size() == 5 and weapon_primary_id(changed[3], 1) != weapon_primary_id(changed[3], 3) and pulsa[5].has_ability(AbilityKind::pulsa_rokkit) and !pulsa[1].has_ability(AbilityKind::pulsa_rokkit) and pulsa[5].weapons.size() == 4
 
 # More Dakka's riled grant differs from plain Mek Kustom Dakka.
 # https://wahapedia.ru/wh40k11ed/factions/orks/{Mek,Big-Mek}
@@ -12851,7 +12864,7 @@ fun test_orks17p2_meganob_defence_and_riled_fight() -> Bool:
 # Kustom Force Field is unit-wide only for ranged saves, and only equipped.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek-In-Mega-Armour
 fun test_orks17p2_force_field_ranged_only() -> Bool:
-    let board = orks17p2_fixture(make_orks_big_mek_in_mega_armour(OrksMegaMekGun::kustom_shoota, OrksMegaMekExtra::force_field))
+    let board = orks17p2_fixture(make_orks_big_mek_in_mega_armour(Weapon::orks_big_mek_in_mega_armour_kustom_shoota_aimed, Weapon::orks_kustom_force_field))
     let info : AttackSequenceInfo
     info.source = Weapon::captain_storm_bolter
     let ranged = make_allocation_groups(board, board[0], info)
@@ -12895,7 +12908,7 @@ fun test_orks17p2_painboss_actual_mounted_attachment() -> Bool:
 
 # Source-wide field protection includes the actual attached Meganob bodyguard.
 fun test_orks17p2_force_field_actual_bodyguard() -> Bool:
-    let unit = orks17p2_attached(make_orks_meganobz(2), make_orks_big_mek_in_mega_armour(OrksMegaMekGun::kustom_shoota, OrksMegaMekExtra::force_field))
+    let unit = orks17p2_attached(make_orks_meganobz(2), make_orks_big_mek_in_mega_armour(Weapon::orks_big_mek_in_mega_armour_kustom_shoota_aimed, Weapon::orks_kustom_force_field))
     let board = orks17p2_fixture(unit)
     let info : AttackSequenceInfo
     info.source = Weapon::captain_storm_bolter
@@ -13089,7 +13102,7 @@ fun test_orks17p2_painboss_targets_banks_and_enemy() -> Bool:
 
 # Optional once-per-battle Fix Dat and Push Dat share limits by original unit.
 fun test_orks17p2_healer_token_limits_and_registration_idempotence() -> Bool:
-    let board = orks17p2_fixture(make_orks_big_mek_in_mega_armour(OrksMegaMekGun::kustom_shoota, OrksMegaMekExtra::none))
+    let board = orks17p2_fixture(make_orks_big_mek_in_mega_armour(Weapon::orks_big_mek_in_mega_armour_kustom_shoota_aimed, Weapon::none))
     let instance = orks17p2_source(board, ORKS_ARMOUR_REPAIR_RULE)
     let count = board.source_instances.size()
     register_orks_datasheet_sources(board)
@@ -13242,7 +13255,7 @@ fun test_orks17p2_trophy_hunters_charge_order_and_cap() -> Bool:
 # Printed M/V and24in, not line of sight; declining costs nothing.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
 fun test_orks17p2_pulsa_target_and_once_usage() -> Bool:
-    let board = orks17p2_fixture(make_orks_tankbustas(false, OrksTankbustaExtra::pulsa, 0))
+    let board = orks17p2_fixture(make_orks_tankbustas(false, Weapon::orks_pulsa_rokkit, 0))
     board[1][0].keywords.append(Keyword::monster)
     let sequence = orks_pulsa_selection(board, unit_id(0))
     sequence.use_pulsa_rokkit(board, true)
@@ -13254,7 +13267,7 @@ fun test_orks17p2_pulsa_target_and_once_usage() -> Bool:
     return sequence.is_done() and marked and spent and info.attack_penetration() == -3 and !orks_pulsa_applies(board, board[0], board[1].identity)
 
 fun test_orks17p2_pulsa_decline_and_unavailable_target() -> Bool:
-    let board = orks17p2_fixture(make_orks_tankbustas(false, OrksTankbustaExtra::pulsa, 0))
+    let board = orks17p2_fixture(make_orks_tankbustas(false, Weapon::orks_pulsa_rokkit, 0))
     let no_monster = orks_pulsa_selection(board, unit_id(0))
     board[1][0].keywords.append(Keyword::vehicle)
     let sequence = orks_pulsa_selection(board, unit_id(0))
@@ -13263,7 +13276,7 @@ fun test_orks17p2_pulsa_decline_and_unavailable_target() -> Bool:
 
 # Retargeting to another enemy loses Pulsa even if it has the same keywords.
 fun test_orks17p2_pulsa_does_not_follow_replacement_target() -> Bool:
-    let board = orks17p2_fixture(make_orks_tankbustas(false, OrksTankbustaExtra::pulsa, 0))
+    let board = orks17p2_fixture(make_orks_tankbustas(false, Weapon::orks_pulsa_rokkit, 0))
     board[1][0].keywords.append(Keyword::vehicle)
     let sequence = orks_pulsa_selection(board, unit_id(0))
     sequence.use_pulsa_rokkit(board, true)
@@ -13277,7 +13290,7 @@ fun test_orks17p2_pulsa_does_not_follow_replacement_target() -> Bool:
 # Barrage requires an actual hit; -1 turns a natural6 against Ld6 into failure.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
 fun test_orks17p2_rokkit_barrage_actual_hit_and_penalty() -> Bool:
-    let board = orks17p2_fixture(make_orks_tankbustas(false, OrksTankbustaExtra::none, 0))
+    let board = orks17p2_fixture(make_orks_tankbustas(false, Weapon::none, 0))
     begin_orks_attack(board)
     let none = orks_rokkit_barrage(board, unit_id(0))
     record_orks_hits(board, unit_id(1), 1)
@@ -13487,7 +13500,7 @@ fun orks17p3_buggies(Int count, Int swaps) -> Unit:
         equipment.append(index < swaps)
     return make_orks_warbuggies(equipment)
 
-fun orks17p3_guns(Int count, OrksMekGun gun) -> Unit:
+fun orks17p3_guns(Int count, Weapon gun) -> Unit:
     let guns : OrksMekGuns
     for index in range(count):
         guns.append(gun)
@@ -13495,7 +13508,11 @@ fun orks17p3_guns(Int count, OrksMekGun gun) -> Unit:
 
 fun orks17p3_kommandos() -> Unit:
     let equipment : OrksKommandoLoadout
+    let equipment_previous_1 = equipment.size()
     equipment.resize(10)
+    for equipment_default_1 in range(10):
+        if equipment_default_1 >= equipment_previous_1:
+            equipment[equipment_default_1] = orks_kommando_equipment()
     return make_orks_kommandos(equipment)
 
 # All25 adapter families coexist in a serializable roster without legacy data.
@@ -13511,16 +13528,16 @@ fun orks17p3_units() -> UnitVector:
     units.append(orks17p3_koptas(6, 2))
     units.append(make_orks_ghazghkull_thraka())
     units.append(make_orks_gorkanaut())
-    units.append(make_orks_gunwagon(0, 4, true, true, true, OrksGunwagonGun::kannon))
+    units.append(make_orks_gunwagon(0, 4, true, true, true, Weapon::orks_gunwagon_kannon_frag))
     units.append(make_orks_hunta_rig())
     units.append(make_orks_kill_rig())
     units.append(orks17p3_kommandos())
-    units.append(orks17p3_guns(3, OrksMekGun::smasha_gun))
+    units.append(orks17p3_guns(3, Weapon::orks_mek_gunz_smasha_gun))
     units.append(make_orks_morkanaut())
     units.append(make_orks_nazdreg())
     units.append(make_orks_rukkatrukk_squigbuggies(2))
     units.append(make_orks_stompa(0))
-    units.append(make_orks_trukk(0, true, OrksTrukkExtra::buzzsaw))
+    units.append(make_orks_trukk(0, true, Weapon::orks_trukk_buzzsaw))
     units.append(orks17p3_buggies(2, 1))
     units.append(make_orks_wartrakks(2))
     units.append(make_orks_wazbom_blastajet(true, true, true))
@@ -13533,7 +13550,7 @@ fun test_orks17p3_battlewagon_factory_metadata() -> Bool:
     let unit = make_orks_battlewagon(0, 4, true, true)
     let valid = unit.roster_datasheet.value == OrksDatasheet::battlewagon.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Big-ed-Bossbunka: named metadata/loadout coherence.
@@ -13541,7 +13558,7 @@ fun test_orks17p3_big_ed_bossbunka_factory_metadata() -> Bool:
     let unit = make_orks_big_ed_bossbunka(0, 3)
     let valid = unit.roster_datasheet.value == OrksDatasheet::big_ed_bossbunka.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Blitza-bommer: named metadata/loadout coherence.
@@ -13549,7 +13566,7 @@ fun test_orks17p3_blitza_bommer_factory_metadata() -> Bool:
     let unit = make_orks_blitza_bommer()
     let valid = unit.roster_datasheet.value == OrksDatasheet::blitza_bommer.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Boss-Snikrot: named metadata/loadout coherence.
@@ -13557,7 +13574,7 @@ fun test_orks17p3_boss_snikrot_factory_metadata() -> Bool:
     let unit = make_orks_boss_snikrot()
     let valid = unit.roster_datasheet.value == OrksDatasheet::boss_snikrot.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Burna-bommer: named metadata/loadout coherence.
@@ -13565,7 +13582,7 @@ fun test_orks17p3_burna_bommer_factory_metadata() -> Bool:
     let unit = make_orks_burna_bommer(true)
     let valid = unit.roster_datasheet.value == OrksDatasheet::burna_bommer.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Dakkajet: named metadata/loadout coherence.
@@ -13573,7 +13590,7 @@ fun test_orks17p3_dakkajet_factory_metadata() -> Bool:
     let unit = make_orks_dakkajet(true)
     let valid = unit.roster_datasheet.value == OrksDatasheet::dakkajet.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Deffkilla-Wartrike: named metadata/loadout coherence.
@@ -13581,7 +13598,7 @@ fun test_orks17p3_deffkilla_wartrike_factory_metadata() -> Bool:
     let unit = make_orks_deffkilla_wartrike()
     let valid = unit.roster_datasheet.value == OrksDatasheet::deffkilla_wartrike.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Deffkoptas: named metadata/loadout coherence.
@@ -13589,7 +13606,7 @@ fun test_orks17p3_deffkoptas_factory_metadata() -> Bool:
     let unit = orks17p3_koptas(6, 2)
     let valid = unit.roster_datasheet.value == OrksDatasheet::deffkoptas.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Ghazghkull-Thraka: named metadata/loadout coherence.
@@ -13597,7 +13614,7 @@ fun test_orks17p3_ghazghkull_thraka_factory_metadata() -> Bool:
     let unit = make_orks_ghazghkull_thraka()
     let valid = unit.roster_datasheet.value == OrksDatasheet::ghazghkull_thraka.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Gorkanaut: named metadata/loadout coherence.
@@ -13605,15 +13622,15 @@ fun test_orks17p3_gorkanaut_factory_metadata() -> Bool:
     let unit = make_orks_gorkanaut()
     let valid = unit.roster_datasheet.value == OrksDatasheet::gorkanaut.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Gunwagon: named metadata/loadout coherence.
 fun test_orks17p3_gunwagon_factory_metadata() -> Bool:
-    let unit = make_orks_gunwagon(0, 4, true, true, true, OrksGunwagonGun::kannon)
+    let unit = make_orks_gunwagon(0, 4, true, true, true, Weapon::orks_gunwagon_kannon_frag)
     let valid = unit.roster_datasheet.value == OrksDatasheet::gunwagon.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Hunta-Rig: named metadata/loadout coherence.
@@ -13621,7 +13638,7 @@ fun test_orks17p3_hunta_rig_factory_metadata() -> Bool:
     let unit = make_orks_hunta_rig()
     let valid = unit.roster_datasheet.value == OrksDatasheet::hunta_rig.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Kill-Rig: named metadata/loadout coherence.
@@ -13629,7 +13646,7 @@ fun test_orks17p3_kill_rig_factory_metadata() -> Bool:
     let unit = make_orks_kill_rig()
     let valid = unit.roster_datasheet.value == OrksDatasheet::kill_rig.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Kommandos: named metadata/loadout coherence.
@@ -13637,15 +13654,15 @@ fun test_orks17p3_kommandos_factory_metadata() -> Bool:
     let unit = orks17p3_kommandos()
     let valid = unit.roster_datasheet.value == OrksDatasheet::kommandos.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Mek-Gunz: named metadata/loadout coherence.
 fun test_orks17p3_mek_gunz_factory_metadata() -> Bool:
-    let unit = orks17p3_guns(3, OrksMekGun::smasha_gun)
+    let unit = orks17p3_guns(3, Weapon::orks_mek_gunz_smasha_gun)
     let valid = unit.roster_datasheet.value == OrksDatasheet::mek_gunz.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Morkanaut: named metadata/loadout coherence.
@@ -13653,7 +13670,7 @@ fun test_orks17p3_morkanaut_factory_metadata() -> Bool:
     let unit = make_orks_morkanaut()
     let valid = unit.roster_datasheet.value == OrksDatasheet::morkanaut.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg: named metadata/loadout coherence.
@@ -13661,7 +13678,7 @@ fun test_orks17p3_nazdreg_factory_metadata() -> Bool:
     let unit = make_orks_nazdreg()
     let valid = unit.roster_datasheet.value == OrksDatasheet::nazdreg.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Rukkatrukk-Squigbuggies: named metadata/loadout coherence.
@@ -13669,7 +13686,7 @@ fun test_orks17p3_rukkatrukk_squigbuggies_factory_metadata() -> Bool:
     let unit = make_orks_rukkatrukk_squigbuggies(2)
     let valid = unit.roster_datasheet.value == OrksDatasheet::rukkatrukk_squigbuggies.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Stompa: named metadata/loadout coherence.
@@ -13677,15 +13694,15 @@ fun test_orks17p3_stompa_factory_metadata() -> Bool:
     let unit = make_orks_stompa(0)
     let valid = unit.roster_datasheet.value == OrksDatasheet::stompa.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Trukk: named metadata/loadout coherence.
 fun test_orks17p3_trukk_factory_metadata() -> Bool:
-    let unit = make_orks_trukk(0, true, OrksTrukkExtra::buzzsaw)
+    let unit = make_orks_trukk(0, true, Weapon::orks_trukk_buzzsaw)
     let valid = unit.roster_datasheet.value == OrksDatasheet::trukk.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Warbuggies: named metadata/loadout coherence.
@@ -13693,7 +13710,7 @@ fun test_orks17p3_warbuggies_factory_metadata() -> Bool:
     let unit = orks17p3_buggies(2, 1)
     let valid = unit.roster_datasheet.value == OrksDatasheet::warbuggies.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Wartrakks: named metadata/loadout coherence.
@@ -13701,7 +13718,7 @@ fun test_orks17p3_wartrakks_factory_metadata() -> Bool:
     let unit = make_orks_wartrakks(2)
     let valid = unit.roster_datasheet.value == OrksDatasheet::wartrakks.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Wazbom-Blastajet: named metadata/loadout coherence.
@@ -13709,7 +13726,7 @@ fun test_orks17p3_wazbom_blastajet_factory_metadata() -> Bool:
     let unit = make_orks_wazbom_blastajet(true, true, true)
     let valid = unit.roster_datasheet.value == OrksDatasheet::wazbom_blastajet.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Wazdakka-Gutsmek: named metadata/loadout coherence.
@@ -13717,7 +13734,7 @@ fun test_orks17p3_wazdakka_gutsmek_factory_metadata() -> Bool:
     let unit = make_orks_wazdakka_gutsmek()
     let valid = unit.roster_datasheet.value == OrksDatasheet::wazdakka_gutsmek.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # https://wahapedia.ru/wh40k11ed/factions/orks/Weirdboy: named metadata/loadout coherence.
@@ -13725,7 +13742,7 @@ fun test_orks17p3_weirdboy_factory_metadata() -> Bool:
     let unit = make_orks_weirdboy()
     let valid = unit.roster_datasheet.value == OrksDatasheet::weirdboy.value and !unit.empty()
     for member_index in range(unit.models.size()):
-        valid = valid and valid_named_model_identity(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
+        valid = valid and valid_model_equipment(unit[member_index]) and unit[member_index].has_waaagh and unit[member_index].has_keyword(Keyword::orks) and unit[member_index].base_radius_micrometres() > 0.0
     return valid
 
 # Large bounded proxy dimensions and new effect/action enums round trip.
@@ -13762,12 +13779,12 @@ fun test_orks17p3_immobile_and_aircraft_absent_characteristics() -> Bool:
 # All physical copies have different groups; profiles within each copy share.
 fun test_orks17p3_gorkanaut_physical_weapon_copies() -> Bool:
     let unit = make_orks_gorkanaut()
-    return unit[0].weapons.size() == 10 and unit[0].weapon_profile_groups[0] == unit[0].weapon_profile_groups[1] and unit[0].weapon_profile_groups[2] != unit[0].weapon_profile_groups[3] and unit[0].weapon_profile_groups[4] == unit[0].weapon_profile_groups[5] and unit[0].weapon_profile_groups[6] == unit[0].weapon_profile_groups[7] and unit[0].weapon_profile_groups[4] != unit[0].weapon_profile_groups[6]
+    return unit[0].weapons.size() == 10 and weapon_primary_id(unit[0], 0) == weapon_primary_id(unit[0], 1) and weapon_primary_id(unit[0], 2) != weapon_primary_id(unit[0], 3) and weapon_primary_id(unit[0], 4) == weapon_primary_id(unit[0], 5) and weapon_primary_id(unit[0], 6) == weapon_primary_id(unit[0], 7) and weapon_primary_id(unit[0], 4) != weapon_primary_id(unit[0], 6)
 
 # Nazdreg's explicit exception includes all THREE ranged profiles, not melee.
 fun test_orks17p3_nazdreg_three_profiles_and_unit_deep_strike() -> Bool:
     let unit = make_orks_nazdreg()
-    return unit[0].weapons.size() == 5 and unit[0].simultaneous_ranged_profiles[0] and unit[0].simultaneous_ranged_profiles[1] and unit[0].simultaneous_ranged_profiles[2] and !unit[0].simultaneous_ranged_profiles[3] and unit.has_ability(AbilityKind::deep_strike)
+    return unit[0].weapons.size() == 5 and permits_simultaneous_profile(unit[0], 0) and permits_simultaneous_profile(unit[0], 1) and permits_simultaneous_profile(unit[0], 2) and !permits_simultaneous_profile(unit[0], 3) and unit.has_ability(AbilityKind::deep_strike)
 
 # Equipment removes SMOKE only when the force field was actually selected.
 fun test_orks17p3_blastajet_field_changes_keyword_and_invulnerable() -> Bool:
@@ -13777,13 +13794,17 @@ fun test_orks17p3_blastajet_field_changes_keyword_and_invulnerable() -> Bool:
 
 # The4-card all-option envelope fits the audited13 slots; no capacity inflation.
 fun test_orks17p3_largest_equipment_envelope() -> Bool:
-    return make_orks_gunwagon(0, 4, true, true, true, OrksGunwagonGun::kannon)[0].weapons.size() == 10 and make_orks_stompa(0)[0].weapons.size() == 10 and MAX_WEAPONS == 13
+    return make_orks_gunwagon(0, 4, true, true, true, Weapon::orks_gunwagon_kannon_frag)[0].weapons.size() == 10 and make_orks_stompa(0)[0].weapons.size() == 10 and MAX_WEAPONS == 13
 
 # Kommandos' one each/two Shootas quotas do not forbid independent extras on
 # the same Boy, or silently give a Boy replacement to the Nob.
 fun test_orks17p3_kommando_loadout_quotas_and_extras() -> Bool:
     let equipment : OrksKommandoLoadout
+    let equipment_previous_1 = equipment.size()
     equipment.resize(10)
+    for equipment_default_1 in range(10):
+        if equipment_default_1 >= equipment_previous_1:
+            equipment[equipment_default_1] = orks_kommando_equipment()
     equipment[1].burna = true
     equipment[1].rokkit = true
     equipment[1].breacha_ram = true
@@ -13799,7 +13820,7 @@ fun test_orks17p3_transport_literal_permissions() -> Bool:
     let ghaz = make_orks_ghazghkull_thraka()
     let wagon = make_orks_battlewagon(0, 0, false, false)
     let gork = make_orks_gorkanaut()
-    let trukk = make_orks_trukk(0, false, OrksTrukkExtra::none)
+    let trukk = make_orks_trukk(0, false, Weapon::none)
     let boyz = make_orks_beast_snagga_boyz(1, 9, 0)
     let rig = make_orks_hunta_rig()
     let ordinary = orks17p3_kommandos()
@@ -13809,7 +13830,7 @@ fun test_orks17p3_transport_literal_permissions() -> Bool:
 # Trukk forbids them regardless of its remaining capacity.
 fun test_orks17p3_transport_jump_and_gretchin_seats() -> Bool:
     let stormboyz = make_orks_stormboyz(4, false)
-    let trukk = make_orks_trukk(0, false, OrksTrukkExtra::none)
+    let trukk = make_orks_trukk(0, false, Weapon::none)
     return orks_passenger_space(stormboyz) == 10 and orks_passenger_space(make_orks_gretchin(11)) == 6 and !passenger_model_permitted(trukk[0], stormboyz[0])
 
 # Passive query assertions exercise the same gathered attack snapshots as play.
@@ -13856,7 +13877,7 @@ fun test_orks17p3_naut_and_gunwagon_rerolls() -> Bool:
     board[0] = make_orks_morkanaut()
     board.identify_units()
     let mork = orks17p2_info(board, 0)
-    board[0] = make_orks_gunwagon(0, 0, false, false, false, OrksGunwagonGun::kannon)
+    board[0] = make_orks_gunwagon(0, 0, false, false, false, Weapon::orks_gunwagon_kannon_frag)
     board.identify_units()
     let gun = orks17p2_info(board, 1)
     board.begin_phase(BattlePhase::fight)
@@ -14126,7 +14147,7 @@ fun test_orks17p3_snikrot_hidden_and_first_round_shadows() -> Bool:
 # Get Back in da Race includes passenger units and shares its army/round limit.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Deffkilla-Wartrike
 fun test_orks17p3_race_clears_cargo_shock_and_shared_limit() -> Bool:
-    let board = orks17p3_cargo(make_orks_trukk(0, false, OrksTrukkExtra::none), make_orks_runtherd())
+    let board = orks17p3_cargo(make_orks_trukk(0, false, Weapon::none), make_orks_runtherd())
     board.units.append(make_orks_deffkilla_wartrike())
     board[2][0].position = board_position(8, 5)
     board.identify_units()
@@ -14264,7 +14285,7 @@ fun test_orks17p3_stompa_effigy_and_idol_cargo() -> Bool:
 # Post-shot status requires actual hit provenance; choosing declarations alone
 # cannot activate Madcap Artillery, Bust 'Em or Squig Barrage.
 # Sources: Orks/{Mek-Gunz,Wartrakks,Rukkatrukk-Squigbuggies}.
-fun orks17p3_post_status(OrksMekGun gun) -> Board:
+fun orks17p3_post_status(Weapon gun) -> Board:
     let board = orks17p2_fixture(orks17p3_guns(2, gun))
     begin_orks_attack(board)
     record_orks_hits(board, unit_id(1), 1)
@@ -14275,20 +14296,20 @@ fun orks17p3_post_status(OrksMekGun gun) -> Board:
 
 # Bubblechukka status is on the attacker, so all its targets gain cover.
 fun test_orks17p3_madcap_bubblechukka_wobbled() -> Bool:
-    let board = orks17p3_post_status(OrksMekGun::bubblechukka)
+    let board = orks17p3_post_status(Weapon::orks_mek_gunz_bubblechukka)
     return unit_orks_effect(board, board[1], OrksEffectKind::wobbled) == 1 and unit_has_benefit_of_cover(board, board[1][0], board[0])
 
 # Numeric effects use the ordered characteristic pipeline and correct Ld sign.
 fun test_orks17p3_madcap_zapped_leadership() -> Bool:
-    let board = orks17p3_post_status(OrksMekGun::kustom_mega_kannon)
+    let board = orks17p3_post_status(Weapon::orks_mek_gunz_kustom_mega_kannon)
     return board[1][0].effective_leadership() == min(8, board[1][0].profile.leadership() + 1)
 
 fun test_orks17p3_madcap_smashed_movement() -> Bool:
-    let board = orks17p3_post_status(OrksMekGun::smasha_gun)
+    let board = orks17p3_post_status(Weapon::orks_mek_gunz_smasha_gun)
     return board[1][0].effective_movement(board[1][0].profile.movement()) == max(1, board[1][0].profile.movement() - 2)
 
 fun test_orks17p3_madcap_grounded_persists_to_next_own_turn() -> Bool:
-    let board = orks17p3_post_status(OrksMekGun::traktor_kannon)
+    let board = orks17p3_post_status(Weapon::orks_mek_gunz_traktor_kannon)
     board.turn_serial = board.turn_serial + 1
     board.current_player = true
     refresh_source_effects(board, TimingWindow::turn_start)
@@ -14301,13 +14322,13 @@ fun test_orks17p3_madcap_grounded_persists_to_next_own_turn() -> Bool:
 # Mixed gun NAMES do not activate the common-weapon effect, even after a hit.
 fun test_orks17p3_madcap_mixed_names_or_no_hits_do_nothing() -> Bool:
     let equipment : OrksMekGuns
-    equipment.append(OrksMekGun::smasha_gun)
-    equipment.append(OrksMekGun::bubblechukka)
+    equipment.append(Weapon::orks_mek_gunz_smasha_gun)
+    equipment.append(Weapon::orks_mek_gunz_bubblechukka)
     let board = orks17p2_fixture(make_orks_mek_gunz(equipment, 0))
     begin_orks_attack(board)
     record_orks_hits(board, unit_id(1), 1)
     let mixed = orks_resolve_hit_effects(board, unit_id(0))
-    board[0] = orks17p3_guns(1, OrksMekGun::smasha_gun)
+    board[0] = orks17p3_guns(1, Weapon::orks_mek_gunz_smasha_gun)
     board.identify_units()
     begin_orks_attack(board)
     let no_hits = orks_resolve_hit_effects(board, unit_id(0))
@@ -14406,7 +14427,7 @@ fun test_orks17p3_supreme_kunnin_free_fixed_five_shared_limit() -> Bool:
 # phase, preserves links/owner and cannot be claimed by the current player.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Trukk
 fun test_orks17p3_pilin_out_actual_rapid_exit_and_owner() -> Bool:
-    let board = orks17p3_cargo(make_orks_trukk(0, false, OrksTrukkExtra::none), make_orks_runtherd())
+    let board = orks17p3_cargo(make_orks_trukk(0, false, Weapon::none), make_orks_runtherd())
     board[1][0].position = board_position(14, 5)
     board.current_player = true
     board.current_decision_maker = true
@@ -14419,7 +14440,7 @@ fun test_orks17p3_pilin_out_actual_rapid_exit_and_owner() -> Bool:
 
 # Same-phase embarkation cannot be evaded with reactive exits.
 fun test_orks17p3_pilin_out_same_phase_embark_and_owner_gates() -> Bool:
-    let board = orks17p3_cargo(make_orks_trukk(0, false, OrksTrukkExtra::none), make_orks_runtherd())
+    let board = orks17p3_cargo(make_orks_trukk(0, false, Weapon::none), make_orks_runtherd())
     board[1][0].position = board_position(14, 5)
     let handled : EntityIdentity[32]
     let own_turn = !orks_trukk_passenger_valid(board, unit_id(1), unit_id(0), handled)
@@ -14778,7 +14799,7 @@ fun test_orks17q_muster_vehicle_individual_options() -> Bool:
     assign_orks_muster_value(guns, 1, OrksMusterField::primary, 1)
     assign_orks_muster_value(guns, 2, OrksMusterField::primary, 3)
     let unit = make_orks_muster_unit(guns)
-    return kopta_quota and unit.models.size() == 3 and unit[1].weapon_profile_names[0].value == NamedWeaponProfile::bubblechukka.value and unit[2].weapon_profile_names[0].value == NamedWeaponProfile::traktor_kannon.value
+    return kopta_quota and unit.models.size() == 3 and unit[1].weapons[0].profile.value == Weapon::orks_mek_gunz_bubblechukka.value and unit[2].weapons[0].profile.value == Weapon::orks_mek_gunz_traktor_kannon.value
 
 # Cancelled drafts consume neither roster capacity nor persistent identities.
 fun test_orks17q_muster_cancel_and_invalid_value() -> Bool:
@@ -15366,3 +15387,47 @@ fun test_source_labels_reject_unknown_saved_value() -> Bool:
     let state = play()
     state.board.command_points[0] = 42
     return !valid_source_foundations(invalid.board) and !set_state(state, to_string(invalid)) and state.board.command_points[0] == 42
+
+# One physical gun chooses one actual profile; a second copy remains available
+# and spent One Shot history follows only its primary link (pp16/83,04.01.03).
+fun test_weapon_catalog_primary_links_keep_copies_independent() -> Bool:
+    let state = play()
+    state.board = attack_declaration_fixture()
+    state.board[0][0].weapons.clear()
+    equip_weapon(state.board[0][0], Weapon::plasma_pistol_standard, 0)
+    equip_weapon(state.board[0][0], Weapon::plasma_pistol_supercharge, 1)
+    equip_weapon(state.board[0][0], Weapon::plasma_pistol_standard, 0)
+    equip_weapon(state.board[0][0], Weapon::plasma_pistol_supercharge, 3)
+    let restored = play()
+    let parsed = set_state(restored, to_string(state))
+    let selected : Bool[MAX_WEAPONS]
+    selected[0] = true
+    let choices = !weapon_selection_valid(restored.board, unit_id(0), 0, 1, false, selected, false) and weapon_selection_valid(restored.board, unit_id(0), 0, 3, false, selected, false)
+    consume_one_shot_profile(restored.board[0][0], 0)
+    return parsed and choices and restored.board[0][0].used_once_per_battle_weapon[0] and restored.board[0][0].used_once_per_battle_weapon[1] and !restored.board[0][0].used_once_per_battle_weapon[2] and !restored.board[0][0].used_once_per_battle_weapon[3]
+
+# Forged links cannot create chains or cross-family aliases in saves; the
+# save gate rejects them atomically (storage infrastructure for04.01.03).
+fun test_weapon_catalog_rejects_chained_or_cross_family_links() -> Bool:
+    let state = play()
+    state.board = attack_declaration_fixture()
+    state.board[0][0].weapons.clear()
+    equip_weapon(state.board[0][0], Weapon::plasma_pistol_standard, 0)
+    equip_weapon(state.board[0][0], Weapon::plasma_pistol_supercharge, 1)
+    state.board[0][0].weapons.append(equipped_weapon(Weapon::plasma_pistol_supercharge, 2))
+    let restored = play()
+    restored.board.command_points[0] = 42
+    let chained = !set_state(restored, to_string(state)) and restored.board.command_points[0] == 42
+    state.board[0][0].weapons[2].secondary_profile_of = 1
+    state.board[0][0].weapons[2].profile = Weapon::bolt_pistol
+    return chained and !set_state(restored, to_string(state)) and restored.board.command_points[0] == 42
+
+# Equipment shares the catalog but does not invent attacks or a compulsory
+# melee selection (Orks Big Mek in Mega Armour/Tankbustas Wargear Options).
+fun test_weapon_catalog_nonattacking_equipment_cannot_be_selected() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0][0].weapons.clear()
+    equip_weapon(board[0][0], Weapon::orks_kustom_force_field, 0)
+    equip_weapon(board[0][0], Weapon::orks_pulsa_rokkit, 0)
+    let selected : Bool[MAX_WEAPONS]
+    return valid_model_equipment(board[0][0]) and !weapon_selection_valid(board, unit_id(0), 0, 0, true, selected, false) and !weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false) and may_finish_weapon_selection(board, unit_id(0), 0, true, false)

@@ -237,13 +237,13 @@ fun orks_muster_draft(OrksDatasheet sheet) -> OrksMusterDraft:
 fun orks_muster_boyz(OrksMusterDraft draft) -> OrksBoyzLoadouts:
     let result : OrksBoyzLoadouts
     for member_index in range(draft.count.value):
-        let item : OrksBoyzLoadout
+        let item = orks_boy_loadout()
         item.nob = member_index < draft.nobs.value
         if item.nob:
-            item.melee.value = draft.equipment[member_index].primary.value
-            item.nob_gun.value = draft.equipment[member_index].secondary.value
+            item.melee = orks_nob_melee_choice(draft.equipment[member_index].primary.value)
+            item.nob_gun = orks_nob_gun_choice(draft.equipment[member_index].secondary.value)
         else:
-            item.boy_gun.value = draft.equipment[member_index].primary.value
+            item.boy_gun = orks_boy_gun_choice(draft.equipment[member_index].primary.value)
         result.append(item)
     return result
 
@@ -251,8 +251,7 @@ fun orks_muster_boyz(OrksMusterDraft draft) -> OrksBoyzLoadouts:
 fun orks_muster_nobz(OrksMusterDraft draft) -> OrksNobLoadouts:
     let result : OrksNobLoadouts
     for member_index in range(draft.count.value):
-        let item : OrksNobLoadout
-        item.value = draft.equipment[member_index].primary.value
+        let item = orks_nob_loadout_choice(draft.equipment[member_index].primary.value)
         result.append(item)
     return result
 
@@ -260,8 +259,7 @@ fun orks_muster_nobz(OrksMusterDraft draft) -> OrksNobLoadouts:
 fun orks_muster_meganobz(OrksMusterDraft draft) -> OrksMeganobLoadouts:
     let result : OrksMeganobLoadouts
     for member_index in range(draft.count.value):
-        let item : OrksMeganobLoadout
-        item.value = draft.equipment[member_index].primary.value
+        let item = orks_meganob_loadout_choice(draft.equipment[member_index].primary.value)
         result.append(item)
     return result
 
@@ -270,8 +268,8 @@ fun orks_muster_meganobz(OrksMusterDraft draft) -> OrksMeganobLoadouts:
 fun orks_muster_kommandos(OrksMusterDraft draft) -> OrksKommandoLoadout:
     let result : OrksKommandoLoadout
     for member_index in range(10):
-        let item : OrksKommandoEquipment
-        item.nob_melee.value = draft.equipment[member_index].primary.value
+        let item = orks_kommando_equipment()
+        item.nob_melee = orks_nob_melee_choice(draft.equipment[member_index].primary.value)
         item.burna = draft.equipment[member_index].extras[0]
         item.rokkit = draft.equipment[member_index].extras[1]
         item.breacha_ram = draft.equipment[member_index].extras[2]
@@ -391,16 +389,13 @@ fun make_orks_muster_unit(OrksMusterDraft draft) -> Unit:
     if draft.sheet.value == OrksDatasheet::big_ed_bossbunka.value:
         return make_orks_big_ed_bossbunka(0, kit.primary.value)
     if draft.sheet.value == OrksDatasheet::gunwagon.value:
-        let gunwagon : OrksGunwagonGun
-        gunwagon.value = kit.secondary.value
+        let gunwagon = orks_gunwagon_gun_choice(kit.secondary.value)
         return make_orks_gunwagon(0, kit.primary.value, kit.extras[0], kit.extras[1], kit.extras[2], gunwagon)
     if draft.sheet.value == OrksDatasheet::big_mek.value:
         return make_orks_big_mek(kit.extras[0], kit.extras[1])
     if draft.sheet.value == OrksDatasheet::big_mek_in_mega_armour.value:
-        let mega_gun : OrksMegaMekGun
-        mega_gun.value = kit.primary.value
-        let mega_extra : OrksMegaMekExtra
-        mega_extra.value = kit.secondary.value
+        let mega_gun = orks_mega_mek_gun_choice(kit.primary.value)
+        let mega_extra = orks_mega_mek_extra_choice(kit.secondary.value)
         return make_orks_big_mek_in_mega_armour(mega_gun, mega_extra)
     if draft.sheet.value == OrksDatasheet::beastboss_on_squigosaur.value:
         return make_orks_beastboss_on_squigosaur(kit.extras[0])
@@ -409,20 +404,16 @@ fun make_orks_muster_unit(OrksMusterDraft draft) -> Unit:
     if draft.sheet.value == OrksDatasheet::dakkajet.value:
         return make_orks_dakkajet(kit.extras[0])
     if draft.sheet.value == OrksDatasheet::deff_dread.value:
-        let dread_first : OrksDreadArmChoice
-        dread_first.value = kit.primary.value
-        let dread_second : OrksDreadArmChoice
-        dread_second.value = kit.secondary.value
+        let dread_first = orks_dread_arm_choice(kit.primary.value)
+        let dread_second = orks_dread_arm_choice(kit.secondary.value)
         return make_orks_deff_dread(dread_first, dread_second)
     if draft.sheet.value == OrksDatasheet::stompa.value:
         return make_orks_stompa(0)
     if draft.sheet.value == OrksDatasheet::trukk.value:
-        let trukk_extra : OrksTrukkExtra
-        trukk_extra.value = kit.primary.value
+        let trukk_extra = orks_trukk_extra_choice(kit.primary.value)
         return make_orks_trukk(0, kit.extras[0], trukk_extra)
     if draft.sheet.value == OrksDatasheet::warboss.value:
-        let warboss_gun : OrksNobGunChoice
-        warboss_gun.value = kit.primary.value
+        let warboss_gun = orks_nob_gun_choice(kit.primary.value)
         return make_orks_warboss(kit.extras[0], warboss_gun)
     if draft.sheet.value == OrksDatasheet::wazbom_blastajet.value:
         return make_orks_wazbom_blastajet(kit.extras[0], kit.extras[1], kit.extras[2])
@@ -456,8 +447,7 @@ fun make_orks_muster_unit(OrksMusterDraft draft) -> Unit:
                 hammer = breaka_index - 1
         return make_orks_breaka_boyz(kit.extras[0], knuckles, hammer)
     if draft.sheet.value == OrksDatasheet::tankbustas.value:
-        let tank_extra : OrksTankbustaExtra
-        tank_extra.value = kit.secondary.value
+        let tank_extra = orks_tankbusta_extra_choice(kit.secondary.value)
         return make_orks_tankbustas(kit.extras[0], tank_extra, kit.primary.value)
     if draft.sheet.value == OrksDatasheet::boyz.value:
         let boyz = orks_muster_boyz(draft)
@@ -481,8 +471,7 @@ fun make_orks_muster_unit(OrksMusterDraft draft) -> Unit:
     if draft.sheet.value == OrksDatasheet::mek_gunz.value:
         let guns : OrksMekGuns
         for mek_index in range(count):
-            let gun : OrksMekGun
-            gun.value = draft.equipment[mek_index].primary.value
+            let gun = orks_mek_gun_choice(draft.equipment[mek_index].primary.value)
             guns.append(gun)
         return make_orks_mek_gunz(guns, 0)
     if draft.sheet.value == OrksDatasheet::kommandos.value:
@@ -732,62 +721,48 @@ fun orks_muster_value_label(OrksMusterDraft draft, Int member_index, OrksMusterF
     let sheet = draft.sheet
     if sheet.value == OrksDatasheet::boyz.value:
         if member_index >= draft.nobs.value:
-            let boy_gun : OrksBoyGunChoice
-            boy_gun.value = value
-            return to_string(boy_gun)
+            let boy_gun = orks_boy_gun_choice(value)
+            return to_string(boy_gun.label())
         if field.value == OrksMusterField::primary.value:
-            let nob_melee : OrksNobMeleeChoice
-            nob_melee.value = value
-            return to_string(nob_melee)
-        let nob_gun : OrksNobGunChoice
-        nob_gun.value = value
-        return to_string(nob_gun)
+            let nob_melee = orks_nob_melee_choice(value)
+            return to_string(nob_melee.label())
+        let nob_gun = orks_nob_gun_choice(value)
+        return to_string(nob_gun.label())
     if sheet.value == OrksDatasheet::nobz.value:
-        let nob_loadout : OrksNobLoadout
-        nob_loadout.value = value
-        return to_string(nob_loadout)
+        let nob_loadout = orks_nob_loadout_choice(value)
+        return to_string(nob_loadout.label())
     if sheet.value == OrksDatasheet::meganobz.value:
-        let mega_loadout : OrksMeganobLoadout
-        mega_loadout.value = value
-        return to_string(mega_loadout)
+        let mega_loadout = orks_meganob_loadout_choice(value)
+        return weapon_pair_label(mega_loadout)
     if sheet.value == OrksDatasheet::kommandos.value:
-        let kommando_melee : OrksNobMeleeChoice
-        kommando_melee.value = value
-        return to_string(kommando_melee)
+        let kommando_melee = orks_nob_melee_choice(value)
+        return to_string(kommando_melee.label())
     if sheet.value == OrksDatasheet::mek_gunz.value:
-        let mek_gun : OrksMekGun
-        mek_gun.value = value
-        return to_string(mek_gun)
+        let mek_gun = orks_mek_gun_choice(value)
+        return to_string(mek_gun.label())
     if sheet.value == OrksDatasheet::deff_dread.value:
-        let dread_arm : OrksDreadArmChoice
-        dread_arm.value = value
-        return to_string(dread_arm)
+        let dread_arm = orks_dread_arm_choice(value)
+        return to_string(dread_arm.label())
     if sheet.value == OrksDatasheet::warboss.value:
-        let boss_gun : OrksNobGunChoice
-        boss_gun.value = value
-        return to_string(boss_gun)
+        let boss_gun = orks_nob_gun_choice(value)
+        return to_string(boss_gun.label())
     if sheet.value == OrksDatasheet::big_mek_in_mega_armour.value:
         if field.value == OrksMusterField::primary.value:
-            let mega_gun : OrksMegaMekGun
-            mega_gun.value = value
-            return to_string(mega_gun)
-        let mega_extra : OrksMegaMekExtra
-        mega_extra.value = value
-        return to_string(mega_extra)
+            let mega_gun = orks_mega_mek_gun_choice(value)
+            return to_string(mega_gun.label())
+        let mega_extra = orks_mega_mek_extra_choice(value)
+        return to_string(mega_extra.label())
     if sheet.value == OrksDatasheet::trukk.value:
-        let trukk_extra : OrksTrukkExtra
-        trukk_extra.value = value
-        return to_string(trukk_extra)
+        let trukk_extra = orks_trukk_extra_choice(value)
+        return to_string(trukk_extra.label())
     if sheet.value == OrksDatasheet::gunwagon.value and field.value == OrksMusterField::secondary.value:
-        let wagon_gun : OrksGunwagonGun
-        wagon_gun.value = value
-        return to_string(wagon_gun)
+        let wagon_gun = orks_gunwagon_gun_choice(value)
+        return to_string(wagon_gun.label())
     if sheet.value == OrksDatasheet::tankbustas.value and field.value == OrksMusterField::primary.value:
         return "Boy "s + to_string(value + 1)
     if sheet.value == OrksDatasheet::tankbustas.value and field.value == OrksMusterField::secondary.value:
-        let tank_extra : OrksTankbustaExtra
-        tank_extra.value = value
-        return to_string(tank_extra)
+        let tank_extra = orks_tankbusta_extra_choice(value)
+        return to_string(tank_extra.label())
     if sheet.value == OrksDatasheet::breaka_boyz.value:
         if value == 1:
             return "Knucklebustas"s

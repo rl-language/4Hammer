@@ -177,11 +177,11 @@ fun apply_orks_option(Board board, UnitID selected, ModelID bearer, OrksEnhancem
         unit[bearer.get()].has_deadly_demise = true
         unit[bearer.get()].deadly_demise = dice_stat(6)
     if option.value == OrksEnhancement::da_gobshot_thunderbuss.value:
-        equip_orks_profile(unit[bearer.get()], Weapon::orks_da_gobshot_thunderbuss, NamedWeaponProfile::da_gobshot_thunderbuss, 0)
+        equip_weapon(unit[bearer.get()], Weapon::orks_da_gobshot_thunderbuss, 0)
     if option.value == OrksEnhancement::da_krunch.value:
-        equip_orks_profile(unit[bearer.get()], Weapon::orks_da_krunch, NamedWeaponProfile::da_krunch, 0)
+        equip_weapon(unit[bearer.get()], Weapon::orks_da_krunch, 0)
     if option.value == OrksEnhancement::eadbanger.value:
-        equip_orks_profile(unit[bearer.get()], Weapon::orks_eadbanger, NamedWeaponProfile::eadbanger, 0)
+        equip_weapon(unit[bearer.get()], Weapon::orks_eadbanger, 0)
 
 # Core Select Enhancements gives options to different roster units BEFORE
 # forming attachments. Joining those original units does not select another

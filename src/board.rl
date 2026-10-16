@@ -948,7 +948,7 @@ fun valid_model_numeric_history(Model model) -> Bool:
         return false
     if model.damaged_threshold.value < 0 or model.damaged_threshold.value >= MAX_WOUNDS:
         return false
-    if !valid_named_model_identity(model):
+    if !valid_model_equipment(model):
         return false
     if model.transport_capacity.value < 0 or model.transport_capacity.value > MAX_UNIT_MODELS or model.transport_space.value < 1 or model.transport_space.value > MAX_UNIT_MODELS or model.firing_deck.value < 0 or model.firing_deck.value > MAX_UNIT_MODELS:
         return false
@@ -1021,29 +1021,19 @@ fun valid_action_history(UnitHistory history) -> Bool:
         pending = pending or !progress.resolved
     return pending == history.action_pending
 
-# Source identity metadata must remain valid in live and archived models
-# (pp.19/88; appendix04.01.03). Unknown tags never certify legacy fixtures.
-fun valid_named_model_identity(Model model) -> Bool:
+# Actual equipment and same-model primary links must remain valid in live
+# and archived models (pp.19/88; appendix04.01.03).
+fun valid_model_equipment(Model model) -> Bool:
     if model.datasheet.value < 0 or model.datasheet.value >= MAX_DATASHEETCODE:
         return false
-    for slot in range(MAX_WEAPONS):
-        if model.weapon_profile_groups[slot].value < 0 or model.weapon_profile_groups[slot].value >= MAX_WEAPON_SCOPES:
+    let catalog : Weapon
+    for slot in range(model.weapons.size()):
+        ref equipped = model.weapons[slot]
+        if equipped.profile.value < 0 or equipped.profile.value > max(catalog) or equipped.profile.value == Weapon::none.value:
             return false
-        if model.weapon_names[slot].value < 0 or model.weapon_names[slot].value >= MAX_WEAPONNAMECODE or model.weapon_profile_names[slot].value < 0 or model.weapon_profile_names[slot].value >= MAX_WEAPONPROFILECODE:
+        let primary = equipped.secondary_profile_of.value
+        if primary < 0 or primary > slot:
             return false
-        if model.simultaneous_ranged_profiles[slot] and (slot >= model.weapons.size() or model.weapon_profile_groups[slot].value == 0 or model.weapons[slot].range() == 0):
+        if primary > 0 and (model.weapons[primary - 1].secondary_profile_of.value != 0 or model.weapons[primary - 1].profile.family_id() != equipped.profile.family_id()):
             return false
-        if slot >= model.weapons.size() and (model.weapon_names[slot].value != 0 or model.weapon_profile_names[slot].value != 0):
-            return false
-        if model.weapon_profile_names[slot].value > 0:
-            let tag : NamedWeaponProfile
-            tag.value = model.weapon_profile_names[slot].value
-            if named_profile_is_melee(tag) != (model.weapons[slot].range() == 0):
-                return false
-            let family = named_profile_weapon(tag)
-            if model.weapon_names[slot].value != family.value:
-                return false
-        for other in range(slot):
-            if model.weapon_profile_groups[slot].value > 0 and model.weapon_profile_groups[slot] == model.weapon_profile_groups[other] and model.weapon_names[slot] != model.weapon_names[other]:
-                return false
     return true

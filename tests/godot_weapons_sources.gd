@@ -6,8 +6,8 @@ func _initialize():
 func check_weapons_sources():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 42)
-	assert(library.get_observation_schema_version() == 42)
+	assert(library.get_state_schema_version() == 43)
+	assert(library.get_observation_schema_version() == 43)
 	assert(library.get_action_schema_version() == 26)
 	var board = RLCBoard.make()
 	var unit = library.make_infernus_squad()
@@ -16,14 +16,14 @@ func check_weapons_sources():
 	var actual_unit = library.get(board.get_units(), 0)
 	var bearer = library.get(actual_unit.get_models(), 0)
 	library.clear(bearer.get_weapons())
-	var weapon = RLCWeapon.make()
-	for slot in range(13):
-		library.append(bearer.get_weapons(), weapon)
+	var naz = library.get(library.make_orks_nazdreg().get_models(), 0)
+	library.append(bearer.get_weapons(), library.get(naz.get_weapons(), 0))
+	library.append(bearer.get_weapons(), library.get(naz.get_weapons(), 1))
+	var weapon = library.orks_boy_gun_choice(0)
+	for slot in range(11):
+		library.append(bearer.get_weapons(), library.equipped_weapon(weapon))
 	assert(library.size(bearer.get_weapons()) == 13)
-	library.set_physical_weapon_group(bearer, 0, 1)
-	library.set_physical_weapon_group(bearer, 1, 1)
-	library.set_physical_weapon_group(bearer, 2, 2)
-	library.permit_simultaneous_ranged_profiles(bearer, 1)
+	assert(library.get(bearer.get_weapons(), 1).get_secondary_profile_of().get_value() == 1)
 	assert(library.permits_simultaneous_profile(bearer, 0))
 	assert(library.permits_simultaneous_profile(bearer, 1))
 	assert(not library.permits_simultaneous_profile(bearer, 2))
