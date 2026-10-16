@@ -16,7 +16,7 @@ using ChargeDistance = LinearlyDistributedInt<0, 13>
 # consumes this phase's declaration but grants neither Lance nor Fights First
 # (pp.36–37/82). This also excludes offboard/retained casualties and engagement.
 fun charge_source_valid(Board board, UnitID source, Bool player) -> Bool:
-    if source.get() < board.units.size() and unit_orks_effect(board, board[source], OrksEffectKind::no_charge) > 0:
+    if source.get() < board.units.size() and !faction_charge_allowed(board, board[source]):
         return false
     if source.get() >= board.units.size():
         return false
@@ -56,7 +56,7 @@ fun charge_distance(Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
 # Banner+1 and distinct Stampede+1 combine before ordered modifiers and caps.
 # Source: Orks/Bannernob; Beastboss-on-Squigosaur Thundering Stampede (Aura).
 fun charge_distance(Board board, Unit unit, Int roll, ChargeKind kind, Bool skies) -> Int:
-    return charge_distance_with_sources(unit, roll, kind, skies, orks_stampede_charge_bonus(board, unit))
+    return charge_distance_with_sources(unit, roll, kind, skies, faction_stampede_charge_bonus(board, unit))
 
 # Banner/Trophy Hunters follow live combined membership; an aura is queried
 # on the battlefield only. All join addition before division (02.02.01).

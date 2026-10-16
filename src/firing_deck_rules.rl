@@ -68,9 +68,9 @@ fun make_deck_declaration(Board board, UnitID source, ModelID carrier, UnitID pa
         result.selected_rules.append(intrinsic[intrinsic_index])
     for granted_index in range(board.embarked_units[passenger.get()][model].additional_weapon_rules[slot].size()):
         result.selected_rules.append(board.embarked_units[passenger.get()][model].additional_weapon_rules[slot][granted_index])
-    append_riled_assault_rules(board[source][carrier], result.weapon, result.selected_rules)
-    append_orks_package_weapon_rules(board, source, carrier.get(), result.weapon, result.weapon_name, result.selected_rules)
-    append_orks_datasheet_weapon_rules(board, source, result.weapon, result.selected_rules)
+    append_faction_intrinsic_weapon_rules(board[source][carrier], result.weapon, result.selected_rules)
+    append_faction_package_weapon_rules(board, source, carrier.get(), result.weapon, result.weapon_name, result.selected_rules)
+    append_faction_datasheet_weapon_rules(board, source, result.weapon, result.selected_rules)
     let own_rules = board[source].get_temporary_weapon_rules()
     for own_index in range(own_rules.size()):
         result.selected_rules.append(own_rules[own_index])

@@ -1,17 +1,4 @@
-import factions.orks.army
-import factions.orks.combat
-import factions.orks.detachments
-import factions.orks.effects
-import factions.orks.enhancements
-import factions.orks.morale
-import factions.orks.movement
-import factions.orks.psychic
-import factions.orks.recovery
-import factions.orks.roster
-import factions.orks.sources
-import factions.orks.stratagems
-import factions.orks.transports
-import factions.orks.types
+import factions.dispatch
 import action
 import ability_procedures
 import healing_rules
@@ -35,7 +22,6 @@ import firing_deck_rules
 import source_effects
 import modifier_choices
 import attachment_rules
-import factions.orks.datasheets
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.
@@ -285,7 +271,7 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
     assert(count == 0 or board.attack_info.source.skill() > 0 or board.attack_info.has_weapon_rule(board, WeaponRuleKind::torrent), "missing hit skill without Torrent")
     if board.attack_info.has_weapon_rule(board, WeaponRuleKind::torrent):
         generated_hits = count
-        record_orks_hits(board, board.attack_info.target_unit_id, count.value)
+        record_faction_hits(board, board.attack_info.target_unit_id, count.value)
     else:
         board.current_state = CurrentStateDescription::hit_roll
         frm hit_rerolls = !board.attack_info.only_hits_on_6 and !(board.attack_info.shooting_kind == ShootingKind::indirect and board.attack_info.has_weapon_rule(board, WeaponRuleKind::indirect_fire))
@@ -296,7 +282,7 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
         # batch must remain possible without an exponential action domain (p.82).
         frm lethal_wounds : CombatCounter
         frm lethal_remaining : CombatCounter
-        frm shield_lethal_deferred = orks_grot_shield(board, target) >= 0
+        frm shield_lethal_deferred = faction_grot_shield(board, target) >= 0
         if board.attack_info.has_weapon_rule(board, WeaponRuleKind::letal_hits) and !shield_lethal_deferred:
             lethal_remaining = hits_pool_snapshot_1.faces[5]
         while lethal_remaining > 0:
@@ -332,11 +318,11 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                     if selected_outcome == AttackRollResult::success:
                         frm ordinary_count : CombatCounter
                         ordinary_count = 1
-                        board.shared_actions.intercept_orks_hits = intercept_orks_hits(board, board.attack_info.target_unit_id, ordinary_count)
+                        board.shared_actions.intercept_orks_hits = intercept_faction_hits(board, board.attack_info.target_unit_id, ordinary_count)
                         subaction*(board) board.shared_actions.intercept_orks_hits
                         frm ordinary_shield_intercepted_snapshot_4 = board.shared_actions.intercept_orks_hits.intercepted
                         add_attack_count(generated_hits, 1 - ordinary_shield_intercepted_snapshot_4.value)
-                        record_orks_hits(board, board.attack_info.target_unit_id, 1 - ordinary_shield_intercepted_snapshot_4.value)
+                        record_faction_hits(board, board.attack_info.target_unit_id, 1 - ordinary_shield_intercepted_snapshot_4.value)
                     ordinary_remaining = ordinary_remaining - 1
                 continue
             frm outcome : AttackRollResult
@@ -355,14 +341,14 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                         automatic = automatically_wound
                     frm one_critical : CombatCounter
                     one_critical = 1
-                    board.shared_actions.intercept_orks_hits = intercept_orks_hits(board, board.attack_info.target_unit_id, one_critical)
+                    board.shared_actions.intercept_orks_hits = intercept_faction_hits(board, board.attack_info.target_unit_id, one_critical)
                     subaction*(board) board.shared_actions.intercept_orks_hits
                     frm critical_shield_intercepted_snapshot_5 = board.shared_actions.intercept_orks_hits.intercepted
                     let additional_hits = board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit)
                     add_attack_count(generated_hits, additional_hits)
-                    record_orks_hits(board, board.attack_info.target_unit_id, additional_hits)
+                    record_faction_hits(board, board.attack_info.target_unit_id, additional_hits)
                     if critical_shield_intercepted_snapshot_5 == 0:
-                        record_orks_hits(board, board.attack_info.target_unit_id, 1)
+                        record_faction_hits(board, board.attack_info.target_unit_id, 1)
                         if automatic:
                             add_attack_count(generated_wounds, 1)
                         else:
@@ -372,15 +358,15 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
             if outcome == AttackRollResult::critical or outcome == AttackRollResult::success:
                 frm rolled_count : CombatCounter
                 rolled_count = hits_pool_snapshot_1.faces[hit_face.value - 1]
-                board.shared_actions.intercept_orks_hits = intercept_orks_hits(board, board.attack_info.target_unit_id, rolled_count)
+                board.shared_actions.intercept_orks_hits = intercept_faction_hits(board, board.attack_info.target_unit_id, rolled_count)
                 subaction*(board) board.shared_actions.intercept_orks_hits
                 frm shielding_intercepted_snapshot_6 = board.shared_actions.intercept_orks_hits.intercepted
                 frm remaining_hits : CombatCounter
                 remaining_hits = rolled_count.value - shielding_intercepted_snapshot_6.value
-                record_orks_hits(board, board.attack_info.target_unit_id, remaining_hits.value)
+                record_faction_hits(board, board.attack_info.target_unit_id, remaining_hits.value)
                 if outcome == AttackRollResult::critical:
                     add_attack_count(generated_hits, rolled_count.value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
-                    record_orks_hits(board, board.attack_info.target_unit_id, rolled_count.value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
+                    record_faction_hits(board, board.attack_info.target_unit_id, rolled_count.value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
                     add_attack_count(generated_wounds, lethal_wounds.value)
                     add_attack_count(generated_hits, remaining_hits.value - lethal_wounds.value)
                 else:
@@ -476,13 +462,13 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
             frm headbutt_recipient : UnitID
             frm crash_mortals : CombatCounter
             crash_mortals = 0
-            if event.bank.value == SourceBank::battlefield.value and casualty.has_keyword(Keyword::aircraft) and casualty.destroyed_whole_unit and board.can_target_strat(source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1, Stratagem::orks_flyin_headbutt, source_bank_unit(board, event.bank, event.unit.get())) and orks_headbutt_has_target(board, event.unit, casualty):
+            if event.bank.value == SourceBank::battlefield.value and casualty.has_keyword(Keyword::aircraft) and casualty.destroyed_whole_unit and board.can_target_strat(source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1, Stratagem::orks_flyin_headbutt, source_bank_unit(board, event.bank, event.unit.get())) and faction_headbutt_has_target(board, event.unit, casualty):
                 actions:
                     act decline_flyin_headbutt()
                     act flyin_headbutt()
                         board.commit_stratagem(source_bank_unit(board, event.bank, event.unit.get()).owned_by_player1, Stratagem::orks_flyin_headbutt, source_bank_unit(board, event.bank, event.unit.get()))
                         suppress_demise = true
-                        act choose_headbutt_target(frm UnitID crash_target) {orks_headbutt_target(board, event.unit, casualty, crash_target)}
+                        act choose_headbutt_target(frm UnitID crash_target) {faction_headbutt_target(board, event.unit, casualty, crash_target)}
                         headbutt_recipient = crash_target
                         frm headbutt_rolls : BInt<0, 9>
                         frm headbutt_mortals : CombatCounter
@@ -626,7 +612,7 @@ act resolve_damage_jobs(ctx Board board, frm DamageJobs jobs, frm Bool finish_at
         frm prevention_lost_snapshot_6 = board.shared_actions.prevent_wound_loss.lost
         frm faction_fight_death = false
         frm faction_threshold : BInt<0, 5>
-        faction_threshold = orks_fight_death_threshold(board, source_bank_unit(board, current_job.bank, current_job.target.get()), source_bank_unit(board, current_job.bank, current_job.target.get())[recipient])
+        faction_threshold = faction_fight_death_threshold(board, source_bank_unit(board, current_job.bank, current_job.target.get()), source_bank_unit(board, current_job.bank, current_job.target.get())[recipient])
         if prevention_lost_snapshot_6 > 0 and prevention_lost_snapshot_6.value >= source_bank_unit(board, current_job.bank, current_job.target.get())[recipient].wounds_left() and faction_threshold > 0:
             board.current_decision_maker = source_bank_unit(board, current_job.bank, current_job.target.get()).owned_by_player1
             act roll(Dice fight_death_face)
@@ -1118,7 +1104,7 @@ fun declared_attack_info(Board board, UnitID source, UnitID target, DeclaredWeap
         if board.is_in_melee(board[target]) and (board[target].has_keyword(Keyword::monster) or board[target].has_keyword(Keyword::vehicle)):
             info.engaged_hit_penalties = info.engaged_hit_penalties + 1
     info.squig_launcha_weapon = weapon.weapon_name.value == Weapon::orks_rukkatrukk_squigbuggies_squig_launchas.family_id()
-    append_orks_attack_effects(board, source, target, weapon, info)
+    append_faction_attack_effects(board, source, target, weapon, info)
     return info
 
 # Group comparisons finish in an ordinary helper before any suspension;
@@ -1219,7 +1205,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     if board[source].empty():
         return
     board.identify_unit(board[source])
-    begin_orks_attack(board)
+    begin_faction_attack(board)
     if !melee:
         board[source].history.shot_this_phase = true
     frm previous_owner = board.current_decision_maker
@@ -1247,12 +1233,12 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     # Source-specific free choices enter the same declaration snapshots as
     # paid rules: Ammo Runts (Boyz/Nobz/Warboss).
     if !melee:
-        subaction*(board) datasheet_selection = orks_datasheet_selection(board, source)
-    subaction*(board) detachment_selection = orks_attack_selection(board, source, melee)
+        subaction*(board) datasheet_selection = faction_datasheet_selection(board, source)
+    subaction*(board) detachment_selection = faction_attack_selection(board, source, melee)
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::attack_selection, board[source].identity, board[target].identity, invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
     if !melee and board.timing.phase == BattlePhase::shooting and board[source].owned_by_player1 == board.current_player:
-        subaction*(board) shokka = orks_shokka_selection(board, source)
+        subaction*(board) shokka = faction_shokka_selection(board, source)
     frm declarations : DeclaredWeapons
     frm model : ModelIterator
     frm hazardous_uses : HazardousUses
@@ -1269,10 +1255,10 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
         declarations.set(declaration_index.value, targets.weapon)
         declaration_index = declaration_index + 1
     frm genius_effect : SourceEffectKey
-    if !melee and orks_single_declared_target(declarations) >= 0:
+    if !melee and faction_single_declared_target(declarations) >= 0:
         frm genius_target : UnitID
-        genius_target = orks_single_declared_target(declarations)
-        subaction*(board) genius = orks_unpredictable_genius(board, source, genius_target)
+        genius_target = faction_single_declared_target(declarations)
+        subaction*(board) genius = faction_unpredictable_genius(board, source, genius_target)
         genius_effect = genius.effect
     while has_unresolved_attacks(declarations):
         board.current_decision_maker = board[source].owned_by_player1
@@ -1284,7 +1270,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
         target = unit
         board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::attack_targeted, board[source].identity, board[target].identity, invalid_entity_identity()))
         subaction*(board) board.shared_actions.resolve_source_event
-        subaction*(board) detachment_defence = orks_attack_targeted(board, source, target, melee)
+        subaction*(board) detachment_defence = faction_attack_targeted(board, source, target, melee)
         configure_attack_info(board, source.get(), target.get(), overwatch, melee)
         subaction*(board) strats = use_attack_stratagems(board, source, target, melee)
         frm target_info = board.attack_info
@@ -1311,10 +1297,10 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     frm cleanup_jobs : DamageJobs
     board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, cleanup_jobs, true, source)
     subaction*(board) board.shared_actions.resolve_damage_jobs
-    remove_orks_scoped_effect(board, genius_effect)
+    remove_faction_scoped_effect(board, genius_effect)
     if !melee and board.timing.phase == BattlePhase::shooting and board[source].owned_by_player1 == board.current_player:
-        subaction*(board) hit_effects = orks_resolve_hit_effects(board, source)
-        subaction*(board) options_end = orks_shooting_option_end(board, source)
+        subaction*(board) hit_effects = faction_resolve_hit_effects(board, source)
+        subaction*(board) options_end = faction_shooting_option_end(board, source)
     hazardous_uses = declared_hazardous_uses(declarations)
     board.shared_actions.resolve_hazards = resolve_hazards(board, source, hazardous_uses)
     subaction*(board) board.shared_actions.resolve_hazards
@@ -1573,7 +1559,7 @@ act timing_overwatch(ctx Board board, frm Bool player) -> TimingOverwatch:
     act overwatch(frm UnitID source) {overwatch_source_valid(board, player, source)}
     board.commit_stratagem(player, Stratagem::overwatch, board[source])
     act overwatch_target(frm UnitID target) {overwatch_target_valid(board, source, target)}
-    board.shared_actions.attack_with_orks_reactions = attack_with_orks_reactions(board, source, target, false, true)
+    board.shared_actions.attack_with_orks_reactions = attack_with_faction_reactions(board, source, target, false, true)
     subaction*(board) board.shared_actions.attack_with_orks_reactions
     board.current_decision_maker = player
 
@@ -1633,7 +1619,7 @@ act timing_objective_stratagem(ctx Board board) -> TimingObjectiveStratagem:
 # effects follow both groups at printed end windows (pp.28–30/32–38/54/57).
 # No mission rules or unspecified faction effects are synthesized.
 act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWindowResolution:
-    register_orks_datasheet_sources(board)
+    register_faction_datasheet_sources(board)
     board.open_timing_window(window)
     frm player = board.timing.active_player
     # Exactly two controller groups; bounded frame storage supports ML inference.
@@ -1656,35 +1642,35 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
         board.timing.controller = player
         if count == 1:
             board.timing.stage = TimingStage::opposing_player_rules
-        while timing_rules_remaining(board, window, player, resolved) or source_events_remaining(board, pending, player, false) or orks_timing_rules_remaining(board, window, player, resolved_orks, false) or orks_package_windows_remaining(board, player, window, false) or (window == TimingWindow::fight_start and (orks_offboard_support_available(board, SourceBank::reserves, player, true) or orks_offboard_support_available(board, SourceBank::embarked, player, true))):
+        while timing_rules_remaining(board, window, player, resolved) or source_events_remaining(board, pending, player, false) or faction_timing_rules_remaining(board, window, player, resolved_orks, false) or faction_package_windows_remaining(board, player, window, false) or (window == TimingWindow::fight_start and (faction_offboard_support_available(board, SourceBank::reserves, player, true) or faction_offboard_support_available(board, SourceBank::embarked, player, true))):
             board.active_source_events = pending
             actions:
-                act finish_timing_rules() {(!(window == TimingWindow::turn_end) or !has_incoherent_units(board, player)) and !source_events_remaining(board, pending, player, true) and !orks_timing_rules_remaining(board, window, player, resolved_orks, true) and !orks_package_windows_remaining(board, player, window, true)}
+                act finish_timing_rules() {(!(window == TimingWindow::turn_end) or !has_incoherent_units(board, player)) and !source_events_remaining(board, pending, player, true) and !faction_timing_rules_remaining(board, window, player, resolved_orks, true) and !faction_package_windows_remaining(board, player, window, true)}
                     break
-                act use_orks_offboard_visions() {window == TimingWindow::fight_start, orks_offboard_support_available(board, SourceBank::reserves, player, true) or orks_offboard_support_available(board, SourceBank::embarked, player, true)}
-                    board.shared_actions.choose_orks_offboard_support = choose_orks_offboard_support(board, player, true)
+                act use_orks_offboard_visions() {window == TimingWindow::fight_start, faction_offboard_support_available(board, SourceBank::reserves, player, true) or faction_offboard_support_available(board, SourceBank::embarked, player, true)}
+                    board.shared_actions.choose_orks_offboard_support = choose_faction_offboard_support(board, player, true)
                     subaction*(board) board.shared_actions.choose_orks_offboard_support
                     board.current_decision_maker = player
-                act choose_orks_package_source(frm UnitID package_source) {orks_package_window_available(board, package_source, player, window)}
-                    board.shared_actions.orks_package_window = orks_package_window(board, package_source, player, window)
+                act choose_orks_package_source(frm UnitID package_source) {faction_package_window_available(board, package_source, player, window)}
+                    board.shared_actions.orks_package_window = faction_package_window(board, package_source, player, window)
                     subaction*(board) board.shared_actions.orks_package_window
                     board.current_decision_maker = player
-                act choose_orks_timing_rule(frm OrksTimingRule orks_rule) {orks_timing_rule_available(board, window, player, orks_rule, resolved_orks)}
+                act choose_orks_timing_rule(frm OrksTimingRule orks_rule) {faction_timing_rule_available(board, window, player, orks_rule, resolved_orks)}
                     resolved_orks[orks_rule.value] = true
-                    resolve_orks_timing_rule(board, player, orks_rule)
+                    resolve_faction_timing_rule(board, player, orks_rule)
                 act choose_window_source(frm SourceEventID event) {pending_source_valid(board, pending, event, player)}
                     frm chosen_source = board.source_instances[pending[event.value].source.value]
                     if chosen_source.rule.value >= 140 and chosen_source.rule.value <= 145:
                         pending[event.value].resolved = true
-                        subaction*(board) datasheet_window = orks_datasheet_window(board, chosen_source)
+                        subaction*(board) datasheet_window = faction_datasheet_window(board, chosen_source)
                     else:
                         if chosen_source.rule.value >= ORKS_SURGERY_RULE and chosen_source.rule.value <= ORKS_PAINBOSS_RULE:
                             commit_source_usage(board, chosen_source)
                             pending[event.value].resolved = true
-                            subaction*(board) command_healing = orks_command_healing(board, chosen_source)
+                            subaction*(board) command_healing = faction_command_healing(board, chosen_source)
                         else:
                             if chosen_source.rule.value == ORKS_SCAVENGERS_RULE:
-                                secure_orks_gretchin_objectives(board, chosen_source)
+                                secure_faction_gretchin_objectives(board, chosen_source)
                                 commit_source_usage(board, chosen_source)
                                 pending[event.value].resolved = true
                             else:
@@ -1768,7 +1754,7 @@ act battle_shock_test(ctx Board board, ctx Unit unit, frm Bool command_step, frm
         if command_step and recover_shock:
             unit.battle_socked = false
     if !shocked_before and unit.battle_socked:
-        board.shared_actions.orks_became_shocked = orks_became_shocked(board, unit.identity)
+        board.shared_actions.orks_became_shocked = faction_became_shocked(board, unit.identity)
         subaction*(board) board.shared_actions.orks_became_shocked
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::shock_end, unit.identity, invalid_entity_identity(), invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
@@ -1785,7 +1771,7 @@ fun battle_shock_test(Board board, Unit unit, Bool command_step, Bool recover_sh
 # (p.30). Snapshot shock at the step's start for the printed recovery condition;
 # never clear the opponent's shock or automatically expire a friendly effect.
 act battle_shock_step(ctx Board board) -> BattleShockStep:
-    subaction*(board) mob_mentality = orks_mob_mentality_step(board)
+    subaction*(board) mob_mentality = faction_mob_mentality_step(board)
     # Freeze recovery eligibility at the step's start for EVERY bank (p30;
     # appendix01.02.04). Storage location must not change the printed test.
     frm shocked_at_start : Bool[MAX_UNIT_COUNT][3]
@@ -1869,7 +1855,7 @@ act command_phase(ctx Board board) -> CommandPhase:
 # Sources: Orks/Beastboss Keep Huntin'; Orks/Squighog-Boyz Bomb Squig;
 # user Rules Sequencing; mortal allocation/destruction core pp24/87.
 act resolve_movement_sources(ctx Board board, frm SourceEvent trigger) -> MovementSourceResolution:
-    register_orks_datasheet_sources(board)
+    register_faction_datasheet_sources(board)
     frm previous_owner = board.current_decision_maker
     frm previous_candidates = board.active_source_events
     frm pending = collect_source_events(board, trigger)
@@ -1877,25 +1863,25 @@ act resolve_movement_sources(ctx Board board, frm SourceEvent trigger) -> Moveme
     frm controllers : BInt<0, 3>
     while controllers.value < 2:
         board.current_decision_maker = player
-        while orks_move_sources_remaining(board, pending, player, false):
+        while faction_move_sources_remaining(board, pending, player, false):
             board.active_source_events = pending
             actions:
-                act finish_source_events() {!orks_move_sources_remaining(board, pending, player, true)}
+                act finish_source_events() {!faction_move_sources_remaining(board, pending, player, true)}
                     break
-                act choose_movement_source(frm SourceEventID event) {orks_move_source_valid(board, pending, event, player)}
+                act choose_movement_source(frm SourceEventID event) {faction_move_source_valid(board, pending, event, player)}
                     frm source_index : SourceInstanceID
                     source_index = pending[event.value].source.value
                     if board.source_instances[source_index.value].rule.value == 147:
-                        act choose_race_target(frm UnitID race_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], race_target)}
+                        act choose_race_target(frm UnitID race_target) {faction_move_source_valid(board, pending, event, player), faction_move_target_valid(board, board.source_instances[source_index.value], race_target)}
                         pending[event.value].resolved = true
-                        commit_orks_race(board, board.source_instances[source_index.value], race_target)
+                        commit_faction_race(board, board.source_instances[source_index.value], race_target)
                     else:
                         if board.source_instances[source_index.value].rule.value == ORKS_KEEP_HUNTIN_RULE or board.source_instances[source_index.value].rule.value == ORKS_INTIMIDATING_RULE:
-                            act choose_keep_huntin_target(frm UnitID hunt_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], hunt_target)}
-                            commit_orks_keep_huntin(board, pending, event, player, hunt_target)
+                            act choose_keep_huntin_target(frm UnitID hunt_target) {faction_move_source_valid(board, pending, event, player), faction_move_target_valid(board, board.source_instances[source_index.value], hunt_target)}
+                            commit_faction_keep_huntin(board, pending, event, player, hunt_target)
                         else:
                             if board.source_instances[source_index.value].rule.value == ORKS_BOMB_SQUIG_RULE:
-                                act choose_bomb_squig_target(frm UnitID bomb_target) {orks_move_source_valid(board, pending, event, player), orks_move_target_valid(board, board.source_instances[source_index.value], bomb_target)}
+                                act choose_bomb_squig_target(frm UnitID bomb_target) {faction_move_source_valid(board, pending, event, player), faction_move_target_valid(board, board.source_instances[source_index.value], bomb_target)}
                                 commit_source_usage(board, board.source_instances[source_index.value])
                                 pending[event.value].resolved = true
                                 frm location = locate_source(board, board.source_instances[source_index.value].source_unit, invalid_entity_identity())
@@ -1913,7 +1899,7 @@ act resolve_movement_sources(ctx Board board, frm SourceEvent trigger) -> Moveme
                             else:
                                 if board.source_instances[source_index.value].rule.value == ORKS_MEK_REPAIR_RULE:
                                     pending[event.value].resolved = true
-                                    subaction*(board) mek_repair = repair_orks_vehicle(board, board.source_instances[source_index.value])
+                                    subaction*(board) mek_repair = repair_faction_vehicle(board, board.source_instances[source_index.value])
                                 else:
                                     if board.source_instances[source_index.value].rule.value == ORKS_SHOKK_BOOST_RULE:
                                         pending[event.value].resolved = true
@@ -2036,7 +2022,7 @@ act cleanup_phase_retained(ctx Board board) -> PhaseRetainedCleanup:
     let source : UnitID
     board.shared_actions.resolve_damage_jobs = resolve_damage_jobs(board, jobs, false, source)
     subaction*(board) board.shared_actions.resolve_damage_jobs
-    subaction*(board) returns = resolve_orks_bank_returns(board)
+    subaction*(board) returns = resolve_faction_bank_returns(board)
 
 # Pile In/consolidation are optional staged per-model moves, separate from
 # attack selection (pp.38/42). No partial path changes live positions; closest
@@ -2044,7 +2030,7 @@ act cleanup_phase_retained(ctx Board board) -> PhaseRetainedCleanup:
 act melee_move(ctx Board board, frm UnitID source, frm Bool consolidate, frm Bool overrun) -> MeleeMove:
     if !melee_move_eligible(board, source, consolidate, overrun):
         return
-    board.shared_actions.orks_move_selection = orks_move_selection(board, source, true)
+    board.shared_actions.orks_move_selection = faction_move_selection(board, source, true)
     subaction*(board) board.shared_actions.orks_move_selection
     frm previous_owner = board.current_decision_maker
     frm previous_active = board.timing.active_player
@@ -2161,8 +2147,8 @@ act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
     board[source].history.fight_eligible_phase = board.phase_serial.value + 1
     board[source].history.consolidation_fight_pending = 0
     board.current_decision_maker = board[source].owned_by_player1
-    subaction*(board) datasheet_psychic_fight = orks_datasheet_fight_selection(board, source)
-    subaction*(board) rokkit_selection = orks_rokkit_selection(board, source)
+    subaction*(board) datasheet_psychic_fight = faction_datasheet_fight_selection(board, source)
+    subaction*(board) rokkit_selection = faction_rokkit_selection(board, source)
     if epic_source_valid(board, source):
         actions:
             act decline_epic_challenge()
@@ -2178,7 +2164,7 @@ act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
         board.shared_actions.melee_move = melee_move(board, source, false, true)
         subaction*(board) board.shared_actions.melee_move
     let unused_target : UnitID
-    board.shared_actions.attack_with_orks_reactions = attack_with_orks_reactions(board, source, unused_target, true, false)
+    board.shared_actions.attack_with_orks_reactions = attack_with_faction_reactions(board, source, unused_target, true, false)
     subaction*(board) board.shared_actions.attack_with_orks_reactions
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
@@ -2291,7 +2277,7 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
     board.current_decision_maker = board[source].owned_by_player1
     board.timing.active_player = board[source].owned_by_player1
     board.moving_unit = source
-    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source].can_reroll_charge() or orks_charge_reroll(board, board[source]), false, true, board[source].owned_by_player1, source)
+    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source].can_reroll_charge() or faction_charge_reroll(board, board[source]), false, true, board[source].owned_by_player1, source)
     subaction*(board) board.current_pair_roll
     if original.has_keyword(Keyword::fly):
         act charge_take_to_skies(Bool do_it)
@@ -2363,12 +2349,12 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
             actions:
                 act resolve_krushin_impetus() {impetus_pending}
                     impetus_pending = false
-                    subaction*(board) impetus = orks_krushin_impetus(board, source)
+                    subaction*(board) impetus = faction_krushin_impetus(board, source)
                 act decline_krushin_impetus() {impetus_pending}
                     impetus_pending = false
                 act resolve_mobbed() {mobbed_pending}
                     mobbed_pending = false
-                    board.shared_actions.resolve_orks_mobbed = resolve_orks_mobbed(board, source)
+                    board.shared_actions.resolve_orks_mobbed = resolve_faction_mobbed(board, source)
                     subaction*(board) board.shared_actions.resolve_orks_mobbed
                 act decline_crushing_impact() {crushing_pending}
                     crushing_pending = false
@@ -2376,7 +2362,7 @@ act charge(ctx Board board, frm UnitID source, frm ChargeKind kind) -> Charge:
                     crushing_pending = false
                     board.shared_actions.resolve_crushing_impact = resolve_crushing_impact(board, source)
                     subaction*(board) board.shared_actions.resolve_crushing_impact
-        board.shared_actions.orks_wagon_charge_end = orks_wagon_charge_end(board, source)
+        board.shared_actions.orks_wagon_charge_end = faction_wagon_charge_end(board, source)
         subaction*(board) board.shared_actions.orks_wagon_charge_end
     board.moving_unit = previous_mover
     board.timing.active_player = previous_active
@@ -2407,14 +2393,14 @@ act charge_phase(ctx Board board) -> ChargePhase:
 # ordinary mortal allocation/FNP/destruction instead of deleting models (pp.24/33).
 act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
     # Orks/Big-ed-Bossbunka Fortification automatically passes these hazards.
-    if !board[id].battle_socked and orks_engaged_only_fortifications(board, board[id]):
+    if !board[id].battle_socked and faction_engaged_only_fortifications(board, board[id]):
         return
     frm count : CombatCounter
     count = live_attachment_strength(board[id])
     frm penalty : FixedStat
-    penalty = orks_escape_penalty(board, board[id])
+    penalty = faction_escape_penalty(board, board[id])
     frm extra_count : CombatCounter
-    extra_count = orks_extra_escape_hazards(board, board[id])
+    extra_count = faction_extra_escape_hazards(board, board[id])
     frm shocked = board[id].battle_socked
     board.shared_actions.collect_attack_dice = collect_attack_dice(board, count, false, false, true, board[id].owned_by_player1, id)
     subaction*(board) board.shared_actions.collect_attack_dice
@@ -2438,9 +2424,9 @@ act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
 # when selected; advance roll and fall-back hazards precede paths (p.33;
 # supplied appendix 02.02.03). A failed staged move can be retried (p.12).
 act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> Movement:
-    board.shared_actions.orks_movement_abilities = orks_movement_abilities(board, id)
+    board.shared_actions.orks_movement_abilities = faction_movement_abilities(board, id)
     subaction*(board) board.shared_actions.orks_movement_abilities
-    board.shared_actions.orks_move_selection = orks_move_selection(board, id, false)
+    board.shared_actions.orks_move_selection = faction_move_selection(board, id, false)
     subaction*(board) board.shared_actions.orks_move_selection
     frm selected = false
     frm kind : MovementKind
@@ -2477,13 +2463,13 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
                 extra = 2 * int(use_the_gilded_spear)
                 if do_it:
                     kind = MovementKind::advance
-                    board.shared_actions.orks_move_mode = orks_move_mode(board, id, kind)
+                    board.shared_actions.orks_move_mode = faction_move_mode(board, id, kind)
                     subaction*(board) board.shared_actions.orks_move_mode
-                    board[id].history.advance_allows_charge = unit_is_riled_up(board[id]) or orks_move_charge_permission(board, board[id], kind)
+                    board[id].history.advance_allows_charge = faction_advance_charge_status(board[id]) or faction_move_charge_permission(board, board[id], kind)
                     if board.timing.phase == BattlePhase::movement and board[id].owned_by_player1 == board.current_player and board[id].has_ability(AbilityKind::shokk_boosta):
                         act use_shokk_boosta(Bool boost_move)
                         board[id].shokk_boosta_move = boost_move
-                    board.current_roll = rerollable_dice_roll(board, unit_has_waaagh(board[id]), false, true, board[id].owned_by_player1, id)
+                    board.current_roll = rerollable_dice_roll(board, faction_advance_reroll(board[id]), false, true, board[id].owned_by_player1, id)
                     subaction*(board) board.current_roll
                     if board[id].shokk_boosta_move:
                         act use_shokk_six(Bool change_to_six)
@@ -2494,24 +2480,24 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
                         if six_instead:
                             board.current_roll.result = 6
                     extra = board.current_roll.result.value + int(board[id].has_ability(AbilityKind::fuel_mixa_grot)) + 2 * unit_orks_effect(board, board[id], OrksEffectKind::advance_plus_two)
-                    capture_orks_selected_move(board, id, kind)
+                    capture_faction_selected_move(board, id, kind)
                 selected = true
             act ordered_retreat() {battlefield_move_eligible(board, id, MovementKind::ordered_retreat)}
                 kind = MovementKind::ordered_retreat
-                capture_orks_selected_move(board, id, kind)
+                capture_faction_selected_move(board, id, kind)
                 selected = true
             act desperate_escape() {battlefield_move_eligible(board, id, MovementKind::desperate_escape)}
                 kind = MovementKind::desperate_escape
-                capture_orks_selected_move(board, id, kind)
+                capture_faction_selected_move(board, id, kind)
                 selected = true
     if kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape:
-        board.shared_actions.orks_move_mode = orks_move_mode(board, id, kind)
+        board.shared_actions.orks_move_mode = faction_move_mode(board, id, kind)
         subaction*(board) board.shared_actions.orks_move_mode
-        board.shared_actions.orks_fallback_selection = orks_fallback_selection(board, id)
+        board.shared_actions.orks_fallback_selection = faction_fallback_selection(board, id)
         subaction*(board) board.shared_actions.orks_fallback_selection
-        if orks_forces_escape(board, board[id]):
+        if faction_forces_escape(board, board[id]):
             kind = MovementKind::desperate_escape
-        capture_orks_selected_move(board, id, kind)
+        capture_faction_selected_move(board, id, kind)
         if kind == MovementKind::desperate_escape:
             board.shared_actions.desperate_escape = desperate_escape(board, id)
             subaction*(board) board.shared_actions.desperate_escape
@@ -2557,11 +2543,11 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
             board[id].history.move_kind = MovementKind::stationary
     board[id].shokk_boosta_move = false
     if board[id].history.last_move_phase == board.phase_serial.value + 1 and !(board[id].history.move_kind == MovementKind::stationary) and has_live_model(board[id]):
-        board.shared_actions.orks_wagon_move_end = orks_wagon_move_end(board, id)
+        board.shared_actions.orks_wagon_move_end = faction_wagon_move_end(board, id)
         subaction*(board) board.shared_actions.orks_wagon_move_end
-        subaction*(board) trukk_reactions = orks_trukk_reactions(board, id)
-        while orks_enemy_move_available(board, id):
-            board.shared_actions.select_orks_enemy_move_reaction = select_orks_enemy_move_reaction(board, id)
+        subaction*(board) trukk_reactions = faction_trukk_reactions(board, id)
+        while faction_enemy_move_available(board, id):
+            board.shared_actions.select_orks_enemy_move_reaction = select_faction_enemy_move_reaction(board, id)
             subaction*(board) board.shared_actions.select_orks_enemy_move_reaction
             frm reply_available_snapshot_11 = board.shared_actions.select_orks_enemy_move_reaction.available
             frm reply_distance_snapshot_11 = board.shared_actions.select_orks_enemy_move_reaction.distance
@@ -2607,7 +2593,7 @@ act disembark(ctx Board board, frm UnitID passenger_bank, frm Bool reactive) -> 
     frm mode = required_disembark_mode(board, board.embarked_units[passenger_bank.get()], carrier_location)
     if reactive:
         mode = DisembarkMode::rapid
-    subaction*(board) selected_passenger = orks_disembark_selection(board, passenger_bank, carrier_location)
+    subaction*(board) selected_passenger = faction_disembark_selection(board, passenger_bank, carrier_location)
     if mode == DisembarkMode::assault:
         act choose_assault_disembark(Bool use_assault)
         if !use_assault:
@@ -2673,15 +2659,15 @@ act movement_phase(ctx Board board) -> MovementPhase:
                     subaction*(board) board.shared_actions.movement
             act end_move() {movement_selection_complete(board, board.current_player)}
                 break
-            act use_orks_offboard_dread_power() {orks_offboard_dread_power_available(board, SourceBank::reserves, board.current_player) or orks_offboard_dread_power_available(board, SourceBank::embarked, board.current_player)}
-                subaction*(board) power = choose_orks_offboard_dread_power(board, board.current_player)
-            act use_orks_offboard_watchin() {orks_offboard_support_available(board, SourceBank::reserves, board.current_player, false) or orks_offboard_support_available(board, SourceBank::embarked, board.current_player, false)}
-                board.shared_actions.choose_orks_offboard_support = choose_orks_offboard_support(board, board.current_player, false)
+            act use_orks_offboard_dread_power() {faction_offboard_dread_power_available(board, SourceBank::reserves, board.current_player) or faction_offboard_dread_power_available(board, SourceBank::embarked, board.current_player)}
+                subaction*(board) power = choose_faction_offboard_dread_power(board, board.current_player)
+            act use_orks_offboard_watchin() {faction_offboard_support_available(board, SourceBank::reserves, board.current_player, false) or faction_offboard_support_available(board, SourceBank::embarked, board.current_player, false)}
+                board.shared_actions.choose_orks_offboard_support = choose_faction_offboard_support(board, board.current_player, false)
                 subaction*(board) board.shared_actions.choose_orks_offboard_support
-            act use_orks_datasheet_movement(frm UnitID datasheet_unit) {orks_datasheet_move_any(board, datasheet_unit)}
-                subaction*(board) datasheet_move = orks_datasheet_movement(board, datasheet_unit)
-            act use_orks_movement_support(frm UnitID support_unit) {orks_phase_support_available(board, support_unit)}
-                subaction*(board) support = orks_phase_support(board, support_unit)
+            act use_orks_datasheet_movement(frm UnitID datasheet_unit) {faction_datasheet_move_any(board, datasheet_unit)}
+                subaction*(board) datasheet_move = faction_datasheet_movement(board, datasheet_unit)
+            act use_orks_movement_support(frm UnitID support_unit) {faction_phase_support_available(board, support_unit)}
+                subaction*(board) support = faction_phase_support(board, support_unit)
             act move_unit(frm UnitID id) {id.get() < board.units.size(), has_live_model(board[id]), !board[id].off_battlefield, !board[id].has_keyword(Keyword::aircraft), board[id].owned_by_player1 == board.current_player, board[id].history.selected_move_phase != board.phase_serial.value + 1}
                 frm use_gilded_spear = false
                 # Preserve this legacy supplied-roster hook without inventing
@@ -2703,20 +2689,20 @@ act movement_phase(ctx Board board) -> MovementPhase:
                     act reserve_remain_stationary() {!board.reserve_units[reserve_id.get()].has_keyword(Keyword::aircraft)}
                         board.reserve_units[reserve_id.get()].history.selected_move_phase = board.phase_serial.value + 1
                         board.reserve_units[reserve_id.get()].history.move_kind = MovementKind::stationary
-                    act place_at(BoardPosition position) {orks_ingress_round_allowed(board, board.reserve_units[reserve_id.get()]), battlefield_entry_available(board, board.reserve_units[reserve_id.get()]), setup_at_valid(board, board.reserve_units[reserve_id.get()], position, MovementKind::ingress, false)}
+                    act place_at(BoardPosition position) {faction_ingress_round_allowed(board, board.reserve_units[reserve_id.get()]), battlefield_entry_available(board, board.reserve_units[reserve_id.get()]), setup_at_valid(board, board.reserve_units[reserve_id.get()], position, MovementKind::ingress, false)}
                         enter_from_reserves(board, reserve_id, position, MovementKind::ingress)
     board.current_decision_maker = board.current_player
 
 # Select the shooting type before weapons, even for a unit with no ranged
 # weapons; shooting prohibits phase-local action starts (pp.34–35/57/88).
 act selected_shooting(ctx Board board, frm UnitID source, frm UnitID initial_target) -> SelectedShooting:
-    board.shared_actions.orks_dreadherder_shooting = orks_dreadherder_shooting(board, source)
+    board.shared_actions.orks_dreadherder_shooting = faction_dreadherder_shooting(board, source)
     subaction*(board) board.shared_actions.orks_dreadherder_shooting
     board[source].has_shoot = true
     board[source].history.shot_this_phase = true
     act choose_shooting_kind(ShootingKind kind) {shooting_kind_valid(board, source, kind)}
     board[source].shooting_kind = kind
-    board.shared_actions.attack_with_orks_reactions = attack_with_orks_reactions(board, source, initial_target, false, false)
+    board.shared_actions.attack_with_orks_reactions = attack_with_faction_reactions(board, source, initial_target, false, false)
     subaction*(board) board.shared_actions.attack_with_orks_reactions
 
 # Keep the existing two-UnitID click selector as a compatibility entrypoint;
@@ -2729,8 +2715,8 @@ act shooting_phase(ctx Board board) -> ShootingPhase:
                 break
             act use_explosives(frm UnitID explosives_source) {explosives_source_valid(board, explosives_source)}
                 subaction*(board) explosives = resolve_explosives(board, explosives_source)
-            act use_dreadherder_support(frm UnitID dreadherder_source) {orks_dreadherder_available(board, dreadherder_source)}
-                board.shared_actions.orks_dreadherder_shooting = orks_dreadherder_shooting(board, dreadherder_source)
+            act use_dreadherder_support(frm UnitID dreadherder_source) {faction_dreadherder_available(board, dreadherder_source)}
+                board.shared_actions.orks_dreadherder_shooting = faction_dreadherder_shooting(board, dreadherder_source)
                 subaction*(board) board.shared_actions.orks_dreadherder_shooting
             act select_shooting_unit(frm UnitID shooting_unit) {shooting_unit_valid(board, shooting_unit)}
                 board.shared_actions.selected_shooting = selected_shooting(board, shooting_unit, shooting_unit)
@@ -2981,19 +2967,19 @@ act resolve_scouts(ctx Board board) -> ResolveScouts:
 # afterward (Leader/Support pp.66–67; starting strength p.86).
 act battle(ctx Board board) -> Battle:
     board.identify_units()
-    register_orks_force_dispositions(board)
-    assert(orks_muster_copies_valid(board), "muster exceeds unit copy limits")
-    subaction*(board) kommando_formations = orks_kommando_formations(board)
+    register_faction_force_dispositions(board)
+    assert(faction_muster_copies_valid(board), "muster exceeds unit copy limits")
+    subaction*(board) kommando_formations = faction_kommando_formations(board)
     subaction*(board) attach_leaders = attach_leaders(board)
     board.capture_starting_strengths()
-    register_orks_option_passives(board)
-    register_orks_force_dispositions(board)
-    register_orks_passive_rules(board)
-    register_orks_datasheet_sources(board)
+    register_faction_option_passives(board)
+    register_faction_force_dispositions(board)
+    register_faction_passive_rules(board)
+    register_faction_datasheet_sources(board)
     subaction*(board) transport_formations = declare_transport_passengers(board)
     subaction*(board) reserves = declare_strategic_reserves(board)
     subaction*(board) deploy = deploy(board)
-    subaction*(board) redeploy = orks_kaptin_redeploy(board)
+    subaction*(board) redeploy = faction_kaptin_redeploy(board)
     subaction*(board) scouts = resolve_scouts(board)
     while board.current_round != 5:
         subaction*(board) round = round(board)
@@ -3065,7 +3051,7 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
         act pick_zarkan_deamonkin()
         board.players_faction[int(current_player)] = make_zarkan_deamonkin(board.reserve_units, current_player)
         act pick_morgrim_butcha()
-        board.players_faction[int(current_player)] = make_orks_starter_roster(board.reserve_units, current_player)
+        board.players_faction[int(current_player)] = make_faction_starter_roster(board.reserve_units, current_player)
         act pick_tristean_gilded_blade()
         board.players_faction[int(current_player)] = make_tristrean_gilded_blade(board.reserve_units, current_player)
 
@@ -3077,11 +3063,11 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
     board.armies[int(current_player)].faction = army_faction_for_roster(board.players_faction[int(current_player)])
     board.armies[int(current_player)].reserve_budget = ReserveBudgetMode::point_free
     board.identify_units()
-    board.shared_actions.select_orks_detachments = select_orks_detachments(board, current_player)
+    board.shared_actions.select_orks_detachments = select_faction_detachments(board, current_player)
     subaction*(board) board.shared_actions.select_orks_detachments
     if custom_orks:
-        subaction*(board) roster = build_orks_roster(board, current_player)
-    board.shared_actions.select_orks_options = select_orks_options(board, current_player)
+        subaction*(board) roster = build_faction_roster(board, current_player)
+    board.shared_actions.select_orks_options = select_faction_options(board, current_player)
     subaction*(board) board.shared_actions.select_orks_options
-    board.shared_actions.select_orks_warlord = select_orks_warlord(board, current_player)
+    board.shared_actions.select_orks_warlord = select_faction_warlord(board, current_player)
     subaction*(board) board.shared_actions.select_orks_warlord

@@ -40,7 +40,7 @@ fun register_orks_option_passives(Board board):
 fun valid_orks_detachment_foundations(Board board) -> Bool:
     if board.orks_attack_serial.value < 0 or board.orks_attack_serial.value >= 1025 or board.orks_reaction_target.value < 0 or board.orks_reaction_target.value > board.next_identity.value:
         return false
-    if !valid_rule_modifiers(board.attack_info.orks_hit_modifiers) or !valid_rule_modifiers(board.attack_info.orks_wound_modifiers):
+    if !valid_rule_modifiers(board.attack_info.faction_hit_modifiers) or !valid_rule_modifiers(board.attack_info.faction_wound_modifiers):
         return false
     for record in range(board.orks_attack_records.size()):
         ref entry = board.orks_attack_records[record]

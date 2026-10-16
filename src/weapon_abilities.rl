@@ -20,21 +20,21 @@ fun model_weapon_rules(Board board, UnitID source, Int model, Int slot) -> Weapo
         result.append(intrinsic[i])
     for i in range(board[source][model].additional_weapon_rules[slot].size()):
         result.append(board[source][model].additional_weapon_rules[slot][i])
-    append_riled_assault_rules(board[source][model], board[source][model].weapons[slot].profile, result)
+    append_faction_intrinsic_weapon_rules(board[source][model], board[source][model].weapons[slot].profile, result)
     # War Horde/Get Stuck In supplies a distinct Sustained Hits1 instance;
     # select duplicate instances through the existing p78 ability choice.
-    if war_horde_melee_rule_applies(board, source, board[source][model].weapons[slot].profile):
+    if faction_melee_sustained_rule_applies(board, source, board[source][model].weapons[slot].profile):
         result.append(weapon_rule(WeaponRuleKind::sustained_hit, 1))
     let granted = board[source].get_temporary_weapon_rules()
     for i in range(granted.size()):
         result.append(granted[i])
-    append_orks_package_weapon_rules(board, source, model, slot, result)
-    append_orks_datasheet_weapon_rules(board, source, board[source][model].weapons[slot].profile, result)
+    append_faction_package_weapon_rules(board, source, model, slot, result)
+    append_faction_datasheet_weapon_rules(board, source, board[source][model].weapons[slot].profile, result)
     return result
 
 # Selection/eligibility uses ability presence before the target is declared (p.78).
 fun model_weapon_has_rule(Model model, Int slot, WeaponRuleKind kind) -> Bool:
-    if kind == WeaponRuleKind::assault and model.weapons[slot].profile.range() > 0 and model.is_riled_up():
+    if faction_model_has_weapon_rule(model, model.weapons[slot].profile, kind):
         return true
     if model.weapons[slot].profile.has_rule(kind):
         return true
@@ -170,25 +170,12 @@ fun consume_one_shot_profile(Model model, Int slot):
 
 # Each riled source supplies ranged Assault with its own expiry key, so a
 # declaration snapshot cannot revive an expired grant (Orks Waaagh!/01.02.02).
-fun append_riled_assault_rules(Model model, Weapon weapon, WeaponAbilitySet rules):
-    if weapon.range() == 0:
-        return
-    for riled_index in range(model.riled_source_effects.size()):
-        let granted = weapon_rule(WeaponRuleKind::assault)
-        granted.source_effect = model.riled_source_effects[riled_index]
-        rules.append(granted)
 
 
 # Get Stuck In is an army detachment rule, not a bearer aura or temporary
 # source: friendly ORKS units' melee attacks have Sustained Hits1. Selections
 # are fixed before battle; snapshots still select one duplicate instance (p78).
 # https://wahapedia.ru/wh40k11ed/factions/orks/#Get-Stuck-In
-fun war_horde_melee_rule_applies(Board board, UnitID source, Weapon weapon) -> Bool:
-    if source.get() < 0 or source.get() >= board.units.size() or weapon.range() != 0:
-        return false
-    ref unit = board[source]
-    ref army = board.armies[int(unit.owned_by_player1)]
-    return army.faction == ArmyFaction::orks and army.has_detachment(OrksDetachment::war_horde) and unit.has_keyword(Keyword::orks)
 
 
 # A phase-limited numeric improvement expires without deleting its intrinsic

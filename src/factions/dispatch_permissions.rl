@@ -1,0 +1,82 @@
+import factions.orks.detachments
+import factions.orks.queries
+import factions.orks.stratagems
+
+# Neutral permissions entrypoints. This composition module is the only layer
+# that selects concrete faction behavior; core algorithms do not inspect it.
+
+# Orks transport passenger faction/type and Ghazghkull restrictions (Orks transport cards; core p64).
+fun faction_passenger_permitted(Model carrier, Model passenger) -> Bool:
+    return orks_passenger_permitted(carrier, passenger)
+
+# Burna Mark prevents Hidden (Orks/Burna-Bommer).
+fun faction_hidden_allowed(Board board, Unit unit) -> Bool:
+    return orks_hidden_allowed(board, unit)
+
+# Found Em and Extra Sneaky change detection range; core applies its shared9-30in cap (Orks cards).
+fun faction_detection_modifier(Board board, Unit target) -> Int:
+    return orks_detection_modifier(board, target)
+
+# Source-owned no_charge restriction; core retains ordinary eligibility and expiry (Orks Pulse Jet/psychic cards).
+fun faction_charge_allowed(Board board, Unit unit) -> Bool:
+    return orks_charge_allowed(board, unit)
+
+# Source-owned no_action restriction; core retains ordinary eligibility and expiry (Orks Pulse Jet/psychic cards).
+fun faction_action_allowed(Board board, Unit unit) -> Bool:
+    return orks_action_allowed(board, unit)
+
+# Source-owned grounded restriction; core retains ordinary eligibility and expiry (Orks Pulse Jet/psychic cards).
+fun faction_flight_allowed(Board board, Unit unit) -> Bool:
+    return orks_flight_allowed(board, unit)
+
+# Only selected Orks packages grant their support cards; unassociated core cards pass through (Orks detachment sections).
+fun faction_stratagem_selected(Board board, Bool player, Stratagem strat) -> Bool:
+    return orks_stratagem_selected(board, player, strat)
+
+# Named Orks effects forbid Overwatch on their target; core retains payment/shock/phase gates (Orks cards).
+fun faction_stratagem_target_allowed(Board board, Bool player, Stratagem strat, Unit target) -> Bool:
+    return orks_stratagem_target_allowed(board, player, strat, target)
+
+# Orks support cards select friendly targets; generic core cards retain their own owner policy (Orks cards).
+fun faction_stratagem_owner_allowed(Stratagem strat, Unit target, Bool player) -> Bool:
+    return orks_stratagem_owner_allowed(strat, target, player)
+
+# Only an attached Painboss may retain its bearer-specific Mounted conversion (Orks/Painboss).
+fun faction_attachment_origin_valid(Unit unit, Model model) -> Bool:
+    return orks_attachment_origin_valid(unit, model)
+
+# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_package_window_available(Board board, UnitID source, Bool owner, TimingWindow window) -> Bool:
+    return orks_package_window_available(board, source, owner, window)
+
+# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_package_windows_remaining(Board board, Bool owner, TimingWindow window, Bool mandatory) -> Bool:
+    return orks_package_windows_remaining(board, owner, window, mandatory)
+
+# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_package_window(Board board, UnitID source, Bool owner, TimingWindow window) -> OrksPackageWindow:
+    return orks_package_window(board, source, owner, window)
+
+# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_phase_support_available(Board board, UnitID source) -> Bool:
+    return orks_phase_support_available(board, source)
+
+# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_phase_support(Board board, UnitID source) -> OrksPhaseSupport:
+    return orks_phase_support(board, source)
+
+# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_headbutt_target(Board board, UnitID source, Model casualty, UnitID target) -> Bool:
+    return orks_headbutt_target(board, source, casualty, target)
+
+# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_headbutt_has_target(Board board, UnitID source, Model casualty) -> Bool:
+    return orks_headbutt_has_target(board, source, casualty)
+
+# Composition hook: stratagems adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_datasheet_stratagem_cost(Stratagem card, Unit unit) -> Int:
+    return orks_datasheet_stratagem_cost(card, unit)
+
+# Composition hook: detachments adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_unit_grants_ability(Unit unit, AbilityKind kind) -> Bool:
+    return orks_unit_grants_ability(unit, kind)

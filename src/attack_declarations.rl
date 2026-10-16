@@ -222,7 +222,7 @@ fun attacks_are_identical(Board board, AttackSequenceInfo left, AttackSequenceIn
         return false
     if left.total_hit_modifier() != right.total_hit_modifier() or left.total_wound_modifier() != right.total_wound_modifier():
         return false
-    if left.orks_fail_hits_three != right.orks_fail_hits_three:
+    if left.fail_hits_up_to_three != right.fail_hits_up_to_three:
         return false
     if left.only_hits_on_6 != right.only_hits_on_6 or left.reroll_hits != right.reroll_hits or left.reroll1_hits != right.reroll1_hits or left.reroll_wounds != right.reroll_wounds or left.reroll1_wounds != right.reroll1_wounds:
         return false
@@ -364,8 +364,8 @@ fun declaration_modifiers(Board board, UnitID source, DeclaredWeapon declaration
     # after a completed charge this turn, within the ordinary addition step.
     if kind.value == ModifiedCharacteristic::damage.value and board[source].has_charged and board[source].has_ability(AbilityKind::brutal_impact):
         result.append(rule_modifier(ModifierOperation::add, 1))
-    append_orks_declaration_modifiers(board, source, declaration, kind, result)
-    append_orks_datasheet_modifiers(board, source, declaration, kind, result)
+    append_faction_declaration_modifiers(board, source, declaration, kind, result)
+    append_faction_datasheet_modifiers(board, source, declaration, kind, result)
     return result
 
 # Hazardous counts actual selected physical weapons, not every simultaneously

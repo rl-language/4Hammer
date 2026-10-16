@@ -1,0 +1,87 @@
+import factions.orks.army
+import factions.orks.effects
+import factions.orks.queries
+import factions.orks.sources
+
+# Neutral sources entrypoints. This composition module is the only layer
+# that selects concrete faction behavior; core algorithms do not inspect it.
+
+# Validate bounded Orks effects/enhancement handles on save load; infrastructure, not another tabletop restriction.
+fun faction_model_state_valid(Model model) -> Bool:
+    return orks_model_state_valid(model)
+
+# Validate bounded Orks psychic usage on save load; generic Psyker level validation remains core.
+fun faction_unit_state_valid(Unit unit) -> Bool:
+    return orks_unit_state_valid(unit)
+
+# Orks typed/riled grants share generic source handles and expiry (Waaagh!/01.02.02).
+fun faction_install_source_grant(Model model, SourceGrant installed, SourceEffectKey key):
+    orks_install_source_grant(model, installed, key)
+
+# Remove only the matching Orks effect/riled key, including archived models (01.02.02; core p88).
+fun faction_remove_source_grant(Model model, SourceEffectKey key):
+    orks_remove_source_grant(model, key)
+
+# Validate faction typed source payloads before loading/dispatch; generic arithmetic validation stays core.
+fun faction_source_grant_valid(SourceGrant grant) -> Bool:
+    return orks_source_grant_valid(grant)
+
+# Returned members inherit only missing faction-owned grant keys (core p88/01.02.02).
+fun faction_model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
+    return orks_model_has_source_grant(model, key)
+
+# Restored faction grants must refer to their real source recipients; preserve existing handle validation.
+fun faction_model_source_handles_valid(Board board, Model model) -> Bool:
+    return orks_model_source_handles_valid(board, model)
+
+# Composition hook: effects adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun remove_faction_scoped_effect(Board board, SourceEffectKey key):
+    remove_orks_scoped_effect(board, key)
+
+# Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun register_faction_option_passives(Board board):
+    register_orks_option_passives(board)
+
+# Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun valid_faction_detachment_foundations(Board board) -> Bool:
+    return valid_orks_detachment_foundations(board)
+
+# Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_source_event_available(Board board, SourceInstance instance, SourceEvent event) -> Bool:
+    return orks_source_event_available(board, instance, event)
+
+# Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_datasheet_window(Board board, SourceInstance instance) -> OrksDatasheetWindow:
+    return orks_datasheet_window(board, instance)
+
+# Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun register_faction_datasheet_sources(Board board):
+    register_orks_datasheet_sources(board)
+
+# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_timing_rule_available(Board board, TimingWindow window, Bool player, OrksTimingRule rule, Bool[2] resolved) -> Bool:
+    return orks_timing_rule_available(board, window, player, rule, resolved)
+
+# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_timing_rules_remaining(Board board, TimingWindow window, Bool player, Bool[2] resolved, Bool mandatory_only) -> Bool:
+    return orks_timing_rules_remaining(board, window, player, resolved, mandatory_only)
+
+# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun resolve_faction_timing_rule(Board board, Bool player, OrksTimingRule rule):
+    resolve_orks_timing_rule(board, player, rule)
+
+# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun register_faction_passive_rules(Board board):
+    register_orks_passive_rules(board)
+
+# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun valid_faction_army_state(Board board) -> Bool:
+    return valid_orks_army_state(board)
+
+# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_advance_reroll(Unit unit) -> Bool:
+    return unit_has_waaagh(unit)
+
+# Composition hook: army adapter owns eligibility and its cited rule; contexts and source identity are preserved.
+fun faction_advance_charge_status(Unit unit) -> Bool:
+    return unit_is_riled_up(unit)

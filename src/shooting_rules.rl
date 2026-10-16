@@ -77,7 +77,7 @@ fun ranged_target_valid(Board board, UnitID source, Model bearer, Weapon weapon,
     if engaged:
         if chosen_weapon_has_rule(board, target, rules, WeaponRuleKind::blast):
             return false
-        if !orks_engaged_only_fortifications(board, board[target]) and !(kind == ShootingKind::close_quarters and mutually_engaged) and (!(board.timing.phase == BattlePhase::shooting) or board.current_player != board[source].owned_by_player1 or (!board[target].has_keyword(Keyword::monster) and !board[target].has_keyword(Keyword::vehicle))):
+        if !faction_engaged_only_fortifications(board, board[target]) and !(kind == ShootingKind::close_quarters and mutually_engaged) and (!(board.timing.phase == BattlePhase::shooting) or board.current_player != board[source].owned_by_player1 or (!board[target].has_keyword(Keyword::monster) and !board[target].has_keyword(Keyword::vehicle))):
             return false
     if kind == ShootingKind::assault and !chosen_weapon_has_rule(board, target, rules, WeaponRuleKind::assault):
         return false
@@ -93,7 +93,7 @@ fun ranged_target_valid(Board board, UnitID source, Model bearer, Weapon weapon,
         let lone_range = 12
         if board[target].lone_operative_range.value > 0:
             lone_range = characteristic_limit(ModifiedCharacteristic::detection_range, board[target].lone_operative_range.value)
-        return !orks_lone_operative(board, board[target]) or live_distance_to_model(board[target], bearer) <= float(lone_range)
+        return !faction_lone_operative(board, board[target]) or live_distance_to_model(board[target], bearer) <= float(lone_range)
     return model_can_see_unit(board, bearer, board[target])
 
 # Selecting Remain Stationary is distinct from a zero-distance normal move;

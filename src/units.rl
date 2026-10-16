@@ -122,19 +122,9 @@ cls Model:
 
     # Read per-model keywords without copying owning storage (pp.67/87).
     fun has_keyword(Keyword keyword) -> Bool:
-        for effect in range(self.orks_effects.size()):
-            if keyword == Keyword::mobile and self.orks_effects[effect].kind.value == OrksEffectKind::mobile.value:
-                return true
-            if keyword == Keyword::fly and self.orks_effects[effect].kind.value == OrksEffectKind::lifted.value:
-                return true
-        if self.blastajet_force_field and keyword == Keyword::smoke:
-            return false
-        # Painboss Runnin' wiv da Herd: no keyword spread to other models.
-        if self.painboss_mounted_attachment:
-            if keyword == Keyword::infantry:
-                return false
-            if keyword == Keyword::mobile or keyword == Keyword::mounted:
-                return true
+        let override = faction_keyword_override(self, keyword)
+        if override != 0:
+            return override > 0
         let i = 0
         ref rules = self.keywords
         while i != rules.size():
@@ -154,17 +144,8 @@ cls Model:
     # Properties stay readable to explicit death hooks; active use is gated
     # by Unit.has_ability/is_alive (p.87). Avoid an owning temporary here.
     fun has_ability(AbilityKind kind) -> Bool:
-        if kind == AbilityKind::deep_strike:
-            for intrinsic in range(self.abilities.size()):
-                if self.abilities[intrinsic] == AbilityKind::nazdregs_know_wotz:
-                    return true
-        if kind == AbilityKind::deep_strike:
-            for jump_effect in range(self.orks_effects.size()):
-                if self.orks_effects[jump_effect].kind.value == OrksEffectKind::jump_deep_strike.value:
-                    return true
-        for effect in range(self.orks_effects.size()):
-            if kind == AbilityKind::keep_huntin and self.orks_effects[effect].kind.value == OrksEffectKind::borrowed_keep_huntin.value or kind == AbilityKind::intimidating_motivation and self.orks_effects[effect].kind.value == OrksEffectKind::borrowed_intimidation.value:
-                return true
+        if faction_model_grants_intrinsic_ability(self, kind):
+            return true
         let i = 0
         ref rules = self.abilities
         while i != rules.size():
@@ -249,11 +230,11 @@ cls Model:
     # Effective model characteristics retain one printed arithmetic policy
     # (appendix02.02.01); source selection and expiry are separate consumers.
     fun effective_movement(Int base) -> Int:
-        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, self.profile.movement() == 0, 4 * int(self.painboss_mounted_attachment) + 2 * int(self.orks_enhancement.value == OrksEnhancement::cybork_boosta.value))
+        return effective_characteristic_value(base, ModifiedCharacteristic::movement, self.characteristic_modifiers, self.profile.movement() == 0, faction_movement_bonus(self))
 
     # Multiple Toughness uses each model's effective value (appendix05.02.01).
     fun effective_toughness() -> Int:
-        return effective_characteristic_value(self.profile.thoughness(), ModifiedCharacteristic::toughness, self.characteristic_modifiers, false, int(self.orks_enhancement.value == OrksEnhancement::it_came_from_da_drops.value))
+        return effective_characteristic_value(self.profile.thoughness(), ModifiedCharacteristic::toughness, self.characteristic_modifiers, false, faction_toughness_bonus(self))
 
     # Save groups compare modified Sv/InSv before allocating dice (p.19).
     fun effective_save() -> Int:
@@ -263,16 +244,7 @@ cls Model:
     # that a bonus can turn into an invulnerable permission (appendix02.02.01).
     # Orks/Wazbom-Blastajet Blastajet Force Field is selected equipment.
     fun effective_invulnerable_save() -> Int:
-        let base = self.profile.invuln_save()
-        if self.blastajet_force_field:
-            base = min(base, 5)
-        if self.is_riled_up():
-            base = min(base, 5)
-        for effect in range(self.orks_effects.size()):
-            if self.orks_effects[effect].kind.value == OrksEffectKind::invulnerable_four.value:
-                base = min(base, 4)
-            if self.orks_effects[effect].kind.value == OrksEffectKind::invulnerable_five.value:
-                base = min(base, 5)
+        let base = faction_invulnerable_base(self)
         return effective_characteristic_value(base, ModifiedCharacteristic::invulnerable_save, self.characteristic_modifiers, base > 6)
 
     # Riled-up gives a5+ InSv and ranged Assault; owned keys preserve overlapping
@@ -466,7 +438,7 @@ cls Unit:
         self.starting_strenght = self.models.size()
         if self.attached_units.empty():
             self.bodyguard_starting_strength = self.models.size()
-            self.bodyguard_waaagh = component_has_waaagh(self, self.identity)
+            self.bodyguard_waaagh = faction_component_has_army_rule(self, self.identity)
 
     fun has_greater_strenght_wound_protection() -> Bool:
         return self.phase_modifiers.greater_strenght_wound_protection 
@@ -526,7 +498,7 @@ cls Unit:
         assert(self.models.size() > 0 and other.models.size() + self.models.size() <= MAX_UNIT_MODELS and other.attached_units.has_capacity(), "attachment model/component capacity exceeded")
         if other.attached_units.empty():
             other.bodyguard_starting_strength = other.models.size()
-            other.bodyguard_waaagh = component_has_waaagh(other, other.identity)
+            other.bodyguard_waaagh = faction_component_has_army_rule(other, other.identity)
         let component : AttachmentComponent
         component.identity = self.identity
         component.starting_strength = self.models.size()
@@ -535,13 +507,10 @@ cls Unit:
         component.datasheet = self.roster_datasheet
         component.abilities = self.unit_abilities
         component.psyker_level = self.psyker_level
-        component.waaagh = component_has_waaagh(self, self.identity)
+        component.waaagh = faction_component_has_army_rule(self, self.identity)
         other.attached_units.append(component)
         for source_model in range(self.models.size()):
-            # https://wahapedia.ru/wh40k11ed/factions/orks/Painboss
-            # Runnin' wiv da Herd changes this model's M/keywords only.
-            if self.roster_datasheet.value == OrksDatasheet::painboss.value and other.has_keyword(Keyword::mounted):
-                self.models[source_model].painboss_mounted_attachment = true
+            faction_prepare_attached_model(self, other, self.models[source_model])
             other.models.append(self.models[source_model])
         other.starting_strenght = other.models.size()
         self.models.clear()
@@ -637,7 +606,7 @@ cls Unit:
     # Typed unit rules retain p67 conferral; intrinsic per-model all-member
     # checks require live bearers and do not pass vacuously (p.87).
     fun all_have_ability(AbilityKind kind) -> Bool:
-        if orks_unit_grants_ability(self, kind):
+        if faction_unit_grants_ability(self, kind):
             return true
         if scoped_unit_ability(self, kind):
             return true
@@ -646,7 +615,7 @@ cls Unit:
         for i in range(self.models.size()):
             if self.models[i].is_alive():
                 alive = true
-                all_have = all_have and (self.models[i].has_ability(kind) or orks_model_grants_ability(self, self.models[i], kind))
+                all_have = all_have and (self.models[i].has_ability(kind) or faction_model_grants_ability(self, self.models[i], kind))
         return alive and all_have
 
     fun all_have_keyword(Keyword kind) -> Bool:
@@ -668,13 +637,13 @@ cls Unit:
     # Typed unit-scope rules follow their source component until its last
     # member dies; attack destruction retains them through all attacks (p.67).
     fun has_ability(AbilityKind kind) -> Bool:
-        if orks_unit_grants_ability(self, kind):
+        if faction_unit_grants_ability(self, kind):
             return true
         if scoped_unit_ability(self, kind):
             return true
         let i = 0
         while i != self.models.size():
-            if model_confers_attached_abilities(self.models[i]) and (self.models[i].has_ability(kind) or orks_model_grants_ability(self, self.models[i], kind)):
+            if model_confers_attached_abilities(self.models[i]) and (self.models[i].has_ability(kind) or faction_model_grants_ability(self, self.models[i], kind)):
                 return true 
             i = i + 1
         return false

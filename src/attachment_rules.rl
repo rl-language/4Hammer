@@ -28,11 +28,6 @@ fun scoped_unit_ability(Unit unit, AbilityKind kind) -> Bool:
 
 # Capture unit-wide Waaagh! provenance before concatenating components; the
 # source's last-member lifetime still applies (pp.66–67; Orks Army Rules).
-fun component_has_waaagh(Unit unit, EntityIdentity component) -> Bool:
-    let available = false
-    for model in range(unit.models.size()):
-        available = available or (unit[model].original_unit == component and unit[model].has_waaagh)
-    return available
 
 # Leaders/Supports that started attached retain 'while leading' permission
 # after bodyguard destruction, including after revival (p.67/19.04.01).
@@ -63,7 +58,7 @@ fun attachment_valid(Board board, UnitID source, UnitID target, Bool player) -> 
     ref bodyguard = board.reserve_units[target.get()]
     if leader.owned_by_player1 != player or bodyguard.owned_by_player1 != player or !leader.attached_units.empty() or leader.models.empty() or bodyguard.models.empty() or leader.retired or bodyguard.retired or !attachment_role_available(bodyguard, leader.attachment_role) or leader.models.size() + bodyguard.models.size() > MAX_UNIT_MODELS:
         return false
-    if !orks_enhancement_attachment_valid(leader, bodyguard):
+    if !faction_enhancement_attachment_valid(leader, bodyguard):
         return false
     if leader.identity.value <= 0 or bodyguard.identity.value <= 0:
         return false
@@ -141,24 +136,22 @@ fun valid_attachment_state(Unit unit) -> Bool:
 # have died; actual revival/setup belongs to17.J (pp.67/88;01.02.03).
 fun attachment_origin_known(Unit unit, Model model) -> Bool:
     let known = model.original_unit == unit.identity
-    let painboss = false
     for component in range(unit.attached_units.size()):
         known = known or model.original_unit == unit.attached_units[component].identity
-        painboss = painboss or (model.original_unit == unit.attached_units[component].identity and unit.attached_units[component].datasheet.value == OrksDatasheet::painboss.value)
-    return known and (!model.painboss_mounted_attachment or painboss)
+    return known and faction_attachment_origin_valid(unit, model)
 
 # Raw unit-scoped rules survive until their source component's last member;
 # registered bearer grants independently use the specific-model clause (p.67).
 fun attachment_component_has_rules(Unit unit, EntityIdentity component) -> Bool:
     let confers = false
     if component == unit.identity:
-        confers = !unit.unit_abilities.empty() or unit.bodyguard_waaagh
+        confers = !unit.unit_abilities.empty() or faction_component_has_army_rules(unit, component)
     for record in range(unit.attached_units.size()):
         if unit.attached_units[record].identity == component:
-            confers = !unit.attached_units[record].abilities.empty() or unit.attached_units[record].waaagh
+            confers = !unit.attached_units[record].abilities.empty() or faction_component_has_army_rules(unit, component)
     for model in range(unit.models.size()):
         if unit[model].original_unit == component:
-            confers = confers or !unit[model].abilities.empty() or unit[model].has_waaagh or unit[model].grants_unit_riled_up
+            confers = confers or !unit[model].abilities.empty() or faction_model_confers_army_rules(unit[model])
     return confers
 
 # P67 retains conferred rules through the attacking unit's ALL attacks. Retain

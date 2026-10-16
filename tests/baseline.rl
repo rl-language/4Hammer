@@ -10853,7 +10853,7 @@ fun test_orks17all_flyboyz_riled_hit_modifier() -> Bool:
     orks17all_tag(board[0], OrksDatasheet::deffkoptas)
     orks17f_intrinsic_riled(board[0][0])
     let info = orks17c2b_info(board, 0)
-    return info.orks_hit_modifiers.size() == 1 and info.total_hit_modifier() == 1
+    return info.faction_hit_modifiers.size() == 1 and info.total_hit_modifier() == 1
 
 # Brute Warboss3+/riled2+ has no CP cost, closes after selecting its unit to
 # fight, and remains distinct from paid4+ permissions.
@@ -11509,7 +11509,7 @@ fun test_orks17all_grouping_preserves_natural_face_gates() -> Bool:
     let board = orks17all_fixture(OrksDetachment::kult_of_speed)
     let first = orks17c2b_info(board, 0)
     let second = first
-    second.orks_fail_hits_three = true
+    second.fail_hits_up_to_three = true
     return !attacks_are_identical(board, first, second)
 
 # Unpredictable6 changes effective target T until this activation ends, then
@@ -12989,7 +12989,7 @@ fun test_orks17p2_repair_contributions_and_full_choice_capacity() -> Bool:
     grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE, OrksEffectKind::clever_hit)
     grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE + 10, OrksEffectKind::clever_hit)
     let info = orks17p2_info(board, 0)
-    let independent = info.orks_unit_hit_modifiers.size() == 3 and info.total_hit_modifier() == 3
+    let independent = info.faction_unit_hit_modifiers.size() == 3 and info.total_hit_modifier() == 3
     let choices : AttackModifierChoices
     for index in range(MAX_ATTACK_MODIFIER_CHOICES):
         choices.append(attack_modifier_choice(rule_modifier(ModifierOperation::add, 1), ModifierOrigin::orks_datasheet))
@@ -15431,3 +15431,52 @@ fun test_weapon_catalog_nonattacking_equipment_cannot_be_selected() -> Bool:
     equip_weapon(board[0][0], Weapon::orks_pulsa_rokkit, 0)
     let selected : Bool[MAX_WEAPONS]
     return valid_model_equipment(board[0][0]) and !weapon_selection_valid(board, unit_id(0), 0, 0, true, selected, false) and !weapon_selection_valid(board, unit_id(0), 0, 1, false, selected, false) and may_finish_weapon_selection(board, unit_id(0), 0, true, false)
+
+# Neutral hooks leave ordinary models unchanged without a faction effect.
+# Dispatch infrastructure; core arithmetic/keyword/save rules remain pp10-19.
+fun test_faction_dispatch_unmodified_model_defaults() -> Bool:
+    let board = attack_declaration_fixture()
+    ref model = board[0][0]
+    return faction_keyword_override(model, Keyword::mounted) == 0 and faction_movement_bonus(model) == 0 and faction_toughness_bonus(model) == 0 and faction_invulnerable_base(model) == model.profile.invuln_save() and !faction_fights_first(model) and faction_charge_allowed(board, board[0]) and faction_action_allowed(board, board[0]) and faction_flight_allowed(board, board[0]) and faction_hidden_allowed(board, board[0])
+
+# A faction-owned effect is consumed on its actual recipient, independently
+# of which army owns that recipient (Orks psychic grants; core p67/01.02.02).
+fun test_faction_dispatch_recipient_effect_without_army_inference() -> Bool:
+    let board = attack_declaration_fixture()
+    board.armies[0].faction = ArmyFaction::space_marines
+    board.armies[1].faction = ArmyFaction::tyranids
+    let grant : OrksEffectGrant
+    grant.kind = OrksEffectKind::invulnerable_four
+    let payload : SourceGrant
+    payload = grant
+    let key : SourceEffectKey
+    key = 17
+    install_source_grant(board[1][0], payload, key)
+    let applied = board[1][0].effective_invulnerable_save() == 4 and faction_model_has_source_grant(board[1][0], key)
+    remove_source_grant(board[1][0], key)
+    return applied and !faction_model_has_source_grant(board[1][0], key) and board[1][0].effective_invulnerable_save() == board[1][0].profile.invuln_save()
+
+# Generic source installation/removal routes faction payloads by their type,
+# preserving overlapping ownership keys (01.02.02, core returning models p88).
+fun test_faction_dispatch_overlapping_grants_keep_other_source() -> Bool:
+    let board = attack_declaration_fixture()
+    let grant : OrksEffectGrant
+    grant.kind = OrksEffectKind::invulnerable_four
+    let payload : SourceGrant
+    payload = grant
+    let first : SourceEffectKey
+    let second : SourceEffectKey
+    first = 18
+    second = 19
+    install_source_grant(board[0][0], payload, first)
+    grant.kind = OrksEffectKind::invulnerable_five
+    payload = grant
+    install_source_grant(board[0][0], payload, second)
+    remove_source_grant(board[0][0], first)
+    return !faction_model_has_source_grant(board[0][0], first) and faction_model_has_source_grant(board[0][0], second) and board[0][0].effective_invulnerable_save() == 5
+
+# A source's optional faction policy does not grant a generic caller transport
+# permission; the shared known/capacity gate still owns eligibility (core p64).
+fun test_faction_dispatch_neutral_hook_does_not_authorize_transport() -> Bool:
+    let board = attack_declaration_fixture()
+    return faction_passenger_permitted(board[0][0], board[1][0]) and !passenger_model_permitted(board[0][0], board[1][0])

@@ -5,11 +5,7 @@ import movement_rules
 fun passenger_model_permitted(Model carrier, Model passenger) -> Bool:
     if !carrier.transport_permissions_known or carrier.transport_capacity.value == 0 or !carrier.has_keyword(Keyword::transport):
         return false
-    if carrier.orks_transport_permissions and (!passenger.has_keyword(Keyword::orks) or !passenger.has_keyword(Keyword::infantry)):
-        return false
-    if carrier.beast_snagga_passengers_only and !passenger.has_keyword(Keyword::beast_snagga):
-        return false
-    if carrier.forbid_ghaz_passenger and model_matches_datasheet(passenger, OrksDatasheet::ghazghkull_thraka):
+    if !faction_passenger_permitted(carrier, passenger):
         return false
     let permitted = carrier.permitted_passenger_keywords.empty()
     for permission in range(carrier.permitted_passenger_keywords.size()):
@@ -27,7 +23,7 @@ fun passenger_space_used(Board board, EntityIdentity carrier) -> Int:
     let occupied = 0
     for passenger_index in range(board.embarked_units.size()):
         if board.embarked_units[passenger_index].embarked_transport == carrier:
-            occupied = occupied + orks_passenger_space(board.embarked_units[passenger_index])
+            occupied = occupied + faction_passenger_space(board.embarked_units[passenger_index])
     return occupied
 
 # Entire friendly units embark; no partial unit can exceed per-model capacity
@@ -35,7 +31,7 @@ fun passenger_space_used(Board board, EntityIdentity carrier) -> Int:
 fun transport_can_carry(Board board, Unit passenger, Unit carrier_unit, Int carrier_model) -> Bool:
     if passenger.empty() or carrier_model < 0 or carrier_model >= carrier_unit.models.size() or passenger.owned_by_player1 != carrier_unit.owned_by_player1 or passenger.identity == carrier_unit.identity or !carrier_unit[carrier_model].is_alive() or !board.embarked_units.has_capacity():
         return false
-    let required = passenger_space_used(board, carrier_unit[carrier_model].identity) + orks_passenger_space(passenger)
+    let required = passenger_space_used(board, carrier_unit[carrier_model].identity) + faction_passenger_space(passenger)
     for model_index in range(passenger.models.size()):
         if !passenger_model_permitted(carrier_unit[carrier_model], passenger[model_index]):
             return false
@@ -94,7 +90,7 @@ fun transfer_embarked_unit(Board board, UnitID passenger, EntityIdentity carrier
     board[passenger].identity = 0
     board[passenger].embarked_transport = 0
     board[passenger].retired = true
-    register_orks_cargo_passives(board)
+    register_faction_cargo_passives(board)
 
 # Prebattle passengers use the same whole-unit permission checks without a
 # battlefield move/range requirement (18.01 p.64). Resolve carrier before erase.
@@ -105,7 +101,7 @@ fun embark_formation_unit(Board board, UnitID passenger, UnitID carrier, ModelID
     mark_unit_offboard(board.reserve_units[passenger.get()], true)
     board.embarked_units.append(board.reserve_units[passenger.get()])
     board.reserve_units.erase(passenger.get())
-    register_orks_cargo_passives(board)
+    register_faction_cargo_passives(board)
 
 # Circle fixtures use farthest passenger-base point to nearest carrier-base
 # point, preserving 3D range and whole-inch stored coordinates (18.04 p.65;
@@ -269,7 +265,7 @@ fun required_disembark_mode(Board board, Unit passenger, CarrierLocation carrier
     assert(carrier.found and !carrier.reserve, "disembark requires battlefield carrier")
     ref carrier_unit = board[carrier.unit]
     if carrier_unit.history.selected_move_phase == board.phase_serial.value + 1 and (carrier_unit.history.move_kind == MovementKind::normal or carrier_unit.history.move_kind == MovementKind::ingress):
-        if unit_orks_effect(board, carrier_unit, OrksEffectKind::assault_disembark) > 0 or carrier_unit.has_ability(AbilityKind::gut_hatch) and carrier_unit.history.move_kind == MovementKind::normal:
+        if faction_assault_disembark(board, carrier_unit):
             return DisembarkMode::assault
         return DisembarkMode::rapid
     if (carrier_unit.history.selected_move_phase != board.phase_serial.value + 1 or carrier_unit.history.move_kind == MovementKind::stationary) and transport_has_setup(board, passenger, carrier, DisembarkMode::tactical, -1):
@@ -564,4 +560,4 @@ fun returned_passenger_permitted(Board board, Unit unit, Model model) -> Bool:
     let candidate : Unit
     candidate = unit
     candidate.models.append(model)
-    return passenger_model_permitted(transport, model) and passenger_space_used(board, unit.embarked_transport) - orks_passenger_space(unit) + orks_passenger_space(candidate) <= transport.transport_capacity.value
+    return passenger_model_permitted(transport, model) and passenger_space_used(board, unit.embarked_transport) - faction_passenger_space(unit) + faction_passenger_space(candidate) <= transport.transport_capacity.value

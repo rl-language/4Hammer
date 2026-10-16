@@ -30,13 +30,13 @@ fun make_allocation_groups(Board board, Unit target, AttackSequenceInfo info) ->
             continue
         let group_index = -1
         for j in range(groups.size()):
-            if allocation_group_matches(groups[j], target[i], orks_allocation_invulnerable(target, target[i], info)):
+            if allocation_group_matches(groups[j], target[i], faction_allocation_invulnerable(target, target[i], info)):
                 group_index = j
         if group_index < 0:
             let group : AllocationGroup
             group.wounds = target[i].profile.wounds()
             group.save = target[i].effective_save()
-            group.invulnerable = orks_allocation_invulnerable(target, target[i], info)
+            group.invulnerable = faction_allocation_invulnerable(target, target[i], info)
             group.character = target[i].is_character()
             groups.append(group)
             group_index = groups.size() - 1
@@ -235,7 +235,7 @@ fun destruction_bank_count(Board board, Bool owner, Bool finish, UnitID source) 
 # Trigger presence determines retention, not merely taking attack damage
 # (p.87). Existing faction hooks retain their legacy definitions until task 17.
 fun has_destruction_trigger(Board board, UnitID source, Bool source_known, Model model, Bool fight_on_death) -> Bool:
-    return has_source_destruction_trigger(board, source, source_known, model) or carrier_has_passengers(board, model.identity) or model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value or orks_aircraft_death_source(board, model) or fight_on_death or model.has_deadly_demise or model.has_keyword(Keyword::master_of_possession) or (source_known and source.get() < board.units.size() and model.is_character() and board[source].has_ability(AbilityKind::feeder_tendrils))
+    return has_source_destruction_trigger(board, source, source_known, model) or carrier_has_passengers(board, model.identity) or faction_has_destruction_trigger(board, model) or fight_on_death or model.has_deadly_demise or model.has_keyword(Keyword::master_of_possession) or (source_known and source.get() < board.units.size() and model.is_character() and board[source].has_ability(AbilityKind::feeder_tendrils))
 
 # Raw lost wounds are committed only after all prevention for that application.
 # Snapshot provenance before removal so deferred hooks cannot target a new slot
@@ -243,29 +243,23 @@ fun has_destruction_trigger(Board board, UnitID source, Bool source_known, Model
 fun commit_wound_loss(Board board, DamageJob job, ModelID model, Int lost, Bool fight_on_death):
     ref unit = source_bank_unit(board, job.bank, job.target.get())
     assert(lost >= 0, "negative wound loss")
-    if lost > 0 and job.from_attack and board.orks_attack_active:
-        ref record = orks_attack_record(board, unit.identity)
-        add_attack_count(record.wounds_lost, min(lost, unit[model].wounds_left()))
+    faction_record_wound_loss(board, unit, model, lost, job.from_attack)
     if lost > 0:
         unit[model].suffered_wounds = min(unit[model].profile.wounds(), unit[model].suffered_wounds.value + lost)
     if unit[model].wounds_left() <= 0:
         unit[model].destroyed_phase = board.phase_serial.value + 1
         # Source lifetime p.67 independently requires retaining the bearer,
         # even if it has no Deadly Demise or other death-trigger ability.
-        if board.orks_attack_active and live_attachment_strength(unit) == 0:
-            ref destruction_record = orks_attack_record(board, unit.identity)
-            destruction_record.destroyed = true
-            unit.orks_destroyed_attack = board.orks_attack_serial
-            unit.orks_destroyed_phase = board.phase_serial.value + 1
+        faction_record_unit_destruction(board, unit)
         let retained_rules = false
         if job.bank.value == SourceBank::battlefield.value:
             retained_rules = retain_attachment_rules_for_attack(board, job.target, model, job)
         unit[model].attachment_abilities_retained = retained_rules
-        let unit_death = !unit.unit_destruction_event_issued and live_attachment_strength(unit) == 0 and (has_source_unit_destruction_trigger(board, job) or orks_package(board, unit, OrksDetachment::flyboyz) and unit[model].has_keyword(Keyword::aircraft))
+        let unit_death = !unit.unit_destruction_event_issued and live_attachment_strength(unit) == 0 and (has_source_unit_destruction_trigger(board, job) or faction_unit_destruction_trigger(board, unit, unit[model]))
         unit[model].destroyed_whole_unit = unit_death
         if unit_death:
             unit.unit_destruction_event_issued = true
-        if unit_death or retained_rules or fight_on_death or has_source_destruction_trigger(board, job.source, job.source_known, unit[model]) or unit[model].orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value or (job.bank.value == SourceBank::battlefield.value and has_destruction_trigger(board, job.source, job.source_known, unit[model], fight_on_death)):
+        if unit_death or retained_rules or fight_on_death or has_source_destruction_trigger(board, job.source, job.source_known, unit[model]) or faction_offboard_destruction_trigger(unit[model]) or (job.bank.value == SourceBank::battlefield.value and has_destruction_trigger(board, job.source, job.source_known, unit[model], fight_on_death)):
             unit[model].state = ModelState::pending_destruction
             if fight_on_death:
                 unit[model].state = ModelState::fight_on_death

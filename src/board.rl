@@ -42,12 +42,12 @@ cls AttackSequenceInfo:
     # Beastboss Dodge Dis!: separate contribution before the cumulative cap.
     Bool dodge_dis_hit_bonus
     Bool hit_roll_bonus
-    RuleModifiers orks_hit_modifiers
+    RuleModifiers faction_hit_modifiers
     # Preserve each repair source in addition to the four unit-rule slots;
     # all modifiers are cumulative and individually ignorable (02.02.01/02).
-    CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS> orks_unit_hit_modifiers
-    RuleModifiers orks_wound_modifiers
-    Bool orks_fail_hits_three
+    CheckedVector<RuleModifier, MAX_DATASHEET_HIT_MODIFIERS> faction_unit_hit_modifiers
+    RuleModifiers faction_wound_modifiers
+    Bool fail_hits_up_to_three
     # Cover changes BS, separate from the clamped hit modifier (p.50).
     Bool target_has_cover
     # Printed Plunging Fire changes BS; Aircraft are excluded (pp.73–74).
@@ -138,7 +138,7 @@ cls AttackSequenceInfo:
     # and appendix02.02.01). Optional ignoring retains its own provenance.
     # https://wahapedia.ru/wh40k11ed/factions/orks/Beastboss
     fun total_hit_modifier() -> Int:
-        let result = apply_rule_modifiers(0, self.orks_hit_modifiers, false) + apply_rule_modifiers(0, self.orks_unit_hit_modifiers, false) + int(self.hit_roll_bonus) + int(self.dodge_dis_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
+        let result = apply_rule_modifiers(0, self.faction_hit_modifiers, false) + apply_rule_modifiers(0, self.faction_unit_hit_modifiers, false) + int(self.hit_roll_bonus) + int(self.dodge_dis_hit_bonus) - int(self.hit_roll_malus) - int(self.damaged_hit_penalty)
         let i = 0
         while i != self.profile_hit_roll_bonus.size():
             if self.profile_hit_roll_bonus[i] == self.source_profile:
@@ -148,7 +148,7 @@ cls AttackSequenceInfo:
         return result
 
     fun total_wound_modifier() -> Int:
-        let result = apply_rule_modifiers(0, self.orks_wound_modifiers, false) + int(self.wound_roll_bonus) - int(self.wound_roll_malus)
+        let result = apply_rule_modifiers(0, self.faction_wound_modifiers, false) + int(self.wound_roll_bonus) - int(self.wound_roll_malus)
         let i = 0
         while i != self.profile_wound_roll_bonus.size():
             if self.profile_wound_roll_bonus[i] == self.source_profile:
@@ -463,8 +463,7 @@ cls Board:
     # New Orks cards require their selected package, independently of the
     # roster and all CP restrictions (Orks detachment source sections).
     fun stratagem_selected_for_player(Bool player, Stratagem strat) -> Bool:
-        let package = strat.orks_detachment()
-        return package == OrksDetachment::none or (self.armies[int(player)].faction == ArmyFaction::orks and self.armies[int(player)].has_detachment(package))
+        return faction_stratagem_selected(self, player, strat)
 
     # Printed extra costs/free-use effects still obey phase restrictions (p.54)
     # and the supplied appendix02.02.01 maximum +1CP increase. An explicit
@@ -476,19 +475,19 @@ cls Board:
     # Only the named Orks cards override shocked/destroyed target gates;
     # their future actions still check the full printed timing/keywords.
     fun can_target_strat_with_cost(Bool player, Stratagem strat, Unit target, Int cost) -> Bool:
-        if strat == Stratagem::overwatch and unit_orks_effect(self, target, OrksEffectKind::overwatch_blocked) > 0:
+        if !faction_stratagem_target_allowed(self, player, strat, target):
             return false
         let policy = strat.target_policy()
         let present = !target.empty()
         if policy == StratagemTargetPolicy::destroyed_unit:
             present = destroyed_stratagem_target(target)
-        let friendly = strat.orks_detachment() == OrksDetachment::none or target.owned_by_player1 == player
+        let friendly = faction_stratagem_owner_allowed(strat, target, player)
         return self.can_use_strat_with_cost(player, strat, cost) and friendly and present and !target.history.stratagem_targeted_by_player[int(player)] and !(target.battle_socked and target.owned_by_player1 == player and policy != StratagemTargetPolicy::allow_shocked)
 
     # Each player may target a unit once per phase (p54); Orks/Hunta-Rig
     # Tramplasquig Charge applies its discount before affordability.
     fun can_target_strat(Bool player, Stratagem strat, Unit target) -> Bool:
-        return self.can_target_strat_with_cost(player, strat, target, orks_datasheet_stratagem_cost(strat, target))
+        return self.can_target_strat_with_cost(player, strat, target, faction_datasheet_stratagem_cost(strat, target))
 
     # Untargeted legacy faction options still need supplied target definitions;
     # their expenditure/phase bookkeeping is nevertheless atomic (p.54).
@@ -508,7 +507,7 @@ cls Board:
     # Targeted use pays the actual cost (p54), including Orks/Hunta-Rig
     # Tramplasquig Charge; free use still consumes phase/target limits.
     fun commit_stratagem(Bool player, Stratagem strat, Unit target):
-        self.commit_stratagem_with_cost(player, strat, target, orks_datasheet_stratagem_cost(strat, target))
+        self.commit_stratagem_with_cost(player, strat, target, faction_datasheet_stratagem_cost(strat, target))
 
     # Invalid targets/costs fail without partial expenditure or history changes
     # (p.54); this recoverable primitive supports legality/rollback tests.
@@ -697,7 +696,7 @@ cls Board:
                     if self.model_in_objective_range(unit[j], objective):
                         total = total + max(0, unit.model_objective_control(j))
                         if !unit.battle_socked:
-                            total = total + orks_bunka_passenger_control(self, unit[j], player)
+                            total = total + faction_bunka_passenger_control(self, unit[j], player)
         return total
 
     # Stateless marker query retained for existing diagnostic fixtures. Real
@@ -849,7 +848,7 @@ fun valid_weapon_condition(WeaponRule rule) -> Bool:
 fun valid_state_foundations(Board board) -> Bool:
     if !valid_attack_modifier_choice(board.pending_modifier_choice) or board.pending_modifier_kind.value < 0 or board.pending_modifier_kind.value > ModifierSelectionKind::hit_roll.value:
         return false
-    if !valid_orks_army_state(board) or !valid_source_foundations(board) or !valid_orks_detachment_foundations(board):
+    if !valid_faction_army_state(board) or !valid_source_foundations(board) or !valid_faction_detachment_foundations(board):
         return false
     if !valid_rule_modifiers(board.attack_info.skill_modifiers) or !valid_rule_modifiers(board.attack_info.ap_modifiers) or !valid_rule_modifiers(board.attack_info.damage_modifiers):
         return false
@@ -929,15 +928,8 @@ fun valid_model_numeric_history(Model model) -> Bool:
         return false
     if model.geometry.proxy_diameter_mm.value < 0 or model.geometry.proxy_diameter_mm.value > 1000:
         return false
-    if model.orks_enhancement.value < 0 or model.orks_enhancement.value > OrksEnhancement::warphead.value or model.orks_upgrade_origin.value < 0 or model.orks_upgrade_origin.value >= MAX_IDENTITY_SEQUENCE or model.destroying_unit_identity.value < 0 or model.destroying_unit_identity.value >= MAX_IDENTITY_SEQUENCE or model.destroyed_phase.value < 0 or model.destroyed_phase.value >= MAX_PHASE_STAMP:
+    if !faction_model_state_valid(model) or model.destroying_unit_identity.value < 0 or model.destroying_unit_identity.value >= MAX_IDENTITY_SEQUENCE or model.destroyed_phase.value < 0 or model.destroyed_phase.value >= MAX_PHASE_STAMP:
         return false
-    for ork_effect in range(model.orks_effects.size()):
-        ref grant = model.orks_effects[ork_effect]
-        if grant.kind.value <= 0 or grant.kind.value > max(grant.kind) or grant.source_effect.value < 0 or grant.source_effect.value >= MAX_SOURCE_EFFECT_KEY or grant.amount.value < 0 or grant.amount.value >= MAX_CHARACTERISTIC or grant.associated_unit.value < 0 or grant.associated_unit.value >= MAX_IDENTITY_SEQUENCE:
-            return false
-    for riled_index in range(model.riled_source_effects.size()):
-        if model.riled_source_effects[riled_index].value < 0 or model.riled_source_effects[riled_index].value >= MAX_SOURCE_EFFECT_KEY:
-            return false
     if !valid_attack_modifier_permissions(model.attack_modifier_permissions):
         return false
     if !valid_stat(model.random_movement) or !valid_stat(model.deadly_demise):
@@ -975,7 +967,7 @@ fun valid_model_numeric_history(Model model) -> Bool:
 fun valid_unit_numeric_history(Unit unit) -> Bool:
     if unit.movement_distance_limit.value < 0 or unit.movement_distance_limit.value >= 258:
         return false
-    if unit.psyker_level.value < 0 or unit.psyker_level.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.budget.round_stamp.value < 0 or unit.orks_psychic_usage.budget.round_stamp.value >= MAX_ROUNDS or unit.orks_psychic_usage.budget.spent.value < 0 or unit.orks_psychic_usage.budget.spent.value >= MAX_CHARACTERISTIC or unit.orks_psychic_usage.roar_phase.value < 0 or unit.orks_psychic_usage.roar_phase.value >= MAX_PHASE_STAMP or unit.orks_psychic_usage.visions_phase.value < 0 or unit.orks_psychic_usage.visions_phase.value >= MAX_PHASE_STAMP:
+    if unit.psyker_level.value < 0 or unit.psyker_level.value >= MAX_CHARACTERISTIC or !faction_unit_state_valid(unit):
         return false
     if unit.history.embarked_phase.value < 0 or unit.history.embarked_phase.value >= MAX_PHASE_STAMP or unit.history.ingress_turn.value < 0 or unit.history.ingress_turn.value >= MAX_TURN_STAMP:
         return false

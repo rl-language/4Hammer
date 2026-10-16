@@ -6,8 +6,8 @@ func _initialize():
 func check_modifier_ignoring():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 43)
-	assert(library.get_observation_schema_version() == 43)
+	assert(library.get_state_schema_version() == 44)
+	assert(library.get_observation_schema_version() == 44)
 	assert(library.get_action_schema_version() == 26)
 	var board = RLCBoard.make()
 	var origin = RLCModifierOrigin.make()

@@ -120,9 +120,9 @@ fun battlefield_move_eligible(Board board, UnitID id, MovementKind kind) -> Bool
     if !unit_has_movable_model(board[id]):
         return false
     if kind == MovementKind::pulse_jet:
-        return !board.is_in_melee(board[id]) and unit_orks_effect(board, board[id], OrksEffectKind::pulse_engine) > 0
+        return !board.is_in_melee(board[id]) and faction_special_move_available(board, board[id], kind)
     if kind == MovementKind::ordered_retreat:
-        return board.is_in_melee(board[id]) and !board[id].battle_socked and !orks_forces_escape(board, board[id])
+        return board.is_in_melee(board[id]) and !board[id].battle_socked and !faction_forces_escape(board, board[id])
     if kind == MovementKind::desperate_escape:
         return board.is_in_melee(board[id])
     if kind == MovementKind::normal or kind == MovementKind::advance:
@@ -153,11 +153,7 @@ fun record_move(Board board, UnitID id, MovementKind kind):
         board[id].interrupt_actions()
         board[id].history.last_move_phase = board.phase_serial.value + 1
         board[id].history.made_move_this_turn = true
-    if kind == MovementKind::pulse_jet:
-        board[id].can_charge = false
-        grant_orks_effect(board, id, id, 173, OrksEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
-        grant_orks_effect(board, id, id, 174, OrksEffectKind::no_action, 1, SourceDuration::turn, invalid_entity_identity())
-        grant_orks_effect(board, id, id, 175, OrksEffectKind::pulse_defence, 1, SourceDuration::next_own_turn, invalid_entity_identity())
+    faction_record_move_effects(board, id, kind)
     if kind == MovementKind::advance:
         board[id].history.advanced_this_turn = true
         board[id].has_run = true
@@ -182,7 +178,7 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
     assert(valid, "setup candidate must satisfy every placement condition")
     let destination = board.units.size()
     if candidate.is_generated_replacement and !candidate.has_return_slot and !board.units.has_capacity():
-        let reusable = orks_replacement_slot(board)
+        let reusable = faction_replacement_slot(board)
         assert(reusable >= 0, "replacement has no safe battlefield slot")
         board.expired_reserves.value.append(board[reusable])
         candidate.has_return_slot = true
@@ -210,7 +206,7 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
         # ingress callers; prebattle deployment/redeployment is not ingress.
         let arrival : UnitID
         arrival = destination
-        orks_flyboss_ingress(board, arrival)
+        faction_flyboss_ingress(board, arrival)
     board.reserve_units.erase(reserve.get())
 
 # Repositioning preserves effects/history and retires the battlefield slot
@@ -300,11 +296,9 @@ fun scouts_values_uniform(Unit unit) -> Bool:
 fun scouts_distance(Unit unit) -> Int:
     if unit.empty():
         return 0
-    if unit_has_orks_enhancement(unit, OrksEnhancement::minefield_detail) and unit.embarked_transport.value == 0:
-        for member in range(unit.models.size()):
-            for entry in range(unit[member].scout_distances.size()):
-                assert(unit[member].scout_distances[entry].value == 6, "Scouts values must all be identical")
-        return 6
+    let override = faction_scouts_override(unit)
+    if override >= 0:
+        return override
     for i in range(unit.models.size()):
         if unit[i].scout_distances.empty():
             return 0
@@ -319,10 +313,7 @@ fun movement_policy(Unit unit, Model model, MovementKind kind, Bool skies) -> Mo
     policy.traverse_enemies = kind == MovementKind::desperate_escape
     # Big Mek Shokk-boosta crosses all models, without granting terrain/FLY.
     # https://wahapedia.ru/wh40k11ed/factions/orks/Big-Mek
-    if kind == MovementKind::advance and unit.shokk_boosta_move:
-        policy.traverse_enemies = true
-        policy.exclude_titanic = false
-        policy.exclude_monster_vehicle = false
+    faction_prepare_movement_policy(unit, kind, policy)
     if unit.has_ability(AbilityKind::super_heavy_walker) and (kind == MovementKind::normal or kind == MovementKind::advance or kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape):
         policy.traverse_enemies = true
         policy.exclude_titanic = !(kind == MovementKind::desperate_escape)
@@ -331,12 +322,7 @@ fun movement_policy(Unit unit, Model model, MovementKind kind, Bool skies) -> Mo
         policy.traverse_terrain = true
         policy.free_vertical_movement = true
         policy.exclude_titanic = false
-    if kind == MovementKind::pulse_jet:
-        policy.traverse_enemies = true
-        policy.traverse_terrain = true
-        policy.free_vertical_movement = true
-        policy.exclude_titanic = false
-        policy.exclude_monster_vehicle = false
+    faction_finish_movement_policy(kind, policy)
     return policy
 
 # Orks index Special Move Types/PULSE JET MOVE has its own D6+18 budget.
@@ -659,4 +645,4 @@ fun return_opponent_aircraft(Board board):
 fun battlefield_entry_available(Board board, Unit unit) -> Bool:
     if unit.has_return_slot:
         return unit.return_slot.get() < board.units.size() and board[unit.return_slot].retired and board[unit.return_slot].empty()
-    return board.units.has_capacity() or (unit.is_generated_replacement and orks_replacement_slot(board) >= 0)
+    return board.units.has_capacity() or (unit.is_generated_replacement and faction_replacement_slot(board) >= 0)

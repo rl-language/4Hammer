@@ -21,7 +21,7 @@ func button_label(rules, library, action):
 func check_muster():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 43)
+	assert(library.get_state_schema_version() == 44)
 	assert(library.get_action_schema_version() == 26)
 	var game = library.play()
 	library.pick_custom_orks(game)
