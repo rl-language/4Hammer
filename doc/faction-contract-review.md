@@ -1,5 +1,9 @@
 # Core-facing faction contracts
 
+The [army API specification](army-api.md) now defines the replacement design
+with the approved names and concrete contracts. This review describes the
+current dispatch implementation and the dependencies that migration must fix.
+
 This review follows dispatch hooks into their **core consumers**. It records
 the interfaces implemented now and the work still required for a core that does
 not interpret particular factions' rules. Documentation changes do not perform
