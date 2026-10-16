@@ -885,3 +885,22 @@ legacy factions. Preserve explicit typed composition/shared frames; do not
 replace them with strings, opaque state or a universal rule interpreter. Further
 runtime extraction remains pending in ROADMAP; documentation review alone does
 not authorize or certify those changes.
+
+## Approved army API design and names —2026-10-16
+
+Use [doc/army-api.md](doc/army-api.md) as the concrete replacement specification.
+The user approved these six names: **Army catalog, Abilities, Passive effects,
+Available abilities, Use ability, Army state**. Do not restore Rule sources,
+Rule contributions, Opportunities or Resolution as API-family names. Existing
+source/effect primitives can retain their names where their mechanics match.
+
+The specification defines typed contexts/outputs, instance and original-recipient
+identities, pure queries, exact windows, common cost/use services, operation
+requests/results and activation continuations. Armies provide their actual rule
+conditions/choices; core owns the shared procedures. Implementations must retire
+superseded policy channels, not merely add renamed wrappers around every hook.
+
+The specification's signatures are contract notation, not current callable
+Rulebook declarations. Keep specification completion distinct from runtime
+implementation in ROADMAP. Preserve explicit typed state, bank/retained-source
+semantics and the shared-frame non-re-entry audit during migration.

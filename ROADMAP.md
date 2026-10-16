@@ -5,6 +5,9 @@ Dispatch contract documentation is complete; the runtime follow-ups listed at
 the end of this roadmap remain pending. Their objective is removal of faction
 rule interpretation from core, using whatever adequate bounded storage is needed.
 
+Approved replacement: [army API specification](doc/army-api.md). All six API
+families and their contracts are specified; runtime implementation is pending.
+
 [The Rulebook design and architecture guide](doc/rulebook-architecture.md) documents the current engine structure and execution paths. The guide is completed documentation work; this roadmap owns implementation status and validation.
 
 This roadmap tracks planning and implementation separately. Tasks 1–5 and 7–16 are complete within their documented scopes. Task6 attachment implementation remains unfinished; the Orks audit now supplies its Orks permission lists, while other factions still require data. Task17 implementation is pending, with its Orks source/requirements audit complete. Task8 retains the user-approved area-only visibility abstraction. Update status and record evidence as work is completed; do not mark a task complete merely because it compiles.
@@ -1962,3 +1965,40 @@ next-state47 are unchanged. Validation is source-level executable-line equality,
 hook-comment coverage, the scoped source-boundary audit, local Markdown links
 and diff checks. No compilation, full rules suite or fuzzer run is required for
 these documentation-only edits; earlier runtime validation remains historical.
+
+## Army API specification —2026-10-16
+
+The user approved the design and the names **Army catalog, Abilities, Passive
+effects, Available abilities, Use ability, Army state**. The concrete
+[specification](doc/army-api.md) defines each family's methods, input/output
+types, ownership, pure-query requirements, neutral behavior and shared-core
+responsibilities. It is the design for the runtime work below, not another
+description of the current Orks forwarding functions.
+
+- [x] Specify the six API families with the approved names.
+- [x] Tie the contracts to attack snapshots, modifiers/rerolls, sequencing,
+  attachment/source lifetime, persisting/offboard effects and destruction rules.
+- [x] Specify typed effect/permission contexts, original-option provenance,
+  availability/acceptance, atomic cost/use and operation request/result steps.
+- [x] Specify genuine interruption/parent continuation without recursive entry
+  into a live shared frame; distinguish it from ordinary after-attack reactions.
+- [x] Link the design from the current architecture/faction guides and record
+  the implementation rules in AGENTS.md.
+- [ ] Implement shared identities, typed contexts/outputs, effect bundles and
+  activation/operation-result state with native contract regressions.
+- [ ] Implement catalog/ability descriptions and core reconciliation; migrate
+  Model/component metadata and selected-option provenance.
+- [ ] Implement Passive effects and migrate consumers, including the interface
+  corrections recorded by the preceding contract review.
+- [ ] Implement Available abilities/Use ability, exact windows, common cost/use
+  services, scoped effects and required interruption continuations.
+- [ ] Migrate Orks, extract legacy factions' core behavior and remove superseded
+  hooks. Add an independent test-army provider and broaden boundary audits.
+- [ ] Complete matching-schema/binding, native, frame/layout and sanitized
+  replay/fuzzer validation for the combined runtime migration.
+
+This delivery is the concrete API specification in Markdown. Its signatures are
+explicitly interface notation; no unimplemented runtime stubs or unused API
+modules are added. Current runtime code, state/observation46, action27 and
+next-state47 remain unchanged. Documentation validation checks local links,
+method/family coverage and diff hygiene; no full rules build/tests are needed.
