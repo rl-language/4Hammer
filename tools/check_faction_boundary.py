@@ -15,6 +15,8 @@ def audit(root):
         concrete.update(re.findall(r'^(?:fun|act) (\w+)\(', path.read_text(), re.M))
     presentation = {'as_string_literal', 'source_label_text', 'weapon_family_label',
                     'pretty_string'}
+    common_effects = {'no_charge', 'no_action', 'grounded', 'fights_first',
+                      'invulnerable_save', 'mobile', 'deep_strike'}
     errors = []
     functions = 0
     for path in sorted(src.glob('*.rl')):
@@ -44,6 +46,10 @@ def audit(root):
                                'concrete behavior call: ' + call))
             if declaration in presentation:
                 continue
+            for effect in re.findall(r'\bRuleEffectKind::(\w+)', line):
+                if effect not in common_effects:
+                    errors.append((str(path.relative_to(root)), number,
+                                   'embedded faction effect policy: ' + effect))
             if re.search(r'\b(?:OrksEffectKind|OrksEnhancement|OrksDatasheet)::', line):
                 errors.append((str(path.relative_to(root)), number,
                                'embedded faction rule/identity check'))

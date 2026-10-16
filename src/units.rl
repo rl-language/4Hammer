@@ -29,7 +29,7 @@ cls Model:
     # https://wahapedia.ru/wh40k11ed/factions/orks/Nobz
     OrksEnhancement orks_enhancement
     EntityIdentity orks_upgrade_origin
-    OrksEffectGrants orks_effects
+    RuleEffectGrants rule_effects
     # Bank/staged offboard units have no battlefield visibility/ranges
     # (supplied appendix01.02.04, transport pp.64–65).
     Bool off_battlefield
@@ -122,6 +122,8 @@ cls Model:
 
     # Read per-model keywords without copying owning storage (pp.67/87).
     fun has_keyword(Keyword keyword) -> Bool:
+        if model_rule_keyword_granted(self, keyword):
+            return true
         let override = faction_keyword_override(self, keyword)
         if override != 0:
             return override > 0
@@ -144,7 +146,7 @@ cls Model:
     # Properties stay readable to explicit death hooks; active use is gated
     # by Unit.has_ability/is_alive (p.87). Avoid an owning temporary here.
     fun has_ability(AbilityKind kind) -> Bool:
-        if faction_model_grants_intrinsic_ability(self, kind):
+        if model_rule_ability_granted(self, kind) or faction_model_grants_intrinsic_ability(self, kind):
             return true
         let i = 0
         ref rules = self.abilities
@@ -244,7 +246,7 @@ cls Model:
     # that a bonus can turn into an invulnerable permission (appendix02.02.01).
     # Orks/Wazbom-Blastajet Blastajet Force Field is selected equipment.
     fun effective_invulnerable_save() -> Int:
-        let base = faction_invulnerable_base(self)
+        let base = granted_invulnerable_base(self, faction_invulnerable_base(self))
         return effective_characteristic_value(base, ModifiedCharacteristic::invulnerable_save, self.characteristic_modifiers, base > 6)
 
     # Riled-up gives a5+ InSv and ranged Assault; owned keys preserve overlapping
@@ -323,8 +325,8 @@ cls Unit:
     FixedStat psyker_level
     OrksPsychicUsage orks_psychic_usage
     Bool is_generated_replacement
-    LinearlyDistributedInt<0, 1025> orks_destroyed_attack
-    PhaseStamp orks_destroyed_phase
+    LinearlyDistributedInt<0, 1025> destroyed_attack
+    PhaseStamp destroyed_phase
     Bool off_battlefield
     EntityIdentity embarked_transport
     # Stable retired slot survives reserve round trips (pp.68–69/74).

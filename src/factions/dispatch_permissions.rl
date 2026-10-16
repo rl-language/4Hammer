@@ -15,17 +15,8 @@ fun faction_detection_modifier(Board board, Unit target) -> Int:
     return orks_detection_modifier(board, target)
 
 # Source-owned no_charge restriction; core retains ordinary eligibility and expiry (Orks Pulse Jet/psychic cards).
-fun faction_charge_allowed(Board board, Unit unit) -> Bool:
-    return orks_charge_allowed(board, unit)
-
 # Source-owned no_action restriction; core retains ordinary eligibility and expiry (Orks Pulse Jet/psychic cards).
-fun faction_action_allowed(Board board, Unit unit) -> Bool:
-    return orks_action_allowed(board, unit)
-
 # Source-owned grounded restriction; core retains ordinary eligibility and expiry (Orks Pulse Jet/psychic cards).
-fun faction_flight_allowed(Board board, Unit unit) -> Bool:
-    return orks_flight_allowed(board, unit)
-
 # Only selected Orks packages grant their support cards; unassociated core cards pass through (Orks detachment sections).
 fun faction_stratagem_selected(Board board, Bool player, Stratagem strat) -> Bool:
     return orks_stratagem_selected(board, player, strat)

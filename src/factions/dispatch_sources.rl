@@ -36,9 +36,6 @@ fun register_faction_option_passives(Board board):
     register_orks_option_passives(board)
 
 # Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun valid_faction_detachment_foundations(Board board) -> Bool:
-    return valid_orks_detachment_foundations(board)
-
 # Composition hook: sources adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_source_event_available(Board board, SourceInstance instance, SourceEvent event) -> Bool:
     return orks_source_event_available(board, instance, event)

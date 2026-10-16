@@ -5,10 +5,8 @@ import board
 
 # Orks active keywords, Blastajet Smoke suppression and Painboss bearer-only Mounted (respective cards; core p67).
 fun orks_keyword_override(Model model, Keyword keyword) -> Int:
-    for effect in range(model.orks_effects.size()):
-        if keyword == Keyword::mobile and model.orks_effects[effect].kind.value == OrksEffectKind::mobile.value:
-            return 1
-        if keyword == Keyword::fly and model.orks_effects[effect].kind.value == OrksEffectKind::lifted.value:
+    for effect in range(model.rule_effects.size()):
+        if keyword == Keyword::fly and model.rule_effects[effect].kind.value == RuleEffectKind::lifted.value:
             return 1
     if model.blastajet_force_field and keyword == Keyword::smoke:
         return -1
@@ -26,12 +24,8 @@ fun orks_model_grants_intrinsic_ability(Model model, AbilityKind kind) -> Bool:
         for intrinsic in range(model.abilities.size()):
             if model.abilities[intrinsic] == AbilityKind::nazdregs_know_wotz:
                 return true
-    if kind == AbilityKind::deep_strike:
-        for jump_effect in range(model.orks_effects.size()):
-            if model.orks_effects[jump_effect].kind.value == OrksEffectKind::jump_deep_strike.value:
-                return true
-    for effect in range(model.orks_effects.size()):
-        if kind == AbilityKind::keep_huntin and model.orks_effects[effect].kind.value == OrksEffectKind::borrowed_keep_huntin.value or kind == AbilityKind::intimidating_motivation and model.orks_effects[effect].kind.value == OrksEffectKind::borrowed_intimidation.value:
+    for effect in range(model.rule_effects.size()):
+        if kind == AbilityKind::keep_huntin and model.rule_effects[effect].kind.value == RuleEffectKind::borrowed_keep_huntin.value or kind == AbilityKind::intimidating_motivation and model.rule_effects[effect].kind.value == RuleEffectKind::borrowed_intimidation.value:
             return true
     return false
 
@@ -50,11 +44,6 @@ fun orks_invulnerable_base(Model model) -> Int:
         base = min(base, 5)
     if is_riled_up(model):
         base = min(base, 5)
-    for effect in range(model.orks_effects.size()):
-        if model.orks_effects[effect].kind.value == OrksEffectKind::invulnerable_four.value:
-            base = min(base, 4)
-        if model.orks_effects[effect].kind.value == OrksEffectKind::invulnerable_five.value:
-            base = min(base, 5)
     return base
 
 # Painboss Runnin wiv da Herd changes this attached bearer only (Orks/Painboss; core pp66-67).
@@ -63,12 +52,6 @@ fun orks_prepare_attached_model(Unit leader, Unit bodyguard, Model model):
         model.painboss_mounted_attachment = true
 
 # Warp Visions grants Fights First; core still checks every participating model (Orks/Wurrband; core p40).
-fun orks_fights_first(Model model) -> Bool:
-    for effect in range(model.orks_effects.size()):
-        if model.orks_effects[effect].kind.value == OrksEffectKind::fights_first.value:
-            return true
-    return false
-
 # Orks transport passenger faction/type and Ghazghkull restrictions (Orks transport cards; core p64).
 fun orks_passenger_permitted(Model carrier, Model passenger) -> Bool:
     if carrier.orks_transport_permissions and (!passenger.has_keyword(Keyword::orks) or !passenger.has_keyword(Keyword::infantry)):
@@ -81,24 +64,15 @@ fun orks_passenger_permitted(Model carrier, Model passenger) -> Bool:
 
 # Burna Mark prevents Hidden (Orks/Burna-Bommer).
 fun orks_hidden_allowed(Board board, Unit unit) -> Bool:
-    return unit_orks_effect(board, unit, OrksEffectKind::burna_mark) == 0
+    return unit_rule_effect(board, unit, RuleEffectKind::burna_mark) == 0
 
 # Found Em and Extra Sneaky change detection range; core applies its shared9-30in cap (Orks cards).
 fun orks_detection_modifier(Board board, Unit target) -> Int:
-    return 3 * unit_orks_effect(board, target, OrksEffectKind::found_detection) - 3 * int(unit_has_orks_enhancement(target, OrksEnhancement::extra_sneaky))
+    return 3 * unit_rule_effect(board, target, RuleEffectKind::found_detection) - 3 * int(unit_has_orks_enhancement(target, OrksEnhancement::extra_sneaky))
 
 # Source-owned no_charge restriction; core retains ordinary eligibility and expiry (Orks Pulse Jet/psychic cards).
-fun orks_charge_allowed(Board board, Unit unit) -> Bool:
-    return unit_orks_effect(board, unit, OrksEffectKind::no_charge) == 0
-
 # Source-owned no_action restriction; core retains ordinary eligibility and expiry (Orks Pulse Jet/psychic cards).
-fun orks_action_allowed(Board board, Unit unit) -> Bool:
-    return unit_orks_effect(board, unit, OrksEffectKind::no_action) == 0
-
 # Source-owned grounded restriction; core retains ordinary eligibility and expiry (Orks Pulse Jet/psychic cards).
-fun orks_flight_allowed(Board board, Unit unit) -> Bool:
-    return unit_orks_effect(board, unit, OrksEffectKind::grounded) == 0
-
 # Only selected Orks packages grant their support cards; unassociated core cards pass through (Orks detachment sections).
 fun orks_stratagem_selected(Board board, Bool player, Stratagem strat) -> Bool:
     let package = strat.orks_detachment()
@@ -106,7 +80,7 @@ fun orks_stratagem_selected(Board board, Bool player, Stratagem strat) -> Bool:
 
 # Named Orks effects forbid Overwatch on their target; core retains payment/shock/phase gates (Orks cards).
 fun orks_stratagem_target_allowed(Board board, Bool player, Stratagem strat, Unit target) -> Bool:
-    return !(strat == Stratagem::overwatch and unit_orks_effect(board, target, OrksEffectKind::overwatch_blocked) > 0)
+    return !(strat == Stratagem::overwatch and unit_rule_effect(board, target, RuleEffectKind::overwatch_blocked) > 0)
 
 # Orks support cards select friendly targets; generic core cards retain their own owner policy (Orks cards).
 fun orks_stratagem_owner_allowed(Stratagem strat, Unit target, Bool player) -> Bool:
@@ -157,13 +131,7 @@ fun orks_model_confers_army_rules(Model model) -> Bool:
     return model.has_waaagh or model.grants_unit_riled_up
 
 # Nazdreg Unit Composition explicitly permits the three simultaneous profiles.
-fun orks_simultaneous_weapon_profile(Weapon profile) -> Bool:
-    return profile.value == Weapon::orks_nazdreg_kustom_blasta_x_gatler.value or profile.value == Weapon::orks_nazdreg_kustom_blasta_x_shoota.value or profile.value == Weapon::orks_nazdreg_kustom_blasta_x_skorcha.value
-
 # Orks KFF/Pulsa equipment grants abilities rather than attacks (their Wargear Options).
-fun orks_nonattacking_equipment(Weapon profile) -> Bool:
-    return profile.value == Weapon::orks_kustom_force_field.value or profile.value == Weapon::orks_pulsa_rokkit.value
-
 # Waaagh riled-up supplies ranged Assault; intrinsic rules remain core (Orks Army Rules).
 fun orks_model_has_weapon_rule(Model model, Weapon profile, WeaponRuleKind kind) -> Bool:
     return kind == WeaponRuleKind::assault and profile.range() > 0 and is_riled_up(model)
@@ -179,23 +147,20 @@ fun orks_reset_timing_progress(FactionTimingProgress progress):
 
 # Da Button adds one Hazardous use after ordinary selected physical weapons (Orks/Dread Mob).
 fun orks_extra_attack_hazards(Board board, Unit unit) -> Int:
-    return int(unit_orks_effect(board, unit, OrksEffectKind::button_hazard) > 0)
+    return int(unit_rule_effect(board, unit, RuleEffectKind::button_hazard) > 0)
 
 # Finish the Orks attack ledger only after attack-end source processing.
-fun orks_end_attack(Board board):
-    board.orks_attack_active = false
-
 # Automatic shock success is a source-owned permission, not a change to the core test (Orks cards).
 fun orks_automatic_shock_success(Board board, Unit unit) -> Bool:
-    return unit_orks_effect(board, unit, OrksEffectKind::automatic_shock_success) > 0
+    return unit_rule_effect(board, unit, RuleEffectKind::automatic_shock_success) > 0
 
 # Snotling psychic penalty contributes before the common Leadership comparison (Orks psychic card).
 fun orks_leadership_roll_penalty(Board board, Unit unit) -> Int:
-    return unit_orks_effect(board, unit, OrksEffectKind::snotling_leadership_penalty)
+    return unit_rule_effect(board, unit, RuleEffectKind::snotling_leadership_penalty)
 
 # Fuel Mixa Grot and source-owned Advance+2 contribute without replacing the shared roll (Orks cards).
 fun orks_advance_distance_bonus(Board board, Unit unit) -> Int:
-    return int(unit.has_ability(AbilityKind::fuel_mixa_grot)) + 2 * unit_orks_effect(board, unit, OrksEffectKind::advance_plus_two)
+    return int(unit.has_ability(AbilityKind::fuel_mixa_grot)) + 2 * unit_rule_effect(board, unit, RuleEffectKind::advance_plus_two)
 
 # Selected Shokk-boosta permission ends at this move boundary (Orks/Big-Mek).
 fun orks_finish_move_selection(Board board, UnitID id):

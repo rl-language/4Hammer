@@ -7,7 +7,7 @@ cls SharedActionFrames:
     Disembark disembark
     OrksPsychicTest orks_psychic_test
     AttackDiceBatch collect_attack_dice
-    AttackWithOrksReactions attack_with_faction_reactions
+    AttackWithReactions attack_with_reactions
     BattleShockTest battle_shock_test
     Charge charge
     ChooseAttackModifiers choose_attack_modifiers
@@ -35,7 +35,7 @@ cls SharedActionFrames:
     OrksMovementAbilities faction_movement_abilities
     OrksOffboardSupportSelection choose_orks_offboard_support
     OrksPackageWindow orks_package_window
-    OrksPostAttack resolve_orks_post_attack
+    OrksPostAttack resolve_faction_post_attack
     OrksPsychic use_orks_psychic
     GrantedMove granted_move
     OrksSupportCard use_orks_support_card

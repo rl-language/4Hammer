@@ -1,4 +1,5 @@
 import factions.dispatch
+import attack_reactions
 import action
 import ability_procedures
 import healing_rules
@@ -271,7 +272,7 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
     assert(count == 0 or board.attack_info.source.skill() > 0 or board.attack_info.has_weapon_rule(board, WeaponRuleKind::torrent), "missing hit skill without Torrent")
     if board.attack_info.has_weapon_rule(board, WeaponRuleKind::torrent):
         generated_hits = count
-        record_faction_hits(board, board.attack_info.target_unit_id, count.value)
+        record_attack_hits(board, board.attack_info.target_unit_id, count.value)
     else:
         board.current_state = CurrentStateDescription::hit_roll
         frm hit_rerolls = !board.attack_info.only_hits_on_6 and !(board.attack_info.shooting_kind == ShootingKind::indirect and board.attack_info.has_weapon_rule(board, WeaponRuleKind::indirect_fire))
@@ -322,7 +323,7 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                         subaction*(board) board.shared_actions.intercept_faction_hits
                         frm ordinary_shield_intercepted_snapshot_4 = board.shared_actions.intercept_faction_hits.intercepted
                         add_attack_count(generated_hits, 1 - ordinary_shield_intercepted_snapshot_4.value)
-                        record_faction_hits(board, board.attack_info.target_unit_id, 1 - ordinary_shield_intercepted_snapshot_4.value)
+                        record_attack_hits(board, board.attack_info.target_unit_id, 1 - ordinary_shield_intercepted_snapshot_4.value)
                     ordinary_remaining = ordinary_remaining - 1
                 continue
             frm outcome : AttackRollResult
@@ -346,9 +347,9 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                     frm critical_shield_intercepted_snapshot_5 = board.shared_actions.intercept_faction_hits.intercepted
                     let additional_hits = board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit)
                     add_attack_count(generated_hits, additional_hits)
-                    record_faction_hits(board, board.attack_info.target_unit_id, additional_hits)
+                    record_attack_hits(board, board.attack_info.target_unit_id, additional_hits)
                     if critical_shield_intercepted_snapshot_5 == 0:
-                        record_faction_hits(board, board.attack_info.target_unit_id, 1)
+                        record_attack_hits(board, board.attack_info.target_unit_id, 1)
                         if automatic:
                             add_attack_count(generated_wounds, 1)
                         else:
@@ -363,10 +364,10 @@ act resolve_attack_dice(ctx Board board, ctx Unit target, ctx Unit source_unit, 
                 frm shielding_intercepted_snapshot_6 = board.shared_actions.intercept_faction_hits.intercepted
                 frm remaining_hits : CombatCounter
                 remaining_hits = rolled_count.value - shielding_intercepted_snapshot_6.value
-                record_faction_hits(board, board.attack_info.target_unit_id, remaining_hits.value)
+                record_attack_hits(board, board.attack_info.target_unit_id, remaining_hits.value)
                 if outcome == AttackRollResult::critical:
                     add_attack_count(generated_hits, rolled_count.value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
-                    record_faction_hits(board, board.attack_info.target_unit_id, rolled_count.value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
+                    record_attack_hits(board, board.attack_info.target_unit_id, rolled_count.value * board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit))
                     add_attack_count(generated_wounds, lethal_wounds.value)
                     add_attack_count(generated_hits, remaining_hits.value - lethal_wounds.value)
                 else:
@@ -1188,7 +1189,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     if board[source].empty():
         return
     board.identify_unit(board[source])
-    begin_faction_attack(board)
+    begin_attack_results(board)
     if !melee:
         board[source].history.shot_this_phase = true
     frm previous_owner = board.current_decision_maker
@@ -1286,7 +1287,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
 
     board.shared_actions.resolve_source_event = resolve_source_event(board, source_event(SourceEventKind::attack_end, board[source].identity, board[target].identity, invalid_entity_identity()))
     subaction*(board) board.shared_actions.resolve_source_event
-    end_faction_attack(board)
+    end_attack_results(board)
     board.timing.active_player = previous_active
     board[source].shooting_kind = previous_kind
     board.current_decision_maker = previous_owner
@@ -1533,8 +1534,8 @@ act timing_overwatch(ctx Board board, frm Bool player) -> TimingOverwatch:
     act overwatch(frm UnitID source) {overwatch_source_valid(board, player, source)}
     board.commit_stratagem(player, Stratagem::overwatch, board[source])
     act overwatch_target(frm UnitID target) {overwatch_target_valid(board, source, target)}
-    board.shared_actions.attack_with_faction_reactions = attack_with_faction_reactions(board, source, target, false, true)
-    subaction*(board) board.shared_actions.attack_with_faction_reactions
+    board.shared_actions.attack_with_reactions = attack_with_reactions(board, source, target, false, true)
+    subaction*(board) board.shared_actions.attack_with_reactions
     board.current_decision_maker = player
 
 # Choose Heroic's mode before rolling, commit its actual cost, then use the
@@ -2038,8 +2039,8 @@ act selected_fight(ctx Board board, frm UnitID source) -> SelectedFight:
         board.shared_actions.melee_move = melee_move(board, source, false, true)
         subaction*(board) board.shared_actions.melee_move
     let unused_target : UnitID
-    board.shared_actions.attack_with_faction_reactions = attack_with_faction_reactions(board, source, unused_target, true, false)
-    subaction*(board) board.shared_actions.attack_with_faction_reactions
+    board.shared_actions.attack_with_reactions = attack_with_reactions(board, source, unused_target, true, false)
+    subaction*(board) board.shared_actions.attack_with_reactions
     board.timing.active_player = previous_active
     board.current_decision_maker = previous_owner
 
@@ -2335,7 +2336,7 @@ act movement(ctx Board board, frm UnitID id, frm Bool use_the_gilded_spear) -> M
     if !(board[id].history.selected_move_phase == board.phase_serial.value + 1) and has_live_model(board[id]):
         board[id].pending_move_kind = kind
         board[id].move_takes_to_skies = false
-        if board[id].has_keyword(Keyword::fly) and faction_flight_allowed(board, board[id]):
+        if board[id].has_keyword(Keyword::fly) and rule_flight_allowed(board, board[id]):
             act take_to_skies(Bool do_it)
             board[id].move_takes_to_skies = do_it
         frm mobile = false
@@ -2489,8 +2490,8 @@ act selected_shooting(ctx Board board, frm UnitID source, frm UnitID initial_tar
     board[source].history.shot_this_phase = true
     act choose_shooting_kind(ShootingKind kind) {shooting_kind_valid(board, source, kind)}
     board[source].shooting_kind = kind
-    board.shared_actions.attack_with_faction_reactions = attack_with_faction_reactions(board, source, initial_target, false, false)
-    subaction*(board) board.shared_actions.attack_with_faction_reactions
+    board.shared_actions.attack_with_reactions = attack_with_reactions(board, source, initial_target, false, false)
+    subaction*(board) board.shared_actions.attack_with_reactions
 
 # Keep the existing two-UnitID click selector as a compatibility entrypoint;
 # the new one-unit selector also supports no-weapon units (pp.34–35/88).

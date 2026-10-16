@@ -1,3 +1,4 @@
+import attack_results
 import board
 import source_effects
 
@@ -25,15 +26,15 @@ fun append_orks_package_weapon_rules(Board board, UnitID source, Int bearer, Wea
     if !melee and orks_package(board, unit, OrksDetachment::shoota_boyz) and unit.has_keyword(Keyword::orks) and unit.has_keyword(Keyword::infantry):
         result.append(weapon_rule(WeaponRuleKind::assault))
     if !melee:
-        append_orks_effect_ability(board, model, OrksEffectKind::ranged_assault, WeaponRuleKind::assault, 0, result)
-        append_orks_effect_ability(board, model, OrksEffectKind::ranged_lethal, WeaponRuleKind::letal_hits, 0, result)
-        append_orks_effect_ability(board, model, OrksEffectKind::ranged_sustained, WeaponRuleKind::sustained_hit, 1, result)
-        append_orks_effect_ability(board, model, OrksEffectKind::ranged_hazardous, WeaponRuleKind::hazardous, 0, result)
-        append_orks_effect_ability(board, model, OrksEffectKind::vindictive_all, WeaponRuleKind::letal_hits, 0, result)
-        append_orks_effect_ability(board, model, OrksEffectKind::vindictive_all, WeaponRuleKind::sustained_hit, 1, result)
-        append_orks_effect_ability(board, model, OrksEffectKind::vindictive_all, WeaponRuleKind::hazardous, 0, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::ranged_assault, WeaponRuleKind::assault, 0, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::ranged_lethal, WeaponRuleKind::letal_hits, 0, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::ranged_sustained, WeaponRuleKind::sustained_hit, 1, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::ranged_hazardous, WeaponRuleKind::hazardous, 0, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::vindictive_all, WeaponRuleKind::letal_hits, 0, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::vindictive_all, WeaponRuleKind::sustained_hit, 1, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::vindictive_all, WeaponRuleKind::hazardous, 0, result)
     else:
-        append_orks_effect_ability(board, model, OrksEffectKind::melee_lethal, WeaponRuleKind::letal_hits, 0, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::melee_lethal, WeaponRuleKind::letal_hits, 0, result)
     if melee and unit_has_orks_enhancement(unit, OrksEnhancement::throat_slittas):
         result.append(non_monster_vehicle_weapon_rule(WeaponRuleKind::letal_hits, 0))
     if !melee and model_has_orks_enhancement(unit, model, OrksEnhancement::supa_glowy_fing):
@@ -45,19 +46,19 @@ fun append_orks_package_weapon_rules(Board board, UnitID source, Int bearer, Wea
         if unit_is_riled_up(unit):
             result.append(weapon_rule(WeaponRuleKind::sustained_hit, 1))
     if !melee and name.value == Weapon::orks_big_mek_with_shokk_attack_gun_shokk_attack_gun.value:
-        append_orks_effect_ability(board, model, OrksEffectKind::shokka_torrent, WeaponRuleKind::torrent, 0, result)
-        append_orks_effect_ability(board, model, OrksEffectKind::shokka_sustained, WeaponRuleKind::sustained_hit, 2, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::shokka_torrent, WeaponRuleKind::torrent, 0, result)
+        append_orks_effect_ability(board, model, RuleEffectKind::shokka_sustained, WeaponRuleKind::sustained_hit, 2, result)
     # Source wording increases existing numeric instances instead of creating
     # a competing instance; apply increments to each before duplicate selection.
     if !melee and unit_has_orks_enhancement(unit, OrksEnhancement::supa_snazz_dakka) and name.value == Weapon::orks_flash_gitz_snazzgun_cutta.value:
         result.append(weapon_rule(WeaponRuleKind::rapid_fire, 1))
-    for effect_index in range(model.orks_effects.size()):
-        ref effect = model.orks_effects[effect_index]
+    for effect_index in range(model.rule_effects.size()):
+        ref effect = model.rule_effects[effect_index]
         if !source_grant_active(board, effect.source_effect):
             continue
-        if !melee and effect.kind.value == OrksEffectKind::rapid_fire_increment.value:
+        if !melee and effect.kind.value == RuleEffectKind::rapid_fire_increment.value:
             increment_orks_weapon_ability(result, WeaponRuleKind::rapid_fire, effect.amount.value, effect.source_effect)
-        if melee and effect.kind.value == OrksEffectKind::cleave_increment.value:
+        if melee and effect.kind.value == RuleEffectKind::cleave_increment.value:
             increment_orks_weapon_ability(result, WeaponRuleKind::cleave, effect.amount.value, effect.source_effect)
 
 # Close-range Dakka/Mow 'Em Down explicitly improve a printed numeric rule;
@@ -101,16 +102,16 @@ fun append_orks_declaration_modifiers(Board board, UnitID source, DeclaredWeapon
             addition = addition + 3
     if kind.value == ModifiedCharacteristic::attacks.value:
         if melee:
-            addition = addition + unit_orks_effect(board, unit, OrksEffectKind::unbridled_attacks)
-        addition = addition + unit_orks_effect(board, unit, OrksEffectKind::button_attacks)
+            addition = addition + unit_rule_effect(board, unit, RuleEffectKind::unbridled_attacks)
+        addition = addition + unit_rule_effect(board, unit, RuleEffectKind::button_attacks)
         if !melee and declaration.weapon_name.value == Weapon::orks_big_mek_with_shokk_attack_gun_shokk_attack_gun.family_id():
-            addition = addition + model_orks_effect(board, model, OrksEffectKind::shokka_attacks)
+            addition = addition + model_rule_effect(board, model, RuleEffectKind::shokka_attacks)
     if kind.value == ModifiedCharacteristic::strength.value:
-        addition = addition + 2 * unit_orks_effect(board, unit, OrksEffectKind::button_strength)
+        addition = addition + 2 * unit_rule_effect(board, unit, RuleEffectKind::button_strength)
         if orks_package(board, unit, OrksDetachment::wurrband) and model.has_keyword(Keyword::orks) and model.has_keyword(Keyword::psyker) and declared_weapon_has_kind(declaration, WeaponRuleKind::psychic):
             addition = addition + 1 + orks_psychic_contributors(board, unit, model) / 5
     if kind.value == ModifiedCharacteristic::armour_penetration.value:
-        addition = addition - unit_orks_effect(board, unit, OrksEffectKind::button_ap)
+        addition = addition - unit_rule_effect(board, unit, RuleEffectKind::button_ap)
     if addition != 0:
         result.append(rule_modifier(ModifierOperation::add, addition))
 
@@ -129,32 +130,32 @@ fun append_orks_attack_effects(Board board, UnitID source, UnitID target, Declar
         info.ap_modifiers.append(rule_modifier(ModifierOperation::add, -1))
     if ranged and orks_package(board, unit, OrksDetachment::flyboyz) and unit_is_riled_up(unit) and unit.has_keyword(Keyword::orks) and (unit.has_keyword(Keyword::aircraft) or orks_type(unit, OrksDatasheet::deffkoptas)):
         info.faction_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
-    if model_has_orks_enhancement(unit, model, OrksEnhancement::proper_killy) or unit_orks_effect(board, unit, OrksEffectKind::reroll_hits_ones) > 0:
+    if model_has_orks_enhancement(unit, model, OrksEnhancement::proper_killy) or unit_rule_effect(board, unit, RuleEffectKind::reroll_hits_ones) > 0:
         info.reroll1_hits = true
-    if unit_orks_effect(board, unit, OrksEffectKind::reroll_hits_all) > 0:
+    if unit_rule_effect(board, unit, RuleEffectKind::reroll_hits_all) > 0:
         info.reroll_hits = true
-    if unit_orks_effect(board, unit, OrksEffectKind::armed_to_da_teef) > 0:
+    if unit_rule_effect(board, unit, RuleEffectKind::armed_to_da_teef) > 0:
         info.reroll1_hits = true
         info.reroll_hits = info.reroll_hits or unit_is_riled_up(unit)
     if ranged and orks_package(board, unit, OrksDetachment::wreckas) and orks_wrecka_unit(unit) and board.timing.phase == BattlePhase::shooting and unit.owned_by_player1 == board.current_player and (unit.history.wrecka_objective_selection or unit_in_any_objective_range(board, victim)):
         info.reroll1_hits = true
     if ranged:
-        if unit_orks_effect(board, unit, OrksEffectKind::reroll_hits_fly) > 0 and victim.has_keyword(Keyword::fly):
+        if unit_rule_effect(board, unit, RuleEffectKind::reroll_hits_fly) > 0 and victim.has_keyword(Keyword::fly):
             info.reroll_hits = true
-        if unit_orks_effect(board, unit, OrksEffectKind::wound_bonus_non_monster_vehicle) > 0 and !victim.has_keyword(Keyword::monster) and !victim.has_keyword(Keyword::vehicle):
+        if unit_rule_effect(board, unit, RuleEffectKind::wound_bonus_non_monster_vehicle) > 0 and !victim.has_keyword(Keyword::monster) and !victim.has_keyword(Keyword::vehicle):
             info.faction_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
-        if unit_orks_effect(board, unit, OrksEffectKind::close_range_ap) > 0 and live_unit_distance(unit, victim) <= 9.0:
+        if unit_rule_effect(board, unit, RuleEffectKind::close_range_ap) > 0 and live_unit_distance(unit, victim) <= 9.0:
             info.ap_modifiers.append(rule_modifier(ModifierOperation::add, -1))
-        if weapon.borrowed_weapon and unit_orks_effect(board, unit, OrksEffectKind::deck_hit_bonus) > 0:
+        if weapon.borrowed_weapon and unit_rule_effect(board, unit, RuleEffectKind::deck_hit_bonus) > 0:
             info.faction_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
-        if unit_orks_effect(board, unit, OrksEffectKind::hit_plus_one) > 0:
-            info.faction_hit_modifiers.append(rule_modifier(ModifierOperation::add, unit_orks_effect(board, unit, OrksEffectKind::hit_plus_one)))
-        if unit_orks_effect(board, victim, OrksEffectKind::all_wound_protection) > 0 or (unit_orks_effect(board, victim, OrksEffectKind::strong_wound_protection) > 0 and info.attack_strength() > info.target_toughness.value):
+        if unit_rule_effect(board, unit, RuleEffectKind::hit_plus_one) > 0:
+            info.faction_hit_modifiers.append(rule_modifier(ModifierOperation::add, unit_rule_effect(board, unit, RuleEffectKind::hit_plus_one)))
+        if unit_rule_effect(board, victim, RuleEffectKind::all_wound_protection) > 0 or (unit_rule_effect(board, victim, RuleEffectKind::strong_wound_protection) > 0 and info.attack_strength() > info.target_toughness.value):
             info.faction_wound_modifiers.append(rule_modifier(ModifierOperation::add, -1))
         if victim.all_have_ability(AbilityKind::stealth):
             info.faction_hit_modifiers.append(rule_modifier(ModifierOperation::add, -1))
-        info.fail_hits_up_to_three = unit_orks_effect(board, victim, OrksEffectKind::fail_hits_one_to_three) > 0
-        if unit_orks_effect(board, victim, OrksEffectKind::lifted) > 0:
+        info.fail_hits_up_to_three = unit_rule_effect(board, victim, RuleEffectKind::fail_hits_one_to_three) > 0
+        if unit_rule_effect(board, victim, RuleEffectKind::lifted) > 0:
             info.target_has_cover = false
         else:
             info.target_has_cover = info.target_has_cover or orks_smoky_cover(board, model, victim)
@@ -201,35 +202,10 @@ fun orks_lone_operative(Board board, Unit unit) -> Bool:
 
 # Attack bookkeeping follows actual hits and prevented wound loss; declaration
 # alone cannot trigger Gun-crazy Show-offs/Goaded Into Action (Orks cards).
-fun orks_attack_record(Board board, EntityIdentity target) -> ref OrksAttackRecord:
-    let found = -1
-    for record in range(board.orks_attack_records.size()):
-        if board.orks_attack_records[record].target == target:
-            found = record
-    if found < 0:
-        let entry : OrksAttackRecord
-        entry.target = target
-        board.orks_attack_records.append(entry)
-        found = board.orks_attack_records.size() - 1
-    return board.orks_attack_records[found]
-
 # A bounded activation serial distinguishes a unit destroyed by this attacking
 # unit from an earlier casualty. This is identity infrastructure for Infested.
-fun begin_orks_attack(Board board):
-    assert(board.orks_attack_serial.value + 1 < 1025, "attack serial capacity exceeded")
-    board.orks_attack_serial = board.orks_attack_serial + 1
-    board.orks_attack_records.clear()
-    board.orks_attack_active = true
-
 # A successful original roll is distinct from generated Sustained Hits. Grot
 # Shields cancels only rolled hits, leaving the separately generated hits.
-fun record_orks_hits(Board board, UnitID target, Int count):
-    if board.orks_attack_active and count > 0:
-        ref record = orks_attack_record(board, board[target].identity)
-        add_attack_count(record.successful_hits, count)
-        if board.attack_info.squig_launcha_weapon:
-            add_attack_count(record.squig_launcha_hits, count)
-
 # Brute Force Warbosses roll3+, riled+1; paid Fight-on-Death cards roll4+,
 # with riled+1 or Crazed Rampage's Deff Dread+3. Selection of their own unit
 # to fight closes eligibility, even if individual models did not attack.
@@ -244,11 +220,11 @@ fun orks_fight_death_threshold(Board board, Unit unit, Model model) -> Int:
     if orks_package(board, unit, OrksDetachment::brute_bosses) and model.has_keyword(Keyword::warboss):
         threshold = 3 - int(unit_is_riled_up(unit))
     if board.timing.phase == BattlePhase::fight:
-        if unit_orks_effect(board, unit, OrksEffectKind::fight_on_death_four) > 0:
+        if unit_rule_effect(board, unit, RuleEffectKind::fight_on_death_four) > 0:
             let card_threshold = 4 - int(unit_is_riled_up(unit))
             if threshold == 0 or threshold > card_threshold:
                 threshold = card_threshold
-        if unit_orks_effect(board, unit, OrksEffectKind::fight_on_death_dread) > 0:
+        if unit_rule_effect(board, unit, RuleEffectKind::fight_on_death_dread) > 0:
             let dread_threshold = 4 - 3 * int(orks_type(unit, OrksDatasheet::deff_dread))
             if threshold == 0 or threshold > dread_threshold:
                 threshold = dread_threshold
@@ -258,9 +234,9 @@ fun orks_fight_death_threshold(Board board, Unit unit, Model model) -> Int:
 # its last battlefield model ends interception without changing the CP target.
 fun orks_grot_shield(Board board, Unit unit) -> Int:
     for member in range(unit.models.size()):
-        for effect in range(unit[member].orks_effects.size()):
-            ref grant = unit[member].orks_effects[effect]
-            if grant.kind.value == OrksEffectKind::grot_shield.value and source_grant_active(board, grant.source_effect):
+        for effect in range(unit[member].rule_effects.size()):
+            ref grant = unit[member].rule_effects[effect]
+            if grant.kind.value == RuleEffectKind::grot_shield.value and source_grant_active(board, grant.source_effect):
                 for grots in range(board.units.size()):
                     if board.units[grots].identity == grant.associated_unit and !board.units[grots].off_battlefield and has_live_model(board.units[grots]):
                         return grots
@@ -284,15 +260,15 @@ fun orks_post_attack_card_valid(Board board, UnitID attacker, UnitID target, Str
     let hit = false
     let lost = false
     let destroyed = false
-    for record in range(board.orks_attack_records.size()):
-        if board.orks_attack_records[record].target == unit.identity:
-            hit = board.orks_attack_records[record].successful_hits > 0
-            lost = board.orks_attack_records[record].wounds_lost > 0
-            destroyed = board.orks_attack_records[record].destroyed
+    for record in range(board.attack_records.size()):
+        if board.attack_records[record].target == unit.identity:
+            hit = board.attack_records[record].successful_hits > 0
+            lost = board.attack_records[record].wounds_lost > 0
+            destroyed = board.attack_records[record].destroyed
     if !board.can_target_strat(unit.owned_by_player1, card, unit):
         return false
     if card == Stratagem::orks_infested_war_zone:
-        return destroyed and unit.orks_destroyed_attack == board.orks_attack_serial and unit.owned_by_player1 != board[attacker].owned_by_player1 and orks_original_type(unit, OrksDatasheet::gretchin) and board.reserve_units.has_capacity()
+        return destroyed and unit.destroyed_attack == board.attack_serial and unit.owned_by_player1 != board[attacker].owned_by_player1 and orks_original_type(unit, OrksDatasheet::gretchin) and board.reserve_units.has_capacity()
     if melee or !(board.timing.phase == BattlePhase::shooting) or unit.off_battlefield or !has_live_model(unit):
         return false
     if card == Stratagem::orks_grab_it:
@@ -323,8 +299,7 @@ fun orks_post_attack_target_valid(Board board, UnitID attacker, UnitID target, B
 # queued actor; the flat outer runner performs its ordinary shooting later.
 act resolve_orks_post_attack(ctx Board board, frm UnitID attacker, frm Bool melee) -> OrksPostAttack:
     frm previous_owner = board.current_decision_maker
-    frm reaction_available = false
-    frm reaction_source : UnitID
+    frm reaction : ReactionAttackRequest
     frm owner = board.current_player
     frm controllers : BInt<0, 3>
     while controllers.value < 2:
@@ -339,14 +314,16 @@ act resolve_orks_post_attack(ctx Board board, frm UnitID attacker, frm Bool mele
                     if card == Stratagem::orks_infested_war_zone:
                         create_orks_replacement(board, recipient)
                     if card == Stratagem::orks_grab_it:
-                        grant_orks_effect(board, recipient, recipient, 300 + card.value, OrksEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
+                        grant_orks_effect(board, recipient, recipient, 300 + card.value, RuleEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
                         frm six : StatModifier
                         six = 6
                         board.shared_actions.granted_move = reactive_move(board, recipient, six, true)
                         subaction*(board) board.shared_actions.granted_move
                     if card == Stratagem::orks_gun_crazy_show_offs:
-                        reaction_available = true
-                        reaction_source = recipient
+                        reaction.available = true
+                        reaction.source = recipient
+                        reaction.target = attacker
+                        reaction.restrict_target = true
                     if card == Stratagem::orks_goaded_into_action:
                         board.current_roll = rerollable_dice_roll(board, unit_is_riled_up(board[recipient]), false, false, owner, recipient)
                         subaction*(board) board.current_roll
@@ -373,30 +350,6 @@ fun orks_post_attack_owner_available(Board board, UnitID attacker, Bool melee, B
 # Flat attack/reaction queue: every Gun-crazy use consumes the ordinary shared
 # once-per-phase stratagem limit, so repeated reactions end by rule rather than
 # an invented depth cutoff. Its sole target is the enemy unit that just shot.
-act attack_with_orks_reactions(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee, frm Bool overwatch) -> AttackWithOrksReactions:
-    frm caller_target = board.forced_attack_target
-    frm continuing = true
-    frm first = true
-    while continuing:
-        if !first:
-            act choose_reaction_shooting_kind(ShootingKind kind) {shooting_kind_valid(board, source, kind)}
-            board[source].shooting_kind = kind
-        board.attack = attack(board, source, target, melee, overwatch)
-        subaction*(board) board.attack
-        board.shared_actions.resolve_orks_post_attack = resolve_orks_post_attack(board, source, melee)
-        subaction*(board) board.shared_actions.resolve_orks_post_attack
-        frm post_reaction_available_snapshot_1 = board.shared_actions.resolve_orks_post_attack.reaction_available
-        frm post_reaction_source_snapshot_1 = board.shared_actions.resolve_orks_post_attack.reaction_source
-        continuing = post_reaction_available_snapshot_1
-        if continuing:
-            target = source
-            source = post_reaction_source_snapshot_1
-            melee = false
-            overwatch = false
-            board.forced_attack_target = board[target].identity
-            first = false
-    board.forced_attack_target = caller_target
-
 # Unpredictable Genius triggers only when all declared ranged attacks share
 # one target. Multiple-target declarations remain legal and do NOT trigger it.
 # Madcap Meks source; target declarations/core grouping pp16-17.
@@ -419,13 +372,13 @@ act orks_unpredictable_genius(ctx Board board, frm UnitID source, frm UnitID tar
         return
     act roll(Dice genius_face)
     if genius_face == 1:
-        grant_orks_effect(board, source, target, 470, OrksEffectKind::invulnerable_four, 1, SourceDuration::phase, invalid_entity_identity())
+        grant_orks_effect(board, source, target, 470, RuleEffectKind::invulnerable_save, 4, SourceDuration::phase, invalid_entity_identity())
         effect = board.next_source_effect
     if genius_face == 4:
-        grant_orks_effect(board, source, source, 470, OrksEffectKind::hit_plus_one, 1, SourceDuration::phase, invalid_entity_identity())
+        grant_orks_effect(board, source, source, 470, RuleEffectKind::hit_plus_one, 1, SourceDuration::phase, invalid_entity_identity())
         effect = board.next_source_effect
     if genius_face == 5:
-        grant_orks_effect(board, source, target, 470, OrksEffectKind::lifted, 1, SourceDuration::phase, invalid_entity_identity())
+        grant_orks_effect(board, source, target, 470, RuleEffectKind::lifted, 1, SourceDuration::phase, invalid_entity_identity())
         effect = board.next_source_effect
     if genius_face == 6:
         grant_orks_payload(board, source, target, 470, characteristic_modifier(ModifiedCharacteristic::toughness, ModifierOperation::add, -1), SourceDuration::phase)
@@ -458,13 +411,13 @@ act orks_shokka_selection(ctx Board board, frm UnitID source) -> OrksShokkaSelec
                 act decline_temperamental_shokka()
                 act temperamental_shokka()
                     act roll(Dice shokka_face)
-                    frm kind : OrksEffectKind
-                    kind = OrksEffectKind::shokka_attacks
+                    frm kind : RuleEffectKind
+                    kind = RuleEffectKind::shokka_attacks
                     if shokka_face == 1:
-                        kind = OrksEffectKind::shokka_torrent
-                        grant_orks_model_effect(board, source, bearer, 480, OrksEffectKind::shokka_destroy)
+                        kind = RuleEffectKind::shokka_torrent
+                        grant_orks_model_effect(board, source, bearer, 480, RuleEffectKind::shokka_destroy)
                     if shokka_face == 6:
-                        kind = OrksEffectKind::shokka_sustained
+                        kind = RuleEffectKind::shokka_sustained
                     grant_orks_model_effect(board, source, bearer, 481, kind)
         member_index = member_index + 1
 
@@ -473,8 +426,8 @@ act orks_shokka_selection(ctx Board board, frm UnitID source) -> OrksShokkaSelec
 fun orks_runt_maw_target(Board board, UnitID source, UnitID target) -> Bool:
     if target.get() >= board.units.size() or !orks_support_actor(board, target, !board[source].owned_by_player1):
         return false
-    for record in range(board.orks_attack_records.size()):
-        if board.orks_attack_records[record].target == board[target].identity and board.orks_attack_records[record].successful_hits > 0:
+    for record in range(board.attack_records.size()):
+        if board.attack_records[record].target == board[target].identity and board.attack_records[record].successful_hits > 0:
             return true
     return false
 
@@ -490,10 +443,10 @@ act orks_shooting_option_end(ctx Board board, frm UnitID source) -> OrksShooting
             target_available = target_available or orks_runt_maw_target(board, source, target)
         if target_available:
             act choose_runt_maw_target(frm UnitID snotlings) {orks_runt_maw_target(board, source, snotlings)}
-            grant_orks_effect(board, source, snotlings, 200 + OrksEnhancement::enhanced_runt_maw.value, OrksEffectKind::snotling_leadership_penalty, 1, SourceDuration::next_own_turn, invalid_entity_identity())
+            grant_orks_effect(board, source, snotlings, 200 + OrksEnhancement::enhanced_runt_maw.value, RuleEffectKind::snotling_leadership_penalty, 1, SourceDuration::next_own_turn, invalid_entity_identity())
     frm member_index : ModelIterator
     while member_index.value < board[source].models.size():
-        if board[source][member_index.value].is_alive() and model_orks_effect(board, board[source][member_index.value], OrksEffectKind::shokka_destroy) > 0:
+        if board[source][member_index.value].is_alive() and model_rule_effect(board, board[source][member_index.value], RuleEffectKind::shokka_destroy) > 0:
             frm bearer : ModelID
             bearer = member_index.value
             frm identity = board[source][bearer].identity
@@ -549,7 +502,7 @@ act orks_dreadherder_shooting(ctx Board board, frm UnitID source) -> OrksDreadhe
             act decline_dreadherder()
             act choose_dreadherder_target(frm UnitID walker) {orks_dreadherder_target(board, source, walker)}
                 commit_source_usage(board, usage)
-                grant_orks_effect(board, source, walker, 200 + OrksEnhancement::dreadherder.value, OrksEffectKind::reroll_hits_ones, 1, SourceDuration::turn, invalid_entity_identity())
+                grant_orks_effect(board, source, walker, 200 + OrksEnhancement::dreadherder.value, RuleEffectKind::reroll_hits_ones, 1, SourceDuration::turn, invalid_entity_identity())
     board.current_decision_maker = previous_owner
 
 # Dreadherder can be used before other units shoot; selecting its bearer to
@@ -643,7 +596,7 @@ fun orks_ramshackle_obscures(Board board, Model observer, Model target) -> Bool:
 fun orks_wobbled_observer(Board board, Model observer) -> Bool:
     for unit_index in range(board.units.size()):
         if board[unit_index].find_model(observer.identity) >= 0:
-            return unit_orks_effect(board, board[unit_index], OrksEffectKind::wobbled) > 0
+            return unit_rule_effect(board, board[unit_index], RuleEffectKind::wobbled) > 0
     return false
 
 # Post-shot effects share one chosen-target action, with eligibility based on
@@ -655,8 +608,8 @@ fun orks_hit_effect_target_valid(Board board, UnitID source, UnitID target) -> B
     if board[source].has_ability(AbilityKind::squig_barrage):
         if board[target].has_keyword(Keyword::monster) or board[target].has_keyword(Keyword::vehicle):
             return false
-        for record in range(board.orks_attack_records.size()):
-            if board.orks_attack_records[record].target == board[target].identity and board.orks_attack_records[record].squig_launcha_hits.value > 0:
+        for record in range(board.attack_records.size()):
+            if board.attack_records[record].target == board[target].identity and board.attack_records[record].tagged_hits[AttackHitTag::squig_launcha.value].value > 0:
                 return true
         return false
     return true
@@ -694,16 +647,16 @@ act orks_resolve_hit_effects(ctx Board board, frm UnitID source) -> OrksHitEffec
         return
     act choose_datasheet_hit_target(frm UnitID victim) {orks_hit_effect_target_valid(board, source, victim)}
     if board[source].has_ability(AbilityKind::squig_barrage):
-        grant_orks_effect(board, source, victim, 156, OrksEffectKind::covered_squigs, 1, SourceDuration::next_own_turn, invalid_entity_identity())
+        grant_orks_effect(board, source, victim, 156, RuleEffectKind::covered_squigs, 1, SourceDuration::next_own_turn, invalid_entity_identity())
     if board[source].has_ability(AbilityKind::bust_em):
-        grant_orks_effect(board, source, victim, 157, OrksEffectKind::busted, 1, SourceDuration::turn, invalid_entity_identity())
+        grant_orks_effect(board, source, victim, 157, RuleEffectKind::busted, 1, SourceDuration::turn, invalid_entity_identity())
     if board[source].has_ability(AbilityKind::madcap_artillery):
         frm gun : WeaponCode
         gun = orks_matching_mek_guns(board[source])
         if gun.value == Weapon::orks_mek_gunz_bubblechukka.value:
-            grant_orks_effect(board, source, victim, 158, OrksEffectKind::wobbled, 1, SourceDuration::next_own_turn, invalid_entity_identity())
+            grant_orks_effect(board, source, victim, 158, RuleEffectKind::wobbled, 1, SourceDuration::next_own_turn, invalid_entity_identity())
         if gun.value == Weapon::orks_mek_gunz_traktor_kannon.value:
-            grant_orks_effect(board, source, victim, 159, OrksEffectKind::grounded, 1, SourceDuration::next_own_turn, invalid_entity_identity())
+            grant_orks_effect(board, source, victim, 159, RuleEffectKind::grounded, 1, SourceDuration::next_own_turn, invalid_entity_identity())
         if gun.value == Weapon::orks_mek_gunz_smasha_gun.value:
             grant_orks_payload(board, source, victim, 160, characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::subtract, 2), SourceDuration::next_own_turn)
         if gun.value == Weapon::orks_mek_gunz_kustom_mega_kannon.value:
@@ -722,9 +675,9 @@ act orks_datasheet_fight_selection(ctx Board board, frm UnitID source) -> OrksDa
         if warpath:
             board.shared_actions.orks_psychic_test = orks_datasheet_psychic(board, source, rule)
             subaction*(board) board.shared_actions.orks_psychic_test
-            frm kind = OrksEffectKind::weirdboy_warpath
+            frm kind = RuleEffectKind::weirdboy_warpath
             if rule.value == 153:
-                kind = OrksEffectKind::psychic_warpath
+                kind = RuleEffectKind::psychic_warpath
             if has_live_model(board[source]):
                 grant_orks_effect(board, source, source, rule.value, kind, 1, SourceDuration::phase, invalid_entity_identity())
 
@@ -771,9 +724,9 @@ fun commit_orks_ammo(Board board, UnitID source, Bool boss):
     bearer = orks_ammo_bearer(board, source, boss)
     commit_source_usage(board, orks_ammo_usage(board[source], board[source][bearer], boss))
     if boss:
-        grant_orks_model_effect(board, source, bearer, 114, OrksEffectKind::boss_ammo_hit)
+        grant_orks_model_effect(board, source, bearer, 114, RuleEffectKind::boss_ammo_hit)
     else:
-        grant_orks_effect(board, source, source, 113, OrksEffectKind::ammo_runts_hit, 1, SourceDuration::phase, invalid_entity_identity())
+        grant_orks_effect(board, source, source, 113, RuleEffectKind::ammo_runts_hit, 1, SourceDuration::phase, invalid_entity_identity())
 
 # Free ammunition choices precede Shooting weapon gathering; one Attack owns
 # this frame. Orks/Boyz, Nobz and Warboss Ammo Runts; appendix01.02.02 duration.
@@ -800,7 +753,7 @@ act orks_rokkit_selection(ctx Board board, frm UnitID source) -> OrksRokkitSelec
     if board[source].has_charged and board[source].has_ability(AbilityKind::rokkit_charge):
         act use_rokkit_charge(Bool rokkit_use)
         if rokkit_use:
-            grant_orks_effect(board, source, source, 115, OrksEffectKind::rokkit_charge, 1, SourceDuration::phase, invalid_entity_identity())
+            grant_orks_effect(board, source, source, 115, RuleEffectKind::rokkit_charge, 1, SourceDuration::phase, invalid_entity_identity())
     board.current_decision_maker = previous_owner
 
 # Boyz charge permission includes every melee weapon of the attached unit.
@@ -822,14 +775,14 @@ fun append_orks_datasheet_weapon_rules(Board board, UnitID source, Weapon select
     if selected.range() > 0 and unit.has_ability(AbilityKind::nazdregs_know_wotz):
         result.append(weapon_rule(WeaponRuleKind::ignore_cover))
     if selected.range() == 0:
-        if unit_orks_effect(board, unit, OrksEffectKind::psychic_warpath) > 0:
+        if unit_rule_effect(board, unit, RuleEffectKind::psychic_warpath) > 0:
             result.append(weapon_rule(WeaponRuleKind::letal_hits))
-        if unit_orks_effect(board, unit, OrksEffectKind::psychic_warpath) > 0 or unit_orks_effect(board, unit, OrksEffectKind::weirdboy_warpath) > 0:
+        if unit_rule_effect(board, unit, RuleEffectKind::psychic_warpath) > 0 or unit_rule_effect(board, unit, RuleEffectKind::weirdboy_warpath) > 0:
             result.append(weapon_rule(WeaponRuleKind::psychic))
     if selected.range() == 0:
         if unit.has_charged and unit.has_ability(AbilityKind::tide_of_muscle):
             result.append(weapon_rule(WeaponRuleKind::letal_hits))
-        if unit_orks_effect(board, unit, OrksEffectKind::rokkit_charge) > 0:
+        if unit_rule_effect(board, unit, RuleEffectKind::rokkit_charge) > 0:
             result.append(weapon_rule(WeaponRuleKind::hazardous))
     else:
         if unit.has_ability(AbilityKind::even_more_dakka) and unit_is_riled_up(unit):
@@ -872,7 +825,7 @@ fun append_orks_datasheet_modifiers(Board board, UnitID source, DeclaredWeapon d
                 addition = addition + 2
         if unit.has_charged and unit.has_ability(AbilityKind::high_speed_carnage) and (kind.value == ModifiedCharacteristic::strength.value or kind.value == ModifiedCharacteristic::damage.value):
             addition = addition + 1
-        if unit_orks_effect(board, unit, OrksEffectKind::rokkit_charge) > 0 and (kind.value == ModifiedCharacteristic::attacks.value or kind.value == ModifiedCharacteristic::strength.value):
+        if unit_rule_effect(board, unit, RuleEffectKind::rokkit_charge) > 0 and (kind.value == ModifiedCharacteristic::attacks.value or kind.value == ModifiedCharacteristic::strength.value):
             addition = addition + 1
     else:
         if kind.value == ModifiedCharacteristic::attacks.value and declaration.weapon_name.value == Weapon::orks_blitzkannon.family_id() and model.has_ability(AbilityKind::blitz_dem_gitz) and board.timing.phase == BattlePhase::shooting and unit.owned_by_player1 == board.current_player:
@@ -913,9 +866,9 @@ fun append_orks_datasheet_attack_effects(Board board, UnitID source, UnitID targ
     if declaration.weapon.range() == 0 and board.timing.phase == BattlePhase::fight and unit.has_ability(AbilityKind::krumpin_time) and unit_is_riled_up(unit):
         info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if bearer >= 0:
-        for repair_index in range(unit[bearer].orks_effects.size()):
-            ref repair = unit[bearer].orks_effects[repair_index]
-            if repair.kind.value == OrksEffectKind::clever_hit.value and source_grant_active(board, repair.source_effect):
+        for repair_index in range(unit[bearer].rule_effects.size()):
+            ref repair = unit[bearer].rule_effects[repair_index]
+            if repair.kind.value == RuleEffectKind::clever_hit.value and source_grant_active(board, repair.source_effect):
                 info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, max(1, repair.amount.value)))
     if orks_pulsa_applies(board, unit, victim.identity):
         info.ap_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
@@ -942,19 +895,19 @@ fun append_orks_datasheet_attack_effects(Board board, UnitID source, UnitID targ
         info.faction_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if unit.has_ability(AbilityKind::nowhere_to_hide) and unit_is_hidden(board, victim):
         info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
-    if unit_orks_effect(board, unit, OrksEffectKind::covered_squigs) > 0:
+    if unit_rule_effect(board, unit, RuleEffectKind::covered_squigs) > 0:
         info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
-    if unit_orks_effect(board, victim, OrksEffectKind::pulse_defence) > 0:
+    if unit_rule_effect(board, victim, RuleEffectKind::pulse_defence) > 0:
         info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
     if ranged and orks_engaged_only_fortifications(board, victim) and info.shooting_kind.value != ShootingKind::close_quarters.value:
         info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::subtract, 1))
-    if ranged and unit_orks_effect(board, victim, OrksEffectKind::burna_mark) > 0:
+    if ranged and unit_rule_effect(board, victim, RuleEffectKind::burna_mark) > 0:
         info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::ignore_cover))
-    if unit_orks_effect(board, victim, OrksEffectKind::busted) > 0 and unit.has_keyword(Keyword::speed_freeks) and unit.owned_by_player1 != victim.owned_by_player1:
+    if unit_rule_effect(board, victim, RuleEffectKind::busted) > 0 and unit.has_keyword(Keyword::speed_freeks) and unit.owned_by_player1 != victim.owned_by_player1:
         info.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::letal_hits))
-    if unit_orks_effect(board, unit, OrksEffectKind::beastscent) > 0 and monster_vehicle:
+    if unit_rule_effect(board, unit, RuleEffectKind::beastscent) > 0 and monster_vehicle:
         info.faction_wound_modifiers.append(rule_modifier(ModifierOperation::add, 1))
-    if !ranged and unit_orks_effect(board, unit, OrksEffectKind::weirdboy_warpath) > 0:
+    if !ranged and unit_rule_effect(board, unit, RuleEffectKind::weirdboy_warpath) > 0:
         info.reroll1_wounds = true
     ref model = unit[bearer]
     if declaration.weapon.range() == 0:
@@ -966,9 +919,9 @@ fun append_orks_datasheet_attack_effects(Board board, UnitID source, UnitID targ
         if unit.has_ability(AbilityKind::da_bigger_dey_iz) and (board[target].has_keyword(Keyword::monster) or board[target].has_keyword(Keyword::vehicle)):
             info.reroll_wounds = true
     else:
-        if unit_orks_effect(board, unit, OrksEffectKind::ammo_runts_hit) > 0:
+        if unit_rule_effect(board, unit, RuleEffectKind::ammo_runts_hit) > 0:
             info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
-        if model_orks_effect(board, model, OrksEffectKind::boss_ammo_hit) > 0:
+        if model_rule_effect(board, model, RuleEffectKind::boss_ammo_hit) > 0:
             info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
     if orks_type(unit, OrksDatasheet::killa_kans) and !orks_target_has_toughness_seven(board[target]):
         info.faction_unit_hit_modifiers.append(rule_modifier(ModifierOperation::add, 1))
@@ -1025,34 +978,34 @@ act orks_attack_selection(ctx Board board, frm UnitID actor, frm Bool melee) -> 
                 break
             act choose_orks_attack_stratagem(frm Stratagem selected_card) {orks_selected_stratagem_valid(board, actor, selected_card, melee)}
                 board.commit_stratagem(board[actor].owned_by_player1, selected_card, board[actor])
-                frm effect : OrksEffectKind
-                effect = OrksEffectKind::melee_lethal
+                frm effect : RuleEffectKind
+                effect = RuleEffectKind::melee_lethal
                 if selected_card == Stratagem::orks_mow_em_down:
-                    effect = OrksEffectKind::cleave_increment
+                    effect = RuleEffectKind::cleave_increment
                 if selected_card == Stratagem::orks_close_range_dakka:
-                    effect = OrksEffectKind::rapid_fire_increment
+                    effect = RuleEffectKind::rapid_fire_increment
                 if selected_card == Stratagem::orks_unbridled_carnage:
                     # The melee-only addition is gathered per selected weapon.
-                    effect = OrksEffectKind::unbridled_attacks
+                    effect = RuleEffectKind::unbridled_attacks
                 if selected_card == Stratagem::orks_armed_to_da_teef:
-                    effect = OrksEffectKind::armed_to_da_teef
+                    effect = RuleEffectKind::armed_to_da_teef
                 if selected_card == Stratagem::orks_kustom_dakka:
-                    effect = OrksEffectKind::wound_bonus_non_monster_vehicle
+                    effect = RuleEffectKind::wound_bonus_non_monster_vehicle
                 if selected_card == Stratagem::orks_glowin_dakka:
-                    effect = OrksEffectKind::close_range_ap
+                    effect = RuleEffectKind::close_range_ap
                 if selected_card == Stratagem::orks_never_enough_dakka or selected_card == Stratagem::orks_dakkastorm:
-                    effect = OrksEffectKind::ranged_sustained
+                    effect = RuleEffectKind::ranged_sustained
                 if selected_card == Stratagem::orks_drive_by_bustin:
-                    effect = OrksEffectKind::deck_hit_bonus
+                    effect = RuleEffectKind::deck_hit_bonus
                 if selected_card == Stratagem::orks_long_uncontrolled_bursts:
-                    effect = OrksEffectKind::reroll_hits_fly
+                    effect = RuleEffectKind::reroll_hits_fly
                 if selected_card == Stratagem::orks_vindictive_artillerists:
                     act choose_artillerist_mode(frm OrksArtilleristMode mode)
-                    effect = OrksEffectKind::ranged_lethal
+                    effect = RuleEffectKind::ranged_lethal
                     if mode.value == OrksArtilleristMode::sustained.value:
-                        effect = OrksEffectKind::ranged_sustained
+                        effect = RuleEffectKind::ranged_sustained
                     if mode.value == OrksArtilleristMode::both_hazardous.value:
-                        effect = OrksEffectKind::vindictive_all
+                        effect = RuleEffectKind::vindictive_all
                 grant_orks_effect(board, actor, actor, 300 + selected_card.value, effect, 1, SourceDuration::phase, invalid_entity_identity())
     # Dread Mob is optional, separate from CP targeting and not blocked by shock.
     if (melee and board.timing.phase == BattlePhase::fight or !melee and board.timing.phase == BattlePhase::shooting and board[actor].owned_by_player1 == board.current_player) and orks_package(board, board[actor], OrksDetachment::dread_mob) and board[actor].has_keyword(Keyword::orks) and board[actor].has_keyword(Keyword::walker) and !board[actor].has_keyword(Keyword::titanic):
@@ -1070,17 +1023,17 @@ act orks_attack_selection(ctx Board board, frm UnitID actor, frm Bool melee) -> 
                         act roll(Dice other_button)
                         second_button = other_button
                     apply_orks_button(board, actor, second_button)
-                    grant_orks_effect(board, actor, actor, 410, OrksEffectKind::button_hazard, 1, SourceDuration::phase, invalid_entity_identity())
+                    grant_orks_effect(board, actor, actor, 410, RuleEffectKind::button_hazard, 1, SourceDuration::phase, invalid_entity_identity())
     board.current_decision_maker = previous_owner
 
 # Every distinct die supplies its relevant cumulative characteristic addition;
 # only identical D6 faces repeat (Try Dat Button!, not identical table bands).
 fun apply_orks_button(Board board, UnitID actor, Dice face):
-    let effect = OrksEffectKind::button_attacks
+    let effect = RuleEffectKind::button_attacks
     if face.value >= 3 and face.value <= 4:
-        effect = OrksEffectKind::button_strength
+        effect = RuleEffectKind::button_strength
     if face.value >= 5:
-        effect = OrksEffectKind::button_ap
+        effect = RuleEffectKind::button_ap
     grant_orks_effect(board, actor, actor, 410 + face.value, effect, 1, SourceDuration::phase, invalid_entity_identity())
 
 # Defensive cards trigger for the actual targeted unit, not a guessed initial
@@ -1115,18 +1068,18 @@ act orks_attack_targeted(ctx Board board, frm UnitID source, frm UnitID target, 
                 break
             act choose_orks_defence_stratagem(frm Stratagem defence_card) {orks_targeted_stratagem_valid(board, source, target, defence_card, melee)}
                 frm extra_cost : BInt<0, 2>
-                frm effect : OrksEffectKind
-                effect = OrksEffectKind::fight_on_death_four
+                frm effect : RuleEffectKind
+                effect = RuleEffectKind::fight_on_death_four
                 if defence_card == Stratagem::orks_crazed_rampage:
-                    effect = OrksEffectKind::fight_on_death_dread
+                    effect = RuleEffectKind::fight_on_death_dread
                 if defence_card == Stratagem::orks_speediest_freeks:
-                    effect = OrksEffectKind::fail_hits_one_to_three
+                    effect = RuleEffectKind::fail_hits_one_to_three
                 if defence_card == Stratagem::orks_hulking_brutes:
                     act choose_hulking_protection(Bool all_attacks) {board.can_target_strat_with_cost(owner, defence_card, board[target], defence_card.cost() + int(all_attacks))}
                     extra_cost = int(all_attacks)
-                    effect = OrksEffectKind::strong_wound_protection
+                    effect = RuleEffectKind::strong_wound_protection
                     if all_attacks:
-                        effect = OrksEffectKind::all_wound_protection
+                        effect = RuleEffectKind::all_wound_protection
                 board.commit_stratagem_with_cost(owner, defence_card, board[target], defence_card.cost() + extra_cost.value)
                 grant_orks_effect(board, target, target, 300 + defence_card.value, effect, 1, SourceDuration::phase, invalid_entity_identity())
     if orks_grot_shield_available(board, source, target, melee):
@@ -1134,7 +1087,7 @@ act orks_attack_targeted(ctx Board board, frm UnitID source, frm UnitID target, 
             act decline_grot_shields()
             act choose_grot_shield_unit(frm UnitID shield) {orks_grot_shield_unit_valid(board, source, target, shield, melee)}
                 board.commit_stratagem(owner, Stratagem::orks_grot_shields, board[shield])
-                grant_orks_effect(board, shield, target, 300 + Stratagem::orks_grot_shields.value, OrksEffectKind::grot_shield, 1, SourceDuration::phase, board[shield].identity)
+                grant_orks_effect(board, shield, target, 300 + Stratagem::orks_grot_shields.value, RuleEffectKind::grot_shield, 1, SourceDuration::phase, board[shield].identity)
     board.current_decision_maker = previous_owner
 
 # Only the five printed defensive cards can appear at this hook; enum capacity
@@ -1201,9 +1154,9 @@ fun orks_shokka_supported(Board board, Unit unit) -> Bool:
 # https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
 fun orks_pulsa_applies(Board board, Unit source, EntityIdentity target) -> Bool:
     for bearer in range(source.models.size()):
-        for index in range(source[bearer].orks_effects.size()):
-            ref effect = source[bearer].orks_effects[index]
-            if effect.kind.value == OrksEffectKind::pulsa_target.value and effect.associated_unit == target and source_grant_active(board, effect.source_effect):
+        for index in range(source[bearer].rule_effects.size()):
+            ref effect = source[bearer].rule_effects[index]
+            if effect.kind.value == RuleEffectKind::pulsa_target.value and effect.associated_unit == target and source_grant_active(board, effect.source_effect):
                 return true
     return false
 
@@ -1290,7 +1243,7 @@ act orks_pulsa_selection(ctx Board board, frm UnitID source) -> OrksPulsaSelecti
         for member in range(board[source].models.size()):
             if board[source][member].is_alive() and board[source][member].has_ability(AbilityKind::pulsa_rokkit):
                 commit_source_usage(board, make_source_usage(board[source].owned_by_player1, ORKS_PULSA_RULE, board[source][member].original_unit, board[source][member].identity, SourceUseScope::unit, source_use_limits(0, 0, 0, 1)))
-        grant_orks_effect(board, source, source, ORKS_PULSA_RULE, OrksEffectKind::pulsa_target, 1, SourceDuration::phase, board[target].identity)
+        grant_orks_effect(board, source, source, ORKS_PULSA_RULE, RuleEffectKind::pulsa_target, 1, SourceDuration::phase, board[target].identity)
 
 # Rokkit Barrage uses actual successful hit records, not declarations; it
 # never fires in Overwatch/out-of-phase shooting. Choose exactly one hit unit.
@@ -1298,8 +1251,8 @@ act orks_pulsa_selection(ctx Board board, frm UnitID source) -> OrksPulsaSelecti
 fun orks_barrage_target_valid(Board board, UnitID source, UnitID target) -> Bool:
     if target.get() >= board.units.size() or board[target].off_battlefield or !has_live_model(board[target]) or board[target].owned_by_player1 == board[source].owned_by_player1:
         return false
-    for entry in range(board.orks_attack_records.size()):
-        if board.orks_attack_records[entry].target == board[target].identity and board.orks_attack_records[entry].successful_hits.value > 0:
+    for entry in range(board.attack_records.size()):
+        if board.attack_records[entry].target == board[target].identity and board.attack_records[entry].successful_hits.value > 0:
             return true
     return false
 
@@ -1392,19 +1345,7 @@ fun orks_has_destruction_trigger(Board board, Model model) -> Bool:
     return model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value or orks_aircraft_death_source(board, model)
 
 # Orks attack ledger records actual wounds lost before clamping, not rolled damage (Orks detachment triggers).
-fun orks_record_wound_loss(Board board, Unit unit, ModelID model, Int lost, Bool from_attack):
-    if lost > 0 and from_attack and board.orks_attack_active:
-        ref record = orks_attack_record(board, unit.identity)
-        add_attack_count(record.wounds_lost, min(lost, unit[model].wounds_left()))
-
 # Track Orks attack/phase kill provenance only after actual last-model destruction (Orks combat triggers).
-fun orks_record_unit_destruction(Board board, Unit unit):
-    if board.orks_attack_active and live_attachment_strength(unit) == 0:
-        ref destruction_record = orks_attack_record(board, unit.identity)
-        destruction_record.destroyed = true
-        unit.orks_destroyed_attack = board.orks_attack_serial
-        unit.orks_destroyed_phase = board.phase_serial.value + 1
-
 # Flyin Headbutt requires the Aircraft unit destruction event (Orks/Flyboyz).
 fun orks_unit_destruction_trigger(Board board, Unit unit, Model model) -> Bool:
     return orks_package(board, unit, OrksDetachment::flyboyz) and model.has_keyword(Keyword::aircraft)
@@ -1412,3 +1353,9 @@ fun orks_unit_destruction_trigger(Board board, Unit unit, Model model) -> Bool:
 # Surly return retains its source even in reserves/passengers; no offboard distance permission is introduced (Orks/Surly).
 fun orks_offboard_destruction_trigger(Model model) -> Bool:
     return model.orks_enhancement.value == OrksEnhancement::surly_as_a_squiggoth.value
+
+# Only Squig Launcha's special hit provenance is faction policy; the generic
+# ledger already counted the hits (Squigbuggies/Squig Barrage).
+fun record_orks_hit_tags(Board board, AttackResultRecord record, Int count):
+    if board.attack_info.squig_launcha_weapon:
+        add_attack_count(record.tagged_hits[AttackHitTag::squig_launcha.value], count)

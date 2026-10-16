@@ -148,8 +148,8 @@ act repair_orks_vehicle(ctx Board board, frm SourceInstance instance) -> OrksVeh
     grant.recipient = SourceTarget::source_model
     grant.duration = SourceDuration::next_own_movement
     grant.label.value = SourceLabel::clever_know_wotz
-    frm payload : OrksEffectGrant
-    payload.kind = OrksEffectKind::clever_hit
+    frm payload : RuleEffectGrant
+    payload.kind = RuleEffectKind::clever_hit
     payload.amount = 1
     grant.grant = payload
     # Repeated repairs reuse the model's grant prototype, while separate
@@ -220,8 +220,6 @@ fun create_orks_replacement(Board board, UnitID destroyed):
 
 # Only private Orks transient state is reset when core creates a new unit.
 fun prepare_orks_replacement_unit(Unit unit):
-    unit.orks_destroyed_attack = 0
-    unit.orks_destroyed_phase = 0
     let psychic : OrksPsychicUsage
     unit.orks_psychic_usage = psychic
 
@@ -229,5 +227,4 @@ fun prepare_orks_replacement_unit(Unit unit):
 fun prepare_orks_replacement_model(Model model, EntityIdentity replacement):
     if model.orks_upgrade_origin.value > 0:
         model.orks_upgrade_origin = replacement
-    model.orks_effects.clear()
     model.riled_source_effects.clear()

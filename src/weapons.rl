@@ -200,6 +200,8 @@ fun non_monster_vehicle_weapon_rule(WeaponRuleKind kind, Int amount) -> WeaponRu
     return rule
 
 enum Weapon:
+
+
     none:
         Int family_id = 0
         StringLiteral label = "None"
@@ -3681,6 +3683,13 @@ enum Weapon:
 
 
     # presence for parameterless abilities (pp.80–85). Own copies exit once.
+    # Finite catalog property, read uniformly by any army (core p16).
+    fun is_nonattacking_equipment() -> Bool:
+        return self.value == Weapon::none.value or self.value == Weapon::orks_kustom_force_field.value or self.value == Weapon::orks_pulsa_rokkit.value
+
+    # Finite catalog property, read uniformly by any army (core p16).
+    fun has_simultaneous_profiles() -> Bool:
+        return self.value == Weapon::orks_nazdreg_kustom_blasta_x_gatler.value or self.value == Weapon::orks_nazdreg_kustom_blasta_x_shoota.value or self.value == Weapon::orks_nazdreg_kustom_blasta_x_skorcha.value
     fun get_rule_parameter(WeaponRuleKind rule) -> Int:
         let rules = self.rules()
         let result = 0
@@ -4034,9 +4043,6 @@ fun equipped_weapon(Weapon profile) -> EquippedWeapon:
 # Nazdreg explicitly fires all three ranged Kustom Blasta X profiles. This
 # catalog property preserves the exception without per-model permission flags.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Nazdreg (Unit Composition).
-fun simultaneous_weapon_profile(Weapon profile) -> Bool:
-    return faction_simultaneous_weapon_profile(profile)
-
 # Shared finite equipment lists contain actual profiles; six covers every
 # current printed replacement list. These temporaries never become actions.
 using WeaponChoices = CheckedVector<Weapon, 6>
@@ -4118,9 +4124,6 @@ fun weapon_pair(Weapon gun, Weapon melee) -> WeaponPair:
 
 # Roster equipment shares the catalog, but its zero-attack tokens grant only
 # their printed nonattack rules (Orks Big Mek in Mega Armour/Tankbustas).
-fun nonattacking_equipment(Weapon profile) -> Bool:
-    return profile.value == Weapon::none.value or faction_nonattacking_equipment(profile)
-
 # Present two actual weapons only when the host requests the roster label.
 fun weapon_pair_label(WeaponPair pair) -> String:
     if pair.gun.value == Weapon::none.value:
@@ -4133,3 +4136,11 @@ fun weapon_family(Weapon profile) -> Weapon:
     let result : Weapon
     result.value = profile.family_id()
     return result
+
+# Shared catalog query used by declarations and Godot (core p16).
+fun simultaneous_weapon_profile(Weapon profile) -> Bool:
+    return profile.has_simultaneous_profiles()
+
+# Shared catalog query used by declarations and Godot (core p16).
+fun nonattacking_equipment(Weapon profile) -> Bool:
+    return profile.is_nonattacking_equipment()

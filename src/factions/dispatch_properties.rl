@@ -25,9 +25,6 @@ fun faction_prepare_attached_model(Unit leader, Unit bodyguard, Model model):
     orks_prepare_attached_model(leader, bodyguard, model)
 
 # Warp Visions grants Fights First; core still checks every participating model (Orks/Wurrband; core p40).
-fun faction_fights_first(Model model) -> Bool:
-    return orks_fights_first(model)
-
 # Waaagh! attachment metadata follows the actual original component lifetime (Orks army rules; core p67).
 fun faction_component_has_army_rules(Unit unit, EntityIdentity component) -> Bool:
     return orks_component_has_army_rules(unit, component)
@@ -37,13 +34,7 @@ fun faction_model_confers_army_rules(Model model) -> Bool:
     return orks_model_confers_army_rules(model)
 
 # Nazdreg Unit Composition allows its three simultaneous profiles.
-fun faction_simultaneous_weapon_profile(Weapon profile) -> Bool:
-    return orks_simultaneous_weapon_profile(profile)
-
 # Orks KFF and Pulsa are equipment rather than attacks.
-fun faction_nonattacking_equipment(Weapon profile) -> Bool:
-    return orks_nonattacking_equipment(profile)
-
 # Waaagh riled-up supplies ranged Assault; core retains intrinsic rules.
 fun faction_model_has_weapon_rule(Model model, Weapon profile, WeaponRuleKind kind) -> Bool:
     return orks_model_has_weapon_rule(model, profile, kind)

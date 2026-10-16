@@ -7,7 +7,7 @@ fun orks_move_charge_permission(Board board, Unit unit, MovementKind kind) -> Bo
     let fallback = kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape
     if !fallback and !(kind == MovementKind::advance):
         return false
-    if unit_orks_effect(board, unit, OrksEffectKind::turbo_engine) > 0:
+    if unit_rule_effect(board, unit, RuleEffectKind::turbo_engine) > 0:
         return true
     if orks_package(board, unit, OrksDetachment::kult_of_speed) and unit.has_keyword(Keyword::speed_freeks):
         return true
@@ -18,7 +18,7 @@ fun orks_move_charge_permission(Board board, Unit unit, MovementKind kind) -> Bo
 # Runt Swarm's Advance/Fall Back permission waives only that action gate;
 # shock, OC, engagement, shooting and once-per-turn restrictions still apply.
 fun orks_move_action_permission(Board board, Unit unit, MovementKind kind) -> Bool:
-    return (kind == MovementKind::advance or kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape) and ((orks_package(board, unit, OrksDetachment::runt_swarm) and orks_type(unit, OrksDatasheet::gretchin)) or unit_orks_effect(board, unit, OrksEffectKind::action_move_permission) > 0)
+    return (kind == MovementKind::advance or kind == MovementKind::ordered_retreat or kind == MovementKind::desperate_escape) and ((orks_package(board, unit, OrksDetachment::runt_swarm) and orks_type(unit, OrksDatasheet::gretchin)) or unit_rule_effect(board, unit, RuleEffectKind::action_move_permission) > 0)
 
 # Blitz Brigade excludes points only for Flyboyz Aircraft; public point-free
 # mode already omits all price caps. It grants no substitute reserve quota.
@@ -34,14 +34,14 @@ fun capture_orks_selected_move(Board board, UnitID source, MovementKind kind):
         unit.history.fallback_allows_shooting = unit_has_orks_enhancement(unit, OrksEnhancement::kunnin_but_brutal)
     unit.history.selected_move_allows_action = orks_move_action_permission(board, unit, kind)
     if orks_package(board, unit, OrksDetachment::kult_of_speed) and unit.has_keyword(Keyword::speed_freeks):
-        grant_orks_effect(board, source, source, 430, OrksEffectKind::ranged_assault, 1, SourceDuration::turn, invalid_entity_identity())
+        grant_orks_effect(board, source, source, 430, RuleEffectKind::ranged_assault, 1, SourceDuration::turn, invalid_entity_identity())
 
 # Wimp-kickaz and the accepted Hunt card force a Desperate Escape; their unit
 # source must still be engaged at this actual selection (ordinary source text).
 fun orks_forces_escape(Board board, Unit unit) -> Bool:
     for enemy in range(board.units.size()):
         ref opponent = board.units[enemy]
-        if opponent.owned_by_player1 != unit.owned_by_player1 and opponent.is_engaged_with(unit) and (unit_has_orks_enhancement(opponent, OrksEnhancement::wimp_kickaz) or unit_orks_effect(board, opponent, OrksEffectKind::hunt_escape_hazards) > 0):
+        if opponent.owned_by_player1 != unit.owned_by_player1 and opponent.is_engaged_with(unit) and (unit_has_orks_enhancement(opponent, OrksEnhancement::wimp_kickaz) or unit_rule_effect(board, opponent, RuleEffectKind::hunt_escape_hazards) > 0):
             return true
     return false
 
@@ -65,7 +65,7 @@ fun orks_extra_escape_hazards(Board board, Unit unit) -> Int:
     for enemy in range(board.units.size()):
         ref opponent = board.units[enemy]
         if opponent.owned_by_player1 != unit.owned_by_player1 and opponent.is_engaged_with(unit):
-            active = active or unit_orks_effect(board, opponent, OrksEffectKind::hunt_escape_hazards) > 0
+            active = active or unit_rule_effect(board, opponent, RuleEffectKind::hunt_escape_hazards) > 0
             count = count + int(opponent.has_keyword(Keyword::beast_snagga))
     return 3 * count * int(active)
 
@@ -174,7 +174,7 @@ act orks_wagon_move_end(ctx Board board, frm UnitID source) -> OrksWagonMoveEnd:
         act decline_readied_brawlers()
         act readied_brawlers()
             board.commit_stratagem(board[source].owned_by_player1, Stratagem::orks_readied_brawlers, board[source])
-            grant_orks_effect(board, source, source, 300 + Stratagem::orks_readied_brawlers.value, OrksEffectKind::assault_disembark, 1, SourceDuration::phase, invalid_entity_identity())
+            grant_orks_effect(board, source, source, 300 + Stratagem::orks_readied_brawlers.value, RuleEffectKind::assault_disembark, 1, SourceDuration::phase, invalid_entity_identity())
 
 # A completed charge, not a declared/failed charge, triggers Impending Krunch;
 # each currently engaged enemy makes its own-1 shock roll (Blitz Brigade).
@@ -396,9 +396,9 @@ act orks_datasheet_movement(ctx Board board, frm UnitID source) -> OrksDatasheet
         frm skorch = ability.value == OrksDatasheetMoveAbility::drive_by_skorchin.value
         act choose_datasheet_move_target(frm UnitID target) {orks_datasheet_move_target(board, source, target, skorch)}
         commit_source_usage(board, make_source_usage(board[source].owned_by_player1, 149 + int(skorch), board[source].identity, invalid_entity_identity(), SourceUseScope::unit, source_use_limits(1, 0, 0, 0)))
-        frm kind = OrksEffectKind::found_detection
+        frm kind = RuleEffectKind::found_detection
         if skorch:
-            kind = OrksEffectKind::overwatch_blocked
+            kind = RuleEffectKind::overwatch_blocked
         grant_orks_effect(board, source, target, 166 + int(skorch), kind, 1, SourceDuration::turn, invalid_entity_identity())
     if ability.value == OrksDatasheetMoveAbility::da_jump.value:
         frm jump_rule : BInt<151, 163>
@@ -406,7 +406,7 @@ act orks_datasheet_movement(ctx Board board, frm UnitID source) -> OrksDatasheet
         board.shared_actions.orks_psychic_test = orks_datasheet_psychic(board, source, jump_rule)
         subaction*(board) board.shared_actions.orks_psychic_test
         if has_live_model(board[source]):
-            grant_orks_effect(board, source, source, 163, OrksEffectKind::jump_deep_strike, 1, SourceDuration::phase, invalid_entity_identity())
+            grant_orks_effect(board, source, source, 163, RuleEffectKind::deep_strike, 1, SourceDuration::phase, invalid_entity_identity())
             assert(reposition_unit(board, source), "Da Jump requires reserve capacity")
     board.orks_support_bank = previous_bank
 
@@ -536,10 +536,10 @@ act orks_move_selection(ctx Board board, frm UnitID actor, frm Bool charging) ->
                 if move_card == Stratagem::orks_fungus_fuel_injection:
                     grant_orks_payload(board, actor, actor, 300 + move_card.value, characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 2), SourceDuration::phase)
                 else:
-                    frm effect : OrksEffectKind
-                    effect = OrksEffectKind::mobile
+                    frm effect : RuleEffectKind
+                    effect = RuleEffectKind::mobile
                     if move_card == Stratagem::orks_ere_we_go:
-                        effect = OrksEffectKind::advance_plus_two
+                        effect = RuleEffectKind::advance_plus_two
                     grant_orks_effect(board, actor, actor, 300 + move_card.value, effect, 1, SourceDuration::phase, invalid_entity_identity())
     board.current_decision_maker = previous_owner
 
@@ -552,7 +552,7 @@ act orks_move_mode(ctx Board board, frm UnitID actor, frm MovementKind kind) -> 
         act decline_mind_on_mission()
         act mind_on_mission()
             board.commit_stratagem(board[actor].owned_by_player1, Stratagem::orks_mind_mostly_on_the_mission, board[actor])
-            grant_orks_effect(board, actor, actor, 300 + Stratagem::orks_mind_mostly_on_the_mission.value, OrksEffectKind::action_move_permission, 1, SourceDuration::phase, invalid_entity_identity())
+            grant_orks_effect(board, actor, actor, 300 + Stratagem::orks_mind_mostly_on_the_mission.value, RuleEffectKind::action_move_permission, 1, SourceDuration::phase, invalid_entity_identity())
 
 # The Da Big Hunt CP target is an engaged friendly Beast Snagga unit; the
 # enemy mover is a separate subject and may not pay/receive the stratagem.
@@ -580,7 +580,7 @@ act orks_fallback_selection(ctx Board board, frm UnitID mover) -> OrksFallbackSe
         act decline_hunting_escape()
         act choose_hunting_escape_unit(frm UnitID hunters) {orks_escape_target_valid(board, mover, hunters)}
             board.commit_stratagem(board[hunters].owned_by_player1, Stratagem::orks_where_d_ya_fink_you_re_going, board[hunters])
-            grant_orks_effect(board, hunters, hunters, 300 + Stratagem::orks_where_d_ya_fink_you_re_going.value, OrksEffectKind::hunt_escape_hazards, 1, SourceDuration::phase, invalid_entity_identity())
+            grant_orks_effect(board, hunters, hunters, 300 + Stratagem::orks_where_d_ya_fink_you_re_going.value, RuleEffectKind::hunt_escape_hazards, 1, SourceDuration::phase, invalid_entity_identity())
     board.current_decision_maker = previous_owner
 
 # Measured targets must be live battlefield units; no external range or LOS
@@ -759,7 +759,7 @@ act orks_movement_phase_choice(ctx Board board) -> OrksMovementPhaseChoice:
 
 # Assault Disembark and Gut Hatch grant specific post-move charge permission (Orks transport cards).
 fun orks_assault_disembark(Board board, Unit carrier_unit) -> Bool:
-    return unit_orks_effect(board, carrier_unit, OrksEffectKind::assault_disembark) > 0 or carrier_unit.has_ability(AbilityKind::gut_hatch) and carrier_unit.history.move_kind == MovementKind::normal
+    return unit_rule_effect(board, carrier_unit, RuleEffectKind::assault_disembark) > 0 or carrier_unit.has_ability(AbilityKind::gut_hatch) and carrier_unit.history.move_kind == MovementKind::normal
 
 # Minefield Detail supplies Scouts6; all combined printed Scouts values must match (Orks/Taktikal Brigade; user ruling).
 fun orks_scouts_override(Unit unit) -> Int:
@@ -774,13 +774,13 @@ fun orks_scouts_override(Unit unit) -> Int:
 fun orks_record_move_effects(Board board, UnitID id, MovementKind kind):
     if kind == MovementKind::pulse_jet:
         board[id].can_charge = false
-        grant_orks_effect(board, id, id, 173, OrksEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
-        grant_orks_effect(board, id, id, 174, OrksEffectKind::no_action, 1, SourceDuration::turn, invalid_entity_identity())
-        grant_orks_effect(board, id, id, 175, OrksEffectKind::pulse_defence, 1, SourceDuration::next_own_turn, invalid_entity_identity())
+        grant_orks_effect(board, id, id, 173, RuleEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
+        grant_orks_effect(board, id, id, 174, RuleEffectKind::no_action, 1, SourceDuration::turn, invalid_entity_identity())
+        grant_orks_effect(board, id, id, 175, RuleEffectKind::pulse_defence, 1, SourceDuration::next_own_turn, invalid_entity_identity())
 
 # Pulse Engine supplies Pulse Jet selection permission (Orks/Wazdakka).
 fun orks_special_move_available(Board board, Unit unit, MovementKind kind) -> Bool:
-    return kind == MovementKind::pulse_jet and unit_orks_effect(board, unit, OrksEffectKind::pulse_engine) > 0
+    return kind == MovementKind::pulse_jet and unit_rule_effect(board, unit, RuleEffectKind::pulse_engine) > 0
 
 # Shokk-boosta permits model traversal without granting FLY or terrain traversal (Orks/Big-Mek).
 fun orks_prepare_movement_policy(Unit unit, MovementKind kind, MovementGeometryPolicy policy):

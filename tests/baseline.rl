@@ -11120,7 +11120,7 @@ fun test_orks17all_retained_unit_stratagem_installation() -> Bool:
     board[0][0].suffered_wounds = board[0][0].profile.wounds()
     let sequence = orks_attack_selection(board, unit_id(0), true)
     sequence.choose_orks_attack_stratagem(board, Stratagem::orks_hit_em_harder)
-    return sequence.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::melee_lethal) == 1 and valid_source_foundations(board)
+    return sequence.is_done() and unit_rule_effect(board, board[0], RuleEffectKind::melee_lethal) == 1 and valid_source_foundations(board)
 
 # Movement card selection spends before granting ordered M or advance dice
 # modifiers, and a failed/absent selection leaves CP/history unchanged.
@@ -11138,7 +11138,7 @@ fun test_orks17all_ere_we_go_advance_bonus() -> Bool:
     board.begin_phase(BattlePhase::movement)
     let sequence = orks_move_selection(board, unit_id(0), false)
     sequence.choose_orks_move_stratagem(board, Stratagem::orks_ere_we_go)
-    return sequence.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::advance_plus_two) == 1 and board[0][0].effective_movement(6) == 6
+    return sequence.is_done() and unit_rule_effect(board, board[0], RuleEffectKind::advance_plus_two) == 1 and board[0][0].effective_movement(6) == 6
 
 # Mobile is a real sourced keyword, expires after its phase and does not add
 # physical terrain features excluded by the user's area-only instruction.
@@ -11228,7 +11228,7 @@ fun test_orks17all_grot_shield_original_lethal_and_sustained() -> Bool:
     board.attack_info.source = Weapon::orks_slugga
     board.attack_info.add_letal_hits()
     board.attack_info.add_sustained_hits(1)
-    begin_orks_attack(board)
+    begin_attack_results(board)
     let dice = resolve_attack_dice(board, board[1], board[0], attack_test_count(1))
     dice.roll(board, board[1], board[0], attack_test_die(6))
     dice.use_lethal_hits(board, board[1], board[0], true)
@@ -11251,9 +11251,9 @@ fun test_orks17all_grot_shield_does_not_intercept_torrent() -> Bool:
 fun test_orks17all_post_attack_ledger_actual_hits_and_wounds() -> Bool:
     let board = orks17all_fixture(OrksDetachment::wreckas)
     orks17all_tag(board[1], OrksDatasheet::flash_gitz)
-    begin_orks_attack(board)
+    begin_attack_results(board)
     let no_hit = !orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_gun_crazy_show_offs, false)
-    record_orks_hits(board, unit_id(1), 1)
+    record_attack_hits(board, unit_id(1), 1)
     let hit = orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_gun_crazy_show_offs, false)
     let other = board.armies[1].record_detachment(OrksDetachment::da_big_hunt)
     board[1][0].keywords.append(Keyword::beast_snagga)
@@ -11266,12 +11266,12 @@ fun test_orks17all_post_attack_ledger_actual_hits_and_wounds() -> Bool:
 # objective-constrained normal move, rather than merely changing UI choices.
 fun test_orks17all_grab_it_charge_lock_expiry() -> Bool:
     let board = orks17all_fixture(OrksDetachment::wreckas)
-    grant_orks_effect(board, unit_id(0), unit_id(0), 300 + Stratagem::orks_grab_it.value, OrksEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
+    grant_orks_effect(board, unit_id(0), unit_id(0), 300 + Stratagem::orks_grab_it.value, RuleEffectKind::no_charge, 1, SourceDuration::turn, invalid_entity_identity())
     board.begin_phase(BattlePhase::charge)
     let blocked = !charge_source_valid(board, unit_id(0), false)
     board.turn_serial = board.turn_serial + 1
     refresh_source_effects(board, TimingWindow::none)
-    return blocked and unit_orks_effect(board, board[0], OrksEffectKind::no_charge) == 0
+    return blocked and unit_rule_effect(board, board[0], RuleEffectKind::no_charge) == 0
 
 # New Infested units receive new unit/model identities and fresh usage/wounds;
 # the original destroyed archive is retained, not revived or overwritten.
@@ -11294,11 +11294,11 @@ fun test_orks17all_infested_current_activation_gate() -> Bool:
     let board = orks17all_fixture(OrksDetachment::runt_swarm)
     orks17all_tag(board[1], OrksDatasheet::gretchin)
     board[1].capture_starting_strength()
-    begin_orks_attack(board)
+    begin_attack_results(board)
     let job = damage_job(DamageKind::normal, unit_id(1), unit_id(0), true, true, 2, board[1][0].identity)
     commit_wound_loss(board, job, damage_test_model(0), 2, false)
     let current = orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_infested_war_zone, false)
-    begin_orks_attack(board)
+    begin_attack_results(board)
     return current and !orks_post_attack_card_valid(board, unit_id(0), unit_id(1), Stratagem::orks_infested_war_zone, false)
 
 # Heal3 restores wounds individually before any non-Character revival.
@@ -11667,9 +11667,9 @@ fun test_orks17all_retained_riled_attack_status() -> Bool:
 fun test_orks17all_detachment_state_save_and_invalid_enum() -> Bool:
     let game = play()
     game.board = orks17all_fixture(OrksDetachment::shoota_boyz)
-    grant_orks_effect(game.board, unit_id(0), unit_id(0), 300 + Stratagem::orks_never_enough_dakka.value, OrksEffectKind::ranged_sustained, 1, SourceDuration::phase, invalid_entity_identity())
+    grant_orks_effect(game.board, unit_id(0), unit_id(0), 300 + Stratagem::orks_never_enough_dakka.value, RuleEffectKind::ranged_sustained, 1, SourceDuration::phase, invalid_entity_identity())
     let restored = play()
-    let good = set_state(restored, to_string(game)) and unit_orks_effect(restored.board, restored.board[0], OrksEffectKind::ranged_sustained) == 1
+    let good = set_state(restored, to_string(game)) and unit_rule_effect(restored.board, restored.board[0], RuleEffectKind::ranged_sustained) == 1
     game.board[0][0].orks_enhancement.value = 99
     return good and !set_state(restored, to_string(game)) and restored.board[0][0].orks_enhancement.value == 0
 
@@ -11777,9 +11777,9 @@ fun test_orks17all_dreadherder_before_other_units_shoot() -> Bool:
     let available = orks_dreadherder_available(board, unit_id(0))
     let selection = orks_dreadherder_shooting(board, unit_id(0))
     selection.choose_dreadherder_target(board, unit_id(2))
-    let granted = unit_orks_effect(board, board[2], OrksEffectKind::reroll_hits_ones) == 1
+    let granted = unit_rule_effect(board, board[2], RuleEffectKind::reroll_hits_ones) == 1
     board.begin_phase(BattlePhase::fight)
-    return available and granted and !board[0].has_shoot and unit_orks_effect(board, board[2], OrksEffectKind::reroll_hits_ones) == 1
+    return available and granted and !board[0].has_shoot and unit_rule_effect(board, board[2], RuleEffectKind::reroll_hits_ones) == 1
 
 # A successful Surly returns its original identity with3W at a nearest legal
 # quad. Its once-per-army token prevents another source/attempt this battle.
@@ -12299,7 +12299,7 @@ fun test_orks17p1_ammo_selection_and_limit() -> Bool:
     let kept = choice.is_done() and board.current_decision_maker == true and orks_ammo_available(board, unit_id(0), false)
     let accepted = orks_datasheet_selection(board, unit_id(0))
     accepted.use_ammo_runts(board, true)
-    return kept and accepted.is_done() and board.current_decision_maker == true and !orks_ammo_available(board, unit_id(0), false) and unit_orks_effect(board, board[0], OrksEffectKind::ammo_runts_hit) == 1 and valid_state_foundations(board)
+    return kept and accepted.is_done() and board.current_decision_maker == true and !orks_ammo_available(board, unit_id(0), false) and unit_rule_effect(board, board[0], RuleEffectKind::ammo_runts_hit) == 1 and valid_state_foundations(board)
 
 # Ammo Runts: every member's ranged attack benefits; melee never does.
 fun test_orks17p1_ammo_ranged_scope() -> Bool:
@@ -12323,14 +12323,14 @@ fun test_orks17p1_attached_ammo_tokens_and_scope() -> Bool:
     configure_attack_info(board, 0, 0, false, false)
     commit_orks_ammo(board, unit_id(0), false)
     commit_orks_ammo(board, unit_id(0), true)
-    return unit_orks_effect(board, board[0], OrksEffectKind::ammo_runts_hit) == 1 and model_orks_effect(board, board[0][10], OrksEffectKind::boss_ammo_hit) == 1 and model_orks_effect(board, board[0][1], OrksEffectKind::boss_ammo_hit) == 0 and !orks_ammo_available(board, unit_id(0), true) and valid_state_foundations(board)
+    return unit_rule_effect(board, board[0], RuleEffectKind::ammo_runts_hit) == 1 and model_rule_effect(board, board[0][10], RuleEffectKind::boss_ammo_hit) == 1 and model_rule_effect(board, board[0][1], RuleEffectKind::boss_ammo_hit) == 0 and !orks_ammo_available(board, unit_id(0), true) and valid_state_foundations(board)
 
 # Ammo Runts: phase effect expires while battle usage remains spent.
 fun test_orks17p1_ammo_expiry_not_refresh() -> Bool:
     let board = orks17p1_fixture(make_orks_nobz(5))
     commit_orks_ammo(board, unit_id(0), false)
     board.begin_phase(BattlePhase::charge)
-    let expired = unit_orks_effect(board, board[0], OrksEffectKind::ammo_runts_hit) == 0
+    let expired = unit_rule_effect(board, board[0], RuleEffectKind::ammo_runts_hit) == 0
     board.begin_phase(BattlePhase::shooting)
     return expired and !orks_ammo_available(board, unit_id(0), false)
 
@@ -12413,7 +12413,7 @@ fun test_orks17p1_rokkit_selection_and_hazardous() -> Bool:
     let info = declared_attack_info(board, unit_id(0), unit_id(1), melee, board.attack_info)
     let yes = choice.is_done() and declaration_fixed_attacks(board, unit_id(0), melee, 0) == 4 and info.attack_strength() == 6 and declared_weapon_has_kind(melee, WeaponRuleKind::hazardous)
     board.begin_phase(BattlePhase::shooting)
-    return yes and unit_orks_effect(board, board[0], OrksEffectKind::rokkit_charge) == 0
+    return yes and unit_rule_effect(board, board[0], RuleEffectKind::rokkit_charge) == 0
 
 # Stormboyz: declining and a non-charging fight grant nothing.
 fun test_orks17p1_rokkit_decline_and_no_charge() -> Bool:
@@ -12423,7 +12423,7 @@ fun test_orks17p1_rokkit_decline_and_no_charge() -> Bool:
     board[0].has_charged = true
     let choice = orks_rokkit_selection(board, unit_id(0))
     choice.use_rokkit_charge(board, false)
-    return absent.is_done() and choice.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::rokkit_charge) == 0
+    return absent.is_done() and choice.is_done() and unit_rule_effect(board, board[0], RuleEffectKind::rokkit_charge) == 0
 
 # Warbikers/High Speed Carnage: charge+1S/D melee, not gun/uncharged.
 fun test_orks17p1_biker_charge_melee_damage() -> Bool:
@@ -12601,7 +12601,7 @@ fun test_orks17p1_ammo_saved_provenance() -> Bool:
     commit_orks_ammo(state.board, unit_id(0), false)
     let restored = play()
     let saved = set_state(restored, to_string(state))
-    return saved and unit_orks_effect(restored.board, restored.board[0], OrksEffectKind::ammo_runts_hit) == 1 and !orks_ammo_available(restored.board, unit_id(0), false) and valid_state_foundations(restored.board)
+    return saved and unit_rule_effect(restored.board, restored.board[0], RuleEffectKind::ammo_runts_hit) == 1 and !orks_ammo_available(restored.board, unit_id(0), false) and valid_state_foundations(restored.board)
 
 
 # Stormboyz: actual selected-fight frame offers the choice before FightKind.
@@ -12613,7 +12613,7 @@ fun test_orks17p1_selected_fight_forwards_rokkit() -> Bool:
     let sequence = selected_fight(board, unit_id(0))
     let offered = can sequence.use_rokkit_charge(board, true)
     sequence.use_rokkit_charge(board, true)
-    return offered and !sequence.is_done() and unit_orks_effect(board, board[0], OrksEffectKind::rokkit_charge) == 1
+    return offered and !sequence.is_done() and unit_rule_effect(board, board[0], RuleEffectKind::rokkit_charge) == 1
 
 
 # Fourteen current recovery, support and infantry fixtures. Sources are the card URLs on every
@@ -12945,7 +12945,7 @@ fun test_orks17p2_mek_repair_model_scope() -> Bool:
     sequence.choose_mek_repair_unit(board, unit_id(1))
     sequence.choose_mek_repair_model(board, damage_test_model(0))
     sequence.quantity(board, attack_test_die(3))
-    return sequence.is_done() and board[1][0].suffered_wounds == 1 and model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 1 and model_orks_effect(board, board[1][1], OrksEffectKind::clever_hit) == 0
+    return sequence.is_done() and board[1][0].suffered_wounds == 1 and model_rule_effect(board, board[1][0], RuleEffectKind::clever_hit) == 1 and model_rule_effect(board, board[1][1], RuleEffectKind::clever_hit) == 0
 
 fun test_orks17p2_mek_target_exclusions_and_bearer_range() -> Bool:
     let board = orks17p2_fixture(make_orks_mek())
@@ -12978,16 +12978,16 @@ fun test_orks17p2_mek_bonus_precise_expiry() -> Bool:
     repair.quantity(board, attack_test_die(1))
     board.turn_serial = board.turn_serial + 2
     board.begin_phase(BattlePhase::command)
-    let during_command = model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 1
+    let during_command = model_rule_effect(board, board[1][0], RuleEffectKind::clever_hit) == 1
     board.begin_phase(BattlePhase::movement)
-    return during_command and model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 0
+    return during_command and model_rule_effect(board, board[1][0], RuleEffectKind::clever_hit) == 0
 
 # Distinct repairs remain distinct modifiers before caps/optional ignoring.
 # Source: Mek; supplied modifiers02.02.01 and ignoring02.02.02.
 fun test_orks17p2_repair_contributions_and_full_choice_capacity() -> Bool:
     let board = orks17p2_fixture(make_orks_killa_kans(3))
-    grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE, OrksEffectKind::clever_hit)
-    grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE + 10, OrksEffectKind::clever_hit)
+    grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE, RuleEffectKind::clever_hit)
+    grant_orks_model_effect(board, unit_id(0), damage_test_model(0), ORKS_MEK_REPAIR_RULE + 10, RuleEffectKind::clever_hit)
     let info = orks17p2_info(board, 0)
     let independent = info.faction_unit_hit_modifiers.size() == 3 and info.total_hit_modifier() == 3
     let choices : AttackModifierChoices
@@ -13011,7 +13011,7 @@ fun test_orks17p2_repair_full_health_still_grants_bonus() -> Bool:
     repair.choose_mek_repair_unit(board, unit_id(1))
     repair.choose_mek_repair_model(board, damage_test_model(0))
     repair.quantity(board, attack_test_die(3))
-    return repair.is_done() and board[1].models.size() == 3 and board[1][0].suffered_wounds == 0 and model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 1
+    return repair.is_done() and board[1].models.size() == 3 and board[1][0].suffered_wounds == 0 and model_rule_effect(board, board[1][0], RuleEffectKind::clever_hit) == 1
 
 # Mandatory Crude Surgery participates in the existing controller-order window;
 # its optional Orderly token can be declined and retained for another Command.
@@ -13291,9 +13291,9 @@ fun test_orks17p2_pulsa_does_not_follow_replacement_target() -> Bool:
 # https://wahapedia.ru/wh40k11ed/factions/orks/Tankbustas
 fun test_orks17p2_rokkit_barrage_actual_hit_and_penalty() -> Bool:
     let board = orks17p2_fixture(make_orks_tankbustas(false, Weapon::none, 0))
-    begin_orks_attack(board)
+    begin_attack_results(board)
     let none = orks_rokkit_barrage(board, unit_id(0))
-    record_orks_hits(board, unit_id(1), 1)
+    record_attack_hits(board, unit_id(1), 1)
     let sequence = orks_rokkit_barrage(board, unit_id(0))
     sequence.choose_rokkit_barrage_target(board, unit_id(1))
     sequence.roll_pair(board, attack_test_die(2), attack_test_die(4))
@@ -13377,7 +13377,7 @@ fun test_orks17p2_repair_reuses_prototype_across_turns() -> Bool:
             repair.choose_mek_repair_unit(board, unit_id(1))
             repair.choose_mek_repair_model(board, damage_test_model(0))
             repair.quantity(board, attack_test_die(1))
-    return board.source_instances.size() == original_sources + 1 and model_orks_effect(board, board[1][0], OrksEffectKind::clever_hit) == 2 and valid_source_foundations(board)
+    return board.source_instances.size() == original_sources + 1 and model_rule_effect(board, board[1][0], RuleEffectKind::clever_hit) == 2 and valid_source_foundations(board)
 
 
 # Final25 standard Orks datasheets: printed profiles and procedural consumers.
@@ -14077,7 +14077,7 @@ fun test_orks17p3_burna_bomb_failed_roll() -> Bool:
     let sequence = orks_datasheet_window(board, orks17p2_source(board, 141))
     sequence.choose_aircraft_bomb_target(board, unit_id(1))
     sequence.roll(board, attack_test_die(1))
-    return sequence.is_done() and board[1][0].suffered_wounds == 0 and unit_orks_effect(board, board[1], OrksEffectKind::burna_mark) == 0
+    return sequence.is_done() and board[1][0].suffered_wounds == 0 and unit_rule_effect(board, board[1], RuleEffectKind::burna_mark) == 0
 
 fun test_orks17p3_burna_hidden_ignore_cover_duration() -> Bool:
     let board = orks17p2_fixture(make_orks_burna_bommer(false))
@@ -14093,14 +14093,14 @@ fun test_orks17p3_burna_hidden_ignore_cover_duration() -> Bool:
     area.upper = geometry_point(11 * MICROMETRES_PER_INCH, 7 * MICROMETRES_PER_INCH, 0)
     area.dense = true
     board.terrain_areas.append(area)
-    let marked = !model_is_hidden(board, board[1], board[1][0]) and unit_orks_effect(board, board[1], OrksEffectKind::burna_mark) == 1
+    let marked = !model_is_hidden(board, board[1], board[1][0]) and unit_rule_effect(board, board[1], RuleEffectKind::burna_mark) == 1
     let info = orks17p2_info(board, 0)
     board.turn_serial = board.turn_serial + 1
     board.current_player = false
     refresh_source_effects(board, TimingWindow::turn_start)
-    let persists = unit_orks_effect(board, board[1], OrksEffectKind::burna_mark) == 1
+    let persists = unit_rule_effect(board, board[1], RuleEffectKind::burna_mark) == 1
     refresh_source_effects(board, TimingWindow::turn_end)
-    return sequence.is_done() and marked and attack_ignores_cover(board, info) and persists and unit_orks_effect(board, board[1], OrksEffectKind::burna_mark) == 0 and model_is_hidden(board, board[1], board[1][0])
+    return sequence.is_done() and marked and attack_ignores_cover(board, info) and persists and unit_rule_effect(board, board[1], RuleEffectKind::burna_mark) == 0 and model_is_hidden(board, board[1], board[1][0])
 
 # Aerial Manoover cannot withdraw an engaged unit and preserves identity.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Deffkoptas
@@ -14195,9 +14195,9 @@ fun test_orks17p3_found_em_turn_grant_and_no_visibility_requirement() -> Bool:
     let sequence = orks_datasheet_movement(board, unit_id(0))
     sequence.choose_datasheet_move_ability(board, OrksDatasheetMoveAbility::found_em)
     sequence.choose_datasheet_move_target(board, unit_id(1))
-    let active = unit_orks_effect(board, board[1], OrksEffectKind::found_detection) == 1
+    let active = unit_rule_effect(board, board[1], RuleEffectKind::found_detection) == 1
     refresh_source_effects(board, TimingWindow::turn_end)
-    return sequence.is_done() and active and unit_orks_effect(board, board[1], OrksEffectKind::found_detection) == 0
+    return sequence.is_done() and active and unit_rule_effect(board, board[1], RuleEffectKind::found_detection) == 0
 
 # Scorch blocks targeting the affected enemy with Fire Overwatch, while no
 # CP is spent and unrelated stratagems remain available.
@@ -14270,7 +14270,7 @@ fun test_orks17p3_beastscent_selected_cargo_and_one() -> Bool:
     let sequence = orks_disembark_selection(board, unit_id(0), carrier)
     sequence.use_beastscent(board, true)
     sequence.roll(board, attack_test_die(1))
-    return sequence.is_done() and board[0].battle_socked and unit_orks_effect(board, board.embarked_units[0], OrksEffectKind::beastscent) == 1 and unit_orks_effect(board, board[0], OrksEffectKind::beastscent) == 0
+    return sequence.is_done() and board[0].battle_socked and unit_rule_effect(board, board.embarked_units[0], RuleEffectKind::beastscent) == 1 and unit_rule_effect(board, board[0], RuleEffectKind::beastscent) == 0
 
 # Idol is mandatory and independent of permanent Waaagh! Effigy.
 # https://wahapedia.ru/wh40k11ed/factions/orks/Stompa
@@ -14287,8 +14287,8 @@ fun test_orks17p3_stompa_effigy_and_idol_cargo() -> Bool:
 # Sources: Orks/{Mek-Gunz,Wartrakks,Rukkatrukk-Squigbuggies}.
 fun orks17p3_post_status(Weapon gun) -> Board:
     let board = orks17p2_fixture(orks17p3_guns(2, gun))
-    begin_orks_attack(board)
-    record_orks_hits(board, unit_id(1), 1)
+    begin_attack_results(board)
+    record_attack_hits(board, unit_id(1), 1)
     let sequence = orks_resolve_hit_effects(board, unit_id(0))
     sequence.choose_datasheet_hit_target(board, unit_id(1))
     assert(sequence.is_done(), "post-shoot must complete after one target")
@@ -14297,7 +14297,7 @@ fun orks17p3_post_status(Weapon gun) -> Board:
 # Bubblechukka status is on the attacker, so all its targets gain cover.
 fun test_orks17p3_madcap_bubblechukka_wobbled() -> Bool:
     let board = orks17p3_post_status(Weapon::orks_mek_gunz_bubblechukka)
-    return unit_orks_effect(board, board[1], OrksEffectKind::wobbled) == 1 and unit_has_benefit_of_cover(board, board[1][0], board[0])
+    return unit_rule_effect(board, board[1], RuleEffectKind::wobbled) == 1 and unit_has_benefit_of_cover(board, board[1][0], board[0])
 
 # Numeric effects use the ordered characteristic pipeline and correct Ld sign.
 fun test_orks17p3_madcap_zapped_leadership() -> Bool:
@@ -14313,11 +14313,11 @@ fun test_orks17p3_madcap_grounded_persists_to_next_own_turn() -> Bool:
     board.turn_serial = board.turn_serial + 1
     board.current_player = true
     refresh_source_effects(board, TimingWindow::turn_start)
-    let persists = unit_orks_effect(board, board[1], OrksEffectKind::grounded) == 1
+    let persists = unit_rule_effect(board, board[1], RuleEffectKind::grounded) == 1
     board.turn_serial = board.turn_serial + 1
     board.current_player = false
     refresh_source_effects(board, TimingWindow::turn_start)
-    return persists and unit_orks_effect(board, board[1], OrksEffectKind::grounded) == 0
+    return persists and unit_rule_effect(board, board[1], RuleEffectKind::grounded) == 0
 
 # Mixed gun NAMES do not activate the common-weapon effect, even after a hit.
 fun test_orks17p3_madcap_mixed_names_or_no_hits_do_nothing() -> Bool:
@@ -14325,12 +14325,12 @@ fun test_orks17p3_madcap_mixed_names_or_no_hits_do_nothing() -> Bool:
     equipment.append(Weapon::orks_mek_gunz_smasha_gun)
     equipment.append(Weapon::orks_mek_gunz_bubblechukka)
     let board = orks17p2_fixture(make_orks_mek_gunz(equipment, 0))
-    begin_orks_attack(board)
-    record_orks_hits(board, unit_id(1), 1)
+    begin_attack_results(board)
+    record_attack_hits(board, unit_id(1), 1)
     let mixed = orks_resolve_hit_effects(board, unit_id(0))
     board[0] = orks17p3_guns(1, Weapon::orks_mek_gunz_smasha_gun)
     board.identify_units()
-    begin_orks_attack(board)
+    begin_attack_results(board)
     let no_hits = orks_resolve_hit_effects(board, unit_id(0))
     return mixed.is_done() and no_hits.is_done() and board.source_effects.empty()
 
@@ -14338,24 +14338,24 @@ fun test_orks17p3_madcap_mixed_names_or_no_hits_do_nothing() -> Bool:
 # when another ranged profile generated an equal final attack result.
 fun test_orks17p3_squig_barrage_named_hit_provenance() -> Bool:
     let board = orks17p2_fixture(make_orks_rukkatrukk_squigbuggies(1))
-    begin_orks_attack(board)
+    begin_attack_results(board)
     board.attack_info.squig_launcha_weapon = false
-    record_orks_hits(board, unit_id(1), 2)
+    record_attack_hits(board, unit_id(1), 2)
     let shotgun = !orks_hit_effect_target_valid(board, unit_id(0), unit_id(1))
     board.attack_info.squig_launcha_weapon = true
-    record_orks_hits(board, unit_id(1), 1)
+    record_attack_hits(board, unit_id(1), 1)
     let launchas = orks_hit_effect_target_valid(board, unit_id(0), unit_id(1))
     let sequence = orks_resolve_hit_effects(board, unit_id(0))
     sequence.choose_datasheet_hit_target(board, unit_id(1))
-    let effects = unit_orks_effect(board, board[1], OrksEffectKind::covered_squigs) == 1
+    let effects = unit_rule_effect(board, board[1], RuleEffectKind::covered_squigs) == 1
     board[1][0].keywords.append(Keyword::monster)
     return shotgun and launchas and effects and !orks_hit_effect_target_valid(board, unit_id(0), unit_id(1))
 
 # Busted grants Lethal only to friendly Speed Freeks attacks at that target.
 fun test_orks17p3_wartrakk_busted_target_and_attacker_keywords() -> Bool:
     let board = orks17p2_fixture(make_orks_wartrakks(1))
-    begin_orks_attack(board)
-    record_orks_hits(board, unit_id(1), 1)
+    begin_attack_results(board)
+    record_attack_hits(board, unit_id(1), 1)
     let sequence = orks_resolve_hit_effects(board, unit_id(0))
     sequence.choose_datasheet_hit_target(board, unit_id(1))
     let speed = orks17p2_info(board, 1)
@@ -14375,9 +14375,9 @@ fun test_orks17p3_full_throttle_turbo_duration() -> Bool:
     board.begin_phase(BattlePhase::movement)
     board.turn_serial = board.turn_serial + 2
     refresh_source_effects(board, TimingWindow::turn_start)
-    let before_command = unit_orks_effect(board, board[0], OrksEffectKind::turbo_engine) == 1
+    let before_command = unit_rule_effect(board, board[0], RuleEffectKind::turbo_engine) == 1
     refresh_source_effects(board, TimingWindow::command_start)
-    return sequence.is_done() and turbo and before_command and unit_orks_effect(board, board[0], OrksEffectKind::turbo_engine) == 0
+    return sequence.is_done() and turbo and before_command and unit_rule_effect(board, board[0], RuleEffectKind::turbo_engine) == 0
 
 # Shokk Attack Engine preserves both unit/model identities on withdrawal.
 fun test_orks17p3_full_throttle_shokk_reserves() -> Bool:
@@ -14388,7 +14388,7 @@ fun test_orks17p3_full_throttle_shokk_reserves() -> Bool:
     let sequence = orks_datasheet_window(board, orks17p2_source(board, 145))
     sequence.choose_shokka_engine(board, OrksEngine::shokk)
     sequence.use_shokk_attack_engine(board, true)
-    return sequence.is_done() and board[0].retired and board.reserve_units[0].identity == identity and unit_orks_effect(board, board.reserve_units[0], OrksEffectKind::shokk_engine) == 1
+    return sequence.is_done() and board[0].retired and board.reserve_units[0].identity == identity and unit_rule_effect(board, board.reserve_units[0], RuleEffectKind::shokk_engine) == 1
 
 # Pulse Jet is D6+18, traverse-all with horizontal costs and mandatory
 # unengaged finish; it forbids charges/actions and grants incoming-1hit.
@@ -14406,7 +14406,7 @@ fun test_orks17p3_pulse_jet_actual_move_restrictions_and_defence() -> Bool:
     let legal = can sequence.move_to(board, board_position(28, 5))
     sequence.move_to(board, board_position(28, 5))
     let policy = movement_policy(board[0], board[0][0], MovementKind::pulse_jet, false)
-    return sequence.is_done() and legal and board[0][0].position.x == 28 and !board[0].can_charge and !action_start_valid(board, unit_id(0), false) and policy.traverse_enemies and policy.traverse_terrain and policy.free_vertical_movement and unit_orks_effect(board, board[0], OrksEffectKind::pulse_defence) == 1
+    return sequence.is_done() and legal and board[0][0].position.x == 28 and !board[0].can_charge and !action_start_valid(board, unit_id(0), false) and policy.traverse_enemies and policy.traverse_terrain and policy.free_vertical_movement and unit_rule_effect(board, board[0], RuleEffectKind::pulse_defence) == 1
 
 # Nazdreg's free reaction does not pay CP or consume a Gretchin/Kopta card,
 # uses the fixed5 option only while riled, and shares a per-army phase token.
@@ -14884,13 +14884,13 @@ fun test_orks17q_coherency_dead_bridge_does_not_connect() -> Bool:
 # hits across saves (Orks/Rukkatrukk-Squigbuggies, Squig Barrage).
 fun test_orks17q_saved_squig_hits_cannot_exceed_total() -> Bool:
     let board = orks17p2_fixture(make_orks_rukkatrukk_squigbuggies(1))
-    begin_orks_attack(board)
-    ref record = orks_attack_record(board, board[1].identity)
+    begin_attack_results(board)
+    ref record = attack_result_record(board, board[1].identity)
     record.successful_hits = 1
-    record.squig_launcha_hits = 2
-    let invalid = !valid_orks_detachment_foundations(board)
-    record.squig_launcha_hits = 1
-    return invalid and valid_orks_detachment_foundations(board)
+    record.tagged_hits[AttackHitTag::squig_launcha.value] = 2
+    let invalid = !valid_attack_results(board)
+    record.tagged_hits[AttackHitTag::squig_launcha.value] = 1
+    return invalid and valid_attack_results(board)
 
 # Both public custom rosters, pending equipment save/restore, actual Warlord
 # handoff and attachment-source identities share the production root.
@@ -15437,7 +15437,7 @@ fun test_weapon_catalog_nonattacking_equipment_cannot_be_selected() -> Bool:
 fun test_faction_dispatch_unmodified_model_defaults() -> Bool:
     let board = attack_declaration_fixture()
     ref model = board[0][0]
-    return faction_keyword_override(model, Keyword::mounted) == 0 and faction_movement_bonus(model) == 0 and faction_toughness_bonus(model) == 0 and faction_invulnerable_base(model) == model.profile.invuln_save() and !faction_fights_first(model) and faction_charge_allowed(board, board[0]) and faction_action_allowed(board, board[0]) and faction_flight_allowed(board, board[0]) and faction_hidden_allowed(board, board[0])
+    return faction_keyword_override(model, Keyword::mounted) == 0 and faction_movement_bonus(model) == 0 and faction_toughness_bonus(model) == 0 and faction_invulnerable_base(model) == model.profile.invuln_save() and !model_has_fights_first_grant(model) and rule_charge_allowed(board, board[0]) and rule_action_allowed(board, board[0]) and rule_flight_allowed(board, board[0]) and faction_hidden_allowed(board, board[0])
 
 # A faction-owned effect is consumed on its actual recipient, independently
 # of which army owns that recipient (Orks psychic grants; core p67/01.02.02).
@@ -15445,23 +15445,25 @@ fun test_faction_dispatch_recipient_effect_without_army_inference() -> Bool:
     let board = attack_declaration_fixture()
     board.armies[0].faction = ArmyFaction::space_marines
     board.armies[1].faction = ArmyFaction::tyranids
-    let grant : OrksEffectGrant
-    grant.kind = OrksEffectKind::invulnerable_four
+    let grant : RuleEffectGrant
+    grant.kind = RuleEffectKind::invulnerable_save
+    grant.amount = 4
     let payload : SourceGrant
     payload = grant
     let key : SourceEffectKey
     key = 17
     install_source_grant(board[1][0], payload, key)
-    let applied = board[1][0].effective_invulnerable_save() == 4 and faction_model_has_source_grant(board[1][0], key)
+    let applied = board[1][0].effective_invulnerable_save() == 4 and model_has_source_grant(board[1][0], key)
     remove_source_grant(board[1][0], key)
-    return applied and !faction_model_has_source_grant(board[1][0], key) and board[1][0].effective_invulnerable_save() == board[1][0].profile.invuln_save()
+    return applied and !model_has_source_grant(board[1][0], key) and board[1][0].effective_invulnerable_save() == board[1][0].profile.invuln_save()
 
 # Generic source installation/removal routes faction payloads by their type,
 # preserving overlapping ownership keys (01.02.02, core returning models p88).
 fun test_faction_dispatch_overlapping_grants_keep_other_source() -> Bool:
     let board = attack_declaration_fixture()
-    let grant : OrksEffectGrant
-    grant.kind = OrksEffectKind::invulnerable_four
+    let grant : RuleEffectGrant
+    grant.kind = RuleEffectKind::invulnerable_save
+    grant.amount = 4
     let payload : SourceGrant
     payload = grant
     let first : SourceEffectKey
@@ -15469,11 +15471,12 @@ fun test_faction_dispatch_overlapping_grants_keep_other_source() -> Bool:
     first = 18
     second = 19
     install_source_grant(board[0][0], payload, first)
-    grant.kind = OrksEffectKind::invulnerable_five
+    grant.kind = RuleEffectKind::invulnerable_save
+    grant.amount = 5
     payload = grant
     install_source_grant(board[0][0], payload, second)
     remove_source_grant(board[0][0], first)
-    return !faction_model_has_source_grant(board[0][0], first) and faction_model_has_source_grant(board[0][0], second) and board[0][0].effective_invulnerable_save() == 5
+    return !model_has_source_grant(board[0][0], first) and model_has_source_grant(board[0][0], second) and board[0][0].effective_invulnerable_save() == 5
 
 # A source's optional faction policy does not grant a generic caller transport
 # permission; the shared known/capacity gate still owns eligibility (core p64).
@@ -15532,10 +15535,10 @@ fun test_faction_dispatch_selected_move_is_atomic() -> Bool:
 fun test_faction_dispatch_special_move_is_peer_and_atomic() -> Bool:
     let board = attack_declaration_fixture()
     board.begin_phase(BattlePhase::movement)
-    let grant : OrksEffectGrant
-    grant.kind = OrksEffectKind::pulse_engine
+    let grant : RuleEffectGrant
+    grant.kind = RuleEffectKind::pulse_engine
     grant.amount = 1
-    board[0][0].orks_effects.append(grant)
+    board[0][0].rule_effects.append(grant)
     let sequence = movement(board, unit_id(0), false)
     let peers = can sequence.normal_move(board) and can sequence.pulse_jet_move(board)
     sequence.pulse_jet_move(board)
@@ -15581,3 +15584,78 @@ fun test_shared_hooks_replacement_uses_fresh_identity_and_template() -> Bool:
     board[0].has_shoot = true
     let replacement = make_replacement_unit(board, board[0])
     return replacement.identity != board[0].identity and replacement[0].identity != original_id and replacement[0].original_unit == replacement.identity and replacement[0].weapons.size() == 1 and replacement[0].suffered_wounds == 0 and !replacement.has_shoot and replacement.history.strategic_reserve and replacement.off_battlefield and board[0][0].suffered_wounds == 1
+
+# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+fun test_shared_hooks_status_grants_and_best_invulnerable_save() -> Bool:
+    let board = attack_declaration_fixture()
+    let grant : RuleEffectGrant
+    grant.kind = RuleEffectKind::invulnerable_save
+    grant.amount = 3
+    let payload : SourceGrant
+    payload = grant
+    let first : SourceEffectKey
+    first = 91
+    install_source_grant(board[1][0], payload, first)
+    grant.amount = 5
+    payload = grant
+    let second : SourceEffectKey
+    second = 92
+    install_source_grant(board[1][0], payload, second)
+    let best = board[1][0].effective_invulnerable_save() == min(3, board[1][0].profile.invuln_save())
+    remove_source_grant(board[1][0], first)
+    return best and board[1][0].effective_invulnerable_save() == min(5, board[1][0].profile.invuln_save()) and model_has_source_grant(board[1][0], second)
+
+
+# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+fun test_shared_hooks_common_permissions_without_faction() -> Bool:
+    let board = attack_declaration_fixture()
+    let status : RuleEffectGrant
+    status.kind = RuleEffectKind::no_charge
+    status.amount = 1
+    board[0][0].rule_effects.append(status)
+    status.kind = RuleEffectKind::no_action
+    board[0][0].rule_effects.append(status)
+    status.kind = RuleEffectKind::fights_first
+    board[0][0].rule_effects.append(status)
+    return !rule_charge_allowed(board, board[0]) and !rule_action_allowed(board, board[0]) and model_has_fights_first_grant(board[0][0]) and rule_charge_allowed(board, board[1])
+
+
+# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+fun test_shared_hooks_reject_invalid_invulnerable_grants() -> Bool:
+    let status : RuleEffectGrant
+    status.kind = RuleEffectKind::invulnerable_save
+    status.amount = 1
+    let invalid_low = !valid_rule_effect(status)
+    status.amount = 7
+    let invalid_high = !valid_rule_effect(status)
+    status.amount = 4
+    return invalid_low and invalid_high and valid_rule_effect(status)
+
+
+# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+fun test_shared_hooks_attack_results_are_faction_independent() -> Bool:
+    let board = attack_declaration_fixture()
+    begin_attack_results(board)
+    record_attack_hits(board, unit_id(1), 3)
+    let member : ModelID
+    member = 0
+    let remaining = board[1][0].wounds_left()
+    record_attack_wound_loss(board, board[1], member, remaining + 7, true)
+    let correct = board.attack_records.size() == 1 and board.attack_records[0].successful_hits == 3 and board.attack_records[0].wounds_lost == remaining and board.attack_records[0].tagged_hits[0] == 0
+    end_attack_results(board)
+    record_attack_hits(board, unit_id(1), 1)
+    let closed = board.attack_records[0].successful_hits == 3
+    begin_attack_results(board)
+    return correct and closed and board.attack_records.empty() and board.attack_serial == 2
+
+
+# Shared source/attack mechanics regression (core pp18-24/40/58,01.02.02).
+fun test_shared_hooks_attack_tag_validation() -> Bool:
+    let board = attack_declaration_fixture()
+    begin_attack_results(board)
+    record_attack_hits(board, unit_id(1), 2)
+    board.attack_records[0].tagged_hits[0] = 3
+    let rejected = !valid_attack_results(board)
+    board.attack_records[0].tagged_hits[0] = 1
+    return rejected and valid_attack_results(board)
+

@@ -16,7 +16,7 @@ using ChargeDistance = LinearlyDistributedInt<0, 13>
 # consumes this phase's declaration but grants neither Lance nor Fights First
 # (pp.36–37/82). This also excludes offboard/retained casualties and engagement.
 fun charge_source_valid(Board board, UnitID source, Bool player) -> Bool:
-    if source.get() < board.units.size() and !faction_charge_allowed(board, board[source]):
+    if source.get() < board.units.size() and !rule_charge_allowed(board, board[source]):
         return false
     if source.get() >= board.units.size():
         return false

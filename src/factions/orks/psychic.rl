@@ -92,8 +92,8 @@ act use_orks_psychic(ctx Board board, frm EntityIdentity subject, frm Bool visio
     if location.found:
         if visions:
             if has_live_model(source_bank_unit(board, location.bank, location.unit.value)):
-                let effect : OrksEffectGrant
-                effect.kind = OrksEffectKind::fights_first
+                let effect : RuleEffectGrant
+                effect.kind = RuleEffectKind::fights_first
                 effect.amount = 1
                 grant_orks_own_payload(board, source_bank_unit(board, location.bank, location.unit.value), 440, effect, SourceDuration::phase)
         else:

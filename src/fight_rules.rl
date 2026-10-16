@@ -44,7 +44,7 @@ fun fight_first_unit(Unit unit) -> Bool:
     for i in range(unit.models.size()):
         if fight_model_present(unit[i]):
             present = true
-            if !unit[i].has_ability(AbilityKind::fight_first) and !faction_fights_first(unit[i]):
+            if !unit[i].has_ability(AbilityKind::fight_first) and !model_has_fights_first_grant(unit[i]):
                 return false
     return present
 

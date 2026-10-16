@@ -1,29 +1,16 @@
+import rule_effects
 import board
 import source_effects
 
 # Non-characteristic grants are keyed to the same expiry machinery as ordinary
 # modifiers (01.02.02); no stale declaration can resurrect an expired grant.
-fun model_orks_effect(Board board, Model model, OrksEffectKind kind) -> Int:
-    let amount = 0
-    for effect_index in range(model.orks_effects.size()):
-        ref effect = model.orks_effects[effect_index]
-        if effect.kind.value == kind.value and source_grant_active(board, effect.source_effect):
-            amount = amount + max(1, effect.amount.value)
-    return amount
-
 # Effects installed on an entire unit count one source once, rather than
 # adding the same grant for each recipient (e.g. Advance+2 and Leadership-1).
-fun unit_orks_effect(Board board, Unit unit, OrksEffectKind kind) -> Int:
-    for model_index in range(unit.models.size()):
-        if model_confers_attached_abilities(unit[model_index]) or unit[model_index].state == ModelState::fight_on_death:
-            return model_orks_effect(board, unit[model_index], kind)
-    return 0
-
 # Every sourced grant uses a stable rule/unit handle, reused on later phases;
 # effect identity, not a mutable source payload, owns each installed copy.
 # Orks cards and appendix01.02.02; no additional rule-use limit is invented.
-fun grant_orks_effect(Board board, UnitID source, UnitID target, Int rule, OrksEffectKind kind, Int amount, SourceDuration duration, EntityIdentity associated):
-    let grant : OrksEffectGrant
+fun grant_orks_effect(Board board, UnitID source, UnitID target, Int rule, RuleEffectKind kind, Int amount, SourceDuration duration, EntityIdentity associated):
+    let grant : RuleEffectGrant
     grant.kind = kind
     grant.amount = amount
     grant.associated_unit = associated
@@ -58,7 +45,7 @@ fun grant_orks_own_payload(Board board, Unit unit, Int rule, SourceGrant payload
 
 # The typed overload preserves the finite generated binding surface while
 # sharing the same installer and expiry logic (appendix01.02.02).
-fun grant_orks_own_payload(Board board, Unit unit, Int rule, OrksEffectGrant payload, SourceDuration duration):
+fun grant_orks_own_payload(Board board, Unit unit, Int rule, RuleEffectGrant payload, SourceDuration duration):
     let typed : SourceGrant
     typed = payload
     grant_orks_own_payload(board, unit, rule, typed, duration)
@@ -78,18 +65,18 @@ fun grant_orks_payload(Board board, UnitID source, UnitID target, Int rule, Char
 
 # Derived weapon rules retain the actual source expiry key in their immutable
 # declaration; a later phase cannot revive a stale grant (01.02.02/p78).
-fun append_orks_effect_ability(Board board, Model model, OrksEffectKind effect_kind, WeaponRuleKind weapon_kind, Int amount, WeaponAbilitySet rules):
-    for effect in range(model.orks_effects.size()):
-        if model.orks_effects[effect].kind.value == effect_kind.value and source_grant_active(board, model.orks_effects[effect].source_effect):
+fun append_orks_effect_ability(Board board, Model model, RuleEffectKind effect_kind, WeaponRuleKind weapon_kind, Int amount, WeaponAbilitySet rules):
+    for effect in range(model.rule_effects.size()):
+        if model.rule_effects[effect].kind.value == effect_kind.value and source_grant_active(board, model.rule_effects[effect].source_effect):
             let rule = weapon_rule(weapon_kind, amount)
-            rule.source_effect = model.orks_effects[effect].source_effect
+            rule.source_effect = model.rule_effects[effect].source_effect
             rules.append(rule)
 
 # Starting equipment includes intrinsic data, not a copy of old timed buffs.
 # New physical weapon use starts from the battle-start template (01.02.10).
 # Temperamental Shokka grants are bearer-only and named-weapon scoped. Copying
 # one model's upgrade to every carrier/unit member would change the card rule.
-fun grant_orks_model_effect(Board board, UnitID source, ModelID bearer, Int rule, OrksEffectKind kind):
+fun grant_orks_model_effect(Board board, UnitID source, ModelID bearer, Int rule, RuleEffectKind kind):
     let instance : SourceInstance
     instance.rule = rule
     instance.owner = board[source].owned_by_player1
@@ -98,9 +85,9 @@ fun grant_orks_model_effect(Board board, UnitID source, ModelID bearer, Int rule
     instance.recipient = SourceTarget::source_model
     instance.duration = SourceDuration::phase
     instance.label.value = SourceLabel::temperamental_shokka
-    if kind.value == OrksEffectKind::boss_ammo_hit.value:
+    if kind.value == RuleEffectKind::boss_ammo_hit.value:
         instance.label.value = SourceLabel::boss_ammo_runt
-    let effect : OrksEffectGrant
+    let effect : RuleEffectGrant
     effect.kind = kind
     effect.amount = 1
     instance.grant = effect

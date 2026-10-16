@@ -37,24 +37,6 @@ fun register_orks_option_passives(Board board):
 
 # Save integrity covers the new bounded activation ledger and modifier stacks;
 # these are implementation invariants, not additional tabletop restrictions.
-fun valid_orks_detachment_foundations(Board board) -> Bool:
-    if board.orks_attack_serial.value < 0 or board.orks_attack_serial.value >= 1025 or board.forced_attack_target.value < 0 or board.forced_attack_target.value > board.next_identity.value:
-        return false
-    if !valid_rule_modifiers(board.attack_info.faction_hit_modifiers) or !valid_rule_modifiers(board.attack_info.faction_wound_modifiers):
-        return false
-    for record in range(board.orks_attack_records.size()):
-        ref entry = board.orks_attack_records[record]
-        if entry.target.value <= 0 or entry.target.value > board.next_identity.value or entry.successful_hits.value < 0 or entry.successful_hits.value >= MAX_COMBAT_COUNTER or entry.wounds_lost.value < 0 or entry.wounds_lost.value >= MAX_COMBAT_COUNTER:
-            return false
-        # Squig Barrage's weapon-specific hits are a subset of all hits;
-        # malformed saves cannot fabricate post-shot triggers (Squigbuggies).
-        if entry.squig_launcha_hits.value < 0 or entry.squig_launcha_hits.value > entry.successful_hits.value:
-            return false
-        for previous in range(record):
-            if board.orks_attack_records[previous].target == entry.target:
-                return false
-    return true
-
 # Custom windows are offered only in the right bank with a valid target;
 # mandatory bombs with no legal target never strand phase completion.
 # Source cards' explicit windows; core timing pp28-30 and reserve p69.
@@ -146,7 +128,7 @@ act orks_datasheet_window(ctx Board board, frm SourceInstance instance) -> OrksD
         if burna and bomb_face.value >= 2:
             # Separate the lasting grant from rule141's consumed window token.
             # Burna-bommer/Burna Bomb: one trigger, not a second ability use.
-            grant_orks_effect(board, source, target, 176, OrksEffectKind::burna_mark, 1, SourceDuration::end_next_turn, invalid_entity_identity())
+            grant_orks_effect(board, source, target, 176, RuleEffectKind::burna_mark, 1, SourceDuration::end_next_turn, invalid_entity_identity())
         board.shared_actions.resolve_mortal_wounds = resolve_mortal_wounds(board, target, source, true, amount)
         subaction*(board) board.shared_actions.resolve_mortal_wounds
     if instance.rule.value == 142 or instance.rule.value == 143:
@@ -158,12 +140,12 @@ act orks_datasheet_window(ctx Board board, frm SourceInstance instance) -> OrksD
                 enter_from_reserves(board, source, position, MovementKind::ingress)
     if instance.rule.value == 145:
         act choose_shokka_engine(frm OrksEngine engine)
-        frm payload : OrksEffectGrant
-        payload.kind = OrksEffectKind::turbo_engine
+        frm payload : RuleEffectGrant
+        payload.kind = RuleEffectKind::turbo_engine
         if engine.value == OrksEngine::shokk.value:
-            payload.kind = OrksEffectKind::shokk_engine
+            payload.kind = RuleEffectKind::shokk_engine
         if engine.value == OrksEngine::pulse.value:
-            payload.kind = OrksEffectKind::pulse_engine
+            payload.kind = RuleEffectKind::pulse_engine
         grant_orks_own_payload(board, source_bank_unit(board, location.bank, location.unit.value), 170 + engine.value, payload, SourceDuration::next_own_command)
         if engine.value == OrksEngine::shokk.value and location.bank.value == SourceBank::battlefield.value and !board.is_in_melee(board[source]) and board.reserve_units.has_capacity():
             act use_shokk_attack_engine(Bool shokk)
@@ -421,10 +403,6 @@ act orks_timing_choice(ctx Board board, ctx CoreTimingProgress core_progress, ct
 fun orks_model_state_valid(Model model) -> Bool:
     if model.orks_enhancement.value < 0 or model.orks_enhancement.value > OrksEnhancement::warphead.value or model.orks_upgrade_origin.value < 0 or model.orks_upgrade_origin.value >= MAX_IDENTITY_SEQUENCE:
         return false
-    for ork_effect in range(model.orks_effects.size()):
-        ref grant = model.orks_effects[ork_effect]
-        if grant.kind.value <= 0 or grant.kind.value > max(grant.kind) or grant.source_effect.value < 0 or grant.source_effect.value >= MAX_SOURCE_EFFECT_KEY or grant.amount.value < 0 or grant.amount.value >= MAX_CHARACTERISTIC or grant.associated_unit.value < 0 or grant.associated_unit.value >= MAX_IDENTITY_SEQUENCE:
-            return false
     for riled_index in range(model.riled_source_effects.size()):
         if model.riled_source_effects[riled_index].value < 0 or model.riled_source_effects[riled_index].value >= MAX_SOURCE_EFFECT_KEY:
             return false
@@ -436,19 +414,11 @@ fun orks_unit_state_valid(Unit unit) -> Bool:
 
 # Orks typed/riled grants share generic source handles and expiry (Waaagh!/01.02.02).
 fun orks_install_source_grant(Model model, SourceGrant installed, SourceEffectKey key):
-    if installed is OrksEffectGrant:
-        installed.source_effect = key
-        model.orks_effects.append(installed)
     if installed is RiledUpGrant:
         model.riled_source_effects.append(key)
 
 # Remove only the matching Orks effect/riled key, including archived models (01.02.02; core p88).
 fun orks_remove_source_grant(Model model, SourceEffectKey key):
-    let effect_index = model.orks_effects.size()
-    while effect_index > 0:
-        effect_index = effect_index - 1
-        if model.orks_effects[effect_index].source_effect == key:
-            model.orks_effects.erase(effect_index)
     let index = model.riled_source_effects.size()
     while index > 0:
         index = index - 1
@@ -457,8 +427,6 @@ fun orks_remove_source_grant(Model model, SourceEffectKey key):
 
 # Validate faction typed source payloads before loading/dispatch; generic arithmetic validation stays core.
 fun orks_source_grant_valid(SourceGrant grant) -> Bool:
-    if grant is OrksEffectGrant:
-        return grant.kind.value > 0 and grant.kind.value <= max(grant.kind) and grant.amount.value >= 0 and grant.associated_unit.value >= 0
     if grant is RiledUpGrant:
         return grant.enabled
     return false
@@ -466,8 +434,6 @@ fun orks_source_grant_valid(SourceGrant grant) -> Bool:
 # Returned members inherit only missing faction-owned grant keys (core p88/01.02.02).
 fun orks_model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
     let present = false
-    for orks_effect in range(model.orks_effects.size()):
-        present = present or model.orks_effects[orks_effect].source_effect == key
     for riled_index in range(model.riled_source_effects.size()):
         present = present or model.riled_source_effects[riled_index] == key
     return present

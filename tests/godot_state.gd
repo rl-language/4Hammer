@@ -33,9 +33,9 @@ func check_bindings():
 	interaction.models = Node.new()
 	interaction.add_child(interaction.models)
 	root.add_child(interaction)
-	assert(rules.library.get_state_schema_version() == 45)
+	assert(rules.library.get_state_schema_version() == 46)
 	assert(rules.library.get_action_schema_version() == 27)
-	assert(rules.library.get_observation_schema_version() == 45)
+	assert(rules.library.get_observation_schema_version() == 46)
 	assert(rules.valid_actions.size() == 7)
 	# User-directed configuration: actual enum buttons, unique picks, saved
 	# pending selection and automatic handoff after the third package.

@@ -1,4 +1,4 @@
-import factions.orks.types
+import rule_effect_types
 import modifiers
 import weapons
 
@@ -65,7 +65,7 @@ cls SourceWeaponGrant:
 cls RiledUpGrant:
     Bool enabled
 
-using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant | AttackModifierPermission | RiledUpGrant | OrksEffectGrant
+using SourceGrant = CharacteristicModifier | IncomingAttackModifier | SourceWeaponGrant | AttackModifierPermission | RiledUpGrant | RuleEffectGrant
 
 cls SourceUseLimits:
     # Zero is unlimited for this interval; combine all four printed limits.

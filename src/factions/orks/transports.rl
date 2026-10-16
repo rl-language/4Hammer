@@ -52,15 +52,15 @@ fun register_orks_cargo_passives(Board board):
                 instance.label.value = SourceLabel::orks_cargo_enhancement
                 instance.grant = characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 2)
                 if effect_index == 1:
-                    let protection : OrksEffectGrant
-                    protection.kind = OrksEffectKind::invulnerable_five
-                    protection.amount = 1
+                    let protection : RuleEffectGrant
+                    protection.kind = RuleEffectKind::invulnerable_save
+                    protection.amount = 5
                     instance.grant = protection
                 if effect_index >= 2:
-                    let ability : OrksEffectGrant
-                    ability.kind = OrksEffectKind::borrowed_keep_huntin
+                    let ability : RuleEffectGrant
+                    ability.kind = RuleEffectKind::borrowed_keep_huntin
                     if effect_index == 3:
-                        ability.kind = OrksEffectKind::borrowed_intimidation
+                        ability.kind = RuleEffectKind::borrowed_intimidation
                     ability.amount = 1
                     instance.grant = ability
                 let registered = -1
@@ -192,8 +192,8 @@ act orks_disembark_selection(ctx Board board, frm UnitID passenger, frm CarrierL
             rule = 162
             board.shared_actions.orks_psychic_test = orks_datasheet_psychic(board, carrier.unit, rule)
             subaction*(board) board.shared_actions.orks_psychic_test
-            frm payload : OrksEffectGrant
-            payload.kind = OrksEffectKind::beastscent
+            frm payload : RuleEffectGrant
+            payload.kind = RuleEffectKind::beastscent
             payload.amount = 1
             grant_orks_own_payload(board, board.embarked_units[passenger.get()], 169, payload, SourceDuration::turn)
 

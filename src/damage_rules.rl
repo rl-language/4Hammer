@@ -243,14 +243,14 @@ fun has_destruction_trigger(Board board, UnitID source, Bool source_known, Model
 fun commit_wound_loss(Board board, DamageJob job, ModelID model, Int lost, Bool fight_on_death):
     ref unit = source_bank_unit(board, job.bank, job.target.get())
     assert(lost >= 0, "negative wound loss")
-    faction_record_wound_loss(board, unit, model, lost, job.from_attack)
+    record_attack_wound_loss(board, unit, model, lost, job.from_attack)
     if lost > 0:
         unit[model].suffered_wounds = min(unit[model].profile.wounds(), unit[model].suffered_wounds.value + lost)
     if unit[model].wounds_left() <= 0:
         unit[model].destroyed_phase = board.phase_serial.value + 1
         # Source lifetime p.67 independently requires retaining the bearer,
         # even if it has no Deadly Demise or other death-trigger ability.
-        faction_record_unit_destruction(board, unit)
+        record_attack_unit_destruction(board, unit)
         let retained_rules = false
         if job.bank.value == SourceBank::battlefield.value:
             retained_rules = retain_attachment_rules_for_attack(board, job.target, model, job)

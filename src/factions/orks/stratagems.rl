@@ -47,7 +47,7 @@ act use_orks_support_card(ctx Board board, frm UnitID source, frm Stratagem card
         board.commit_stratagem(board[source].owned_by_player1, card, board[source])
     if card == Stratagem::orks_mob_mentality:
         act choose_mob_mentality_target(frm UnitID mob) {orks_support_target(board, source, mob, card)}
-        grant_orks_effect(board, source, mob, 300 + card.value, OrksEffectKind::automatic_shock_success, 1, SourceDuration::phase, invalid_entity_identity())
+        grant_orks_effect(board, source, mob, 300 + card.value, RuleEffectKind::automatic_shock_success, 1, SourceDuration::phase, invalid_entity_identity())
     if card == Stratagem::orks_dubious_restraint:
         act choose_orks_secured_objective(BInt<0, 4> objective) {board.unit_controls_objective(board[source], objective.value)}
         board.grant_secured_objective(objective.value, board[source].owned_by_player1)

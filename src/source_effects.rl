@@ -393,6 +393,9 @@ fun install_source_grant(Model model, SourceGrant grant, SourceEffectKey key):
     if installed is AttackModifierPermission:
         installed.source_effect = key
         model.attack_modifier_permissions.append(installed)
+    if installed is RuleEffectGrant:
+        installed.source_effect = key
+        model.rule_effects.append(installed)
     faction_install_source_grant(model, installed, key)
     if installed is SourceWeaponGrant:
         installed.rule.source_effect = key
@@ -423,6 +426,11 @@ fun commit_pending_source(Board board, PendingSourceEvents pending, SourceEventI
 # Remove a handle, not every equal-valued modifier. Archives are included so
 # later revival cannot resurrect expired grants (returning models p.88).
 fun remove_source_grant(Model model, SourceEffectKey key):
+    let status_index = model.rule_effects.size()
+    while status_index > 0:
+        status_index = status_index - 1
+        if model.rule_effects[status_index].source_effect == key:
+            model.rule_effects.erase(status_index)
     faction_remove_source_grant(model, key)
     let index = model.characteristic_modifiers.size()
     while index > 0:
@@ -555,6 +563,8 @@ fun source_weapon_grant(WeaponRule rule) -> SourceWeaponGrant:
 # invalid modifiers, foreign ownership or forged effect handles into consumers.
 fun valid_source_grant(SourceGrant grant) -> Bool:
     let valid = faction_source_grant_valid(grant)
+    if grant is RuleEffectGrant:
+        valid = valid_rule_effect(grant)
     if grant is CharacteristicModifier:
         let entries : CharacteristicModifiers
         entries.append(grant)
@@ -676,6 +686,8 @@ fun source_aura_target(Board board, SourceInstance instance, SourceLocation targ
 # already carried by a surviving model (returning models p.88/01.02.02).
 fun model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
     let present = faction_model_has_source_grant(model, key)
+    for status_index in range(model.rule_effects.size()):
+        present = present or model.rule_effects[status_index].source_effect == key
     for index in range(model.characteristic_modifiers.size()):
         present = present or model.characteristic_modifiers[index].source_effect == key
     for incoming_index in range(model.incoming_attack_modifiers.size()):
@@ -719,6 +731,8 @@ fun source_handle_matches_model(Board board, SourceEffectKey key, EntityIdentity
 
 fun valid_model_source_handles(Board board, Model model) -> Bool:
     let valid = true
+    for status_index in range(model.rule_effects.size()):
+        valid = valid and valid_rule_effect(model.rule_effects[status_index]) and source_handle_matches_model(board, model.rule_effects[status_index].source_effect, model.identity)
     for index in range(model.characteristic_modifiers.size()):
         valid = valid and source_handle_matches_model(board, model.characteristic_modifiers[index].source_effect, model.identity)
     for incoming in range(model.incoming_attack_modifiers.size()):
@@ -871,6 +885,11 @@ fun commit_reusable_unit_grant(Board board, SourceInstance instance, EntityIdent
 # Strip sourced arithmetic/weapon permissions from a new battle-start copy
 # (adding units01.02.10); intrinsic zero-key grants remain equipment data.
 fun strip_temporary_model_grants(Model model):
+    let status_index = model.rule_effects.size()
+    while status_index > 0:
+        status_index = status_index - 1
+        if model.rule_effects[status_index].source_effect.value > 0:
+            model.rule_effects.erase(status_index)
     let index = model.characteristic_modifiers.size()
     while index > 0:
         index = index - 1

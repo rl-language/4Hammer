@@ -7,13 +7,7 @@ fun faction_has_destruction_trigger(Board board, Model model) -> Bool:
     return orks_has_destruction_trigger(board, model)
 
 # Orks attack ledger records actual wounds lost before clamping, not rolled damage (Orks detachment triggers).
-fun faction_record_wound_loss(Board board, Unit unit, ModelID model, Int lost, Bool from_attack):
-    orks_record_wound_loss(board, unit, model, lost, from_attack)
-
 # Track Orks attack/phase kill provenance only after actual last-model destruction (Orks combat triggers).
-fun faction_record_unit_destruction(Board board, Unit unit):
-    orks_record_unit_destruction(board, unit)
-
 # Flyin Headbutt requires the Aircraft unit destruction event (Orks/Flyboyz).
 fun faction_unit_destruction_trigger(Board board, Unit unit, Model model) -> Bool:
     return orks_unit_destruction_trigger(board, unit, model)
@@ -47,13 +41,7 @@ fun faction_lone_operative(Board board, Unit unit) -> Bool:
     return orks_lone_operative(board, unit)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun begin_faction_attack(Board board):
-    begin_orks_attack(board)
-
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun record_faction_hits(Board board, UnitID target, Int count):
-    record_orks_hits(board, target, count)
-
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_fight_death_threshold(Board board, Unit unit, Model model) -> Int:
     return orks_fight_death_threshold(board, unit, model)
@@ -63,9 +51,6 @@ fun faction_hit_interceptor(Board board, Unit unit) -> Int:
     return orks_grot_shield(board, unit)
 
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun attack_with_faction_reactions(Board board, UnitID source, UnitID target, Bool melee, Bool overwatch) -> AttackWithOrksReactions:
-    return attack_with_orks_reactions(board, source, target, melee, overwatch)
-
 # Composition hook: combat adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_pre_declaration_options(Board board, UnitID source) -> OrksShokkaSelection:
     return orks_shokka_selection(board, source)
@@ -143,9 +128,6 @@ fun faction_extra_attack_hazards(Board board, Unit unit) -> Int:
     return orks_extra_attack_hazards(board, unit)
 
 # Core attack-end sequencing precedes faction ledger closure.
-fun end_faction_attack(Board board):
-    orks_end_attack(board)
-
 # Automatic shock success is a source-owned permission, not a change to the core test (Orks cards).
 fun faction_automatic_shock_success(Board board, Unit unit) -> Bool:
     return orks_automatic_shock_success(board, unit)
@@ -186,3 +168,12 @@ fun faction_attack_selection_options(Board board, UnitID source, Bool melee) -> 
 # Brutal Impact contributes damage before other faction modifiers, preserving operation order (Orks/Squighog-Boyz).
 fun append_faction_intrinsic_modifiers(Board board, UnitID source, ModifiedCharacteristic kind, RuleModifiers result):
     append_orks_intrinsic_modifiers(board, source, kind, result)
+
+# Optional faction hit provenance augments the generic per-target facts.
+fun record_faction_hit_tags(Board board, AttackResultRecord record, Int count):
+    record_orks_hit_tags(board, record, count)
+
+# Core executes returned attack requests; the adapter owns reaction eligibility,
+# CP, choices and sequencing of nonattack effects (Orks reaction cards).
+fun faction_post_attack(Board board, UnitID attacker, Bool melee) -> OrksPostAttack:
+    return resolve_orks_post_attack(board, attacker, melee)

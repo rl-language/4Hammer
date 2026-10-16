@@ -1,3 +1,4 @@
+import attack_result_types
 import action_frames
 import units
 import source_effect_types
@@ -248,12 +249,12 @@ cls Board:
     SourceEffectKey next_source_generation
     AttackSequenceInfo attack_info
     # Actual hit/loss provenance for detachment post-attack reactions.
-    OrksAttackRecords orks_attack_records
-    LinearlyDistributedInt<0, 1025> orks_attack_serial
+    AttackResultRecords attack_records
+    LinearlyDistributedInt<0, 1025> attack_serial
     Bool move_requires_objective
     UnitID constrained_mover
     EntityIdentity forced_attack_target
-    Bool orks_attack_active
+    Bool attack_active
     SourceBank orks_support_bank
     UnitID orks_selected_unit
     # Active group labels/target are editor infrastructure for p.19 decisions.
@@ -844,7 +845,7 @@ fun valid_weapon_condition(WeaponRule rule) -> Bool:
 fun valid_state_foundations(Board board) -> Bool:
     if !valid_attack_modifier_choice(board.pending_modifier_choice) or board.pending_modifier_kind.value < 0 or board.pending_modifier_kind.value > ModifierSelectionKind::hit_roll.value:
         return false
-    if !valid_faction_army_state(board) or !valid_source_foundations(board) or !valid_faction_detachment_foundations(board):
+    if !valid_attack_results(board) or !valid_faction_army_state(board) or !valid_source_foundations(board):
         return false
     if !valid_rule_modifiers(board.attack_info.skill_modifiers) or !valid_rule_modifiers(board.attack_info.ap_modifiers) or !valid_rule_modifiers(board.attack_info.damage_modifiers):
         return false

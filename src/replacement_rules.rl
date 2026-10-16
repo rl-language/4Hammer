@@ -23,6 +23,8 @@ fun make_replacement_unit(Board board, Unit original) -> Unit:
     replacement.off_battlefield = true
     replacement.embarked_transport = 0
     replacement.unit_destruction_event_issued = false
+    replacement.destroyed_attack = 0
+    replacement.destroyed_phase = 0
     let history : UnitHistory
     replacement.history = history
     replacement.history.strategic_reserve = true
