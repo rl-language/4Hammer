@@ -52,7 +52,7 @@ fun call_war_cry(Board board, Bool player):
     assert(board.timing.window == TimingWindow::command_start and war_cry_available(board, player), "War Cry is unavailable")
     let instance : SourceInstance
     instance.rule = 100
-    instance.name.value = "War Cry"s
+    instance.label.value = SourceLabel::war_cry
     instance.owner = player
     instance.trigger = SourceEventKind::timing_window
     instance.window = TimingWindow::command_start
@@ -118,7 +118,7 @@ fun register_orks_passive_rules(Board board):
                     continue
                 let instance : SourceInstance
                 instance.rule = 101
-                instance.name.value = "Permanent riled up"s
+                instance.label.value = SourceLabel::permanent_riled_up
                 instance.source_unit = unit.identity
                 instance.source_model = unit[model_index].identity
                 instance.owner = unit.owned_by_player1

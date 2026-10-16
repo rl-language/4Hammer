@@ -99,7 +99,7 @@
     "source": "src/rules.rl",
     "line": 2982,
     "game_copies": 1,
-    "native_bytes": 2216,
+    "native_bytes": 2200,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -382,7 +382,7 @@
     "source": "src/full_game.rl",
     "line": 6,
     "game_copies": 1,
-    "native_bytes": 34160,
+    "native_bytes": 34016,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -559,7 +559,7 @@
     "source": "src/rules.rl",
     "line": 1871,
     "game_copies": 1,
-    "native_bytes": 1296,
+    "native_bytes": 1264,
     "storage": "Board.shared_actions.resolve_movement_sources",
     "nested_reentry": false,
     "calls": [
@@ -660,7 +660,7 @@
     "source": "src/factions/orks/recovery.rl",
     "line": 280,
     "game_copies": 1,
-    "native_bytes": 1048,
+    "native_bytes": 1016,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -713,7 +713,7 @@
     "source": "src/factions/orks/sources.rl",
     "line": 166,
     "game_copies": 1,
-    "native_bytes": 608,
+    "native_bytes": 592,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -740,7 +740,7 @@
     "source": "src/factions/orks/combat.rl",
     "line": 539,
     "game_copies": 1,
-    "native_bytes": 520,
+    "native_bytes": 504,
     "storage": "Board.shared_actions.orks_dreadherder_shooting",
     "nested_reentry": false,
     "calls": []
@@ -797,7 +797,7 @@
     "source": "src/factions/orks/movement.rl",
     "line": 246,
     "game_copies": 1,
-    "native_bytes": 1240,
+    "native_bytes": 1224,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": []
@@ -1025,7 +1025,7 @@
     "source": "src/factions/orks/morale.rl",
     "line": 102,
     "game_copies": 1,
-    "native_bytes": 584,
+    "native_bytes": 568,
     "storage": "Board.shared_actions.orks_runtherd_shock",
     "nested_reentry": false,
     "calls": [
@@ -1130,7 +1130,7 @@
     "source": "src/factions/orks/recovery.rl",
     "line": 230,
     "game_copies": 1,
-    "native_bytes": 1040,
+    "native_bytes": 1008,
     "storage": "single parent/root",
     "nested_reentry": false,
     "calls": [
@@ -1179,7 +1179,7 @@
     "function": "pick_army",
     "frame": "PickFaction",
     "source": "src/rules.rl",
-    "line": 3052,
+    "line": 3054,
     "game_copies": 1,
     "native_bytes": 584,
     "storage": "Board.shared_actions.pick_army",
@@ -1502,7 +1502,7 @@
     "source": "src/rules.rl",
     "line": 1635,
     "game_copies": 1,
-    "native_bytes": 2320,
+    "native_bytes": 2256,
     "storage": "Board.shared_actions.resolve_timing_window",
     "nested_reentry": false,
     "calls": [

@@ -7778,7 +7778,6 @@ fun source17e_instance(Board board, Int unit, Int rule) -> SourceInstance:
     board.identify_units()
     let instance : SourceInstance
     instance.rule = rule
-    instance.name.value = "Source fixture"s
     instance.source_unit = board[unit].identity
     instance.source_model = board[unit][0].identity
     instance.owner = board[unit].owned_by_player1
@@ -9115,7 +9114,6 @@ fun attachment17g_source(Board board, EntityIdentity component, Int rule) -> Sou
     let source : SourceInstance
     source.source_unit = component
     source.rule = rule
-    source.name.value = "Attachment lifetime fixture"s
     source.owner = false
     source.own_unit_passive = true
     source.offboard_allowed = true
@@ -15339,3 +15337,32 @@ fun test_usage_specification_survives_bank_transfer() -> Bool:
     board.units.erase(0)
     let restored = make_source_usage(board.reserve_units[0].owned_by_player1, 492, unit_identity, model_identity, SourceUseScope::model, source_use_limits(0, 0, 0, 1))
     return !source_usage_available(board, restored) and restored.source_unit == unit_identity and restored.source_model == model_identity and source_usage_subject(board, restored) == model_identity
+
+# Presentation metadata must survive a save without becoming a source-use key
+# or changing its granted rule. Source/effect infrastructure, appendix01.02.02.
+fun test_source_labels_restore_without_changing_effect() -> Bool:
+    let state = play()
+    state.board = attack_declaration_fixture()
+    let instance = source17e_instance(state.board, 0, 1)
+    instance.label.value = SourceLabel::crude_surgery
+    register_source_instance(state.board, instance)
+    let restored = play()
+    let parsed = set_state(restored, to_string(state))
+    let label_retained = parsed and restored.board.source_instances[0].label.value.value == SourceLabel::crude_surgery.value
+    let sequence = resolve_source_event(restored.board, source17e_trigger(restored.board, SourceEventKind::timing_window, 0))
+    let choice : GameChooseSourceEvent
+    let text_retained = pretty_string(restored.board, choice) == "Crude Surgery"s
+    sequence.choose_source_event(restored.board, source17e_id(0))
+    return label_retained and text_retained and sequence.is_done() and restored.board[0][0].effective_movement(6) == 8
+
+# Raw enum fields can be forged by the host/parser. The save gate must reject
+# an unknown label atomically, just as it rejects invalid gameplay enums.
+fun test_source_labels_reject_unknown_saved_value() -> Bool:
+    let invalid = play()
+    invalid.board = attack_declaration_fixture()
+    let instance = source17e_instance(invalid.board, 0, 1)
+    register_source_instance(invalid.board, instance)
+    invalid.board.source_instances[0].label.value.value = max(instance.label.value) + 1
+    let state = play()
+    state.board.command_points[0] = 42
+    return !valid_source_foundations(invalid.board) and !set_state(state, to_string(invalid)) and state.board.command_points[0] == 42

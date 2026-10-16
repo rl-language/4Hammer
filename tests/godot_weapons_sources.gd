@@ -6,8 +6,8 @@ func _initialize():
 func check_weapons_sources():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 41)
-	assert(library.get_observation_schema_version() == 41)
+	assert(library.get_state_schema_version() == 42)
+	assert(library.get_observation_schema_version() == 42)
 	assert(library.get_action_schema_version() == 26)
 	var board = RLCBoard.make()
 	var unit = library.make_infernus_squad()
@@ -44,7 +44,9 @@ func check_weapons_sources():
 	source.get_rule().set_value(1)
 	source.get_source_unit().set_value(actual_unit.get_identity().get_value())
 	source.get_source_model().set_value(bearer.get_identity().get_value())
-	library.assign(source.get_name().get_value(), actual_unit.get_name().get_value())
+	var label = RLCSourceLabel.make()
+	label.set_value(1) # War Cry
+	library.assign(source.get_label().get_value(), label)
 	source.set_optional(true)
 	var window = RLCTimingWindow.make()
 	window.set_value(8) # movement_start
@@ -55,7 +57,7 @@ func check_weapons_sources():
 	var choice = RLCGameChooseWindowSource.make()
 	assert(choice.members_count() == 1)
 	assert(not choice.get_member(0) is RLCUnitID)
-	assert(library.convert_string(library.pretty_string(board, choice)) == library.convert_string(actual_unit.get_name().get_value()))
+	assert(library.convert_string(library.pretty_string(board, choice)) == "War Cry")
 	assert(library.can_choose_window_source(sequence, board, choice.get_event()))
 	# Exercise the production choice panel: source handles need explicit
 	# buttons because autodetection does not treat them as unit/model clicks.
@@ -70,7 +72,7 @@ func check_weapons_sources():
 	panel.add_child(buttons)
 	root.add_child(panel)
 	assert(buttons.get_child_count() == 1)
-	assert(buttons.get_child(0).text == rules.strip_symbols("Resolve " + library.convert_string(actual_unit.get_name().get_value())))
+	assert(buttons.get_child(0).text == rules.strip_symbols("Resolve War Cry"))
 	panel.free()
 	library.choose_window_source(sequence, board, choice.get_event())
 	assert(library.is_done(sequence))

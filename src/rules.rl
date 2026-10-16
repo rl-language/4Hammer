@@ -3022,18 +3022,20 @@ fun main() -> Int:
         return 0
     return 1
 
+# Host presentation only: source labels are finite state; allocate their text
+# when Godot displays the current choice, never during effect registration.
 fun<T> pretty_string(Board b, T obj) -> String:
     if obj is GamePickMorgrimButcha:
         return "Orks (current units)"s
     if obj is GameChooseSourceEvent:
         if obj.event.value < b.active_source_events.size():
-            return b.source_instances[b.active_source_events[obj.event.value].source.value].name.value
+            return source_label_text(b.source_instances[b.active_source_events[obj.event.value].source.value].label.value)
     if obj is GameChooseMovementSource:
         if obj.event.value < b.active_source_events.size():
-            return b.source_instances[b.active_source_events[obj.event.value].source.value].name.value
+            return source_label_text(b.source_instances[b.active_source_events[obj.event.value].source.value].label.value)
     if obj is GameChooseWindowSource:
         if obj.event.value < b.active_source_events.size():
-            return b.source_instances[b.active_source_events[obj.event.value].source.value].name.value
+            return source_label_text(b.source_instances[b.active_source_events[obj.event.value].source.value].label.value)
     if obj is GameSelectWeapon:
         if !(b.get_current_attacking_model().weapons.size() > obj.weapon_id.value):
             return to_string(obj)

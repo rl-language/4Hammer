@@ -36,7 +36,7 @@ fun grant_orks_effect(Board board, UnitID source, UnitID target, Int rule, OrksE
 fun grant_orks_typed_payload(Board board, EntityIdentity source, Bool owner, EntityIdentity target, Int rule, SourceGrant payload, SourceDuration duration):
     let instance : SourceInstance
     instance.rule = rule
-    instance.name.value = "Orks detachment modifier"s
+    instance.label.value = SourceLabel::orks_detachment_modifier
     instance.source_unit = source
     instance.owner = owner
     instance.recipient = SourceTarget::target_unit
@@ -130,9 +130,9 @@ fun grant_orks_model_effect(Board board, UnitID source, ModelID bearer, Int rule
     instance.source_model = board[source][bearer].identity
     instance.recipient = SourceTarget::source_model
     instance.duration = SourceDuration::phase
-    instance.name.value = "Temperamental Shokka"s
+    instance.label.value = SourceLabel::temperamental_shokka
     if kind.value == OrksEffectKind::boss_ammo_hit.value:
-        instance.name.value = "Boss' Ammo Runt"s
+        instance.label.value = SourceLabel::boss_ammo_runt
     let effect : OrksEffectGrant
     effect.kind = kind
     effect.amount = 1

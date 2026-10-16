@@ -74,13 +74,41 @@ cls SourceUseLimits:
     FixedStat round
     FixedStat battle
 
+# Presentation identity only: source registration stores no owning text.
+# UI labels are derived on demand; rule codes/scopes still govern gameplay.
+enum SourceLabel:
+    none
+    war_cry
+    permanent_riled_up
+    orks_detachment_modifier
+    temperamental_shokka
+    boss_ammo_runt
+    clever_know_wotz
+    permanent_orks_option
+    keep_huntin
+    intimidating_motivation
+    bomb_squig
+    crude_surgery
+    fix_dat_armour_up
+    push_dat_bit_back_in
+    thievin_scavengers
+    shokk_boosta_hazards
+    boom_bomb
+    burna_bomb
+    kunnin_infiltrator
+    aerial_manoover
+    deff_from_the_shadows
+    full_throttle
+    get_back_in_da_race
+    orks_cargo_enhancement
+
 cls SourceInstance:
     # A recycled source slot cannot satisfy an older pending event.
     SourceEffectKey generation
     EntityIdentity required_embarked_model
     EntityIdentity required_carrier_model
     SourceRuleCode rule
-    Hidden<String> name
+    Hidden<SourceLabel> label
     EntityIdentity source_unit
     EntityIdentity source_model
     Bool owner

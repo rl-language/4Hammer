@@ -243,7 +243,7 @@ act repair_orks_vehicle(ctx Board board, frm SourceInstance instance) -> OrksVeh
     grant.source_model = board[target][repaired].identity
     grant.recipient = SourceTarget::source_model
     grant.duration = SourceDuration::next_own_movement
-    grant.name.value = "Clever Know-wotz"s
+    grant.label.value = SourceLabel::clever_know_wotz
     frm payload : OrksEffectGrant
     payload.kind = OrksEffectKind::clever_hit
     payload.amount = 1

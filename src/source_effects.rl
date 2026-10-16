@@ -94,6 +94,57 @@ fun source_confers_rules(Board board, SourceInstance instance) -> Bool:
     let model = unit.find_model(instance.source_model)
     return model >= 0 and model_confers_attached_abilities(unit[model]) and (!instance.requires_leading or source_started_leading(unit, instance))
 
+# Host presentation infrastructure, not a tabletop effect. Materialize text
+# only when displaying a choice; persisted sources keep a finite hidden enum.
+fun source_label_text(SourceLabel label) -> String:
+    if label.value == SourceLabel::war_cry.value:
+        return "War Cry"s
+    if label.value == SourceLabel::permanent_riled_up.value:
+        return "Permanent riled up"s
+    if label.value == SourceLabel::orks_detachment_modifier.value:
+        return "Orks detachment modifier"s
+    if label.value == SourceLabel::temperamental_shokka.value:
+        return "Temperamental Shokka"s
+    if label.value == SourceLabel::boss_ammo_runt.value:
+        return "Boss' Ammo Runt"s
+    if label.value == SourceLabel::clever_know_wotz.value:
+        return "Clever Know-wotz"s
+    if label.value == SourceLabel::permanent_orks_option.value:
+        return "Permanent Orks option"s
+    if label.value == SourceLabel::keep_huntin.value:
+        return "Keep Huntin'!"s
+    if label.value == SourceLabel::intimidating_motivation.value:
+        return "Intimidating Motivation"s
+    if label.value == SourceLabel::bomb_squig.value:
+        return "Bomb Squig"s
+    if label.value == SourceLabel::crude_surgery.value:
+        return "Crude Surgery"s
+    if label.value == SourceLabel::fix_dat_armour_up.value:
+        return "Fix Dat Armour Up"s
+    if label.value == SourceLabel::push_dat_bit_back_in.value:
+        return "Push Dat Bit Back In"s
+    if label.value == SourceLabel::thievin_scavengers.value:
+        return "Thievin' Scavengers"s
+    if label.value == SourceLabel::shokk_boosta_hazards.value:
+        return "Shokk-boosta hazards"s
+    if label.value == SourceLabel::boom_bomb.value:
+        return "Boom Bomb"s
+    if label.value == SourceLabel::burna_bomb.value:
+        return "Burna Bomb"s
+    if label.value == SourceLabel::kunnin_infiltrator.value:
+        return "Kunnin Infiltrator"s
+    if label.value == SourceLabel::aerial_manoover.value:
+        return "Aerial Manoover"s
+    if label.value == SourceLabel::deff_from_the_shadows.value:
+        return "Deff from the Shadows"s
+    if label.value == SourceLabel::full_throttle.value:
+        return "Full Throttle"s
+    if label.value == SourceLabel::get_back_in_da_race.value:
+        return "Get Back in da Race!"s
+    if label.value == SourceLabel::orks_cargo_enhancement.value:
+        return "Orks cargo enhancement"s
+    return ""s
+
 # Source rules use explicit rule codes for printed shared limits; equal names
 # do not infer shared restrictions. All numeric metadata is standard bounded.
 fun register_source_instance(Board board, SourceInstance instance) -> SourceInstanceID:
@@ -547,6 +598,8 @@ fun valid_source_foundations(Board board) -> Bool:
         if instance.generation.value <= 0 or instance.generation.value > board.next_source_generation.value or instance.required_embarked_model.value < 0 or instance.required_embarked_model.value > board.next_identity.value or instance.required_carrier_model.value < 0 or instance.required_carrier_model.value > board.next_identity.value:
             return false
         if instance.rule.value <= 0 or instance.rule.value >= 513 or instance.source_unit.value <= 0 or instance.source_unit.value > board.next_identity.value or instance.source_model.value < 0 or instance.source_model.value > board.next_identity.value:
+            return false
+        if instance.label.value.value < 0 or instance.label.value.value > max(instance.label.value):
             return false
         if instance.trigger.value < 0 or instance.trigger.value > SourceEventKind::unit_destroyed.value or instance.window.value < 0 or instance.window.value > TimingWindow::fight_end.value or instance.phase.value < 0 or instance.phase.value > BattlePhase::fight.value or instance.subject.value < 0 or instance.subject.value > SourceSubject::target_unit.value or instance.use_scope.value < 0 or instance.use_scope.value > SourceUseScope::model.value or instance.recipient.value < 0 or instance.recipient.value > SourceTarget::source_model.value or instance.duration.value < 0 or instance.duration.value > SourceDuration::next_own_command.value:
             return false

@@ -16,7 +16,7 @@ fun register_orks_option_passives(Board board):
                     continue
                 let instance : SourceInstance
                 instance.rule = 200 + option.value
-                instance.name.value = "Permanent Orks option"s
+                instance.label.value = SourceLabel::permanent_orks_option
                 instance.owner = unit.owned_by_player1
                 instance.source_unit = model.original_unit
                 instance.source_model = model.identity
@@ -245,10 +245,10 @@ fun register_orks_datasheet_sources(Board board):
                             continue
                         let instance : SourceInstance
                         instance.rule = ORKS_KEEP_HUNTIN_RULE
-                        instance.name.value = "Keep Huntin'!"s
+                        instance.label.value = SourceLabel::keep_huntin
                         if window_index >= 2:
                             instance.rule = ORKS_INTIMIDATING_RULE
-                            instance.name.value = "Intimidating Motivation"s
+                            instance.label.value = SourceLabel::intimidating_motivation
                         instance.source_unit = model.original_unit
                         instance.source_model = model.identity
                         instance.owner = unit.owned_by_player1
@@ -278,7 +278,7 @@ fun register_orks_datasheet_sources(Board board):
                 if model.has_ability(AbilityKind::bomb_squig):
                     let instance : SourceInstance
                     instance.rule = ORKS_BOMB_SQUIG_RULE
-                    instance.name.value = "Bomb Squig"s
+                    instance.label.value = SourceLabel::bomb_squig
                     instance.source_unit = model.original_unit
                     instance.owner = unit.owned_by_player1
                     instance.phase = BattlePhase::movement
@@ -324,22 +324,22 @@ fun register_orks_datasheet_sources(Board board):
                     bearer_instance.offboard_allowed = true
                     bearer_instance.optional = bearer_entry != 0
                     bearer_instance.limits.phase = 1
-                    bearer_instance.name.value = "Crude Surgery"s
+                    bearer_instance.label.value = SourceLabel::crude_surgery
                     if bearer_entry == 1:
-                        bearer_instance.name.value = "Fix Dat Armour Up"s
+                        bearer_instance.label.value = SourceLabel::fix_dat_armour_up
                         bearer_instance.limits.battle = 1
                     if bearer_entry == 2:
-                        bearer_instance.name.value = "Push Dat Bit Back In"s
+                        bearer_instance.label.value = SourceLabel::push_dat_bit_back_in
                         bearer_instance.limits.battle = 1
                     if bearer_entry == 3:
-                        bearer_instance.name.value = "Clever Know-wotz"s
+                        bearer_instance.label.value = SourceLabel::clever_know_wotz
                         bearer_instance.offboard_allowed = false
                         bearer_instance.trigger = SourceEventKind::move_start
                         bearer_instance.window = TimingWindow::none
                         bearer_instance.phase = BattlePhase::movement
                         bearer_instance.limits.phase = 0
                     if bearer_entry == 4:
-                        bearer_instance.name.value = "Thievin' Scavengers"s
+                        bearer_instance.label.value = SourceLabel::thievin_scavengers
                         bearer_instance.rule = ORKS_SCAVENGERS_RULE
                         bearer_instance.source_model = 0
                         bearer_instance.offboard_allowed = false
@@ -347,7 +347,7 @@ fun register_orks_datasheet_sources(Board board):
                         bearer_instance.phase = BattlePhase::movement
                         bearer_instance.optional = false
                     if bearer_entry == 5:
-                        bearer_instance.name.value = "Shokk-boosta hazards"s
+                        bearer_instance.label.value = SourceLabel::shokk_boosta_hazards
                         bearer_instance.rule = ORKS_SHOKK_BOOST_RULE
                         bearer_instance.offboard_allowed = false
                         bearer_instance.trigger = SourceEventKind::move_end
@@ -388,17 +388,17 @@ fun register_orks_datasheet_sources(Board board):
                 window_instance.opposing_turn_only = true
                 window_instance.optional = window_entry >= 2
                 window_instance.grant = riled_up_grant()
-                window_instance.name.value = "Boom Bomb"s
+                window_instance.label.value = SourceLabel::boom_bomb
                 if window_entry == 1:
-                    window_instance.name.value = "Burna Bomb"s
+                    window_instance.label.value = SourceLabel::burna_bomb
                 if window_entry == 2:
-                    window_instance.name.value = "Kunnin Infiltrator"s
+                    window_instance.label.value = SourceLabel::kunnin_infiltrator
                 if window_entry == 3:
-                    window_instance.name.value = "Aerial Manoover"s
+                    window_instance.label.value = SourceLabel::aerial_manoover
                 if window_entry == 4:
-                    window_instance.name.value = "Deff from the Shadows"s
+                    window_instance.label.value = SourceLabel::deff_from_the_shadows
                 if window_entry == 5:
-                    window_instance.name.value = "Full Throttle"s
+                    window_instance.label.value = SourceLabel::full_throttle
                 if window_entry == 4:
                     window_instance.window = TimingWindow::movement_end
                     window_instance.phase = BattlePhase::movement
@@ -425,6 +425,6 @@ fun register_orks_datasheet_sources(Board board):
                     window_instance.optional = true
                     window_instance.duration = SourceDuration::next_own_turn
                     window_instance.grant = riled_up_grant()
-                    window_instance.name.value = "Get Back in da Race!"s
+                    window_instance.label.value = SourceLabel::get_back_in_da_race
                     if !orks_unit_source_registered(board, window_instance):
                         let window_handle = register_source_instance(board, window_instance)

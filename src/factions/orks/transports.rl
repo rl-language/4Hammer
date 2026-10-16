@@ -49,7 +49,7 @@ fun register_orks_cargo_passives(Board board):
                 instance.requires_live_source = true
                 instance.offboard_allowed = true
                 instance.duration = SourceDuration::battle
-                instance.name.value = "Orks cargo enhancement"s
+                instance.label.value = SourceLabel::orks_cargo_enhancement
                 instance.grant = characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 2)
                 if effect_index == 1:
                     let protection : OrksEffectGrant

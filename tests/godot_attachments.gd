@@ -21,8 +21,8 @@ func wrapped(library, action):
 func check_attachments():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 41)
-	assert(library.get_observation_schema_version() == 41)
+	assert(library.get_state_schema_version() == 42)
+	assert(library.get_observation_schema_version() == 42)
 	assert(library.get_action_schema_version() == 26)
 	var board = RLCBoard.make()
 	var bodyguard = library.make_infernus_squad()
