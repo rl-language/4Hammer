@@ -10,7 +10,7 @@ fun make_faction_starter_roster(UnitVector out, Bool owner) -> Faction:
     return make_orks_starter_roster(out, owner)
 
 # Composition hook: roster adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun select_faction_warlord(Board board, Bool player) -> SelectOrksWarlord:
+fun select_faction_warlord(Board board, Bool player) -> SelectWarlord:
     return select_orks_warlord(board, player)
 
 # Composition hook: roster adapter owns eligibility and its cited rule; contexts and source identity are preserved.
@@ -18,9 +18,6 @@ fun register_faction_force_dispositions(Board board):
     register_orks_force_dispositions(board)
 
 # Composition hook: roster adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_roster_copies_valid(Board board) -> Bool:
-    return orks_muster_copies_valid(board)
-
 # Composition hook: roster adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun select_faction_detachments(Board board, Bool detachment_player) -> SelectOrksDetachments:
     return select_orks_detachments(board, detachment_player)
@@ -86,3 +83,7 @@ fun army_faction_for_roster(Faction roster) -> ArmyFaction:
     if roster == Faction::tristraen_gilded_blade:
         return ArmyFaction::adeptus_custodes
     return ArmyFaction::space_marines
+
+# Detachments may change Battleline; the copy-counting rule stays shared.
+fun faction_force_battleline(Board board, Unit unit) -> Bool:
+    return orks_force_battleline(board, unit)

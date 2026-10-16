@@ -54,7 +54,7 @@ cls SharedActionFrames:
     RollStat evaluate_random_stat
     SelectOrksDetachments select_orks_detachments
     SelectOrksOptions select_orks_options
-    SelectOrksWarlord select_orks_warlord
+    SelectWarlord select_orks_warlord
     SelectedFight selected_fight
     SelectedShooting selected_shooting
     ShadowInTheWarp shadow_in_the_warp

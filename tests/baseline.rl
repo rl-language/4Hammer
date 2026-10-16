@@ -9017,9 +9017,9 @@ fun test_orks17f_required_warlord_and_model() -> Bool:
     board.identify_unit(board.reserve_units[0])
     board.reserve_units[0][1].must_be_warlord = true
     let model : ModelID
-    let ordinary = !orks_warlord_model_valid(board, false, unit_id(0), model)
+    let ordinary = !warlord_model_valid(board, false, unit_id(0), model, Keyword::orks)
     model = 1
-    return ordinary and orks_warlord_model_valid(board, false, unit_id(0), model) and !orks_warlord_unit_valid(board, false, unit_id(1))
+    return ordinary and warlord_model_valid(board, false, unit_id(0), model, Keyword::orks) and !warlord_unit_valid(board, false, unit_id(1), Keyword::orks)
 
 # Prohibition overrides required status and excludes that model from both
 # optional and forced eligibility (user Warlord definition).
@@ -9031,9 +9031,9 @@ fun test_orks17f_cannot_warlord_overrides_required() -> Bool:
     board.reserve_units[0][0].must_be_warlord = true
     board.reserve_units[0][0].cannot_be_warlord = true
     let model : ModelID
-    let prohibited = !orks_warlord_model_valid(board, false, unit_id(0), model)
+    let prohibited = !warlord_model_valid(board, false, unit_id(0), model, Keyword::orks)
     model = 1
-    return prohibited and orks_warlord_model_valid(board, false, unit_id(0), model)
+    return prohibited and warlord_model_valid(board, false, unit_id(0), model, Keyword::orks)
 
 # A required unit can supply any eligible Character; the unit's faction union
 # and model's Character status are checked independently (user definition).
@@ -9041,13 +9041,13 @@ fun test_orks17f_warlord_unit_and_character_conditions() -> Bool:
     let board = orks17f_warlord_fixture()
     board.reserve_units[0].must_supply_warlord = true
     let model : ModelID
-    let required = orks_warlord_model_valid(board, false, unit_id(0), model)
+    let required = warlord_model_valid(board, false, unit_id(0), model, Keyword::orks)
     board.reserve_units[0][0].keywords.clear()
     board.reserve_units[0][0].keywords.append(Keyword::orks)
-    let non_character = !orks_warlord_unit_valid(board, false, unit_id(0))
+    let non_character = !warlord_unit_valid(board, false, unit_id(0), Keyword::orks)
     board.reserve_units[0][0].keywords.clear()
     board.reserve_units[0][0].keywords.append(Keyword::character)
-    return required and non_character and !orks_warlord_unit_valid(board, false, unit_id(0))
+    return required and non_character and !warlord_unit_valid(board, false, unit_id(0), Keyword::orks)
 
 # Two required units still allow exactly one Warlord; unit/model prohibitions
 # must not be inferred from a datasheet name (user definition).
@@ -10881,12 +10881,12 @@ fun test_orks17all_roster_three_and_six_copy_limits() -> Bool:
     let board = orks17all_option_board(4, OrksDetachment::runt_swarm, false)
     for slot in range(board.reserve_units.size()):
         orks17all_tag(board.reserve_units[slot], OrksDatasheet::gretchin)
-    let effective = orks_muster_copies_valid(board)
+    let effective = muster_copies_valid(board)
     board.armies[0].detachments.clear()
-    let limited = !orks_muster_copies_valid(board)
+    let limited = !muster_copies_valid(board)
     let selected = board.armies[0].record_detachment(OrksDetachment::runt_swarm)
     register_orks_force_dispositions(board)
-    return effective and limited and selected and orks_muster_copies_valid(board) and board.reserve_units[0].has_keyword(Keyword::battleline)
+    return effective and limited and selected and muster_copies_valid(board) and board.reserve_units[0].has_keyword(Keyword::battleline)
 
 # Literal card actor fixtures keep applicability separate from expected effect.
 # They use controlled stats and tags, not fabricated production datasheets.
@@ -14845,7 +14845,7 @@ fun test_orks17q_muster_copy_limits_and_battleline_disposition() -> Bool:
     let more = orks_muster_add_valid(board, false, draft)
     for extra_index in range(3):
         board.reserve_units.append(make_orks_muster_unit(draft))
-    return ordinary and recorded and more and !orks_muster_add_valid(board, false, draft) and orks_muster_copies_valid(board)
+    return ordinary and recorded and more and !orks_muster_add_valid(board, false, draft) and muster_copies_valid(board)
 
 # All excluded identities stay unavailable through the actual public selector.
 fun test_orks17q_muster_excludes_legends_and_forge_world() -> Bool:
@@ -15658,4 +15658,39 @@ fun test_shared_hooks_attack_tag_validation() -> Bool:
     let rejected = !valid_attack_results(board)
     board.attack_records[0].tagged_hits[0] = 1
     return rejected and valid_attack_results(board)
+
+
+# General Select Army restrictions (user supplied Warlord/enhancement rules).
+fun test_shared_hooks_warlord_uses_supplied_faction_keyword() -> Bool:
+    let fixture = attack_declaration_fixture()
+    let board : Board
+    board.reserve_units.append(fixture[0])
+    board.reserve_units[0][0].keywords.append(Keyword::character)
+    board.reserve_units[0][0].keywords.append(Keyword::adeptus_astartes)
+    board.armies[0].faction = ArmyFaction::space_marines
+    let sequence = select_warlord(board, false, Keyword::adeptus_astartes, true)
+    let member : ModelID
+    member = 0
+    let allowed = can sequence.choose_warlord_unit(board, unit_id(0))
+    if allowed:
+        sequence.choose_warlord_unit(board, unit_id(0))
+        sequence.choose_warlord_model(board, member)
+    return allowed and sequence.is_done() and board.armies[0].warlord == board.reserve_units[0][0].identity and board.reserve_units[0][0].has_keyword(Keyword::warlord)
+
+
+# General Select Army restrictions (user supplied Warlord/enhancement rules).
+fun test_shared_hooks_enhancement_limits() -> Bool:
+    let counter : EnhancementSelectionCounter
+    counter.record_choice(1)
+    counter.record_choice(2)
+    counter.record_choice(3)
+    counter.record_choice(4)
+    counter.record_choice(4)
+    let full = counter.total == 4 and !counter.permits(5, true)
+    counter.record_unit_copy(true)
+    let ordinary_unique = !counter.permits(1, false)
+    counter.record_unit_copy(true)
+    let second_upgrade = counter.permits(1, true)
+    counter.record_unit_copy(true)
+    return full and ordinary_unique and second_upgrade and !counter.permits(1, true)
 

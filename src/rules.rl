@@ -2745,7 +2745,7 @@ act resolve_scouts(ctx Board board) -> ResolveScouts:
 act battle(ctx Board board) -> Battle:
     board.identify_units()
     register_faction_force_dispositions(board)
-    assert(faction_roster_copies_valid(board), "muster exceeds unit copy limits")
+    assert(muster_copies_valid(board), "muster exceeds unit copy limits")
     subaction*(board) faction_formations = faction_prebattle_formations(board)
     subaction*(board) attach_leaders = attach_leaders(board)
     board.capture_starting_strengths()

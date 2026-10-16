@@ -1,0 +1,36 @@
+extends SceneTree
+
+func _initialize():
+	call_deferred("check_shared_muster")
+
+func check_shared_muster():
+	var library = root.get_node("GlobalRules").library
+	assert(library.get_state_schema_version() == 46)
+	var board = RLCBoard.make()
+	var unit = library.make_infernus_squad()
+	library.resize(unit.get_models(), 1)
+	var model = library.get(unit.get_models(), 0)
+	var character = RLCKeyword.make()
+	character.set_value(8)
+	assert(str(library.as_string_literal(character)) == "character")
+	library.append(model.get_keywords(), character)
+	var faction_keyword = RLCKeyword.make()
+	faction_keyword.set_value(12)
+	assert(str(library.as_string_literal(faction_keyword)) == "adeptus_astartes")
+	library.append(model.get_keywords(), faction_keyword)
+	library.append(board.get_reserve_units(), unit)
+	library.identify_units(board)
+	library.army_for_player(board, false).get_faction().set_value(1)
+	var selection = library.select_warlord(board, false, faction_keyword, true)
+	var unit_id = RLCUnitID.make()
+	assert(library.can_choose_warlord_unit(selection, board, unit_id))
+	library.choose_warlord_unit(selection, board, unit_id)
+	var model_id = RLCModelID.make()
+	assert(library.can_choose_warlord_model(selection, board, model_id))
+	library.choose_warlord_model(selection, board, model_id)
+	assert(library.is_done(selection))
+	var selected = library.get(library.get(board.get_reserve_units(), 0).get_models(), 0)
+	assert(library.army_for_player(board, false).get_warlord().get_value() == selected.get_identity().get_value())
+	library.free()
+	print("PASS: Godot schema exports, shared Warlord selection with an explicit non-Orks faction keyword")
+	quit()

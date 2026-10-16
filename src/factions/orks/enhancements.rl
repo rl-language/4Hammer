@@ -131,14 +131,12 @@ fun orks_option_selection_valid(Board board, UnitID unit_id, ModelID bearer, Ork
     if unit_id.get() >= board.reserve_units.size() or option.value <= 0 or option.value > OrksEnhancement::warphead.value:
         return false
     ref unit = board.reserve_units[unit_id.get()]
-    if unit.owned_by_player1 != owner or bearer.get() >= unit.models.size() or unit.has_keyword(Keyword::epic_hero) or orks_unit_has_any_option(unit) or !orks_package(board, unit, orks_enhancement_package(option)):
+    if unit.owned_by_player1 != owner or bearer.get() >= unit.models.size() or orks_unit_has_any_option(unit) or !orks_package(board, unit, orks_enhancement_package(option)):
         return false
     ref model = unit[bearer.get()]
-    if !model.is_alive() or (!orks_is_upgrade(option) and !model.has_keyword(Keyword::character)) or !orks_option_source_eligible(unit, model, option):
+    if !enhancement_recipient_valid(unit, model, orks_is_upgrade(option)) or !orks_option_source_eligible(unit, model, option):
         return false
-    let counted : Bool[39]
-    let copies = 0
-    let total = 0
+    let counter : EnhancementSelectionCounter
     for roster_unit in range(board.reserve_units.size()):
         ref existing = board.reserve_units[roster_unit]
         if existing.owned_by_player1 != owner:
@@ -147,12 +145,9 @@ fun orks_option_selection_valid(Board board, UnitID unit_id, ModelID bearer, Ork
             let existing_option = existing[model_index].orks_enhancement.value
             if existing_option == 0:
                 continue
-            if !counted[existing_option]:
-                counted[existing_option] = true
-                total = total + 1
-        if unit_has_orks_enhancement(existing, option):
-            copies = copies + 1
-    return (counted[option.value] or total < 4) and copies < (1 + 2 * int(orks_is_upgrade(option)))
+            counter.record_choice(existing_option)
+        counter.record_unit_copy(unit_has_orks_enhancement(existing, option))
+    return counter.permits(option.value, orks_is_upgrade(option))
 
 # Unit-only upgrades mark the original qualifying component, so a separated
 # leader does not retain an extinct bodyguard's upgrade (pp66–67).
@@ -189,7 +184,7 @@ fun apply_orks_option(Board board, UnitID selected, ModelID bearer, OrksEnhancem
 fun orks_enhancement_attachment_valid(Unit leader, Unit bodyguard) -> Bool:
     let leader_option = orks_unit_has_any_option(leader)
     let bodyguard_option = orks_unit_has_any_option(bodyguard)
-    return !(leader_option or bodyguard_option) or (!leader.has_keyword(Keyword::epic_hero) and !bodyguard.has_keyword(Keyword::epic_hero))
+    return enhancement_attachment_valid(leader, bodyguard, leader_option or bodyguard_option)
 
 # Options use one enum, reserve-unit and model decisions independently. This
 # prevents huge action products and keeps offboard Godot selectors explicit.
