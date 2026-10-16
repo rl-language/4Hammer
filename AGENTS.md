@@ -896,9 +896,15 @@ Do not duplicate it with a catalog object, listing API or separate army-descript
 interface. This work defines passive and triggered abilities only, not selection,
 ability-discovery or army-state provider APIs.
 
-Define two mechanisms: passive functions add standard effects to core-supplied
-calculation contexts; triggered functions queue actual event activations and
-ordinary action functions execute their choices through shared procedures.
+Use separate hooks for each calculation and each actual trigger boundary.
+Passive functions such as `append_weapon_rules` and
+`append_objective_control_effects` have concrete inputs/outputs. Triggered
+actions such as `on_move_finished`, `on_unit_selected_to_shoot` and
+`on_model_destroyed` have event-specific payloads, progress and permitted
+effects. The user rejected four universal passive/queue/validate/execute hooks;
+do not recreate them under new names or use an arbitrary event-kind dispatcher.
+Share effect, queue, usage and lifetime helpers underneath these concrete hooks,
+using queues only where the actual event needs pending activations.
 Core owns event identity, compulsory/optional sequencing, cost/use records,
 mechanical effect evaluation, source/expiry and shared-frame lifetime. Army
 code owns actual named conditions and ability-specific choices.

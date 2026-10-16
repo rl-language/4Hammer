@@ -1977,10 +1977,11 @@ The [corrected specification](doc/army-api.md) defines passive functions and
 triggered actions, with explicit common effects, events and lifecycle contracts.
 
 - [x] Remove the rejected catalog, discovery and state-provider API definitions.
-- [x] Define passive application to typed core contexts, standard effect payloads,
+- [x] Define calculation-specific passive hooks, standard effect payloads,
   per-term/source identity, independent permissions and pure evaluation.
-- [x] Define event payloads, pending activations, queue/validation/action execution,
-  compulsory/optional ordering and once-only cost/use handling.
+- [x] Replace the rejected four-function interface with event-specific action
+  hooks, typed payloads/progress and concrete boundary contracts. Shared helpers
+  enforce compulsory/optional ordering and once-only cost/use handling.
 - [x] Define common effect lifetime, offboard/retained-source handling and normal
   action/shared-procedure ownership without another ability-step interpreter.
 - [x] Correct the architecture/faction guides and AGENTS instructions so future
@@ -1989,9 +1990,10 @@ triggered actions, with explicit common effects, events and lifecycle contracts.
   records with native regressions, reusing current shared primitives.
 - [ ] Migrate passive consumers and remove fixed-bonus/bundled-permission hooks;
   pass the actual scored objective to cargo OC and test overlapping markers.
-- [ ] Unify triggered queuing, validation, sequencing and ordinary action execution
-  with shared cost/use/effect lifecycle. Preserve true interruption order and
-  prevent shared-frame re-entry.
+- [ ] Implement separate typed triggered-action hooks at the actual event
+  boundaries, reusing queue/validation/sequencing helpers where needed and
+  shared cost/use/effect lifecycle. Preserve true interruption order and
+  prevent shared-frame re-entry; no universal ability/event dispatcher.
 - [ ] Replace named Model/component data with generic abilities, equipment,
   option provenance and grants; migrate Orks/legacy behavior out of core and
   retire superseded hooks. No selection-provider refactor is included.
@@ -2001,5 +2003,6 @@ triggered actions, with explicit common effects, events and lifecycle contracts.
 This correction changes Markdown only. No runtime provider, declarations or
 unused stub modules are added. Current runtime schemas remain state/observation46,
 action27 and next-state47. Mechanism/signature coverage, removal of rejected
-APIs, guidance consistency,115 local Markdown links and `git diff --check` pass.
+APIs, event-specific hook coverage, guidance consistency,116 local Markdown
+links and `git diff --check` pass.
 No runtime tests were run for this Markdown-only correction.

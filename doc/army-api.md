@@ -20,7 +20,7 @@ to the current library.
 | Mechanism | Army implementation | Core responsibility |
 | --- | --- | --- |
 | Passive ability | An ordinary function tests the ability's conditions and adds standard effects to the supplied calculation. | Supply the exact context, aggregate effects, apply ordinary arithmetic/permissions and return the effective game result. |
-| Triggered ability | An ordinary function queues an activation at its specified event; an action function performs that activation's decisions and effects. | Emit events once, retain pending activations, order controllers, enforce required work and run the shared game procedures. |
+| Triggered ability | An event-specific action handles abilities at that exact boundary, with typed event data and normal action choices. | Call the correct boundary once, retain required activations, order controllers and run shared game procedures. |
 
 A unit/model constructor or existing selection action writes its ability,
 equipment and selected-option data as it already does. The army implementation
@@ -66,16 +66,48 @@ presentation metadata, never identity or dispatch keys.
 
 ## Passive abilities
 
-### Function contract
+### Calculation-specific hooks
+
+Each calculation has its own named function, concrete context and typed output.
+There is no public catch-all passive function with a domain enum. Planned hooks
+are:
+
+| Hook | Concrete context and output |
+| --- | --- |
+| `append_model_properties` | Model/component and retained-source facts; model characteristic, keyword, ability and save effects |
+| `append_unit_properties` | Combined membership and original components; unit-scoped properties |
+| `append_weapon_rules` | Actual bearer, physical copy and selected/borrowed profile; weapon-rule instances |
+| `append_weapon_modifiers` | Actual declaration and bearer; weapon characteristic modifiers |
+| `append_movement_policy` | Mover, selected kind and movement purpose; distance, traversal and endpoint policy |
+| `append_charge_policy` | Charger, targets and captured movement history; charge permissions and distance policy |
+| `append_attack_effects` | Attacker, target and declaration; attack modifiers, reroll and cover policies |
+| `append_allocation_effects` | Recipient model and incoming attack/damage; save, damage and prevention policies |
+| `append_advance_roll_effects` | Advance roll and attempt; modifiers/reroll permissions |
+| `append_charge_roll_effects` | Charge roll and attempt; modifiers/reroll permissions |
+| `append_battle_shock_roll_effects` | Test subject and attempt; modifiers and permitted success/reroll rules |
+| `append_escape_roll_effects` | Escaping unit and hazard batch; additional rolls, modifiers and bypass permissions |
+| `append_hazardous_roll_effects` | Actual physical-weapon uses and hazard batch; additional rolls and permitted prevention |
+| `append_objective_control_effects` | The queried marker, contributing unit/model and cargo; OC effects |
+| `append_stratagem_cost_effects` | Card, payer, source/targets and use context; cost effects |
+| `append_action_permissions` | Actor and proposed core action; specific permission/restriction effects |
+| `append_targeting_permissions` | Proposed attack/card target and mode; detection, visibility and engagement exceptions |
+
+The names omit a faction because the composition boundary is faction-neutral;
+army implementations use their own prefixed names. Reuse existing appenders
+where their contract already fits, rather than adding a parallel path. Roll
+hooks are separate at distinct rule boundaries; hit/wound/save policies receive
+their concrete attack/allocation context, not an unrelated roll-kind switch.
+
+For example, in contract notation:
 
 ```text
-apply_passive_abilities(read_context, calculation_context, effects)
+append_weapon_rules(board, WeaponContext weapon, WeaponAbilitySet rules)
+append_charge_roll_effects(board, ChargeRollContext charge, ChargeRollEffects effects)
+append_objective_control_effects(board, ObjectiveControlContext objective, ObjectiveControlEffects effects)
 ```
 
-This is a family of typed overloads, one per common calculation domain.
-Composition calls the relevant army functions; the army can organize its own
-ordinary helpers as convenient. There is no callback for a particular named
-army rule and no callback that asks for an already computed final stat.
+Composition calls the relevant army functions. There is no hook for a particular
+named army rule and no hook asking for an already computed final stat.
 
 1. Core starts from printed/intrinsic data and established common effects.
 2. Core supplies the calculation context and its current effect accumulator.
@@ -188,7 +220,7 @@ must not recursively ask for the same effective property it is defining.
 
 | Record | Required information |
 | --- | --- |
-| `AbilityEvent` | Unique event/window identity; exact mechanical kind and before/after stage; cause and parent operation; actor/affected identities; relevant immutable snapshots; current turn/decision roles. |
+| Event-specific records | Each boundary has its own type, such as `MoveFinishedEvent` or `ModelDestroyedEvent`. A shared header holds window identity, cause/parent operation and controller roles; each concrete payload defines its subjects, snapshots and before/after stage. No arbitrary event-kind/payload bag. |
 | `PendingAbility` | Origin; triggering event; controller and payer policy; compulsory/optional status; established trigger-time facts; conditions still required at use; usage scope and cost; pending/accepted/declined/completed state. |
 
 A window can permit a player's voluntary ability even without an earlier
@@ -196,45 +228,110 @@ committed event. For example, “in your Movement phase” is a legal player-act
 window, while “after this unit ends a move” refers to that actual completed move.
 Remaining stationary does not invent a move-start/end event.
 
-### Event boundaries
+### Event-specific action hooks
 
-Core supplies these mechanical boundary families with precise payloads:
+Core calls a separate action hook at each boundary. This is the public extension
+surface, not a universal queue/validate/execute dispatcher. The planned hook
+inventory follows; each name has its own typed event and action frame.
 
-- Battle/round/turn/phase start and end, and particular steps such as the start
-  of Battle-shock before eligibility/recovery is frozen.
-- Unit selected to move/shoot/fight/charge; movement kind selected; Advance
-  preparation and final roll; weapon and target declarations completed.
-- Attack target/group selected, roll attempts and rerolls, hit/wound result
-  classification, allocation, pending wound loss and completed attacks.
-- Committed movement/setup, embark/disembark boundaries and reserve transfers.
-- Battle-shock test results and transition into Battle-shocked state.
-- Model/unit destruction, required retained destruction processing and removal.
+| Hooks | Boundary and permitted work |
+| --- | --- |
+| `on_battle_start`, `on_battle_end` | Before the first round / after required final-turn work; battle-boundary effects |
+| `on_round_start`, `on_round_end` | The particular round boundary; resolve matching activations |
+| `on_turn_start`, `on_turn_end` | The named player's turn boundary; preserve controller order and core end-turn gates |
+| `on_command_phase_start`, `on_command_phase_end` | Actual Command-phase boundaries; not the Battle-shock-step boundary |
+| `on_movement_phase_start`, `on_movement_phase_end` | Actual Movement-phase boundaries |
+| `on_shooting_phase_start`, `on_shooting_phase_end` | Actual Shooting-phase boundaries |
+| `on_charge_phase_start`, `on_charge_phase_end` | Actual Charge-phase boundaries |
+| `on_fight_phase_start`, `on_fight_phase_end` | Actual Fight-phase boundaries; retained death work finishes before removal |
+| `during_movement_phase`, `during_shooting_phase`, `during_charge_phase`, `during_fight_phase` | Separate ordinary peer actions for voluntary in-phase abilities; accepting one does not imply starting/ending the phase |
+| `on_battle_shock_step_start` | After core Command CP work, before test/recovery eligibility is frozen |
+| `on_battle_shock_test_resolved` | Final test result and attempt; result-triggered work |
+| `on_unit_became_battle_shocked` | Actual state transition and stable subject identity; not merely a failed-test notification |
+| `on_unit_selected_to_move` | Selected mover, before mode-dependent choices and placement |
+| `on_move_kind_selected` | Committed kind and captured selection facts; mode-specific effects, no fabricated completed move |
+| `before_advance_roll`, `after_advance_roll` | Before the roll / after final rerolls and evaluation; changes only at their permitted stage |
+| `on_move_finished` | Committed mover, start/end facts and kind; same hook handles both players' matching reactions |
+| `on_reserve_arrival` | Successfully placed unit and actual arrival location |
+| `before_disembark`, `on_disembark_finished`, `on_embark_finished` | Separate transport boundaries with stable passenger/carrier identities and actual transfer facts |
+| `on_unit_selected_to_shoot` | Selection before weapon/target declaration; all relevant abilities share this window |
+| `before_weapon_declarations` | After selection effects, immediately before weapon/profile/target choices; do not collapse this into an earlier selection event if intervening state changes matter |
+| `on_unit_selected_to_fight` | Selection before Pile In and melee declarations |
+| `on_targets_declared` | Completed declarations with physical-weapon provenance and selection snapshots |
+| `on_attack_target_selected` | Particular declared target/group before its attack rolls; distinguish group selection from the earlier declaration event |
+| `on_hit_rolls_resolved` | Identified surviving original rolled hits, before critical-hit conversion; generated hits remain distinct |
+| `on_wound_rolls_resolved` | Identified final wound-roll batch, before allocation |
+| `before_wounds_lost` | Actual recipient and pending wound loss before committing it; explicit prevention/replacement only |
+| `on_attacks_finished` | Operation-wide hit/damage ledger after all declared groups; ordinary Hazardous processing remains core-owned |
+| `on_charge_declared`, `before_charge_roll`, `after_charge_roll` | Separate declaration and roll stages with the actual charger/targets/attempt |
+| `on_charge_finished` | Completed charge and actual endpoints; simultaneous charge effects share one ordered window |
+| `on_model_destroyed` | Retained casualty, bank, cause and pending demise; standard damage jobs and explicit demise replacement results |
+| `on_unit_destroyed` | Actual last-model destruction, once; retained unit/component facts and source scopes |
 
-When a model is destroyed, core emits the appropriate event before removal and
-retains it for required pending processing. Actual last-model loss emits a
-unit-destruction event once. Army code queues its matching effects; core must
-not predict them through a special named-faction “has death trigger” flag.
+Prebattle redeployment and formation actions remain separate existing actions.
+Their mechanics must not be squeezed into phase-start hooks. Likewise, retain
+separate callbacks for any further printed trigger whose timing is materially
+different; do not dispatch it through an approximate existing event.
 
-Each boundary identifies **when** it is allowed to change a pending result.
-An after-event cannot rewrite a completed move or resolved attack. Original
-rolled hits, generated hits, actual wounds lost and destruction are distinct
-facts. Rerolled attempts are identifiable rolls without reopening spent rerolls.
-[Core pp.16–24/28–42/54–58/64–67/87; supplied appendix definitions.]
-
-### Queue, validate and execute
+Illustrative contract notation:
 
 ```text
-queue_triggered_abilities(read_context, event, pending)
-triggered_ability_valid(read_context, pending_ability) -> Bool
-execute_triggered_ability(board, pending_ability) -> TriggeredAbility action
+on_unit_selected_to_shoot(board, ShootSelectionEvent event, ShootSelectionProgress progress)
+    -> ShootSelectionAbilities action
+on_move_finished(board, MoveFinishedEvent event, MoveFinishedProgress progress)
+    -> MoveFinishedAbilities action
+on_model_destroyed(board, ModelDestroyedEvent event, DestructionProgress progress)
+    -> ModelDestroyedAbilities action
 ```
 
-Existing constructors and selection actions already determine which abilities
-exist. The queue function checks those abilities at this event and appends
-actual triggered work. The action implements that work in ordinary Rulebook.
+These are normal Rulebook actions, composed with core's choices at that event.
+Each event's progress/result record contains only that boundary's state. There
+is no generic `execute_triggered_ability` hook or `AbilityEvent` switch repeated
+inside every army. Eligibility is expressed in the appropriate action guards
+and event-specific helpers.
 
-**Queue.** Core emits the event once and calls composition once for it. Army
-functions append matching activations to `pending`, without mutating Board,
+### Changes to existing hooks
+
+| Current hooks | Planned boundary |
+| --- | --- |
+| `faction_melee_sustained_rule_applies`, intrinsic/package/datasheet weapon appenders | `append_weapon_rules`; actual parameterized instances replace the Boolean special case |
+| `faction_innate_hit_bonus`, attack modifier appenders | `append_attack_effects`; retain individually ignorable modifiers |
+| `faction_charge_reroll`, `faction_charge_aura_bonus`, `faction_unit_charge_bonus` | `append_charge_roll_effects`; actual modifier/reroll terms |
+| `faction_advance_charge_status`, `faction_move_charge_permission` | Movement/charge policy hooks with explicit selection-time capture |
+| `faction_engagement_exception` | Independent targeting and escape-roll permissions |
+| `faction_passenger_objective_control` | `append_objective_control_effects`, receiving the scored marker |
+| `faction_movement_abilities`, `faction_move_selection` | `on_unit_selected_to_move`; preserve distinct later mode-selection boundaries |
+| `faction_after_move` and movement-end source reactions | `on_move_finished`; both players' effects share the actual event |
+| `faction_shooting_support`, `faction_pre_declaration_options` | `on_unit_selected_to_shoot` and `before_weapon_declarations`, respectively |
+| `faction_became_shocked`, `faction_before_battle_shock` | `on_unit_became_battle_shocked` and `on_battle_shock_step_start`, respectively |
+| `faction_timing_choice` | Separate named round/turn/phase boundary actions; shared sequencing underneath |
+| `faction_before_destruction` and destruction-presence queries | Typed model/unit destruction actions and common retention handling; no named-faction death-presence flags |
+
+Keep the existing contract when it is already correct. Consolidation is based
+on the same calculation or event, never merely on both hooks being abilities.
+Source installation/removal/expiry remains common lifecycle machinery, not
+another event-dispatch API.
+
+When a model is destroyed, core invokes the destruction boundary before
+removal and retains it for required processing. Actual last-model loss invokes
+the unit-destruction boundary once. The same bank-aware hooks serve battlefield,
+reserve and embarked units, subject to the actual rule's permissions.
+
+Each boundary specifies when it may change a pending result. An after-event
+cannot rewrite an already completed move or resolved attack. Original rolled
+hits, generated hits, actual wounds lost and destruction are distinct facts.
+Rerolled attempts are identifiable without reopening spent rerolls.
+[Core pp.16–24/28–42/54–58/64–67/87; supplied appendix definitions.]
+
+### Shared obligations inside each event hook
+
+The following are common implementation rules, not additional catch-all public
+hooks. Reuse the existing queue/identity/usage machinery where a window needs
+pending activations and simultaneous ordering; a simple event action does not
+need a new queue merely to fit an abstraction.
+
+**Queue.** Core opens the particular event window once. Where queuing is needed,
+event-specific helpers append matching activations without mutating Board,
 paying or rolling. Preserve earlier entries. An origin/event/activation identity
 prevents duplicate queuing; separately permitted instances stay separate.
 Record trigger-time qualification now. Core owns the queue and its lifetime.
@@ -361,8 +458,9 @@ eligibility of any particular faction's datasheet.
    reusing existing modifier, source/effect, dice and damage-job primitives.
 2. Wire passive evaluation into core calculations and replace the narrow
    fixed-bonus/permission hooks; pass the actual objective to cargo OC.
-3. Unify triggered queuing, validation, ordering and normal action execution,
-   keeping common and army effects in the same windows.
+3. Implement separate typed action hooks at the actual event boundaries,
+   sharing queue/usage/ordering helpers where needed and keeping common and
+   army effects in the same windows. Do not add a universal ability dispatcher.
 4. Migrate existing named model/component data to generic abilities, equipment,
    option provenance and common grants; remove superseded hooks and extract
    legacy faction behavior from core.
