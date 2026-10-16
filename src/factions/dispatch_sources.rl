@@ -50,7 +50,8 @@ fun faction_model_has_source_grant(Model model, SourceEffectKey key) -> Bool:
 
 # Check each stored riled-up key against its actual source recipient using
 # core handle validation. Read-only save integrity check, not expiry cleanup;
-# the common helper also defines acceptance of the zero-key sentinel.
+# key 0 is accepted as an unsourced grant. Nonzero keys must identify an effect
+# whose recipients include this model (source_handle_matches_model).
 fun faction_model_source_handles_valid(Board board, Model model) -> Bool:
     return orks_model_source_handles_valid(board, model)
 
@@ -99,6 +100,8 @@ fun faction_advance_charge_status(Unit unit) -> Bool:
 # Resolve one accepted pending timing event against its original queue.
 # Adapter-specific rolls/targets/effects may mutate Board and mark the entry
 # resolved/consume usage; unhandled rules use the common commit path.
+# Caller must check pending_source_valid first: construction reads the event
+# and source immediately. Do not copy/replace the queue during the child.
 fun faction_resolve_timing_source(Board board, PendingSourceEvents pending, SourceEventID event, Bool player) -> OrksTimingSource:
     return orks_resolve_timing_source(board, pending, event, player)
 
@@ -106,6 +109,8 @@ fun faction_resolve_timing_source(Board board, PendingSourceEvents pending, Sour
 # frame sets started on acceptance; core must then finish that child before
 # offering siblings. Borrow the original queue/progress, preserving controller
 # order and common mandatory gates (user Rules Sequencing; Orks timing cards).
+# Construction must not mutate Board or any borrowed progress/queue: the core
+# peer is constructed too, and either peer may receive the next input.
 fun faction_timing_choice(Board board, CoreTimingProgress core_progress, FactionTimingProgress progress, PendingSourceEvents pending, TimingWindow window, Bool player) -> OrksTimingChoice:
     return orks_timing_choice(board, core_progress, progress, pending, window, player)
 

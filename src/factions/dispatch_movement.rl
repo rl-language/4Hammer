@@ -21,8 +21,9 @@ fun faction_assault_disembark(Board board, Unit carrier_unit) -> Bool:
     return orks_assault_disembark(board, carrier_unit)
 
 # Return an absolute Scouts distance in inches, or -1 to use printed Scouts.
-# Minefield Detail supplies 6in when eligible; combined printed Scouts must
-# match that value, as required by the user's static-assert ruling.
+# The caller accepts any nonnegative override (0 permits no Scouts movement).
+# Minefield Detail supplies 6in when eligible and asserts that existing printed
+# values equal 6, enforcing the user's uniform-value requirement.
 fun faction_scouts_override(Unit unit) -> Int:
     return orks_scouts_override(unit)
 
@@ -38,7 +39,8 @@ fun faction_record_move_effects(Board board, UnitID id, MovementKind kind):
 fun faction_special_move_available(Board board, Unit unit, MovementKind kind) -> Bool:
     return orks_special_move_available(board, unit, kind)
 
-# Adjust policy before ordinary traversal processing for this unit/mode.
+# Adjust policy after core initializes the move kind's traversal defaults,
+# before Super-heavy Walker/Take to the Skies processing in movement_policy.
 # A selected Shokk-boosta Advance crosses enemy models without exclusions;
 # it does not grant FLY, terrain traversal or legalize final overlap.
 fun faction_prepare_movement_policy(Unit unit, MovementKind kind, MovementGeometryPolicy policy):
@@ -47,6 +49,7 @@ fun faction_prepare_movement_policy(Unit unit, MovementKind kind, MovementGeomet
 # Apply final mode overrides after ordinary movement policy is assembled.
 # Pulse Jet crosses enemies/terrain with free vertical movement; common
 # endpoint overlap, engagement and board constraints still apply.
+# Runs last in movement_policy, after the prepare hook and Walker/FLY changes.
 fun faction_finish_movement_policy(MovementKind kind, MovementGeometryPolicy policy):
     orks_finish_movement_policy(kind, policy)
 
@@ -93,8 +96,9 @@ fun faction_movement_abilities(Board board, UnitID source) -> OrksMovementAbilit
     return orks_movement_abilities(board, source)
 
 # Resolve remaining Wagon-specific charge-end effects after the shared
-# ordered charge-effect menu. Returns the shock-test action for the completed
-# charger; Mobbed/Impetus ordering is handled by separate combat hooks.
+# ordered charge-effect menu. Impending Krunch selects engaged enemy units
+# for Battle-shock tests; the charger is the source, not the test recipient.
+# The child finishes those tests; Mobbed/Impetus use separate combat hooks.
 fun faction_charge_finished(Board board, UnitID source) -> OrksWagonChargeEnd:
     return orks_wagon_charge_end(board, source)
 
@@ -167,6 +171,8 @@ fun register_faction_cargo_passives(Board board):
 # Return extra OC contributed through this carrier, not the carrier's total
 # OC. Raucous/Bossbunka checks passengers and the owner's home objective;
 # no distance/visibility is measured from an embarked unit (core p54/01.02.04).
+# player selects the home-marker assignment (home == int(player) + 1); caller
+# supplies the carrier owner. No contribution exists without an assigned home.
 fun faction_passenger_objective_control(Board board, Model carrier, Bool player) -> Int:
     return orks_bunka_passenger_control(board, carrier, player)
 
@@ -186,12 +192,16 @@ fun faction_pending_returns(Board board) -> OrksBankReturns:
 # Resolve one accepted event against the original pending queue, marking
 # resolution/usage and executing its rolls, targets or damage. Handles named
 # movement abilities, falling back to common commit for unhandled source rules.
+# Caller must select an event passing faction_movement_event_available first;
+# construction indexes that entry immediately. Keep its queue alive throughout.
 fun faction_resolve_movement_source(Board board, PendingSourceEvents pending, SourceEventID event, Bool player) -> OrksMovementSource:
     return orks_resolve_movement_source(board, pending, event, player)
 
 # Peer alternative to ordinary move modes: started becomes true only on an
 # accepted input. On completion, kind selects the mode and extra is its budget
 # (Pulse Jet D6+18 inches, not M plus that value); core then performs placement.
+# Construction leaves Board unchanged. Read kind/extra only after this peer
+# was selected and completed, before reinitializing its frame.
 fun faction_special_move_choice(Board board, UnitID id) -> OrksSpecialMoveChoice:
     return orks_special_move_choice(board, id)
 
@@ -228,6 +238,8 @@ fun faction_after_move(Board board, UnitID id) -> OrksAfterMove:
 # Peer menu offering one faction Movement-phase activation beside core
 # choices. started distinguishes the selected child; finish its atomic ability
 # before returning to the phase menu. Bank adapters select the real source.
+# Construction must leave Board unchanged even if no faction input is enabled;
+# the parent initializes this frame alongside the core menu on every iteration.
 fun faction_movement_phase_choice(Board board) -> OrksMovementPhaseChoice:
     return orks_movement_phase_choice(board)
 
@@ -238,14 +250,16 @@ fun faction_unit_charge_bonus(Unit unit) -> Int:
     return orks_unit_charge_bonus(unit)
 
 # Adjust only traversal policy for Get Out da Way, using the original unit:
-# allow crossing enemies except Monster/Vehicle. Does not alter final charge
-# target, overlap, engagement or coherency requirements (Nobz; core pp36-37).
+# if enemy traversal is not already allowed, permit it except Monster/Vehicle.
+# Existing FLY traversal takes precedence; final charge target, overlap,
+# engagement and coherency requirements remain core (Nobz; core pp36-37).
 fun faction_charge_traversal(Unit original, MovementGeometryPolicy policy):
     orks_charge_traversal(original, policy)
 
 # Test whether destroyed_models[archive] in this unit still has a Surly
-# return pending; archive is not a live model slot. Core preserves its old slot
-# accordingly. True promises neither a successful roll nor legal return placement.
+# return pending; archive is not a live model slot. replacement_slot uses true
+# to protect the UNIT's retired battlefield slot from recycling for a new unit.
+# True promises neither a successful roll nor legal return placement.
 fun faction_casualty_has_pending_return(Board board, Unit unit, ModelID archive) -> Bool:
     return orks_surly_casualty_valid(board, unit, archive)
 

@@ -8,6 +8,8 @@ import factions.orks.queries
 # Override one model's keyword: negative removes, zero defers to its intrinsic
 # keywords, positive grants. Current exceptions are Lifted/Fly, Blastajet/Smoke
 # and the attached Painboss's Infantry-to-Mounted conversion (Orks cards).
+# Model.has_keyword checks shared keyword grants before this hook; a negative
+# result suppresses the later intrinsic lookup, not a prior shared grant.
 fun faction_keyword_override(Model model, Keyword keyword) -> Int:
     return orks_keyword_override(model, keyword)
 
@@ -37,12 +39,15 @@ fun faction_invulnerable_base(Model model) -> Int:
 # Apply bearer-specific attachment metadata to model while joining leader to
 # bodyguard (core pp66-67). Currently marks a Painboss joining Mounted models;
 # does not spread its keyword conversion to the bodyguard or authorize attachment.
+# Unit.attach_to passes each leader model by reference before copying it into
+# bodyguard; mutate that model only, not either unit's component collection.
 fun faction_prepare_attached_model(Unit leader, Unit bodyguard, Model model):
     orks_prepare_attached_model(leader, bodyguard, model)
 
 # Read the captured army-rule flag for an original component identity, using
 # bodyguard/attached-component records. Used to retain conferred rules during
-# destruction (core p67); unlike the singular hook, this does not rescan models.
+# destruction (core p67). faction_component_has_army_rule captures this flag;
+# this plural hook reads it without rescanning surviving models.
 fun faction_component_has_army_rules(Unit unit, EntityIdentity component) -> Bool:
     return orks_component_has_army_rules(unit, component)
 
@@ -72,6 +77,8 @@ fun faction_melee_sustained_rule_applies(Board board, UnitID source, Weapon weap
 
 # Scan models with original_unit == component for their Waaagh! flag when
 # capturing attachment metadata (core pp66-67). This reads model membership;
-# the plural hook reads the resulting stored component flag instead.
+# faction_component_has_army_rules reads the resulting stored flag instead.
+# No live-source filter is applied here: snapshot capture and subsequent
+# component_source_active checks have separate responsibilities.
 fun faction_component_has_army_rule(Unit unit, EntityIdentity component) -> Bool:
     return component_has_waaagh(unit, component)

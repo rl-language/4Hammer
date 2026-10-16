@@ -5,9 +5,11 @@ import factions.orks.queries
 # Combat/morale extension contracts. UnitID indexes battlefield units; bearer
 # and slot index the source's models/equipment. Stable EntityIdentity overloads
 # can support all banks. Read queries leave state unchanged; appenders modify
-# their output without rolling or paying. Returned typed frames borrow the actual
-# contexts and can mutate Board during construction/resumption; core owns shared
-# attack, damage, casualty removal and flat reaction execution.
+# caller-owned output without rolling or paying. Appenders are cumulative:
+# do not reapply to the same result as if they were idempotent queries.
+# Returned frames borrow contexts and can mutate Board during initialization
+# or resumption, except peer menus, which must wait for an accepted input.
+# Core owns shared attack, damage, casualty removal and flat reaction execution.
 # Concrete rules/citations: orks/{combat,morale,queries}.rl and named Orks cards at
 # https://wahapedia.ru/wh40k11ed/factions/orks/; core attack/destruction pp16-24/87.
 
@@ -52,6 +54,8 @@ fun append_faction_declaration_modifiers(Board board, UnitID source, DeclaredWea
 # Gather source/target-dependent grants into info for this declared weapon:
 # modifier lists, reroll flags, hit provenance and cover exceptions. Core then
 # classifies rolls/applies caps; this hook neither rolls dice nor spends CP.
+# Caller supplies initialized common attack facts and a resolved bearer; this
+# augments that attack group rather than clearing/rebuilding the whole record.
 fun append_faction_attack_effects(Board board, UnitID source, UnitID target, DeclaredWeapon weapon, AttackSequenceInfo info):
     append_orks_attack_effects(board, source, target, weapon, info)
 
@@ -77,6 +81,7 @@ fun faction_fight_death_threshold(Board board, Unit unit, Model model) -> Int:
 # Return the battlefield unit index of a live Grot Shield recipient, or -1
 # if none. This is a lookup, not a hit count; the interception action below
 # rechecks the shield between wounds (Runt Swarm/Grot Shields).
+# Index 0 is valid; test >= 0 rather than treating the result as a Boolean.
 fun faction_hit_interceptor(Board board, Unit unit) -> Int:
     return orks_grot_shield(board, unit)
 
@@ -188,6 +193,8 @@ fun faction_before_battle_shock(Board board) -> OrksMobMentalityStep:
 # payment/target/dice. Outputs suppress_demise, headbutt_recipient and
 # crash_mortals; core applies the resulting mortal jobs/removal in order.
 # event supplies the real bank/unit; casualty is the caller's retained model.
+# Read outputs after completion. headbutt_recipient identifies a mortal-job
+# target only when crash_mortals > 0; suppress_demise can be true with no mortals.
 fun faction_before_destruction(Board board, Model casualty, PendingDestruction event) -> OrksBeforeDestruction:
     return orks_before_destruction(board, casualty, event)
 
@@ -212,12 +219,16 @@ fun faction_leadership_roll_penalty(Board board, Unit unit) -> Int:
 # Peer menu offering Dreadherder support beside ordinary Shooting choices.
 # started is set on the first accepted input; core completes this child before
 # reopening the menu. It does not select/consume ordinary shooting by itself.
+# Construction must leave Board unchanged; an unavailable menu simply offers
+# no enabled input, allowing the core peer to remain selectable.
 fun faction_shooting_phase_choice(Board board) -> OrksShootingPhaseChoice:
     return orks_shooting_phase_choice(board)
 
 # After all declarations, resolve Unpredictable Genius only when ranged
 # attacks share one target. Returns effect, the scoped source key core must
 # expire after this activation; does not prohibit multi-target declarations.
+# effect == 0 means no scoped grant to remove. Read it after completion and
+# preserve it until the attack's remove_scoped_source_effect cleanup boundary.
 fun faction_declarations_complete(Board board, DeclaredWeapons declarations, UnitID source, Bool melee) -> OrksDeclarationsComplete:
     return orks_declarations_complete(board, declarations, source, melee)
 
@@ -225,6 +236,8 @@ fun faction_declarations_complete(Board board, DeclaredWeapons declarations, Uni
 # with core Crushing Impact. Mutates the original progress flags and sets
 # started on acceptance; crushing_pending is borrowed common-menu context,
 # not this adapter's flag to clear (user Rules Sequencing; Orks cards).
+# Construction must leave Board/progress unchanged. Accepted resolution or
+# decline clears its own pending flag before the child resolves nested effects.
 fun faction_charge_choice(Board board, FactionChargeProgress progress, Bool crushing_pending, UnitID source) -> OrksChargeChoice:
     return orks_charge_choice(board, progress, crushing_pending, source)
 
@@ -268,5 +281,7 @@ fun record_faction_hit_tags(Board board, AttackResultRecord record, Int count):
 # including payment and nonattack effects. Returns reaction, a typed request
 # for core's flat attack runner; never nests the shared Attack frame. Uses the
 # completed activation ledger and restores decision ownership (Orks cards).
+# After completion, inspect reaction.available before reading its actor/target
+# fields; copy the request before reusing the shared reaction frame.
 fun faction_post_attack(Board board, UnitID attacker, Bool melee) -> OrksPostAttack:
     return resolve_orks_post_attack(board, attacker, melee)

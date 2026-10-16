@@ -11,20 +11,38 @@ binary libraries.
 | --- | --- |
 | [dispatch_properties.rl](dispatch_properties.rl) | Model keywords/abilities, characteristic contributions, intrinsic weapon rules and component army-rule metadata |
 | [dispatch_combat.rl](dispatch_combat.rl) | Selection/target/hit/destruction hooks, modifiers, defensive permissions and faction combat choices |
-| [dispatch_movement.rl](dispatch_movement.rl) | Source movement events, mode/Advance choices, traversal, charge contributions, passenger permissions/costs, arrival and completed-move reactions |
+| [dispatch_movement.rl](dispatch_movement.rl) | Source movement events, mode/Advance choices, traversal, charge contributions, prebattle formations/redeploy, cargo choices/OC, arrival/reactions and replacement metadata |
 | [dispatch_sources.rl](dispatch_sources.rl) | Source registration/availability, typed faction grant lifecycle, validation, timing-source resolution and faction timing choices |
 | [dispatch_permissions.rl](dispatch_permissions.rl) | Action, detection, stratagem, attachment and other source-specific eligibility queries |
-| [dispatch_setup.rl](dispatch_setup.rl) | Existing roster menu, selected detachments/options/Warlord, formations and setup policy |
+| [dispatch_setup.rl](dispatch_setup.rl) | Existing roster menu, selected detachments/options/Warlord and muster/attachment policy |
 | [types.rl](types.rl) | Explicit bounded extension progress used by neutral action controllers |
 
 ## Calling a hook
 
 Queries must not spend CP, consume a use or register an effect merely because
 Godot enumerates a legal input. Modifier appenders contribute to the provided
-result without replacing other sources. Commands and action constructors are
+result without erasing other sources; weapon-rule appenders can also increment
+existing numeric instances while preserving their provenance. These are
+cumulative operations: applying them twice to the same result can duplicate a
+contribution. Commands and action constructors are
 called at the actual gameplay boundary, with stable source/model identities and
 the original Board/bank contexts. Faction code may invoke the existing common
 movement, damage, healing and source primitives; it must not copy those engines.
+
+The comments over each hook define its timing, output and mutation contract.
+In particular, a permission may waive one restriction, while a veto's `true`
+only permits further validation. Neither establishes complete legality. A bounded
+`UnitID` still needs an existing slot in the correct bank; it is not a persistent
+identity. Predicates may reject invalid selectors, but action constructors that
+immediately read a pending event require the caller to validate it first.
+
+Read result fields after completion and before reusing their frame. The `started`
+routing flag is deliberately read earlier, after forwarding one input, to choose
+which peer to finish. Check each result's guard: `reaction.available` before its actor/target fields,
+`crash_mortals > 0` before using the death-reaction recipient, and a selected,
+completed special-move peer before using `kind`/`extra`. A zero source-effect key
+means no scoped effect to remove; a Grot Shield unit index of zero is valid and
+its absence sentinel is `-1`. Never infer these meanings from integer truthiness.
 
 Routing follows the actual rule context, not just the target owner's selected
 army. The current static composition calls the Orks adapter whose existing
