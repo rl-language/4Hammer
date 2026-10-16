@@ -41,5 +41,6 @@ healing and model return remain in common modules. No custom init/drop is used.
 
 The engine is jointly compiled: core phases call these adapters and shared
 state still contains faction catalog/storage types. This folder is not a
-standalone library. State/observation41 protects renamed internal frame fields;
-public action payload compatibility is checked separately.
+standalone library. State/observation42 protects renamed internal frame fields;
+public action payload compatibility is checked separately. Source display names
+are hidden enum values; the UI derives text only when presenting a choice.

@@ -741,7 +741,7 @@ not the continuing buff produced by using it.
 | `required_embarked_model` | `EntityIdentity` | Optional dependent passenger identity for cargo-granted rules; zero means no such dependency. |
 | `required_carrier_model` | `EntityIdentity` | Optional carrier dependency identity; moving/destroying the carrier can invalidate the source. |
 | `rule` | `SourceRuleCode` | Explicit source rule code 1–512 on registration; shared use is determined by code/scope, not name equality. |
-| `name` | `Hidden<String>` | Display label for source choices; outside normal ML observation, not its unique use key. |
+| `label` | `Hidden<SourceLabel>` | Finite presentation ID for source choices; zero is no label. Text is derived on demand, outside normal ML observation; this is not the source-use key. |
 | `source_unit` | `EntityIdentity` | Original source/component unit identity, including a component later attached into another unit. |
 | `source_model` | `EntityIdentity` | Specific bearer identity where applicable; zero denotes a unit/component source. |
 | `owner` | `Bool` | Controlling player for this source and its usage/effect ownership. |

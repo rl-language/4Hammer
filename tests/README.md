@@ -536,3 +536,14 @@ are now `godot_orks_datasheets.gd` (all54 previews and detailed runtime choices)
 and `godot_orks_recovery.gd` (recovery/support choices). Use matching
 state/observation41 and action26. ROADMAP.md records the exact constructor/layout
 comparisons, source audits, focused Godot scripts and sanitizer evidence.
+
+## Source label enums —2026-10-16
+
+The final native build in `/workspace/4hammer-validation/source-labels/tests`
+passes1,195 assertions plus the compile fixture. The two new tests cover source
+label save/restore with unchanged grant behavior and invalid-enum rejection.
+Source records store `Hidden<SourceLabel>` instead of an owning String; generated
+host clients must use `get_label()` and matching state/observation42, action26.
+Matching Godot artifacts are under `source-labels/godot`; the source-choice test
+uses an enum and checks the actual displayed button. ROADMAP.md owns the full
+layout, host and sanitizer evidence.

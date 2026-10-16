@@ -1669,3 +1669,51 @@ through unchanged action discovery. All852 local Markdown links and heading
 targets resolve. The full broad/rendered journey is not rerun. Validation artifacts, exact
 snapshot/layout comparisons and logs are under
 `/workspace/4hammer-validation/orks-ownership`.
+
+## Finite source presentation labels —2026-10-16
+
+The user requested replacing the dynamically stored effect name with an enum.
+
+- [x] Replace `SourceInstance.name: Hidden<String>` with
+  `label: Hidden<SourceLabel>` (none plus23 fixed presentation identities).
+  All24 source-label assignments use enums. Source registration creates no
+  owning display string; the existing three action-label paths request text
+  through `source_label_text` only when presenting the choice.
+- [x] Preserve rule codes, source identities, effects, use scopes/limits,
+  durations and action payloads. Hidden labels contribute no ML observations.
+  Validate raw label values during source/save validation.
+- [x] Add native regressions for label save/restore and unchanged grant behavior,
+  and atomic rejection of an invalid saved enum. Update the Godot source-choice
+  test to construct an enum label and verify the actual choice button.
+- [x] Update the state/property reference, architecture and agent guidance.
+  State/observation42 and next-state43 replace41/42; action schema remains26.
+- [x] Complete the native suite, matching bindings/layout/frame audit, focused
+  Godot choices and sanitized source/replay/mutation checks.
+
+Validation artifacts are under `/workspace/4hammer-validation/source-labels`.
+
+The fresh metadata comparison passes: all reachable Game field types/names are
+unchanged except the source display field and singleton schema version. Public
+`AnyGameAction` remains identical (24 bytes). `SourceInstance` shrinks488→472
+bytes and has no reachable String; Board shrinks31,936→31,808 and
+Game34,160→34,016 bytes. The full action-frame audit still finds121 actions,
+66 shared slots and no duplicate frames or nested re-entry. A source comparison
+verifies all15 faction modules differ only in presentation assignments.
+
+The rebuilt optimized ASAN/UBSAN fuzzer passes27 source/label regressions plus
+empty input (28 runs/11.36s), both preserved memory inputs (7.46s), the previously
+completed-game replay (71.47s), and fresh action mutation (33 runs/31.63s), with
+leak detection enabled and no crash artifacts. These are regression checks;
+source eligibility, scope and printed rule behavior are unchanged.
+
+Final native CTest passes all1,195 assertions plus the compilation fixture
+(1,196/1,196 entries;267.95s,262.96s compilation), with unoptimized RLC0.4.18
+and four compiler workers. The pure rule-test path remains entirely native.
+
+Fresh unoptimized Godot C++ bindings linked to the new native library pass
+`godot_weapons_sources.gd`, `godot_orks_unit_rules.gd`,
+`godot_orks_recovery.gd` and `godot_orks_datasheets.gd` (9.71–10.47s each),
+including the actual enum-backed source label and choice button. Existing
+runtime glue/Godot C++ dependencies are reused. All852 Markdown local links,
+heading anchors and fences pass. The full broad/rendered walkthrough was not
+rerun; no action-discovery or rule-mechanic changes are included.

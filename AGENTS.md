@@ -16,6 +16,9 @@ categories such as Elite/Remaining. Use `make_orks_model`, one
 `finalize_orks_unit`, and the shared explicit `make_source_usage`/
 `source_use_limits` constructors instead of category wrappers. Preserve each
 rule's identities, limits and live-conferral checks when consolidating helpers.
+Source presentation metadata must use `Hidden<SourceLabel>`, never an owning
+String in `SourceInstance`. Derive display text with `source_label_text` only
+when a host requests a label; rule IDs/scopes remain the gameplay identities.
 
 Use the existing isolated checkout; do not create a Git worktree unless requested. Inspect existing changes before editing. Unlike environment onboarding, a rule-change task permits the necessary source and test changes.
 
@@ -756,3 +759,19 @@ comparisons, full frame/layout/source audits, focused Godot checks and sanitized
 semantic/replay/mutation runs. Read the latest ROADMAP section for exact evidence
 and limits. This cleanup removes17 batch helpers and317 runtime lines; further
 shared-engine file proposals are pending, not authorization to implement them.
+
+## Finite source labels —2026-10-16
+
+Source records now store `Hidden<SourceLabel>` instead of display strings.
+Choose a fixed enum value when registering an ability; `source_label_text`
+materializes presentation text only on request. Keep rule codes/scopes as the
+actual behavior/use identities. Source validation rejects unknown raw enum
+values, including in saved state. Do not reintroduce owning labels or custom
+init/drop for this metadata.
+
+Latest completed schemas are state/observation42, action26 and next-state43;
+older counts/versions above are historical. Final1,195 native assertions plus
+the compile fixture, source/layout/frame audits, four focused Godot scripts and
+sanitized source/memory/game/mutation checks pass. See the latest ROADMAP section
+for evidence. The representation saves16 bytes per source record and eliminates
+its label allocation/copy ownership without changing public action layouts.

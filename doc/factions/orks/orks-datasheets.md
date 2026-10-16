@@ -105,6 +105,8 @@ positive bounded diameters override the defaults.
 Specialized editor choices retain their real reserve/passenger/formation banks
 and the existing enum, Bool, UnitID, ModelID and BoardPosition contracts.
 Public action names are preserved; internal Command-healing, timing-window and
-post-shoot frames use responsibility names. State/observation41 rejects older
+post-shoot frames use responsibility names. State/observation42 rejects older
 serialized frame-field names. Matching generated native/Godot bindings are
-required after the refactor; ROADMAP.md owns final compatibility evidence.
+required after storage changes. Sources store a finite hidden label enum;
+display strings are derived only when requested. ROADMAP.md owns compatibility
+evidence.

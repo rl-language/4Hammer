@@ -397,7 +397,7 @@ The generic whole-unit Hidden query lives with `model_is_hidden` in terrain
 rules; the riled-up grant constructor lives in the faction effects module.
 Shared healing/model return, granted moves, damage and source counters remain
 in common modules. Persisted internal frame fields use responsibility names;
-state/observation41 protects saves, while the public action catalog is checked
+state/observation42 protects saves, while the public action catalog is checked
 separately. ROADMAP.md records actual validation and compatibility evidence.
 
 ## Attached units
@@ -414,7 +414,7 @@ The source framework makes an ability's origin, usage and duration explicit. It 
 
 | Record | Role |
 | --- | --- |
-| `SourceInstance` | Registered source: stable unit/model, owner, explicit rule code, trigger/conditions, scope, limits, grant and duration |
+| `SourceInstance` | Registered source: stable unit/model, owner, explicit rule code, hidden presentation-label enum, trigger/conditions, scope, limits, grant and duration |
 | `SourceEvent` | Snapshot of the gameplay boundary and involved stable entities |
 | `PendingSourceEvent` | Source handle plus event, retained while the controller resolves choices |
 | `SourceUseRecord` | Rule/player/scope/subject usage across phase, turn, round and battle intervals |
@@ -606,7 +606,7 @@ Home-objective ownership is explicit mission metadata, not inferred geometry.
 All54 included standard cards use [one datasheet guide](factions/orks/orks-datasheets.md)
 and public roster selection. ROADMAP.md owns validation and scope limits.
 Internal frame names describe Command healing, datasheet windows and hit
-effects; state/observation41 requires matching clients. Public action payloads
+effects; state/observation42 requires matching clients. Public action payloads
 remain at schema26. No custom lifecycle hook is introduced.
 
 ### Shared rules across storage banks
