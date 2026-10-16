@@ -1,3 +1,17 @@
+import factions.orks.army
+import factions.orks.combat
+import factions.orks.detachments
+import factions.orks.effects
+import factions.orks.enhancements
+import factions.orks.morale
+import factions.orks.movement
+import factions.orks.psychic
+import factions.orks.recovery
+import factions.orks.roster
+import factions.orks.sources
+import factions.orks.stratagems
+import factions.orks.transports
+import factions.orks.types
 import action
 import ability_procedures
 import healing_rules
@@ -18,18 +32,10 @@ import fight_rules
 import core_stratagem_rules
 import transport_rules
 import firing_deck_rules
-import factions.orks.orks_detachment_rules
-import factions.orks.orks_detachment_support
 import source_effects
 import modifier_choices
-import factions.orks.orks_army_rules
 import attachment_rules
 import factions.orks.datasheets
-import factions.orks.orks_unit_rules
-import factions.orks.orks_datasheet_rules
-import factions.orks.orks_roster
-import factions.orks.orks_remaining_rules
-import factions.orks.orks_elite_rules
 
 # User-supplied sequencing: turn owner's source instances in their chosen
 # order, then the opponent's. Declining optional sources spends no usage.
@@ -1307,7 +1313,7 @@ act attack(ctx Board board, frm UnitID source, frm UnitID target, frm Bool melee
     subaction*(board) board.shared_actions.resolve_damage_jobs
     remove_orks_scoped_effect(board, genius_effect)
     if !melee and board.timing.phase == BattlePhase::shooting and board[source].owned_by_player1 == board.current_player:
-        subaction*(board) remaining_end = orks_remaining_post_shoot(board, source)
+        subaction*(board) hit_effects = orks_resolve_hit_effects(board, source)
         subaction*(board) options_end = orks_shooting_option_end(board, source)
     hazardous_uses = declared_hazardous_uses(declarations)
     board.shared_actions.resolve_hazards = resolve_hazards(board, source, hazardous_uses)
@@ -1627,7 +1633,7 @@ act timing_objective_stratagem(ctx Board board) -> TimingObjectiveStratagem:
 # effects follow both groups at printed end windows (pp.28–30/32–38/54/57).
 # No mission rules or unspecified faction effects are synthesized.
 act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWindowResolution:
-    register_orks_unit_rules(board)
+    register_orks_datasheet_sources(board)
     board.open_timing_window(window)
     frm player = board.timing.active_player
     # Exactly two controller groups; bounded frame storage supports ML inference.
@@ -1670,12 +1676,12 @@ act resolve_timing_window(ctx Board board, frm TimingWindow window) -> TimingWin
                     frm chosen_source = board.source_instances[pending[event.value].source.value]
                     if chosen_source.rule.value >= 140 and chosen_source.rule.value <= 145:
                         pending[event.value].resolved = true
-                        subaction*(board) remaining_window = orks_remaining_window(board, chosen_source)
+                        subaction*(board) datasheet_window = orks_datasheet_window(board, chosen_source)
                     else:
                         if chosen_source.rule.value >= ORKS_SURGERY_RULE and chosen_source.rule.value <= ORKS_PAINBOSS_RULE:
                             commit_source_usage(board, chosen_source)
                             pending[event.value].resolved = true
-                            subaction*(board) elite_healing = orks_elite_command(board, chosen_source)
+                            subaction*(board) command_healing = orks_command_healing(board, chosen_source)
                         else:
                             if chosen_source.rule.value == ORKS_SCAVENGERS_RULE:
                                 secure_orks_gretchin_objectives(board, chosen_source)
@@ -1774,30 +1780,6 @@ fun battle_shock_test(Board board, Unit unit, Bool command_step, Bool recover_sh
     let penalty : LinearlyDistributedInt<0, 8>
     return battle_shock_test(board, unit, command_step, recover_shock, penalty)
 
-# Mobbed's owner orders all affected enemy units; each opponent controls its
-# own shock rules, then the charge controller is restored. Snapshot the13+
-# strength threshold once when this charge-end ability starts resolving.
-# https://wahapedia.ru/wh40k11ed/factions/orks/Beast-Snagga-Boyz (Mobbed).
-act resolve_orks_mobbed(ctx Board board, frm UnitID source) -> OrksMobbed:
-    frm previous_owner = board.current_decision_maker
-    frm penalty : LinearlyDistributedInt<0, 8>
-    penalty = orks_mobbed_penalty(board[source])
-    frm pending : Bool[MAX_UNIT_COUNT]
-    frm remaining : UnitIterator
-    let target : UnitID
-    for index in range(board.units.size()):
-        target = index
-        pending[index] = orks_mobbed_target_valid(board, source, target)
-        remaining = remaining + int(pending[index])
-    while remaining.value > 0:
-        board.current_decision_maker = board[source].owned_by_player1
-        act choose_mobbed_target(frm UnitID shock_target) {shock_target.get() < board.units.size(), pending[shock_target.get()]}
-        pending[shock_target.get()] = false
-        remaining = remaining - 1
-        if orks_mobbed_target_valid(board, source, shock_target):
-            board.shared_actions.battle_shock_test = battle_shock_test(board, board[shock_target], false, false, penalty)
-            subaction*(board, board[shock_target]) board.shared_actions.battle_shock_test
-    board.current_decision_maker = previous_owner
 
 # Test each live friendly unit once when already shocked or at/below half
 # (p.30). Snapshot shock at the step's start for the printed recovery condition;
@@ -1887,7 +1869,7 @@ act command_phase(ctx Board board) -> CommandPhase:
 # Sources: Orks/Beastboss Keep Huntin'; Orks/Squighog-Boyz Bomb Squig;
 # user Rules Sequencing; mortal allocation/destruction core pp24/87.
 act resolve_movement_sources(ctx Board board, frm SourceEvent trigger) -> MovementSourceResolution:
-    register_orks_unit_rules(board)
+    register_orks_datasheet_sources(board)
     frm previous_owner = board.current_decision_maker
     frm previous_candidates = board.active_source_events
     frm pending = collect_source_events(board, trigger)
@@ -3007,7 +2989,7 @@ act battle(ctx Board board) -> Battle:
     register_orks_option_passives(board)
     register_orks_force_dispositions(board)
     register_orks_passive_rules(board)
-    register_orks_unit_rules(board)
+    register_orks_datasheet_sources(board)
     subaction*(board) transport_formations = declare_transport_passengers(board)
     subaction*(board) reserves = declare_strategic_reserves(board)
     subaction*(board) deploy = deploy(board)
@@ -3062,21 +3044,6 @@ fun<T> pretty_string(Board b, T obj) -> String:
     return to_string(obj)
 
 
-# Configure at most three distinct Orks packages; no DP accounting is performed
-# by user instruction (source: https://wahapedia.ru/wh40k11ed/factions/orks/).
-# Package effects require their own ROADMAP batches; Get Stuck In is17.I1.
-act select_orks_detachments(ctx Board board, frm Bool detachment_player) -> SelectOrksDetachments:
-    if board.armies[int(detachment_player)].faction != ArmyFaction::orks:
-        return
-    board.current_decision_maker = detachment_player
-    frm detachment_finished = false
-    while !detachment_finished and board.armies[int(detachment_player)].detachments.has_capacity():
-        actions:
-            act finish_detachment_selection()
-                detachment_finished = true
-            act choose_orks_detachment(OrksDetachment detachment) {board.armies[int(detachment_player)].detachment_selection_valid(detachment)}
-                let recorded = board.armies[int(detachment_player)].record_detachment(detachment)
-                assert(recorded, "legal detachment selection must be recorded")
 
 # Select the current Orks starter (other rosters remain legacy fixtures), then
 # independent detachment configuration. Point-free play is user authority.
@@ -3116,14 +3083,3 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
     subaction*(board) board.shared_actions.select_orks_options
     board.shared_actions.select_orks_warlord = select_orks_warlord(board, current_player)
     subaction*(board) board.shared_actions.select_orks_warlord
-
-# UI infrastructure reads the one active draft frame; no second Board/Unit
-# copy or alternative roster validator is installed in the host.
-fun orks_active_muster_field_label(Board board, OrksMusterField field) -> String:
-    ref entry = board.shared_actions.pick_army.roster.entry
-    return orks_muster_field_label(entry.draft, entry.member_index.get(), field)
-
-# Label a numeric input with its real source weapon/equipment choice.
-fun orks_active_muster_value_label(Board board, Int value) -> String:
-    ref entry = board.shared_actions.pick_army.roster.entry
-    return orks_muster_value_label(entry.draft, entry.member_index.get(), entry.field, value)

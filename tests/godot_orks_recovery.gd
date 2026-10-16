@@ -2,7 +2,7 @@ extends SceneTree
 
 # These production bindings expose actual current cards and preserve the
 # editor's one-UnitID/one-ModelID action discovery. Sources: Orks card URLs
-# in src/factions/orks/orks_elite_data.rl and src/factions/orks/orks_elite_rules.rl.
+# in src/factions/orks/datasheets.rl and src/factions/orks/README.md.
 func _initialize():
 	call_deferred("check_units")
 
@@ -22,8 +22,8 @@ func panel_for(rules, library, action):
 func check_units():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 40)
-	assert(library.get_observation_schema_version() == 40)
+	assert(library.get_state_schema_version() == 41)
+	assert(library.get_observation_schema_version() == 41)
 	assert(library.get_action_schema_version() == 26)
 	var gun = RLCOrksMegaMekGun.make()
 	var extra = RLCOrksMegaMekExtra.make()
@@ -39,7 +39,7 @@ func check_units():
 	library.identify_units(board)
 	library.capture_starting_strengths(board)
 	library.register_orks_passive_rules(board)
-	library.register_orks_unit_rules(board)
+	library.register_orks_datasheet_sources(board)
 	assert(library.valid_state_foundations(board))
 	assert(library.orks_passenger_space(units[11]) == 5)
 	library.assign(rules.state.get_board(), board)

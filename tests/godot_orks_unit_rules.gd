@@ -24,7 +24,7 @@ func panel_for(rules, library, action):
 func check_rules():
 	var rules = root.get_node("GlobalRules")
 	var library = rules.library
-	assert(library.get_state_schema_version() == 40)
+	assert(library.get_state_schema_version() == 41)
 	assert(library.get_action_schema_version() == 26)
 	var board = RLCBoard.make()
 	var boss = library.make_orks_beastboss()
@@ -47,7 +47,7 @@ func check_rules():
 	var phase = RLCBattlePhase.make()
 	phase.set_value(2) # movement
 	library.begin_phase(board, phase)
-	library.register_orks_unit_rules(board)
+	library.register_orks_datasheet_sources(board)
 	assert(library.size(board.get_source_instances()) == 3)
 	var event = RLCSourceEvent.make()
 	event.get_kind().set_value(1) # move_start

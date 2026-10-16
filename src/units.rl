@@ -1,3 +1,4 @@
+import factions.orks.types
 import bounded_arg
 import stats
 import vector2d
@@ -6,7 +7,6 @@ import range
 import state_types
 import geometry
 import modifiers
-import factions.orks.orks_detachment_types
 
 using Wounds = LinearlyDistributedInt<0, MAX_WOUNDS>
 using WeaponsVector = CheckedVector<Weapon, MAX_WEAPONS>
@@ -1905,24 +1905,3 @@ fun set_physical_weapon_group(Model model, Int slot, Int group):
 # raw fixed-array selector (Nazdreg UNIT COMPOSITION; appendix04.01.03).
 fun permits_simultaneous_profile(Model model, Int slot) -> Bool:
     return slot >= 0 and slot < model.weapons.size() and model.simultaneous_ranged_profiles[slot]
-
-
-# A unit ability follows its live constituent union; corpses cannot keep an
-# active army ability (Orks Waaagh! / appendix02.05.01 / destruction p.87).
-fun unit_has_waaagh(Unit unit) -> Bool:
-    let available = false
-    for index in range(unit.models.size()):
-        available = available or (model_confers_attached_abilities(unit[index]) and unit[index].has_waaagh)
-    if !unit.attached_units.empty():
-        available = available or (unit.bodyguard_waaagh and component_source_active(unit, unit.identity))
-        for component_index in range(unit.attached_units.size()):
-            available = available or (unit.attached_units[component_index].waaagh and component_source_active(unit, unit.attached_units[component_index].identity))
-    return available and unit.has_keyword(Keyword::orks)
-
-# All members receive each unit-wide riled grant. Read only live bearers for
-# movement/shooting permissions (Orks Waaagh! / destruction p.87).
-fun unit_is_riled_up(Unit unit) -> Bool:
-    let active = false
-    for index in range(unit.models.size()):
-        active = active or ((unit[index].is_alive() or unit[index].state == ModelState::fight_on_death) and unit[index].is_riled_up())
-    return active

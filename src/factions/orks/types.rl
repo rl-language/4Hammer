@@ -1,5 +1,11 @@
 import state_types
 
+# Source: https://wahapedia.ru/wh40k11ed/factions/orks/ (Army Rules).
+# Keep these choices in the same controller group as other start-window rules.
+enum OrksTimingRule:
+    war_cry
+    da_boss
+
 # Source IDs for all38 ordinary enhancements/upgrades. Prices are deliberately
 # absent by user instruction; eligibility and usage are separate game rules.
 # https://wahapedia.ru/wh40k11ed/factions/orks/ (ordinary Detachments)
@@ -124,6 +130,7 @@ cls OrksEffectGrant:
     EntityIdentity associated_unit
 
 using OrksEnhancements = CheckedVector<OrksEnhancement, 4>
+
 using OrksEffectGrants = CheckedVector<OrksEffectGrant, MAX_ORKS_MODEL_EFFECTS>
 
 # Attack-end reactions retain actual per-target hits/lost wounds, not merely
@@ -160,3 +167,50 @@ enum OrksArtilleristMode:
     lethal
     sustained
     both_hazardous
+
+# The selected engine lasts to next own Command, including offboard time.
+# No point/CP expenditure or unstated bonus is introduced.
+# https://wahapedia.ru/wh40k11ed/factions/orks/Wazdakka-Gutsmek (Full Throttle).
+enum OrksEngine:
+    turbo
+    shokk
+    pulse
+
+# Free Movement abilities keep independent printed limits and eligibility.
+# Target choice is checked BEFORE acceptance to prevent empty mandatory steps.
+# Sources: Orks/{Ghazghkull-Thraka,Kommandos,Warbuggies,Weirdboy}.
+enum OrksDatasheetMoveAbility:
+    makari
+    found_em
+    drive_by_skorchin
+    da_jump
+
+# Rule codes retain per-original-unit token history through attachments and
+# revival. Source: Orks/Painboy, Painboss, Big-Mek-In-Mega-Armour, Tankbustas.
+const ORKS_SURGERY_RULE = 120
+
+const ORKS_ARMOUR_REPAIR_RULE = 121
+
+const ORKS_PAINBOSS_RULE = 122
+
+const ORKS_MEK_REPAIR_RULE = 123
+
+const ORKS_ORDERLY_RULE = 124
+
+const ORKS_RUNTHERD_RULE = 125
+
+const ORKS_PULSA_RULE = 126
+
+const ORKS_SCAVENGERS_RULE = 127
+
+const ORKS_SHOKK_BOOST_RULE = 128
+
+# Shared rule codes are infrastructure for the printed per-army-round and
+# per-unit-battle limits. Beastboss on Squigosaur must reuse110 in its adapter.
+# Sources: Orks/Beastboss Keep Huntin'; Orks/Squighog-Boyz Bomb Squig.
+const ORKS_KEEP_HUNTIN_RULE = 110
+
+# Standard Warboss card, borrowed by Boss Boomer with its own army-round use.
+const ORKS_INTIMIDATING_RULE = 112
+
+const ORKS_BOMB_SQUIG_RULE = 111

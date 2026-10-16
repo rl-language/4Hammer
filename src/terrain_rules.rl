@@ -165,3 +165,14 @@ fun unit_in_any_objective_range(Board board, Unit unit) -> Bool:
             if unit[member].is_alive() and board.model_in_objective_range(unit[member], definition):
                 return true
     return false
+
+# Hidden is a whole-unit condition for Kommandos/Snikrot. A single exposed
+# living model fails it; retained corpses are not extra required members.
+# Sources: Orks/Kommandos Nowhere to Hide; Boss-Snikrot Kunnin' Infiltrator.
+fun unit_is_hidden(Board board, Unit unit) -> Bool:
+    if unit.off_battlefield or !has_live_model(unit):
+        return false
+    for member_index in range(unit.models.size()):
+        if unit[member_index].is_alive() and !model_is_hidden(board, unit, unit[member_index]):
+            return false
+    return true

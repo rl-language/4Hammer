@@ -247,7 +247,7 @@ fun source_event_available(Board board, SourceInstance instance, SourceEvent eve
         return false
     if instance.restrict_movement and (event.kind.value == SourceEventKind::move_start.value or event.kind.value == SourceEventKind::move_end.value) and instance.movement.value != event.movement.value:
         return false
-    if !orks_elite_event_available(board, instance, event) or !orks_remaining_event_available(board, instance, event):
+    if !orks_source_event_available(board, instance, event):
         return false
     let location = source_event_location(board, instance, event)
     # Explicit death permission does not waive a while-leading condition.
@@ -715,14 +715,6 @@ fun source_attack_modifier_grant(AttackModifierPermission permission) -> SourceG
     return result
 
 
-# One typed status installs all three printed riled benefits through consumers,
-# with exact-key expiry rather than independent buff lifetimes (Orks Waaagh!).
-fun riled_up_grant() -> SourceGrant:
-    let grant : RiledUpGrant
-    grant.enabled = true
-    let result : SourceGrant
-    result = grant
-    return result
 
 
 # Simultaneous model/unit destruction rules share controller groups and choice

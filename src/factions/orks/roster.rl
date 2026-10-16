@@ -1,3 +1,5 @@
+import board
+import source_effects
 import factions.orks.datasheets
 
 # Pre-identity muster metadata, not model state. Small bounded ordinals are
@@ -810,3 +812,164 @@ fun make_orks_starter_roster(UnitVector out, Bool owner) -> Faction:
     # Keep the stable six-roster identifier/action API; its current Orks
     # content is now explicit, rather than inferred from the old name.
     return Faction::morgrim_butchas
+
+# User-supplied Warlord definition: choose a CHARACTER unit carrying the army
+# faction keyword, then an eligible CHARACTER model. These Orks selectors
+# address the pre-formation reserve roster, not battlefield slots.
+fun orks_warlord_unit_base_valid(Board board, Bool player, UnitID unit) -> Bool:
+    return unit.get() >= 0 and unit.get() < board.reserve_units.size() and board.reserve_units[unit.get()].owned_by_player1 == player and board.reserve_units[unit.get()].has_keyword(Keyword::orks) and board.reserve_units[unit.get()].has_keyword(Keyword::character)
+
+# Cannot-be-Warlord overrides required status (user definition). A model-level
+# requirement such as Ghazghkull's cannot be satisfied by a different Character.
+fun orks_warlord_model_base_valid(Unit unit, Int model) -> Bool:
+    return model >= 0 and model < unit.models.size() and unit[model].is_alive() and unit[model].has_keyword(Keyword::character) and !unit[model].cannot_be_warlord
+
+# Required-unit and required-model clauses are distinct. Only otherwise legal
+# required choices participate; prohibitions retain precedence (user wording).
+fun orks_warlord_model_required(Unit unit, Int model) -> Bool:
+    return orks_warlord_model_base_valid(unit, model) and (unit.must_supply_warlord or unit[model].must_be_warlord)
+
+# Gather required eligible choices across the player's actual roster, rather
+# than always selecting the first boss (user Warlord definition).
+fun orks_has_required_warlord(Board board, Bool player) -> Bool:
+    let required = false
+    let unit : UnitID
+    for index in range(board.reserve_units.size()):
+        unit = index
+        if !orks_warlord_unit_base_valid(board, player, unit):
+            continue
+        for model in range(board.reserve_units[index].models.size()):
+            required = required or orks_warlord_model_required(board.reserve_units[index], model)
+    return required
+
+# Finite selectors safely reject spare indices and foreign units before access
+# (editor protocol; user Warlord definition).
+fun orks_warlord_model_valid(Board board, Bool player, UnitID unit, ModelID model) -> Bool:
+    if board.armies[int(player)].warlord.value != 0 or board.armies[int(player)].faction != ArmyFaction::orks or !orks_warlord_unit_base_valid(board, player, unit) or !orks_warlord_model_base_valid(board.reserve_units[unit.get()], model.get()):
+        return false
+    ref roster_unit = board.reserve_units[unit.get()]
+    let required_model = false
+    for index in range(roster_unit.models.size()):
+        required_model = required_model or (orks_warlord_model_base_valid(roster_unit, index) and roster_unit[index].must_be_warlord)
+    if required_model and !roster_unit[model.get()].must_be_warlord:
+        return false
+    return !orks_has_required_warlord(board, player) or orks_warlord_model_required(roster_unit, model.get())
+
+# A selected unit must contain a selectable model, so the second input cannot
+# deadlock after an otherwise legal unit choice (user Warlord definition).
+fun orks_warlord_unit_valid(Board board, Bool player, UnitID unit) -> Bool:
+    if !orks_warlord_unit_base_valid(board, player, unit):
+        return false
+    let selectable = false
+    let model : ModelID
+    for index in range(board.reserve_units[unit.get()].models.size()):
+        model = index
+        selectable = selectable or orks_warlord_model_valid(board, player, unit, model)
+    return selectable
+
+# Army construction remains data-driven: a legacy roster without current ORKS
+# metadata is not certified here. Actual roster adapters must supply eligible
+# Characters/requirements before claiming full current army construction.
+fun has_orks_warlord_choice(Board board, Bool player) -> Bool:
+    let selectable = false
+    let unit : UnitID
+    for index in range(board.reserve_units.size()):
+        unit = index
+        selectable = selectable or orks_warlord_unit_valid(board, player, unit)
+    return selectable
+
+# Both selectors retain established UnitID/ModelID shapes; explicit Godot
+# buttons use reserves and this saved context. Restore caller roles afterward.
+act select_orks_warlord(ctx Board board, frm Bool player) -> SelectOrksWarlord:
+    if board.armies[int(player)].faction != ArmyFaction::orks or !has_orks_warlord_choice(board, player):
+        return
+    frm previous_owner = board.current_decision_maker
+    frm previous_unit = board.selected_warlord_unit
+    board.current_decision_maker = player
+    act choose_warlord_unit(frm UnitID warlord_unit) {orks_warlord_unit_valid(board, player, warlord_unit)}
+    board.selected_warlord_unit = warlord_unit
+    act choose_warlord_model(frm ModelID warlord_model) {orks_warlord_model_valid(board, player, warlord_unit, warlord_model)}
+    ref selected = board.reserve_units[warlord_unit.get()][warlord_model]
+    board.armies[int(player)].warlord = selected.identity
+    if !selected.has_keyword(Keyword::warlord):
+        selected.keywords.append(Keyword::warlord)
+    board.selected_warlord_unit = previous_unit
+    board.current_decision_maker = previous_owner
+
+# One source-backed Battleline predicate serves both draft acceptance and the
+# committed roster: Runt Swarm/Gretchin, Kult/Warbikers, Brigade/Stormboyz.
+fun orks_force_battleline(Board board, Unit unit) -> Bool:
+    return (orks_package(board, unit, OrksDetachment::runt_swarm) and orks_type(unit, OrksDatasheet::gretchin)) or (orks_package(board, unit, OrksDetachment::kult_of_speed) and orks_type(unit, OrksDatasheet::warbikers)) or (orks_package(board, unit, OrksDetachment::taktikal_brigade) and orks_type(unit, OrksDatasheet::stormboyz))
+
+# User-supplied copy limits apply to effective Battleline membership at muster.
+# Reuse this for draft choices and the final pre-attachment roster validation.
+fun orks_muster_copy_limit(Board board, Unit unit) -> Int:
+    return 3 + 3 * int(unit.has_keyword(Keyword::battleline) or orks_force_battleline(board, unit))
+
+# Force dispositions change Battleline membership at muster without changing
+# unit prices or adding new datasheets (Sneaky Little Gitz/Adrenaline Junkies/
+# Suspiciously Well Organised). Replacement units retain the original trait.
+fun register_orks_force_dispositions(Board board):
+    let bank : SourceBank
+    for bank_index in range(3):
+        bank.value = bank_index
+        for unit_index in range(source_bank_size(board, bank)):
+            ref unit = source_bank_unit(board, bank, unit_index)
+            if orks_force_battleline(board, unit):
+                for bearer in range(unit.models.size()):
+                    if !unit[bearer].has_keyword(Keyword::battleline):
+                        unit[bearer].keywords.append(Keyword::battleline)
+
+# User roster limits: three copies, six for Battleline, applied before
+# attachments merge units. Detachment force dispositions precede this check.
+# Named datasheet identity is explicit; unknown legacy fixtures are not guessed.
+fun orks_muster_copies_valid(Board board) -> Bool:
+    for slot in range(board.reserve_units.size()):
+        ref unit = board.reserve_units[slot]
+        if unit.models.empty() or !unit.has_keyword(Keyword::orks):
+            continue
+        let code = unit[0].datasheet.value
+        if code == 0:
+            continue
+        let copies = 0
+        for other in range(board.reserve_units.size()):
+            ref candidate = board.reserve_units[other]
+            if !candidate.models.empty() and candidate.owned_by_player1 == unit.owned_by_player1 and candidate[0].datasheet.value == code:
+                copies = copies + 1
+        if copies > orks_muster_copy_limit(board, unit):
+            return false
+    return true
+
+# Convert an already validated battlefield slot to the existing finite action
+# selector; persistent references still use EntityIdentity (infrastructure).
+fun unit_id_for_orks_slot(Int slot) -> UnitID:
+    let result : UnitID
+    result = slot
+    return result
+
+# Configure at most three distinct Orks packages; no DP accounting is performed
+# by user instruction (source: https://wahapedia.ru/wh40k11ed/factions/orks/).
+# Package effects require their own ROADMAP batches; Get Stuck In is17.I1.
+act select_orks_detachments(ctx Board board, frm Bool detachment_player) -> SelectOrksDetachments:
+    if board.armies[int(detachment_player)].faction != ArmyFaction::orks:
+        return
+    board.current_decision_maker = detachment_player
+    frm detachment_finished = false
+    while !detachment_finished and board.armies[int(detachment_player)].detachments.has_capacity():
+        actions:
+            act finish_detachment_selection()
+                detachment_finished = true
+            act choose_orks_detachment(OrksDetachment detachment) {board.armies[int(detachment_player)].detachment_selection_valid(detachment)}
+                let recorded = board.armies[int(detachment_player)].record_detachment(detachment)
+                assert(recorded, "legal detachment selection must be recorded")
+
+# UI infrastructure reads the one active draft frame; no second Board/Unit
+# copy or alternative roster validator is installed in the host.
+fun orks_active_muster_field_label(Board board, OrksMusterField field) -> String:
+    ref entry = board.shared_actions.pick_army.roster.entry
+    return orks_muster_field_label(entry.draft, entry.member_index.get(), field)
+
+# Label a numeric input with its real source weapon/equipment choice.
+fun orks_active_muster_value_label(Board board, Int value) -> String:
+    ref entry = board.shared_actions.pick_army.roster.entry
+    return orks_muster_value_label(entry.draft, entry.member_index.get(), entry.field, value)

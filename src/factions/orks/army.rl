@@ -1,10 +1,5 @@
+import board
 import source_effects
-
-# Source: https://wahapedia.ru/wh40k11ed/factions/orks/ (Army Rules).
-# Keep these choices in the same controller group as other start-window rules.
-enum OrksTimingRule:
-    war_cry
-    da_boss
 
 # War Cry affects friendly ORKS units with Waaagh!, including offboard units;
 # it neither measures to them nor grants the ability to an unrelated roster.
@@ -167,85 +162,22 @@ fun valid_orks_army_state(Board board) -> Bool:
         valid = valid and found
     return valid
 
-# User-supplied Warlord definition: choose a CHARACTER unit carrying the army
-# faction keyword, then an eligible CHARACTER model. These Orks selectors
-# address the pre-formation reserve roster, not battlefield slots.
-fun orks_warlord_unit_base_valid(Board board, Bool player, UnitID unit) -> Bool:
-    return unit.get() >= 0 and unit.get() < board.reserve_units.size() and board.reserve_units[unit.get()].owned_by_player1 == player and board.reserve_units[unit.get()].has_keyword(Keyword::orks) and board.reserve_units[unit.get()].has_keyword(Keyword::character)
+# A unit ability follows its live constituent union; corpses cannot keep an
+# active army ability (Orks Waaagh! / appendix02.05.01 / destruction p.87).
+fun unit_has_waaagh(Unit unit) -> Bool:
+    let available = false
+    for index in range(unit.models.size()):
+        available = available or (model_confers_attached_abilities(unit[index]) and unit[index].has_waaagh)
+    if !unit.attached_units.empty():
+        available = available or (unit.bodyguard_waaagh and component_source_active(unit, unit.identity))
+        for component_index in range(unit.attached_units.size()):
+            available = available or (unit.attached_units[component_index].waaagh and component_source_active(unit, unit.attached_units[component_index].identity))
+    return available and unit.has_keyword(Keyword::orks)
 
-# Cannot-be-Warlord overrides required status (user definition). A model-level
-# requirement such as Ghazghkull's cannot be satisfied by a different Character.
-fun orks_warlord_model_base_valid(Unit unit, Int model) -> Bool:
-    return model >= 0 and model < unit.models.size() and unit[model].is_alive() and unit[model].has_keyword(Keyword::character) and !unit[model].cannot_be_warlord
-
-# Required-unit and required-model clauses are distinct. Only otherwise legal
-# required choices participate; prohibitions retain precedence (user wording).
-fun orks_warlord_model_required(Unit unit, Int model) -> Bool:
-    return orks_warlord_model_base_valid(unit, model) and (unit.must_supply_warlord or unit[model].must_be_warlord)
-
-# Gather required eligible choices across the player's actual roster, rather
-# than always selecting the first boss (user Warlord definition).
-fun orks_has_required_warlord(Board board, Bool player) -> Bool:
-    let required = false
-    let unit : UnitID
-    for index in range(board.reserve_units.size()):
-        unit = index
-        if !orks_warlord_unit_base_valid(board, player, unit):
-            continue
-        for model in range(board.reserve_units[index].models.size()):
-            required = required or orks_warlord_model_required(board.reserve_units[index], model)
-    return required
-
-# Finite selectors safely reject spare indices and foreign units before access
-# (editor protocol; user Warlord definition).
-fun orks_warlord_model_valid(Board board, Bool player, UnitID unit, ModelID model) -> Bool:
-    if board.armies[int(player)].warlord.value != 0 or board.armies[int(player)].faction != ArmyFaction::orks or !orks_warlord_unit_base_valid(board, player, unit) or !orks_warlord_model_base_valid(board.reserve_units[unit.get()], model.get()):
-        return false
-    ref roster_unit = board.reserve_units[unit.get()]
-    let required_model = false
-    for index in range(roster_unit.models.size()):
-        required_model = required_model or (orks_warlord_model_base_valid(roster_unit, index) and roster_unit[index].must_be_warlord)
-    if required_model and !roster_unit[model.get()].must_be_warlord:
-        return false
-    return !orks_has_required_warlord(board, player) or orks_warlord_model_required(roster_unit, model.get())
-
-# A selected unit must contain a selectable model, so the second input cannot
-# deadlock after an otherwise legal unit choice (user Warlord definition).
-fun orks_warlord_unit_valid(Board board, Bool player, UnitID unit) -> Bool:
-    if !orks_warlord_unit_base_valid(board, player, unit):
-        return false
-    let selectable = false
-    let model : ModelID
-    for index in range(board.reserve_units[unit.get()].models.size()):
-        model = index
-        selectable = selectable or orks_warlord_model_valid(board, player, unit, model)
-    return selectable
-
-# Army construction remains data-driven: a legacy roster without current ORKS
-# metadata is not certified here. Actual roster adapters must supply eligible
-# Characters/requirements before claiming full current army construction.
-fun has_orks_warlord_choice(Board board, Bool player) -> Bool:
-    let selectable = false
-    let unit : UnitID
-    for index in range(board.reserve_units.size()):
-        unit = index
-        selectable = selectable or orks_warlord_unit_valid(board, player, unit)
-    return selectable
-
-# Both selectors retain established UnitID/ModelID shapes; explicit Godot
-# buttons use reserves and this saved context. Restore caller roles afterward.
-act select_orks_warlord(ctx Board board, frm Bool player) -> SelectOrksWarlord:
-    if board.armies[int(player)].faction != ArmyFaction::orks or !has_orks_warlord_choice(board, player):
-        return
-    frm previous_owner = board.current_decision_maker
-    frm previous_unit = board.selected_warlord_unit
-    board.current_decision_maker = player
-    act choose_warlord_unit(frm UnitID warlord_unit) {orks_warlord_unit_valid(board, player, warlord_unit)}
-    board.selected_warlord_unit = warlord_unit
-    act choose_warlord_model(frm ModelID warlord_model) {orks_warlord_model_valid(board, player, warlord_unit, warlord_model)}
-    ref selected = board.reserve_units[warlord_unit.get()][warlord_model]
-    board.armies[int(player)].warlord = selected.identity
-    if !selected.has_keyword(Keyword::warlord):
-        selected.keywords.append(Keyword::warlord)
-    board.selected_warlord_unit = previous_unit
-    board.current_decision_maker = previous_owner
+# All members receive each unit-wide riled grant. Read only live bearers for
+# movement/shooting permissions (Orks Waaagh! / destruction p.87).
+fun unit_is_riled_up(Unit unit) -> Bool:
+    let active = false
+    for index in range(unit.models.size()):
+        active = active or ((unit[index].is_alive() or unit[index].state == ModelState::fight_on_death) and unit[index].is_riled_up())
+    return active
