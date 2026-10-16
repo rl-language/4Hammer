@@ -1,9 +1,13 @@
 # Passive and triggered abilities
 
-This is the corrected mechanism specification. It supersedes the six-family
-army-provider proposal. Army, unit, equipment, detachment and enhancement
-selection remain ordinary existing action functions and constructors. There is
-no new catalog API, ability-discovery API or army-state provider API.
+The faction-specific army-building action **is the army catalog**. Its action
+inputs, preconditions and control flow define the available units, equipment,
+detachments and enhancements and construct the selected army. For Orks, this is
+[`build_orks_roster`](../src/factions/orks/roster.rl), together with its delegated
+selection actions. Do not duplicate that procedure with a catalog object,
+listing API or a separate army-description interface.
+
+This specification covers passive and triggered abilities only.
 
 The task is to define **passive abilities** and **triggered abilities** so core
 can apply the same mechanics for any army. The contracts below are to be
@@ -225,7 +229,6 @@ triggered_ability_valid(read_context, pending_ability) -> Bool
 execute_triggered_ability(board, pending_ability) -> TriggeredAbility action
 ```
 
-These are the triggered-ability protocol, not three new provider/catalog layers.
 Existing constructors and selection actions already determine which abilities
 exist. The queue function checks those abilities at this event and appends
 actual triggered work. The action implements that work in ordinary Rulebook.

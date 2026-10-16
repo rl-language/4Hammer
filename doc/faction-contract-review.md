@@ -1,9 +1,9 @@
 # Core-facing faction contracts
 
 The [passive/triggered ability specification](army-api.md) defines the corrected
-replacement mechanism. Selection stays in ordinary actions; the six-family
-provider proposal has been superseded. This review describes current dispatch
-and the dependencies that migration must fix.
+replacement mechanism. The faction-specific army-building action is the catalog
+and owns legal selection and construction. This review describes current
+dispatch and the dependencies that migration must fix.
 
 This review follows dispatch hooks into their **core consumers**. It records
 the interfaces implemented now and the work still required for a core that does

@@ -889,10 +889,12 @@ not authorize or certify those changes.
 ## Passive and triggered abilities —2026-10-16 correction
 
 Use [doc/army-api.md](doc/army-api.md) as the corrected mechanism specification.
-The user rejected the six-family provider architecture: army/unit/equipment/
-detachment/option selection already belongs to ordinary action functions and
-constructors. Do not add catalog, ability-discovery or army-state provider APIs,
-and do not turn this work into a collection of getting/listing interfaces.
+The faction-specific army-building action IS the army catalog: its action
+inputs, preconditions and control flow define the selections and construct the
+army. For Orks this is `build_orks_roster` and its delegated selection actions.
+Do not duplicate it with a catalog object, listing API or separate army-description
+interface. This work defines passive and triggered abilities only, not selection,
+ability-discovery or army-state provider APIs.
 
 Define two mechanisms: passive functions add standard effects to core-supplied
 calculation contexts; triggered functions queue actual event activations and

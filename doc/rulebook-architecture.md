@@ -5,9 +5,10 @@ and [struct/property reference](game-state-reference.md). This page is the deepe
 implementation guide.
 
 The [passive/triggered ability specification](army-api.md) defines the corrected
-replacement for the current faction dispatch layer. It introduces no catalog,
-discovery or army-state provider layer. Runtime migration is pending; the
-architecture below describes the existing implementation.
+replacement for the current faction dispatch layer. The faction-specific
+army-building action is the catalog and owns legal selection and construction.
+Runtime migration is pending; the architecture below describes the existing
+implementation.
 
 This guide explains how the `.rl` part of 4Hammer is organized, how a decision advances the simulation, and where a new mechanic belongs. It describes all54 standard Orks adapters through17.Q and the shared ability procedures, using Rulebook compiler0.4.18. [ROADMAP.md](../ROADMAP.md) owns migration status and validation evidence; this guide describes the design. The engine still contains legacy roster data and compatibility entrypoints while the 11th-edition migration proceeds.
 
@@ -286,8 +287,8 @@ to ordinary healing; explicit resurrection calls the return operation directly.
 These procedures have non-Orks regression fixtures. Existing mortality,
 damage-job and source-effect pipelines already serve targeted effects with
 different roll meanings; retain their explicit card adapters instead of adding
-an unused generic target/effect interpreter. Generic faction catalogs and
-replacement of Orks-specific grant metadata are separate work.
+an unused generic target/effect interpreter. Replacement of Orks-specific grant
+metadata is separate work; army selection stays in faction-building actions.
 
 ## Movement and placement
 

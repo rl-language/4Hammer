@@ -1,10 +1,9 @@
 # Faction behavior boundary
 
 The [passive/triggered ability specification](../../doc/army-api.md) defines the
-replacement mechanism. Existing selection actions/constructors remain in charge
-of armies and equipment; no catalog, discovery or army-state provider layer is
-introduced. The dispatch modules below remain the current runtime implementation
-until their consumers are migrated.
+replacement mechanism. The faction-specific army-building action is the catalog:
+it defines legal choices and constructs the army. The dispatch modules below
+remain the current runtime implementation until their consumers are migrated.
 
 Core functions and actions use the neutral contracts in
 [dispatch.rl](dispatch.rl). These composition modules select the concrete

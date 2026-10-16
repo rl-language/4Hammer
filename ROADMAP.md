@@ -6,8 +6,8 @@ the end of this roadmap remain pending. Their objective is removal of faction
 rule interpretation from core, using whatever adequate bounded storage is needed.
 
 Corrected replacement: [passive and triggered abilities](doc/army-api.md).
-Selection stays in existing actions; the six-family provider proposal is
-superseded. Mechanism definition is complete; runtime migration is pending.
+The faction-specific army-building action is the catalog. Mechanism definition
+is complete; runtime migration is pending.
 
 [The Rulebook design and architecture guide](doc/rulebook-architecture.md) documents the current engine structure and execution paths. The guide is completed documentation work; this roadmap owns implementation status and validation.
 
@@ -1969,9 +1969,10 @@ these documentation-only edits; earlier runtime validation remains historical.
 
 ## Passive and triggered abilities —2026-10-16 correction
 
-The user rejected the six-family provider proposal. Army/unit/equipment/
-detachment/option selection remains in ordinary actions and constructors.
-No catalog, ability-discovery or army-state provider layer is to be added.
+The faction-specific army-building action is the army catalog. Its inputs,
+preconditions and control flow define legal selections and construct the army.
+Do not duplicate it with a catalog object, listing API or army-description
+interface. Work here is limited to passive and triggered abilities.
 The [corrected specification](doc/army-api.md) defines passive functions and
 triggered actions, with explicit common effects, events and lifecycle contracts.
 
