@@ -917,11 +917,6 @@ fun orks_muster_copies_valid(Board board) -> Bool:
 
 # Convert an already validated battlefield slot to the existing finite action
 # selector; persistent references still use EntityIdentity (infrastructure).
-fun unit_id_for_orks_slot(Int slot) -> UnitID:
-    let result : UnitID
-    result = slot
-    return result
-
 # Configure at most three distinct Orks packages; no DP accounting is performed
 # by user instruction (source: https://wahapedia.ru/wh40k11ed/factions/orks/).
 # Package effects require their own ROADMAP batches; Get Stuck In is17.I1.

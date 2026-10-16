@@ -283,16 +283,12 @@ cls Board:
     # behind stored references (destruction p.19; returning models p.88).
     fun identify_unit(Unit unit):
         if unit.identity.value == 0:
-            assert(self.next_identity.value < MAX_ENTITY_IDENTITIES, "entity identity capacity exceeded")
-            unit.identity = self.next_identity.value + 1
-            self.next_identity = self.next_identity + 1
+            unit.identity = allocate_entity_identity(self)
         let i = 0
         while i < unit.models.size():
             ref model = unit.models[i]
             if model.identity.value == 0:
-                assert(self.next_identity.value < MAX_ENTITY_IDENTITIES, "entity identity capacity exceeded")
-                model.identity = self.next_identity.value + 1
-                self.next_identity = self.next_identity + 1
+                model.identity = allocate_entity_identity(self)
                 model.original_unit = unit.identity
             i = i + 1
 
@@ -1029,3 +1025,10 @@ fun valid_model_equipment(Model model) -> Bool:
         if primary > 0 and (model.weapons[primary - 1].secondary_profile_of.value != 0 or model.weapons[primary - 1].profile.family_id() != equipped.profile.family_id()):
             return false
     return true
+
+# Shared monotonic identity allocator for roster and new-unit creation;
+# returns retain identities, replacements allocate new ones (pp87-88/01.02.10).
+fun allocate_entity_identity(Board board) -> EntityIdentity:
+    assert(board.next_identity.value < MAX_ENTITY_IDENTITIES, "entity identity capacity exceeded")
+    board.next_identity = board.next_identity + 1
+    return board.next_identity

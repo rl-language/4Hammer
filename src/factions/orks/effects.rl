@@ -44,17 +44,7 @@ fun grant_orks_typed_payload(Board board, EntityIdentity source, Bool owner, Ent
     instance.offboard_allowed = true
     instance.allow_retained_source = true
     instance.grant = payload
-    let found = -1
-    for source_index in range(board.source_instances.size()):
-        if board.source_instances[source_index].rule.value == rule and board.source_instances[source_index].source_unit == instance.source_unit and board.source_instances[source_index].owner == instance.owner:
-            found = source_index
-    if found < 0:
-        let handle = register_source_instance(board, instance)
-        found = handle.value
-    else:
-        board.source_instances[found].grant = payload
-        board.source_instances[found].duration = duration
-    commit_source_effect_to_unit(board, board.source_instances[found], found, target)
+    commit_reusable_unit_grant(board, instance, target)
 
 # UnitID callers and own-unit bank adapters share one keyed source installer.
 # Effects retain identity and duration across transfers (01.02.02/01.02.04).
@@ -97,29 +87,6 @@ fun append_orks_effect_ability(Board board, Model model, OrksEffectKind effect_k
 
 # Starting equipment includes intrinsic data, not a copy of old timed buffs.
 # New physical weapon use starts from the battle-start template (01.02.10).
-fun strip_orks_temporary_model_grants(Model model):
-    let index = model.characteristic_modifiers.size()
-    while index > 0:
-        index = index - 1
-        if model.characteristic_modifiers[index].source_effect.value > 0:
-            model.characteristic_modifiers.erase(index)
-    index = model.incoming_attack_modifiers.size()
-    while index > 0:
-        index = index - 1
-        if model.incoming_attack_modifiers[index].source_effect.value > 0:
-            model.incoming_attack_modifiers.erase(index)
-    index = model.attack_modifier_permissions.size()
-    while index > 0:
-        index = index - 1
-        if model.attack_modifier_permissions[index].source_effect.value > 0:
-            model.attack_modifier_permissions.erase(index)
-    for weapon in range(model.weapons.size()):
-        index = model.additional_weapon_rules[weapon].size()
-        while index > 0:
-            index = index - 1
-            if model.additional_weapon_rules[weapon][index].source_effect.value > 0:
-                model.additional_weapon_rules[weapon].erase(index)
-
 # Temperamental Shokka grants are bearer-only and named-weapon scoped. Copying
 # one model's upgrade to every carrier/unit member would change the card rule.
 fun grant_orks_model_effect(Board board, UnitID source, ModelID bearer, Int rule, OrksEffectKind kind):

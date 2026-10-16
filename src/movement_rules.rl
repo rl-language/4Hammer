@@ -1,3 +1,4 @@
+import replacement_rules
 import movement_geometry
 
 # The legacy mission has 5-inch home zones; check the whole base, not the
@@ -178,7 +179,7 @@ fun enter_from_reserves(Board board, UnitID reserve, BoardPosition position, Mov
     assert(valid, "setup candidate must satisfy every placement condition")
     let destination = board.units.size()
     if candidate.is_generated_replacement and !candidate.has_return_slot and !board.units.has_capacity():
-        let reusable = faction_replacement_slot(board)
+        let reusable = replacement_slot(board)
         assert(reusable >= 0, "replacement has no safe battlefield slot")
         board.expired_reserves.value.append(board[reusable])
         candidate.has_return_slot = true
@@ -645,4 +646,4 @@ fun return_opponent_aircraft(Board board):
 fun battlefield_entry_available(Board board, Unit unit) -> Bool:
     if unit.has_return_slot:
         return unit.return_slot.get() < board.units.size() and board[unit.return_slot].retired and board[unit.return_slot].empty()
-    return board.units.has_capacity() or (unit.is_generated_replacement and faction_replacement_slot(board) >= 0)
+    return board.units.has_capacity() or (unit.is_generated_replacement and replacement_slot(board) >= 0)

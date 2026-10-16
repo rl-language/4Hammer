@@ -851,3 +851,53 @@ fun remove_scoped_source_effect(Board board, SourceEffectKey key):
         if board.source_effects[index].identity == key:
             board.source_effects.erase(index)
         index = index - 1
+
+# Shared keyed installer for unit-owned persisting grants (appendix01.02.02).
+# Caller supplies label, recipient, duration and offboard/retained-source policy.
+# Reusing the prototype never merges the separate committed effect identities.
+fun commit_reusable_unit_grant(Board board, SourceInstance instance, EntityIdentity target):
+    let found = -1
+    for source_index in range(board.source_instances.size()):
+        if board.source_instances[source_index].rule.value == instance.rule.value and board.source_instances[source_index].source_unit == instance.source_unit and board.source_instances[source_index].owner == instance.owner:
+            found = source_index
+    if found < 0:
+        let handle = register_source_instance(board, instance)
+        found = handle.value
+    else:
+        board.source_instances[found].grant = instance.grant
+        board.source_instances[found].duration = instance.duration
+    commit_source_effect_to_unit(board, board.source_instances[found], found, target)
+
+# Strip sourced arithmetic/weapon permissions from a new battle-start copy
+# (adding units01.02.10); intrinsic zero-key grants remain equipment data.
+fun strip_temporary_model_grants(Model model):
+    let index = model.characteristic_modifiers.size()
+    while index > 0:
+        index = index - 1
+        if model.characteristic_modifiers[index].source_effect.value > 0:
+            model.characteristic_modifiers.erase(index)
+    index = model.incoming_attack_modifiers.size()
+    while index > 0:
+        index = index - 1
+        if model.incoming_attack_modifiers[index].source_effect.value > 0:
+            model.incoming_attack_modifiers.erase(index)
+    index = model.attack_modifier_permissions.size()
+    while index > 0:
+        index = index - 1
+        if model.attack_modifier_permissions[index].source_effect.value > 0:
+            model.attack_modifier_permissions.erase(index)
+    for weapon in range(model.weapons.size()):
+        index = model.additional_weapon_rules[weapon].size()
+        while index > 0:
+            index = index - 1
+            if model.additional_weapon_rules[weapon][index].source_effect.value > 0:
+                model.additional_weapon_rules[weapon].erase(index)
+
+# Registration identity is rule, source unit/model and trigger; do not reset
+# usage when the source attaches or transfers banks (pp66/88,01.02.02).
+fun source_instance_registered(Board board, SourceInstance instance) -> Bool:
+    let found = false
+    for index in range(board.source_instances.size()):
+        ref existing = board.source_instances[index]
+        found = found or (existing.rule == instance.rule and existing.source_unit == instance.source_unit and existing.source_model == instance.source_model and existing.trigger.value == instance.trigger.value)
+    return found

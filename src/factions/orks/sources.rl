@@ -32,7 +32,7 @@ fun register_orks_option_passives(Board board):
                     instance.grant = characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 2)
                 if option.value == OrksEnhancement::ardboyz.value:
                     instance.grant = characteristic_modifier(ModifiedCharacteristic::save, ModifierOperation::replace, 4)
-                if !orks_unit_source_registered(board, instance):
+                if !source_instance_registered(board, instance):
                     let handle = register_source_instance(board, instance)
 
 # Save integrity covers the new bounded activation ledger and modifier stacks;
@@ -173,13 +173,6 @@ act orks_datasheet_window(ctx Board board, frm SourceInstance instance) -> OrksD
 
 # Duplicate registration must not reset usage or create multiple tokens when
 # a model transfers banks, attaches, or returns (core pp66/88; source limits).
-fun orks_unit_source_registered(Board board, SourceInstance instance) -> Bool:
-    let found = false
-    for index in range(board.source_instances.size()):
-        ref existing = board.source_instances[index]
-        found = found or (existing.rule == instance.rule and existing.source_unit == instance.source_unit and existing.source_model == instance.source_model and existing.trigger.value == instance.trigger.value)
-    return found
-
 # Register explicit ability metadata after identities exist; attachment
 # provenance also allows registration after formation or a bank transfer.
 # Keep Huntin' has two windows sharing one army-round counter. Bomb Squig is
@@ -224,7 +217,7 @@ fun register_orks_datasheet_sources(Board board):
                             if dependency.source_model == model.identity and (dependency.rule.value == 462 and window_index < 2 or dependency.rule.value == 463 and window_index >= 2):
                                 instance.required_embarked_model = dependency.required_embarked_model
                                 instance.required_carrier_model = dependency.required_carrier_model
-                        if !orks_unit_source_registered(board, instance):
+                        if !source_instance_registered(board, instance):
                             let source = register_source_instance(board, instance)
                         else:
                             for known in range(board.source_instances.size()):
@@ -251,7 +244,7 @@ fun register_orks_datasheet_sources(Board board):
                     if model_matches_datasheet(model, OrksDatasheet::breaka_boyz) or model_matches_datasheet(model, OrksDatasheet::tankbustas):
                         instance.limits.battle = 2
                         instance.limits.turn = 1
-                    if !orks_unit_source_registered(board, instance):
+                    if !source_instance_registered(board, instance):
                         let source = register_source_instance(board, instance)
 
     let bearer_bank : SourceBank
@@ -313,11 +306,11 @@ fun register_orks_datasheet_sources(Board board):
                         bearer_instance.phase = BattlePhase::movement
                         bearer_instance.optional = false
                         bearer_instance.limits.phase = 0
-                    if !orks_unit_source_registered(board, bearer_instance):
+                    if !source_instance_registered(board, bearer_instance):
                         let bearer_handle = register_source_instance(board, bearer_instance)
                     if bearer_entry == 3:
                         bearer_instance.trigger = SourceEventKind::move_end
-                        if !orks_unit_source_registered(board, bearer_instance):
+                        if !source_instance_registered(board, bearer_instance):
                             let bearer_end_handle = register_source_instance(board, bearer_instance)
     let window_bank : SourceBank
     for window_bank_index in range(3):
@@ -367,7 +360,7 @@ fun register_orks_datasheet_sources(Board board):
                     window_instance.own_turn_only = true
                     window_instance.optional = false
                     window_instance.offboard_allowed = true
-                if !orks_unit_source_registered(board, window_instance):
+                if !source_instance_registered(board, window_instance):
                     let window_handle = register_source_instance(board, window_instance)
             if window_unit.has_ability(AbilityKind::get_back_in_da_race):
                 for window_entry in range(2):
@@ -383,7 +376,7 @@ fun register_orks_datasheet_sources(Board board):
                     window_instance.duration = SourceDuration::next_own_turn
                     window_instance.grant = riled_up_grant()
                     window_instance.label.value = SourceLabel::get_back_in_da_race
-                    if !orks_unit_source_registered(board, window_instance):
+                    if !source_instance_registered(board, window_instance):
                         let window_handle = register_source_instance(board, window_instance)
 
 # Orks datasheet windows, healing and Scavengers own their code dispatch; unhandled generic grants commit normally (Orks cards; core pp28-30/01.02.02).

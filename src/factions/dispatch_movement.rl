@@ -117,10 +117,6 @@ fun faction_passenger_space(Unit unit) -> Int:
     return orks_passenger_space(unit)
 
 # Composition hook: recovery adapter owns eligibility and its cited rule; contexts and source identity are preserved.
-fun faction_replacement_slot(Board board) -> Int:
-    return orks_replacement_slot(board)
-
-# Composition hook: recovery adapter owns eligibility and its cited rule; contexts and source identity are preserved.
 fun faction_pending_returns(Board board) -> OrksBankReturns:
     return resolve_orks_bank_returns(board)
 
@@ -163,3 +159,15 @@ fun faction_unit_charge_bonus(Unit unit) -> Int:
 # Get Out da Way permits charge traversal only; common final overlap/engagement checks remain mandatory (Orks/Nobz).
 fun faction_charge_traversal(Unit original, MovementGeometryPolicy policy):
     orks_charge_traversal(original, policy)
+
+# Pending resurrection owns its old slot; Surly remains the current faction policy.
+fun faction_casualty_has_pending_return(Board board, Unit unit, ModelID archive) -> Bool:
+    return orks_surly_casualty_valid(board, unit, archive)
+
+# Generic new-unit construction asks the adapter to clear its private metadata.
+fun prepare_faction_replacement_unit(Unit unit):
+    prepare_orks_replacement_unit(unit)
+
+# Model extension reset preserves the replacement original-component mapping.
+fun prepare_faction_replacement_model(Model model, EntityIdentity replacement):
+    prepare_orks_replacement_model(model, replacement)

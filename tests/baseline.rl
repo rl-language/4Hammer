@@ -11852,7 +11852,7 @@ fun test_orks17all_replacement_slot_reservation_protection() -> Bool:
     reserved.has_return_slot = true
     reserved.return_slot = 2
     board.reserve_units.append(reserved)
-    return orks_replacement_slot(board) == 3 and battlefield_entry_available(board, board.reserve_units[0])
+    return replacement_slot(board) == 3 and battlefield_entry_available(board, board.reserve_units[0])
 
 # A live Surly end-phase archive cannot be evicted by a replacement arriving
 # into a full arena before its mandatory revival chance (source lifecycle).
@@ -11868,7 +11868,7 @@ fun test_orks17all_replacement_slot_pending_surly_protection() -> Bool:
         let empty : Unit
         empty.retired = true
         board.units.append(empty)
-    return orks_replacement_slot(board) == 3
+    return replacement_slot(board) == 3
 
 # The largest native permission list still has room for exactly one card-
 # added bodyguard. Re-applying the same permission does not append a duplicate.
@@ -15542,3 +15542,42 @@ fun test_faction_dispatch_special_move_is_peer_and_atomic() -> Bool:
     let locked = !(can sequence.normal_move(board))
     sequence.roll(board, attack_test_die(3))
     return peers and locked and sequence.kind == MovementKind::pulse_jet and sequence.extra.value == 21
+
+# Shared persisting-effect infrastructure: reusing a source prototype retains
+# independent overlapping effect keys (appendix01.02.02), without Orks metadata.
+fun test_shared_hooks_reusable_grant_keeps_independent_effects() -> Bool:
+    let board = attack_declaration_fixture()
+    let instance = source17e_instance(board, 0, 511)
+    instance.source_model = 0
+    instance.recipient = SourceTarget::target_unit
+    commit_reusable_unit_grant(board, instance, board[1].identity)
+    commit_reusable_unit_grant(board, instance, board[1].identity)
+    let before = board[1][0].effective_movement(6) == 10 and board.source_instances.size() == 1 and board.source_effects.size() == 2
+    let first = board.source_effects[0].identity
+    remove_scoped_source_effect(board, first)
+    return before and board[1][0].effective_movement(6) == 8
+
+# New-unit cleanup removes sourced values and retains intrinsic zero-key data
+# (01.02.10). This is independent of the faction that supplied the modifier.
+fun test_shared_hooks_cleanup_preserves_intrinsic_grants() -> Bool:
+    let board = attack_declaration_fixture()
+    let model = board[0][0]
+    let intrinsic = characteristic_modifier(ModifiedCharacteristic::movement, ModifierOperation::add, 1)
+    let temporary = intrinsic
+    temporary.source_effect = 1
+    model.characteristic_modifiers.append(intrinsic)
+    model.characteristic_modifiers.append(temporary)
+    strip_temporary_model_grants(model)
+    return model.characteristic_modifiers.size() == 1 and model.characteristic_modifiers[0].source_effect.value == 0
+
+# Adding a unit creates fresh identities and uses battle-start equipment;
+# ordinary returning models instead keep their identity (01.02.10/core p88).
+fun test_shared_hooks_replacement_uses_fresh_identity_and_template() -> Bool:
+    let board = attack_declaration_fixture()
+    board[0].capture_starting_strength()
+    let original_id = board[0][0].identity
+    board[0][0].suffered_wounds = 1
+    board[0][0].weapons.clear()
+    board[0].has_shoot = true
+    let replacement = make_replacement_unit(board, board[0])
+    return replacement.identity != board[0].identity and replacement[0].identity != original_id and replacement[0].original_unit == replacement.identity and replacement[0].weapons.size() == 1 and replacement[0].suffered_wounds == 0 and !replacement.has_shoot and replacement.history.strategic_reserve and replacement.off_battlefield and board[0][0].suffered_wounds == 1

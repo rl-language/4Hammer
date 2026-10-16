@@ -1,3 +1,4 @@
+import replacement_rules
 import board
 import source_effects
 
@@ -5,108 +6,11 @@ import source_effects
 # unit. Ordinary returns retain their own reserved slot. Check all bank returns
 # and pending destruction references before recycling; preserve the old unit in
 # the identity archive (Infested War Zone; allocation infrastructure, not a rule).
-fun orks_replacement_slot(Board board) -> Int:
-    if board.units.has_capacity():
-        return board.units.size()
-    for slot in range(board.units.size()):
-        if !board[slot].models.empty() or !board[slot].retired:
-            continue
-        let reserved = false
-        for reserve in range(board.reserve_units.size()):
-            reserved = reserved or (board.reserve_units[reserve].has_return_slot and board.reserve_units[reserve].return_slot.get() == slot)
-        for passenger in range(board.embarked_units.size()):
-            reserved = reserved or (board.embarked_units[passenger].has_return_slot and board.embarked_units[passenger].return_slot.get() == slot)
-        for unit in range(board.units.size()):
-            for model in range(board[unit].models.size()):
-                reserved = reserved or (board[unit][model].destruction_pending and board[unit][model].destroying_unit_known and board[unit][model].destroying_unit.get() == slot)
-        let archive : ModelID
-        for casualty in range(board[slot].destroyed_models.value.size()):
-            archive = casualty
-            reserved = reserved or orks_surly_archive_valid(board, unit_id_for_orks_slot(slot), archive, board[slot].owned_by_player1)
-        if !reserved:
-            return slot
-    return -1
-
 # New units allocate new unit/component/model identities. A revived model uses
 # its old identity instead; conflating these violates Infested War Zone/01.02.10.
-fun allocate_orks_identity(Board board) -> EntityIdentity:
-    assert(board.next_identity.value < MAX_ENTITY_IDENTITIES, "entity identity capacity exceeded")
-    board.next_identity = board.next_identity + 1
-    return board.next_identity
-
 # Literal identical battle-start equipment/strength, fresh histories/wounds and
 # identities, with original component membership mapped into the new unit.
 # Adding during battle is not another mustering choice or a price calculation.
-fun create_orks_replacement(Board board, UnitID destroyed):
-    ref original = board[destroyed]
-    assert(board.reserve_units.has_capacity() and !original.battle_start_models.value.empty(), "replacement needs its original roster and a reserve slot")
-    let replacement = original
-    replacement.identity = allocate_orks_identity(board)
-    replacement.models = original.battle_start_models.value
-    replacement.destroyed_models.value.clear()
-    replacement.movement_distance_limit = 0
-    replacement.has_moved = false
-    replacement.has_run = false
-    replacement.has_charged = false
-    replacement.has_shoot = false
-    replacement.has_fought = false
-    replacement.can_shoot = true
-    replacement.can_charge = true
-    replacement.battle_socked = false
-    replacement.retired = false
-    replacement.is_generated_replacement = true
-    replacement.has_return_slot = false
-    replacement.off_battlefield = true
-    replacement.embarked_transport = 0
-    replacement.unit_destruction_event_issued = false
-    replacement.orks_destroyed_attack = 0
-    replacement.orks_destroyed_phase = 0
-    let history : UnitHistory
-    replacement.history = history
-    replacement.history.strategic_reserve = true
-    let phase : PhaseModifiers
-    replacement.phase_modifiers = phase
-    let psychic : OrksPsychicUsage
-    replacement.orks_psychic_usage = psychic
-    let old_components : CheckedVector<EntityIdentity, 2>
-    for component in range(replacement.attached_units.size()):
-        old_components.append(replacement.attached_units[component].identity)
-        replacement.attached_units[component].identity = allocate_orks_identity(board)
-    for member in range(replacement.models.size()):
-        ref model = replacement[member]
-        model.identity = allocate_orks_identity(board)
-        let origin = replacement.identity
-        for component in range(old_components.size()):
-            if model.original_unit == old_components[component]:
-                origin = replacement.attached_units[component].identity
-        model.original_unit = origin
-        if model.orks_upgrade_origin.value > 0:
-            model.orks_upgrade_origin = replacement.identity
-        model.suffered_wounds = 0
-        model.state = ModelState::normal
-        model.off_battlefield = true
-        model.destruction_pending = false
-        model.destroyed_whole_unit = false
-        model.destroyed_by_attack = false
-        model.destruction_released = false
-        model.destruction_attack_suppressed = false
-        model.attachment_abilities_retained = false
-        model.destroying_unit_known = false
-        model.destroying_unit_identity = 0
-        model.orks_effects.clear()
-        model.riled_source_effects.clear()
-        let keyword = model.keywords.size()
-        while keyword > 0:
-            keyword = keyword - 1
-            if model.keywords[keyword] == Keyword::warlord:
-                model.keywords.erase(keyword)
-        strip_orks_temporary_model_grants(model)
-    replacement.battle_start_models.value = replacement.models
-    board.reserve_units.append(replacement)
-    register_orks_option_passives(board)
-    register_orks_force_dispositions(board)
-    register_orks_datasheet_sources(board)
-
 # Surly is a compulsory end-phase roll, not a free revival choice or a new
 # model. Only its bearer destroyed in THIS phase can consume the army token.
 fun orks_surly_archive_valid(Board board, UnitID source, ModelID archive, Bool owner) -> Bool:
@@ -303,3 +207,27 @@ act orks_command_healing(ctx Board board, frm SourceInstance instance) -> OrksCo
     board.shared_actions.heal_unit = heal_unit(board, source_bank_unit(board, bank, target.get()), bank, remaining)
     subaction*(board, source_bank_unit(board, bank, target.get())) board.shared_actions.heal_unit
     board.current_decision_maker = previous_owner
+
+# Infested War Zone owns eligibility/reserve destination and registration;
+# shared construction supplies a fresh battle-start unit (01.02.10).
+fun create_orks_replacement(Board board, UnitID destroyed):
+    assert(board.reserve_units.has_capacity() and !board[destroyed].battle_start_models.value.empty(), "replacement needs its original roster and a reserve slot")
+    let replacement = make_replacement_unit(board, board[destroyed])
+    board.reserve_units.append(replacement)
+    register_orks_option_passives(board)
+    register_orks_force_dispositions(board)
+    register_orks_datasheet_sources(board)
+
+# Only private Orks transient state is reset when core creates a new unit.
+fun prepare_orks_replacement_unit(Unit unit):
+    unit.orks_destroyed_attack = 0
+    unit.orks_destroyed_phase = 0
+    let psychic : OrksPsychicUsage
+    unit.orks_psychic_usage = psychic
+
+# Original upgrade ownership follows the newly allocated replacement component.
+fun prepare_orks_replacement_model(Model model, EntityIdentity replacement):
+    if model.orks_upgrade_origin.value > 0:
+        model.orks_upgrade_origin = replacement
+    model.orks_effects.clear()
+    model.riled_source_effects.clear()
